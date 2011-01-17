@@ -1,8 +1,9 @@
 (defproject forma-hadoop "1.0.0-SNAPSHOT"
   :source-path "src/clj"
   :dependencies [[org.clojure/clojure "1.2.0"]
-                 [cascalog "1.6.0-SNAPSHOT"]
                  [org.clojure/clojure-contrib "1.2.0"]
+                 [org.hdfgroup/hdf-java "2.6.1"]
+                 [cascalog "1.6.0-SNAPSHOT"]
                  ]
   :dev-dependencies [
                      [org.apache.hadoop/hadoop-core "0.20.2-dev"]
