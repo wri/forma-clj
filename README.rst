@@ -1,4 +1,4 @@
-# forma-hadoop
+# forma
 
 FIXME: write description
 
