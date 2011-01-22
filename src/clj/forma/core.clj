@@ -20,8 +20,8 @@
   [path]
   (w/hfs-tap (whole-file ["file"]) path))
 
-
-
-(?<- (stdout) [?count]
+(def testquery
+  (?<- (stdout) [?count]
      ((hfs-wholefile nasa-dir-path) ?file)
-     (c/count ?count))
+     (c/count ?count)))
+
