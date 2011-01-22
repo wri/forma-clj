@@ -12,26 +12,22 @@ import java.io.IOException;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
 
-public class WholeFile extends Scheme
-{
+public class WholeFile extends Scheme {
     // @ConstructorProperties({"fields"})
-    public WholeFile( Fields fields )
-    {
-    	super(fields);
+    public WholeFile( Fields fields ) {
+        super(fields);
     }
 
     @Override
-    public void sourceInit( Tap tap, JobConf conf )
-    {
+    public void sourceInit( Tap tap, JobConf conf ) {
         conf.setInputFormat( WholeFileInputFormat.class );
     }
-
+    
     @Override
-    public void sinkInit(Tap tap, JobConf conf) throws IOException
-    {
+    public void sinkInit(Tap tap, JobConf conf) throws IOException {
         throw new UnsupportedOperationException("Not supported.");
     }
-
+    
     @Override
     public Tuple source( Object key, Object value )
     {
