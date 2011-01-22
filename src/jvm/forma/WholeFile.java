@@ -25,17 +25,19 @@ public class WholeFile extends Scheme {
     
     @Override
     public void sinkInit(Tap tap, JobConf conf) throws IOException {
-        throw new UnsupportedOperationException("Not supported.");
+        throw new UnsupportedOperationException("Not supported yet.");
     }
     
     @Override
     public Tuple source( Object key, Object value )
     {
-        return (Tuple) value;
+        Tuple tuple = new Tuple();
+        tuple.add(value);
+        return tuple;
     }
     
     @Override
     public void sink(TupleEntry te, OutputCollector oc) throws IOException {
-        throw new UnsupportedOperationException("Not supported.");
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 } 

@@ -2,10 +2,10 @@
   (:use cascalog.api)
   (:import [org.gdal.gdal gdal Dataset]
            [forma WholeFile])
-  (:require [cascalog [workflow :as w]]))
+  (:require [cascalog [ops :as c] [workflow :as w]]))
 
 (def nasa-dir-path
-  "/Users/sritchie/Desktop/MOD13A3.A2000032.h00v08.005.2006271174446.hdf")
+  "/Users/sritchie/Desktop/MODISTEST/")
 
 (def test-dataset
   (do
@@ -20,3 +20,8 @@
   [path]
   (w/hfs-tap (whole-file ["file"]) path))
 
+
+
+(?<- (stdout) [?count]
+     ((hfs-wholefile nasa-dir-path) ?file)
+     (c/count ?count))
