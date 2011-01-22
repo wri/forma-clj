@@ -12,10 +12,10 @@ import java.io.IOException;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
 
-public static class WholeFileScheme extends Scheme
+public class WholeFile extends Scheme
 {
     // @ConstructorProperties({"fields"})
-    public WholeFileScheme( Fields fields )
+    public WholeFile( Fields fields )
     {
     	super(fields);
     }
