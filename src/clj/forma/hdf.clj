@@ -20,18 +20,18 @@
 (def nasa-dir-path
   "/Users/sritchie/Desktop/MODISTEST/")
 
-(defmapop [unpack [somearg]] {:stateful true} 
+;; TODO -- figure out how to delete values after we create them.
+(defmapop [unpack [somearg]] {:stateful true}
   ([]
-     (let [hash (Integer/toString (m/abs (.hashCode key)))]
-       (do (gdal/AllRegister)
-           (i/file (io/temp-dir "hdf") hash))))
+     (gdal/AllRegister))
   ([tfile stream]
-     (let [tpath (.toString tfile)
+     (let [hash (Integer/toString (m/abs (.hashCode stream)))
+           tfile (i/file (io/temp-dir "hdf") hash)
            bytes (byte-array (.getLength stream)
                              (.getBytes stream))]
        (do
          (i/copy bytes tfile)
-         (gdal/Open tpath 0)))) 
+         (gdal/Open (.toString tfile) 0)))) 
   ([tfile]
      (i/delete-file tfile)))
 
