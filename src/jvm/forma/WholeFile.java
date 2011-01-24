@@ -20,7 +20,7 @@ public class WholeFile extends Scheme {
 
     @Override
     public void sourceInit( Tap tap, JobConf conf ) {
-        conf.setInputFormat( WholeFileInputFormat.class );
+        conf.qsetInputFormat( WholeFileInputFormat.class );
     }
     
     @Override

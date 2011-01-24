@@ -1,6 +1,8 @@
 package forma;
 
 import java.io.IOException;
+import org.gdal.gdal.gdal;
+import org.gdal.gdal.Dataset;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -20,6 +22,7 @@ class WholeFileRecordReader implements RecordReader<NullWritable, BytesWritable>
     public WholeFileRecordReader(FileSplit fileSplit, Configuration conf) throws IOException {
         this.fileSplit = fileSplit;
         this.conf = conf;
+        gdal.AllRegister();
     }
 
     @Override
@@ -47,11 +50,17 @@ class WholeFileRecordReader implements RecordReader<NullWritable, BytesWritable>
         if (!processed) {
             byte[] contents = new byte[(int) fileSplit.getLength()];
             Path file = fileSplit.getPath();
+
+            // Dataset dataSet = gdal.Open(file.toString().substring(5)); 
+
             FileSystem fs = file.getFileSystem(conf);
             FSDataInputStream in = null;
             try {
                 in = fs.open(file);
                 IOUtils.readFully(in, contents, 0, contents.length);
+                
+                //THIS IS WHERE TO STOP!!
+                
                 value.set(contents, 0, contents.length);
             } finally {
                 IOUtils.closeStream(in);
