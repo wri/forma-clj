@@ -53,8 +53,6 @@
   ([tdir]
      (i/delete-file-recursively tdir)))
 
-(def opened-file (gdal/Open "/Users/sritchie/Desktop/MODISTEST/MOD13A3.A2000183.h08v06.005.2006310224652.hdf"))
-
 (def subdata-map {:evi "monthly EVI"
                   :qual "VI Quality"
                   :red "red reflectance"
@@ -69,14 +67,14 @@
 (def forma-sets #{:ndvi :evi :qual :reli})
 
 (defn keep-dataset? [entry]
-  (and (s/substring? "_NAME" (.getKey entry))
-       (some #(s/substring? % (.getValue entry)) (vals subdata-map))))
+  (let [val (.getValue entry)
+        key (.getKey entry)]
+    (and (s/substring? "_NAME" key)
+         (some #(s/substring? % val)
+               (map subdata-map forma-sets)))))
 
+;; the QUERY to use. TODO: make sure this associates the key with the
+;; subdataset.
 (let [metadata (.GetMetadata_Dict opened-file "SUBDATASETS")]
   (map #(gdal/Open (.getValue %))
        (filter keep-dataset? metadata)))
-
-;; (let [metadata (.GetMetadata_Dict opened-file "SUBDATASETS")]
-;;   (map-indexed #(.get metadata %2)
-;;                (filter #(s/substring? "_NAME" %)
-;;                        (enumeration-seq (.keys metadata)))))
