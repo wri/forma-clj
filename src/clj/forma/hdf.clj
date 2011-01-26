@@ -3,7 +3,7 @@
   (:import [org.gdal.gdal gdal Dataset]
            [org.apache.hadoop.io BytesWritable])
   (:require [cascalog [ops :as c] [workflow :as w] [io :as io]]
-            [clojure.contrib [math :as m] [io :as i]]))
+            [clojure.contrib [math :as m] [io :as i] [string :as s]]))
 
 (defn get-metadata
   "Takes in a decompressed HDF file and a key, and returns the associated
@@ -23,12 +23,11 @@
   (byte-array (.getLength bytes)
               (.getBytes bytes)))
 
-
 ;; Requires an unpacked MODIS file and a seq of meta-data keys.
 
 (defmapop [meta-values [meta-keys]] [modis]
   (let [metadata (.GetMetadata_Dict modis "")]
-    (vec (map #(.get metadata %) meta-keys))))
+    (map #(.get metadata %) meta-keys)))
 
 ;; ## Mapping operations
 
@@ -37,7 +36,9 @@
 ;; array is processed with gdal, and then the temp directory is destroyed.
 ;; Function returns the decompressed MODIS file as a 1-tuple.
 
-(defmapop unpack {:stateful true}
+;; dataset_index2name = {11:'ndvi', 2:'evi', 5:'reli', 9:'qual'}   # indices are within the MODIS HDF4 files
+
+(defmapcatop unpack {:stateful true}
   ([]
      (do
        (gdal/AllRegister)
@@ -51,3 +52,31 @@
          (gdal/Open (.toString tfile) 0))))
   ([tdir]
      (i/delete-file-recursively tdir)))
+
+(def opened-file (gdal/Open "/Users/sritchie/Desktop/MODISTEST/MOD13A3.A2000183.h08v06.005.2006310224652.hdf"))
+
+(def subdata-map {:evi "monthly EVI"
+                  :qual "VI Quality"
+                  :red "red reflectance"
+                  :nir "NIR reflectance"
+                  :azi "azimuth"
+                  :blue "blue reflectance"
+                  :reli "monthly pixel"
+                  :viewz "view zenith"
+                  :ndvi "NDVI"
+                  :sunz "sun zenith"})
+
+(def forma-sets #{:ndvi :evi :qual :reli})
+
+(defn keep-dataset? [entry]
+  (and (s/substring? "_NAME" (.getKey entry))
+       (some #(s/substring? % (.getValue entry)) (vals subdata-map))))
+
+(let [metadata (.GetMetadata_Dict opened-file "SUBDATASETS")]
+  (map #(gdal/Open (.getValue %))
+       (filter keep-dataset? metadata)))
+
+;; (let [metadata (.GetMetadata_Dict opened-file "SUBDATASETS")]
+;;   (map-indexed #(.get metadata %2)
+;;                (filter #(s/substring? "_NAME" %)
+;;                        (enumeration-seq (.keys metadata)))))

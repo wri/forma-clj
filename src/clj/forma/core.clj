@@ -24,14 +24,6 @@
 
 ;; ##Helper Functions
 
-(defn add-metadata
-  "Takes a seq of keys and an unpacked modis tile, and returns
-   a number of fields based on the size of the input sequence."
-  [modis keys]
-  (let [outargs (v/gen-nullable-vars (count keys))]
-    (<- outargs (modis ?freetile)
-        (h/meta-values [keys] ? :>> outargs))))
-
 ;; We currently can't have a subquery that returns any sort
 ;; of custom dataset. Once I get a response on the cascalog user group,
 ;; we need to go ahead and refactor this.
@@ -45,6 +37,14 @@
 
 ;; ## Example Queries
 ;; This is the good stuff!
+
+(defn add-metadata
+  "Takes a seq of keys and an unpacked modis tile, and returns
+   a number of fields based on the size of the input sequence."
+  [modis keys]
+  (let [outargs (v/gen-nullable-vars (count keys))]
+    (<- outargs (modis ?freetile)
+        (h/meta-values [keys] ? :>> outargs))))
 
 (defn same-tiles
   "Refactored version of unique tiles."
@@ -65,25 +65,13 @@
 
 (defn modis-chunks
   "Chunker."
-  [hdf]
+  [hdf-source]
   (let [keys ["TileID"]]
     (<- [?tileid]
-        (hdf ?hdf)
+        (hdf-source ?hdf)
         (h/unpack ?hdf :> ?freetile)
         (h/meta-values [keys] ?freetile :> ?tileid)
         (:distinct false))))
-
-;; (defn unique-tiles
-;;   "Processes all HDF files in the supplied directory, and prints the TileIDs
-;;    and their associated counts to standard out."
-;;   [nasa-dir]
-;;   (let [nasa-files (all-files nasa-dir)
-;;         tile-keys ["TileID"]]
-;;     (?<- (stdout) [?tileid ?count]
-;;          (nasa-files ?hdf)
-;;          (h/unpack ?hdf :> ?freetile)
-;;          (h/meta-values [tile-keys] ?freetile :> ?tileid) 
-;;          (c/count ?count))))
 
 (defn unique-tiles
   "Processes all HDF files in the supplied directory, and prints the TileIDs
