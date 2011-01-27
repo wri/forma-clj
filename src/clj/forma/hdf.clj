@@ -31,7 +31,7 @@
 
 (defn metadata
   "Returns the metadata hashtable for the supplied (opened) MODIS file."
-  [modis arg]
+  [^Dataset modis arg]
   (.GetMetadata_Dict modis arg))
 
 (defn subdataset-key
