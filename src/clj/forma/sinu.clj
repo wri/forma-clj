@@ -20,12 +20,12 @@
   (* arg *rho* (/ (Math/PI) 180)))
 
 (defn x-from-geo
-  "Returns the sinusoidal projection's x coordinate in meters for a given latitude and longitude."
+  "Returns the sinusoidal projection's x coordinate in meters for a given lat and long (in degrees)."
   [lat lon]
   (degs-by-rho (* (Math/cos (Math/toRadians lat)) lon)))
 
 (defn y-from-geo
-  "Returns the sinusoidal projection's y coordinate in meters for a given latitude and longitude."
+  "Returns the sinusoidal projection's y coordinate in meters for a given lat and long (in degrees)."
   [lat lon]
   (degs-by-rho lat))
 
@@ -33,40 +33,46 @@
 (def min-y (y-from-geo -90 0))
 (def max-y (y-from-geo 90 0))
 
-(def grid-size
-  (let [y-tiles 18]
-    (/ (- max-y min-y) y-tiles)))
+(defn pixel-length
+  "The length, in meters, of the edge of a pixel at a given resolution."
+  [res]
+  (let [y-tiles 18
+        pixel-span (/ (- max-y min-y) y-tiles)]
+    (/ pixel-span (pixels-at-res res))))
 
 (defn lat-long
   "Computes the latitude and longitude for a given set of sinusoidal map coordinates (in meters)."
   [x y]
   (let [lat (/ y *rho*)
         lon (/ x (* *rho* (Math/cos lat)))]
-    (map #(Math/toDegrees %) (vector lat lon))))
+    (map #(Math/toDegrees %) [lat lon])))
 
+(defn distance
+  "Calculates distance of magnitude from the starting point in a given direction."
+  [dir start magnitude]
+  (dir start magnitude))
 
-(defn image-coords
+(defn scale
+  "Scales each element in a collection of numbers by the supplied factor."
+  [fact seq]
+  (for [x seq] (* x fact)))
+
+(defn pixel-coords
   "returns the row and dimension of the pixel on the global MODIS grid."
   [mod-y mod-x line sample res]
-  (let [tile-size (pixels-at-res res)]
-    (vector (+ sample
-               (* mod-x tile-size))
-            (+ line
-               (* mod-y tile-size)))))
+  (let [edge-pixels (pixels-at-res res)]
+    (map + [sample line] (scale edge-pixels [mod-x mod-y]))))
 
 (defn map-coords
   "Returns the map position in meters for a given MODIS tile coordinate at the specified resolution."
   [mod-y mod-x line sample res]
-  (let [tile-size (/ grid-size (pixels-at-res res))
-        half-tile (/ tile-size 2)
-        ul-x (+ min-x half-tile)
-        ul-y (- max-y half-tile)
-        pos (image-coords mod-y mod-x line sample res)]
-    (vector (+ ul-x (* (first pos) tile-size))
-            (- ul-y (* (second pos) tile-size)))))
+  (let [edge-length (pixel-length res)
+        half-edge (/ edge-length 2)
+        pix-pos (pixel-coords mod-y mod-x line sample res)
+        magnitudes (map #(+ half-edge %) (scale edge-length pix-pos))]
+    (map distance [+ -] [min-x max-y] magnitudes)))
 
 (defn geo-coords
   "Returns the latitude and longitude for a given group of MODIS tile coordinates at the specified resolution."
   [mod-y mod-x line sample res]
-  (let [map-point (map-coords mod-y mod-x line sample res)]
-    (lat-long (first map-point) (second map-point))))
+  (apply lat-long (map-coords mod-y mod-x line sample res)))
