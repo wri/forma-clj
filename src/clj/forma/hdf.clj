@@ -91,6 +91,14 @@ MODIS subdataset keys."}
     (do (.ReadRaster band 0 0 width height type ret)
         ret)))
 
+;; ##Conversion between MODIS and mercator.
+(defn modis-position
+  "For a given MODIS chunk and index within that chunk, returns [line, sample] within the MODIS tile."
+  [chunk index]
+  (let [line (* chunk *chunk-size*)
+        sample (+ line index)]
+    (vector line sample)))
+
 ;; ##Cascalog Custom Functions
 ;; These guys actually get called by the queries inside of core.
 
