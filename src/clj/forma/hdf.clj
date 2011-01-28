@@ -91,8 +91,7 @@ MODIS subdataset keys."}
     (do (.ReadRaster band 0 0 width height type ret)
         ret)))
 
-;; ##Conversion between MODIS and mercator.
-(defn modis-position
+(defn tile-position
   "For a given MODIS chunk and index within that chunk, returns [line, sample] within the MODIS tile."
   [chunk index]
   (let [line (* chunk *chunk-size*)
