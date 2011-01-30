@@ -6,6 +6,9 @@
   (:require [cascalog [ops :as c] [workflow :as w] [io :as io]]
             [clojure.contrib [math :as m] [io :as i] [string :as s]]))
 
+
+(set! *warn-on-reflection* true)
+
 ;; ##Constants
 
 (def

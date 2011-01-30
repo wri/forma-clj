@@ -4,41 +4,41 @@
 ;; http://www.dfanning.com/map_tips/modis_overlay.html
 ;; NASA stopped using integerized sinusoidal projection in collection 3, and moved on to strictly
 ;; sinusoidal in collection 4. I believe that NDVI uses a straight up sinusoidal, so that's all we need to worry about.
+;; 38,800 chunks for the 1km data means that to do a straight lookup for everything on the rain table is going to take,
+;; roughly, 90 minutes (distributed across machines). Gotta be a faster way to do this!
+
 
 (ns forma.sinu)
 
 (def *rho* 6371007.181)
+(def *pi* (Math/PI))
+(def *x-tiles* 36)
+(def *y-tiles* 18)
 
 (def pixels-at-res
   {:250 4800
    :500 2400
    :1000 1200})
 
+(defn cos
+  "Takes the cosine of the supplied angle. Angle must be in degrees."
+  [angle]
+  (Math/cos (Math/toRadians angle)))
+
 (defn degs-by-rho
   "Multiplies the argument by rho and converts the answer to radians."
   [arg]
-  (* arg *rho* (/ (Math/PI) 180)))
+  (* arg *rho* (/ *pi* 180)))
 
-(defn x-from-geo
+(defn sinusoidal-x
   "Returns the sinusoidal projection's x coordinate in meters for a given lat and long (in degrees)."
   [lat lon]
-  (degs-by-rho (* (Math/cos (Math/toRadians lat)) lon)))
+  (degs-by-rho (* (cos lat) lon)))
 
-(defn y-from-geo
+(defn sinusoidal-y
   "Returns the sinusoidal projection's y coordinate in meters for a given lat and long (in degrees)."
   [lat lon]
   (degs-by-rho lat))
-
-(def min-x (x-from-geo 0 -180))
-(def min-y (y-from-geo -90 0))
-(def max-y (y-from-geo 90 0))
-
-(defn pixel-length
-  "The length, in meters, of the edge of a pixel at a given resolution."
-  [res]
-  (let [y-tiles 18
-        pixel-span (/ (- max-y min-y) y-tiles)]
-    (/ pixel-span (pixels-at-res res))))
 
 (defn lat-long
   "Computes the latitude and longitude for a given set of sinusoidal map coordinates (in meters)."
@@ -46,6 +46,17 @@
   (let [lat (/ y *rho*)
         lon (/ x (* *rho* (Math/cos lat)))]
     (map #(Math/toDegrees %) [lat lon])))
+
+(def min-x (sinusoidal-x 0 -180))
+(def min-y (sinusoidal-y -90 0))
+(def max-y (sinusoidal-y 90 0))
+
+(defn pixel-length
+  "The length, in meters, of the edge of a pixel at a given resolution."
+  [res]
+  (let [pixel-span (/ (- max-y min-y) *y-tiles*)
+        total-pixels (pixels-at-res res)]
+    (/ pixel-span total-pixels)))
 
 (defn distance
   "Calculates distance of magnitude from the starting point in a given direction."
