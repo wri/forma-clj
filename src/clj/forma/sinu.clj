@@ -7,11 +7,13 @@
 ;; 38,800 chunks for the 1km data means that to do a straight lookup for everything on the rain table is going to take,
 ;; roughly, 90 minutes (distributed across machines). Gotta be a faster way to do this!
 
+(ns forma.sinu
+  (:use [clojure.contrib.generic.math-functions :only (cos)]))
 
-(ns forma.sinu)
+
+;; ## Constants
 
 (def *rho* 6371007.181)
-(def *pi* (Math/PI))
 (def *x-tiles* 36)
 (def *y-tiles* 18)
 
@@ -20,43 +22,10 @@
    :500 2400
    :1000 1200})
 
-(defn cos
-  "Takes the cosine of the supplied angle. Angle must be in degrees."
-  [angle]
-  (Math/cos (Math/toRadians angle)))
+;; ## Helper Functions
 
-(defn degs-by-rho
-  "Multiplies the argument by rho and converts the answer to radians."
-  [arg]
-  (* arg *rho* (/ *pi* 180)))
-
-(defn sinusoidal-x
-  "Returns the sinusoidal projection's x coordinate in meters for a given lat and long (in degrees)."
-  [lat lon]
-  (degs-by-rho (* (cos lat) lon)))
-
-(defn sinusoidal-y
-  "Returns the sinusoidal projection's y coordinate in meters for a given lat and long (in degrees)."
-  [lat lon]
-  (degs-by-rho lat))
-
-(defn lat-long
-  "Computes the latitude and longitude for a given set of sinusoidal map coordinates (in meters)."
-  [x y]
-  (let [lat (/ y *rho*)
-        lon (/ x (* *rho* (Math/cos lat)))]
-    (map #(Math/toDegrees %) [lat lon])))
-
-(def min-x (sinusoidal-x 0 -180))
-(def min-y (sinusoidal-y -90 0))
-(def max-y (sinusoidal-y 90 0))
-
-(defn pixel-length
-  "The length, in meters, of the edge of a pixel at a given resolution."
-  [res]
-  (let [pixel-span (/ (- max-y min-y) *y-tiles*)
-        total-pixels (pixels-at-res res)]
-    (/ pixel-span total-pixels)))
+(defn to-rad [angle] (Math/toRadians angle))
+(defn to-deg [angle] (Math/toDegrees angle))
 
 (defn distance
   "Calculates distance of magnitude from the starting point in a given direction."
@@ -65,8 +34,52 @@
 
 (defn scale
   "Scales each element in a collection of numbers by the supplied factor."
-  [fact seq]
-  (for [x seq] (* x fact)))
+  [fact sequence]
+  (for [x sequence] (* x fact)))
+
+(defn x-coord
+  "Returns the x coordinate for a given (lat, long) point."
+  [point]
+  (first point))
+
+(defn y-coord
+  "Returns the y coordinate for a given (lat, long) point."  
+  [point]
+  (second point))
+
+(defn sinu-xy
+  "Computes the sinusoidal x and y coordinates for the supplied latitude and longitude (in radians)."
+    [lat lon]
+  (scale *rho* [(* (cos lat) lon) lat]))
+
+(defn sinu-deg-xy
+  "Computes the sinusoidal x and y coordinates for the supplied latitude and longitude (in degrees)."  
+  [lat lon]
+  (apply sinu-xy (map to-rad [lat lon])))
+
+(defn lat-long
+  "Computes the latitude and longitude for a given set of sinusoidal map coordinates (in meters)."
+  [x y]
+  (let [lat (/ y *rho*)
+        lon (/ x (* *rho* (cos lat)))]
+    (map to-deg [lat lon])))
+
+
+;; These are the meter values of the minimum possible x and y values on a sinusoidal projection. Things get weird at the corners,
+;; so I compute the minimum x and y values separately, along the projection's axes.
+
+(def min-x (x-coord (sinu-deg-xy 0 -180)))
+(def min-y (y-coord (sinu-deg-xy -90 0)))
+(def max-y (y-coord (sinu-deg-xy 90 0)))
+
+(defn pixel-length
+  "The length, in meters, of the edge of a pixel at a given resolution."
+  [res]
+  (let [pixel-span (/ (- max-y min-y) *y-tiles*)
+        total-pixels (pixels-at-res res)]
+    (/ pixel-span total-pixels)))
+
+;; ## Main Conversion Functions
 
 (defn pixel-coords
   "returns the row and dimension of the pixel on the global MODIS grid."
