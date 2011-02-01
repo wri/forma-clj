@@ -4,7 +4,8 @@
   :javac-options {:debug "true" :fork "true"}
   :dependencies [[org.clojure/clojure "1.2.0"]
                  [org.clojure/clojure-contrib "1.2.0"]
-                 [cascalog "1.6.0-SNAPSHOT"]
+                 [incanter "1.2.3"]
+                 [cascalog "1.7.0-SNAPSHOT"]
                  ]
   :native-dependencies [[org.clojars.sritchie09/gdal-java-osx-native-deps "1.0.0"]]
   :repositories {"conjars" "http://conjars.org/repo/"}

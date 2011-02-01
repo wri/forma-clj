@@ -1,5 +1,6 @@
 (ns forma.hdf
-  (:use cascalog.api)
+  (:use cascalog.api
+        forma.hadoop)
   (:import [java.util Map$Entry Hashtable]
            [java.io File]
            [org.gdal.gdal gdal Dataset Band]
@@ -72,12 +73,6 @@ MODIS subdataset keys."}
   [^Map$Entry entry]
   (vector (subdataset-key entry) (gdal/Open (.getValue entry))))
 
-(defn get-bytes
-  "Extracts a byte array from a Hadoop BytesWritable object."
-  [^BytesWritable bytes]
-  (byte-array (.getLength bytes)
-              (.getBytes bytes)))
-
 (defn subdatasets
   "Returns the SUBDATASETS metadata Hashtable for a given filepath."
   [^File hdf-file]
@@ -87,13 +82,12 @@ MODIS subdataset keys."}
 (defn raster-array
   "Unpacks the data inside of a MODIS band into a 1xN integer array."
   [^Dataset data]
-  (let [band (.GetRasterBand data 1)
+  (let [^Band band (.GetRasterBand data 1)
         type (gdalconstConstants/GDT_UInt16)
         width (.GetXSize band)
         height (.GetYSize band)
         ret (int-array (* width height))]
-    (do (.ReadRaster band 0 0 width height type ret)
-        ret)))
+    (do (.ReadRaster band 0 0 width height type ret) ret)))
 
 (defn tile-position
   "For a given MODIS chunk and index within that chunk, returns [line, sample] within the MODIS tile."
@@ -113,7 +107,7 @@ Dataset and a seq of keys."}
     (map #(.get metadata %) meta-keys)))
 
 (defmapcatop
-  #^{:doc "Stateful approach to unpacking HDF files. Registers all
+    #^{:doc "Stateful approach to unpacking HDF files. Registers all
 gdal formats, Creates a temp directory, then saves the byte array to
 disk. This byte array is processed with gdal, and then the temp
 directory is destroyed. Function returns the decompressed MODIS file
