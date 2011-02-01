@@ -14,5 +14,6 @@
                      [lein-eclipse "1.0.0"]
                      [marginalia "0.2.3"]
                      [native-deps "1.0.5"]
+                     [midje "1.0.1"]
                      ])
 

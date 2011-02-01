@@ -1,11 +1,12 @@
 (ns forma.hdf
   (:use cascalog.api)
-  (:import [org.gdal.gdal gdal Dataset Band]
+  (:import [java.util Map$Entry Hashtable]
+           [java.io File]
+           [org.gdal.gdal gdal Dataset Band]
            [org.gdal.gdalconst gdalconstConstants]
            [org.apache.hadoop.io BytesWritable])
   (:require [cascalog [ops :as c] [workflow :as w] [io :as io]]
             [clojure.contrib [math :as m] [io :as i] [string :as s]]))
-
 
 (set! *warn-on-reflection* true)
 
@@ -46,7 +47,7 @@ MODIS subdataset keys."}
 
 (defn subdataset-key
   "For a given Hashtable entry, returns the associated key in *modis-subsets*."
-  [entry]
+  [^Map$Entry entry]
   (let [val (.getValue entry)
         key (.getKey entry)]
     (some #(if (s/substring? (% *modis-subsets*) val) %)
@@ -57,7 +58,7 @@ MODIS subdataset keys."}
    set of acceptable keys. These keys should exist in *modis-subsets*."
   [good-keys]
   (let [kept-substrings (map *modis-subsets* good-keys)]
-    (fn [entry]
+    (fn [^Map$Entry entry]
       (let [val (.getValue entry)
             key (.getKey entry)]
         (and (s/substring? "_NAME" key)
@@ -68,7 +69,7 @@ MODIS subdataset keys."}
 (defn make-subdataset
   "Accepts an entry in the SUBDATASETS Hashtable of a MODIS Dataset, and returns
    a 2-tuple with the forma dataset key and the Dataset object."
-  [entry]
+  [^Map$Entry entry]
   (vector (subdataset-key entry) (gdal/Open (.getValue entry))))
 
 (defn get-bytes
@@ -79,7 +80,7 @@ MODIS subdataset keys."}
 
 (defn subdatasets
   "Returns the SUBDATASETS metadata Hashtable for a given filepath."
-  [hdf-file]
+  [^File hdf-file]
   (let [path (.toString hdf-file)]
     (metadata (gdal/Open path) "SUBDATASETS")))
 
@@ -108,7 +109,7 @@ MODIS subdataset keys."}
   #^{:doc "Generates metadata values for a given unpacked MODIS
 Dataset and a seq of keys."}
   [meta-values [meta-keys]] [modis]
-  (let [metadata (metadata modis "")]
+  (let [^Hashtable metadata (metadata modis "")]
     (map #(.get metadata %) meta-keys)))
 
 (defmapcatop
@@ -122,7 +123,7 @@ as a 1-tuple."}
      (do
        (gdal/AllRegister)
        (io/temp-dir "hdf")))
-  ([tdir stream]
+  ([tdir ^BytesWritable stream]
      (let [hash (Integer/toString (m/abs (.hashCode stream)))
            tfile (i/file tdir hash)
            bytes (get-bytes stream)]

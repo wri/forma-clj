@@ -1,6 +1,6 @@
 (ns forma.test.core
   (:use [forma.core] :reload)
-  (:use [clojure.test]))
+  (:use midje.sweet))
 
-(deftest replace-me ;; FIXME: write
+(deftest replace-me
   (is true "No tests have been written."))
