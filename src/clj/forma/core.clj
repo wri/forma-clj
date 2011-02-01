@@ -4,8 +4,8 @@
   (:require [cascalog [vars :as v] [ops :as c] [workflow :as w]]
             [forma [hdf :as h]]))
 
-;; ##Tap files
-;; These help define the source tap that will slurp up HDF files from a local file, remote file, or S3 bucket.
+;; ##Tap files These help define the source tap that will slurp up HDF
+;; files from a local file, remote file, or S3 bucket.
 
 (defn whole-file
   "Custom scheme for dealing with entire files."

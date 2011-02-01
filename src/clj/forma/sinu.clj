@@ -13,7 +13,6 @@
 (ns forma.sinu
   (:use [clojure.contrib.generic.math-functions :only (cos)]))
 
-
 ;; ## Constants
 
 (def *rho* 6371007.181)
