@@ -7,6 +7,7 @@
                  [cascalog "1.6.0-SNAPSHOT"]
                  ]
   :native-dependencies [[org.clojars.sritchie09/gdal-java-osx-native-deps "1.0.0"]]
+  :repositories {"conjars" "http://conjars.org/repo/"}
   :dev-dependencies [
                      [org.apache.hadoop/hadoop-core "0.20.2-dev"]
                      [swank-clojure "1.2.1"]
