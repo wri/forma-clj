@@ -1,11 +1,14 @@
 ;; I want to go ahead and rewrite the code found at this site:
-;; http://landweb.nascom.nasa.gov/developers/tilemap/note.html
-;; Now, as referenced here:
-;; http://www.dfanning.com/map_tips/modis_overlay.html
-;; NASA stopped using integerized sinusoidal projection in collection 3, and moved on to strictly
-;; sinusoidal in collection 4. I believe that NDVI uses a straight up sinusoidal, so that's all we need to worry about.
-;; 38,800 chunks for the 1km data means that to do a straight lookup for everything on the rain table is going to take,
-;; roughly, 90 minutes (distributed across machines). Gotta be a faster way to do this!
+;; http://landweb.nascom.nasa.gov/developers/tilemap/note.html Now, as
+;; referenced here:
+;; http://www.dfanning.com/map_tips/modis_overlay.html this os what
+;; NASA stopped using integerized sinusoidal projection in
+;; collection 3, and moved on to strictly sinusoidal in collection
+;; 4. I believe that NDVI uses a straight up sinusoidal, so that's all
+;; we need to worry about.  38,800 chunks for the 1km data means that
+;; to do a straight lookup for everything on the rain table is going
+;; to take, roughly, 90 minutes (distributed across machines). Gotta
+;; be a faster way to do this!
 
 (ns forma.sinu
   (:use [clojure.contrib.generic.math-functions :only (cos)]))
@@ -65,8 +68,10 @@
     (map to-deg [lat lon])))
 
 
-;; These are the meter values of the minimum possible x and y values on a sinusoidal projection. Things get weird at the corners,
-;; so I compute the minimum x and y values separately, along the projection's axes.
+;; These are the meter values of the minimum possible x and y values
+;; on a sinusoidal projection. Things get weird at the corners, so I
+;; compute the minimum x and y values separately, along the
+;; projection's axes.
 
 (def min-x (x-coord (sinu-deg-xy 0 -180)))
 (def min-y (y-coord (sinu-deg-xy -90 0)))
