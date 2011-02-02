@@ -29,10 +29,8 @@ public class WholeFile extends Scheme {
     public Tuple source( Object key, Object value )
     {
         Tuple tuple = new Tuple();
-
-        tuple.add( key.toString() );
+        tuple.add(key.toString());
         tuple.add(value);
-
         return tuple;
     }
     
