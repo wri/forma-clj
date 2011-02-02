@@ -8,9 +8,10 @@
 (ns forma.rain
   (:use cascalog.api
         forma.hadoop
-        [clojure.contrib.io :only [as-file to-byte-array *byte-array-type*]])
+        [clojure.contrib.io :only [file to-byte-array *byte-array-type*]])
   (:import [java.io File]
-           [java.nio FloatBuffer HeapByteBuffer]))
+           [java.nio FloatBuffer HeapByteBuffer]
+           [forma LittleEndianDataInputStream]))
 
 (set! *warn-on-reflection* true)
 
@@ -65,7 +66,7 @@
 (defmethod to-byte-buffer HeapByteBuffer [^HeapByteBuffer x] x)
 
 (defmethod to-byte-buffer String [^String str]
-  (to-byte-buffer (as-file str)))
+  (to-byte-buffer (file str)))
 
 (defmethod to-byte-buffer File [^File f]
   (to-byte-buffer (to-byte-array f)))
