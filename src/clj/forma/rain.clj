@@ -14,6 +14,8 @@
 
 (set! *warn-on-reflection* true)
 
+(def test-file "/Users/sritchie/Desktop/FORMA/RainTest/precl_mon_v1.0.lnx.2009.gri0.5m")
+
 (def *float-bytes* (/ ^Integer (Float/SIZE)
                       ^Integer (Byte/SIZE)))
 
@@ -104,8 +106,8 @@
   "Returns a lazy seq of all months inside of a yearly rain array."
   [^HeapByteBuffer buf]
   (let [area (area-at-res *forma-res*)]
-    (map #(take area (lazy-floats %))
-         (for [i (range 12)] (extract-month i buf)))))
+    (map-indexed #(vector %1 (take area (lazy-floats %2)))
+                 (for [i (range 12)] (extract-month i buf)))))
 
 ;; ## Cascalog Queries
 

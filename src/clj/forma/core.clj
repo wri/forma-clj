@@ -2,7 +2,7 @@
   (:use cascalog.api)
   (:import [forma WholeFile])
   (:require [cascalog [vars :as v] [ops :as c] [workflow :as w]]
-            [forma [hdf :as h]]))
+            [forma [hdf :as h] [rain :as r]]))
 
 ;; ## Tap files
 ;; These help define the source tap that will slurp up HDF
@@ -87,4 +87,14 @@
     (?<- (stdout) [?tileid ?count]
          (nasa-files ?dataset ?unpacked)
          (add-metadata ?unpacked ["TileID"] :> ?tileid)
+         (c/count ?count))))
+
+(defn rain-months
+  "Test query! Returns the count of output data sets for each month, from
+   0 to 11."
+  [rain-dir]
+  (let [rain-files (all-files rain-dir)]
+    (?<- (stdout) [?month ?count]
+         (rain-files ?file)
+         (r/rain-months ?file :> ?month ?month-data)
          (c/count ?count))))
