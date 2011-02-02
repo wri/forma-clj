@@ -7,11 +7,11 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.RecordReader;
 
-class WholeFileRecordReader implements RecordReader<NullWritable, BytesWritable> {
+class WholeFileRecordReader implements RecordReader<Text, BytesWritable> {
   
     private FileSplit fileSplit;
     private Configuration conf;
@@ -23,8 +23,32 @@ class WholeFileRecordReader implements RecordReader<NullWritable, BytesWritable>
     }
 
     @Override
-    public NullWritable createKey() {
-        return NullWritable.get();
+    public boolean next(Text key, BytesWritable value) throws IOException {
+        if (!processed) {
+            byte[] contents = new byte[(int) fileSplit.getLength()];
+            Path file = fileSplit.getPath();
+
+            String fileName = file.getName();
+            key.set(fileName);
+
+            FileSystem fs = file.getFileSystem(conf);
+            FSDataInputStream in = null;
+            try {
+                in = fs.open(file);
+                IOUtils.readFully(in, contents, 0, contents.length);                
+                value.set(contents, 0, contents.length);
+            } finally {
+                IOUtils.closeStream(in);
+            }
+            processed = true;
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public Text createKey() {
+        return new Text();
     }
 
     @Override
@@ -40,27 +64,6 @@ class WholeFileRecordReader implements RecordReader<NullWritable, BytesWritable>
     @Override
     public float getProgress() throws IOException {
         return processed ? 1.0f : 0.0f;
-    }
-
-    @Override
-    public boolean next(NullWritable key, BytesWritable value) throws IOException {
-        if (!processed) {
-            byte[] contents = new byte[(int) fileSplit.getLength()];
-            Path file = fileSplit.getPath();
-
-            FileSystem fs = file.getFileSystem(conf);
-            FSDataInputStream in = null;
-            try {
-                in = fs.open(file);
-                IOUtils.readFully(in, contents, 0, contents.length);                
-                value.set(contents, 0, contents.length);
-            } finally {
-                IOUtils.closeStream(in);
-            }
-            processed = true;
-            return true;
-        }
-        return false;
     }
 
     @Override
