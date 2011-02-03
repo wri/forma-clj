@@ -8,9 +8,8 @@
 (ns forma.rain
   (:use cascalog.api
         forma.hadoop
-        [clojure.contrib.io :only [file to-byte-array *byte-array-type*]])
-  (:import [java.io File]
-           [java.nio FloatBuffer HeapByteBuffer]
+        [clojure.contrib.io :only [input-stream file *byte-array-type*]])
+  (:import [java.io File InputStream]
            [forma LittleEndianDataInputStream]))
 
 (set! *warn-on-reflection* true)
@@ -42,12 +41,6 @@
   (* (area-at-res res)
      *float-bytes*))
 
-(defn get-float
-  "Retrieves the float for the supplied array index, taking
-   the byte length of a float into account."
-  [index ^HeapByteBuffer array]
-  (.getFloat array (* index *float-bytes*)))
-
 ;; ## Buffer Slurping
 
 ;;Java reads its byte arrays in using big endian format -- this rain
@@ -56,66 +49,66 @@
 ;;allow a number of ways for a little-endian binary file to be
 ;;accessed using a HeapByteBuffer.
 
-(defmulti
-  #^{:doc "Converts argument into a HeapByteBuffer.  Argument may be
-  a File, String, or another HeapByteBuffer.  If the argument is already
-  a HeapByteBuffer, returns it."
-     :arglists '([arg])}
-  to-byte-buffer type)
+(derive java.lang.String ::fileable)
+(derive java.io.File ::fileable)
 
-(defmethod to-byte-buffer HeapByteBuffer [^HeapByteBuffer x] x)
+(defmulti #^{:doc "Converts argument into a DataInputStream, with
+    little endian byte order. Argument may be an Input Stream, File,
+    String, byte array, or another LittleEndianDataInputStream. If the
+    latter is true, acts as identity."
+             :arglists '([arg])}
+  little-stream type)
 
-(defmethod to-byte-buffer String [^String str]
-  (to-byte-buffer (file str)))
+(defmethod little-stream LittleEndianDataInputStream [^LittleEndianDataInputStream x] x)
 
-(defmethod to-byte-buffer File [^File f]
-  (to-byte-buffer (to-byte-array f)))
+(defmethod little-stream InputStream [^InputStream x]
+  (LittleEndianDataInputStream. x))
 
-(defmethod to-byte-buffer *byte-array-type* [^bytes b]
-  (-> b
-      java.nio.ByteBuffer/wrap
-      (.order java.nio.ByteOrder/LITTLE_ENDIAN)))
+(defmethod little-stream ::fileable [x]
+  (LittleEndianDataInputStream. (input-stream (file x))))
+
+(defmethod little-stream *byte-array-type* [^bytes b]
+  (LittleEndianDataInputStream. (input-stream b)))
 
 ;; ## Data Extraction
 
-;; The following methods pull various float chunks out of a yearly
-;; PREC/L file and return them as a lazy sequence. Note that none of
-;; the various matrix transformations required by FORMA have been done
-;; to the data, yet.
+;; (Note that none of the various matrix transformations required by
+;; FORMA have been done to the data, yet.)
 
 (defn lazy-floats
   "Creates a lazy seq from the supplied byte buffer."
-  [#^HeapByteBuffer buf]
+  [^LittleEndianDataInputStream buf]
   (lazy-seq
    (try
-     (cons (.getFloat buf) (lazy-floats buf))
-     (catch java.nio.BufferUnderflowException e
-       (.rewind buf)))))
+     (cons (.readFloat buf) (lazy-floats buf))
+     (catch java.io.IOException e
+       (.close buf)))))
 
-(defn extract-month
-  "Extracts the bytes representing rainfall data for a given month from a yearly
-   binary PREC/L file. Assumes 0.5 degree resolution."
-  [index ^HeapByteBuffer f]
-  (let [arr-size (floats-for-res *forma-res*)
-        month-offset (* index arr-size 2)
-        ret-array (byte-array arr-size)]
-    (do (.position f month-offset)
-        (.get f ret-array 0 arr-size)
-        (to-byte-buffer ret-array))))
+(defn lazy-months
+  "Generates a lazy seq of byte-arrays from a binary NOAA PREC/L
+  file. Elements alternate between precipitation rate in mm / day and
+  total # of gauges."
+  ([^InputStream stream] (lazy-months stream *forma-res*))
+  ([^InputStream stream res]
+     (let [arr-size (floats-for-res res)
+           buf (byte-array arr-size)]
+       (if (pos? (.read stream buf))
+         (lazy-seq
+          (cons buf (lazy-months stream)))))))
 
 (defn all-months
   "Returns a lazy seq of all months inside of a yearly rain array."
-  [^HeapByteBuffer buf]
-  (let [area (area-at-res *forma-res*)]
-    (map-indexed #(vector %1 (take area (lazy-floats %2)))
-                 (for [i (range 12)] (extract-month i buf)))))
+  [^InputStream stream]
+    (map-indexed #(vector %1 (lazy-floats (little-stream %2)))
+                 (take-nth 2 (lazy-months stream))))
 
 ;; ## Cascalog Queries
+;; [TODO] Add in with-open, where appropriate.
 
 (defmapcatop
   #^{:doc "Unpacks a yearly PREC/L binary file, and returns its
-months as a lazy sequence."}
+    months as a lazy sequence."}
   rain-months
   [^BytesWritable stream]
   (let [bytes (get-bytes stream)]
-    (all-months (to-byte-buffer bytes))))
+    (all-months (input-stream bytes))))

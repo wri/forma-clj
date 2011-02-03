@@ -1,6 +1,7 @@
 (ns forma.core
   (:use cascalog.api)
-  (:import [forma WholeFile])
+  (:import [forma WholeFile]
+           [cascading.tuple Fields])
   (:require [cascalog [vars :as v] [ops :as c] [workflow :as w]]
             [forma [hdf :as h] [rain :as r]]))
 
@@ -102,7 +103,7 @@
    0 to 11."
   [rain-dir]
   (let [rain-files (files-with-names rain-dir)]
-    (?<- (stdout) [?filename ?count]
+    (?<- (stdout) [?filename ?month ?count]
          (rain-files ?filename ?file)
          (r/rain-months ?file :> ?month ?month-data)
          (c/count ?count))))
