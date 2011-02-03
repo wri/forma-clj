@@ -68,14 +68,14 @@
      (c/count ?count))))
 
 (defn modis-chunks
-  "Chunker currently returns the TileID alone.
+  "Chunker currently returns the TileID and Julian time.
    [TODO] figure out what metadata we need associated with each chunk."
   [hdf-source]
-  (let [keys ["TileID"]]
-    (<- [?tileid]
+  (let [keys ["TileID" "PRODUCTIONDATETIME"]]
+    (<- [?tileid ?juliantime]
         (hdf-source ?hdf)
         (h/unpack ?hdf :> ?dataset ?freetile)
-        (h/meta-values [keys] ?freetile :> ?tileid)
+        (h/meta-values [keys] ?freetile :> ?tileid ?juliantime)
         (:distinct false))))
 
 (defn unique-tiles
@@ -85,7 +85,7 @@
   (let [nasa-files (all-files nasa-dir)
         chunks (modis-chunks nasa-files)]
     (?<- (stdout) [?tileid ?count]
-         (chunks ?tileid)
+         (chunks ?tileid ?juliantime)
          (c/count ?count))))
 
 (defn same-tiles

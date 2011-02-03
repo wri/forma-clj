@@ -43,11 +43,19 @@ MODIS subdataset keys."}
 
 (defn metadata
   "Returns the metadata hashtable for the supplied (opened) MODIS file."
-  [^Dataset modis arg]
-  (.GetMetadata_Dict modis arg))
+  ([^Dataset modis arg]
+     (.GetMetadata_Dict modis arg))
+  ([^Dataset modis]
+     (metadata modis "")))
+
+(defn lookup
+  "Looks up a key in the supplied hashtable."
+  [key ^Hashtable table]
+  (.get table key))
 
 (defn subdataset-key
-  "For a given Hashtable entry, returns the associated key in modis-subsets."
+  "For a given Hashtable entry, returns the associated key in
+  modis-subsets."
   [^Map$Entry entry]
   (let [val (.getValue entry)
         key (.getKey entry)]
@@ -55,8 +63,9 @@ MODIS subdataset keys."}
           (keys modis-subsets))))
 
 (defn subdataset-filter
-  "Generates a predicate function that compares Hashtable entries to a supplied
-   set of acceptable keys. These keys should exist in modis-subsets."
+  "Generates a predicate function that compares Hashtable entries to a
+   supplied set of acceptable keys. These keys should exist in
+   modis-subsets."
   [good-keys]
   (let [kept-substrings (map modis-subsets good-keys)]
     (fn [^Map$Entry entry]
@@ -68,8 +77,9 @@ MODIS subdataset keys."}
 (def forma-dataset? (subdataset-filter forma-subsets))
 
 (defn make-subdataset
-  "Accepts an entry in the SUBDATASETS Hashtable of a MODIS Dataset, and returns
-   a 2-tuple with the forma dataset key and the Dataset object."
+  "Accepts an entry in the SUBDATASETS Hashtable of a MODIS Dataset,
+   and returns a 2-tuple with the forma dataset key and the Dataset
+   object."
   [^Map$Entry entry]
   (vector (subdataset-key entry) (gdal/Open (.getValue entry))))
 
@@ -90,24 +100,25 @@ MODIS subdataset keys."}
     (do (.ReadRaster band 0 0 width height type ret) ret)))
 
 (defn tile-position
-  "For a given MODIS chunk and index within that chunk, returns [line, sample] within the MODIS tile."
+  "For a given MODIS chunk and index within that chunk, returns [line,
+  sample] within the MODIS tile."
   [chunk index]
   (let [line (* chunk chunk-size)
         sample (+ line index)]
     (vector line sample)))
 
 ;; ##Cascalog Custom Functions
-;; These guys actually get called by the queries inside of core.
+;;These guys actually get called by the queries inside of core.
 
 (defmapop
   #^{:doc "Generates metadata values for a given unpacked MODIS
 Dataset and a seq of keys."}
   [meta-values [meta-keys]] [modis]
-  (let [^Hashtable metadata (metadata modis "")]
-    (map #(.get metadata %) meta-keys)))
+  (let [^Hashtable metadict (metadata modis)]
+    (map #(lookup % metadict) meta-keys)))
 
 (defmapcatop
-    #^{:doc "Stateful approach to unpacking HDF files. Registers all
+  #^{:doc "Stateful approach to unpacking HDF files. Registers all
 gdal formats, Creates a temp directory, then saves the byte array to
 disk. This byte array is processed with gdal, and then the temp
 directory is destroyed. Function returns the decompressed MODIS file

@@ -6,6 +6,7 @@
                  [org.clojure/clojure-contrib "1.2.0"]
                  [incanter "1.2.3"]
                  [cascalog "1.7.0-SNAPSHOT"]
+                 [clj-time "0.3.0-SNAPSHOT"]
                  ]
   :native-dependencies [[org.clojars.sritchie09/gdal-java-osx-native-deps "1.0.0"]]
   :repositories {"conjars" "http://conjars.org/repo/"}
