@@ -16,7 +16,7 @@
 (def
   #^{:doc "Map between symbols and chosen substrings of
 MODIS subdataset keys."}
-  *modis-subsets*
+  modis-subsets
   {:evi "monthly EVI"
    :qual "VI Quality"
    :red "red reflectance"
@@ -30,12 +30,12 @@ MODIS subdataset keys."}
 
 (def
   #^{:doc "Default set of data for FORMA processing."}
-  *forma-subsets*
+  forma-subsets
   #{:ndvi :evi :qual :reli})
 
 (def
   #^{:doc "Arbitrary number of pixels in a chunk of MODIS data."}
-  *chunk-size*
+  chunk-size
   24000)
 
 ;; ##Helper Functions
@@ -47,25 +47,25 @@ MODIS subdataset keys."}
   (.GetMetadata_Dict modis arg))
 
 (defn subdataset-key
-  "For a given Hashtable entry, returns the associated key in *modis-subsets*."
+  "For a given Hashtable entry, returns the associated key in modis-subsets."
   [^Map$Entry entry]
   (let [val (.getValue entry)
         key (.getKey entry)]
-    (some #(if (s/substring? (% *modis-subsets*) val) %)
-          (keys *modis-subsets*))))
+    (some #(if (s/substring? (% modis-subsets) val) %)
+          (keys modis-subsets))))
 
 (defn subdataset-filter
   "Generates a predicate function that compares Hashtable entries to a supplied
-   set of acceptable keys. These keys should exist in *modis-subsets*."
+   set of acceptable keys. These keys should exist in modis-subsets."
   [good-keys]
-  (let [kept-substrings (map *modis-subsets* good-keys)]
+  (let [kept-substrings (map modis-subsets good-keys)]
     (fn [^Map$Entry entry]
       (let [val (.getValue entry)
             key (.getKey entry)]
         (and (s/substring? "_NAME" key)
              (some #(s/substring? % val) kept-substrings))))))
 
-(def forma-dataset? (subdataset-filter *forma-subsets*))
+(def forma-dataset? (subdataset-filter forma-subsets))
 
 (defn make-subdataset
   "Accepts an entry in the SUBDATASETS Hashtable of a MODIS Dataset, and returns
@@ -92,7 +92,7 @@ MODIS subdataset keys."}
 (defn tile-position
   "For a given MODIS chunk and index within that chunk, returns [line, sample] within the MODIS tile."
   [chunk index]
-  (let [line (* chunk *chunk-size*)
+  (let [line (* chunk chunk-size)
         sample (+ line index)]
     (vector line sample)))
 

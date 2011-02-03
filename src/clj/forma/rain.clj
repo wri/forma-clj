@@ -7,28 +7,27 @@
 
 (ns forma.rain
   (:use cascalog.api
-        forma.hadoop
-        [clojure.contrib.io :only [input-stream file *byte-array-type*]])
+        forma.hadoop)
+  (:require [clojure.contrib.io :as io])
   (:import [java.io File InputStream]
+           [java.util.zip GZIPInputStream]
            [forma LittleEndianDataInputStream]))
 
 (set! *warn-on-reflection* true)
 
-(def test-file "/Users/sritchie/Desktop/FORMA/RainTest/precl_mon_v1.0.lnx.2009.gri0.5m")
+(def test-zip "/Users/sritchie/Desktop/FORMA/RainTest/precl_mon_v1.0.lnx.2001.gri0.5m.gz")
+(def test-file "/Users/sritchie/Desktop/FORMA/RainTest/precl_mon_v1.0.lnx.2001.gri0.5m")
 
-(def *float-bytes* (/ ^Integer (Float/SIZE)
+(def float-bytes (/ ^Integer (Float/SIZE)
                       ^Integer (Byte/SIZE)))
 
-(def *lat-spread* 180)
-(def *lon-spread* 360)
-(def *forma-res* 0.5)
+(def map-dimensions [180 360])
+(def forma-res 0.5)
 
 (defn dimensions-at-res
   "returns the pixel dimensions at the specified pixel width (in degrees)."
   [res]
-  (->> [*lat-spread* *lon-spread*]
-       (map #(/ % res))
-       (map int)))
+  (map #(int (/ % res)) map-dimensions))
 
 (defn area-at-res
   "Area of pixel grid at supplied resolution."
@@ -39,18 +38,24 @@
   "Length of the row of floats representing the earth at the specified resolution."
   [res]
   (* (area-at-res res)
-     *float-bytes*))
+     float-bytes))
 
 ;; ## Buffer Slurping
+
+(defn input-stream
+  "Attempts to coerce the given argument to an input stream -- see
+  clojure.contrib.io/input-stream. Supports gzipped files."
+  [arg]
+  (try
+      (GZIPInputStream. (io/input-stream arg))
+      (catch java.io.IOException e
+        (io/input-stream arg))))
 
 ;;Java reads its byte arrays in using big endian format -- this rain
 ;;data was written in little endian format. The way to get these
 ;;numbers in is to swap them around. In the following multimethod, we
 ;;allow a number of ways for a little-endian binary file to be
 ;;accessed using a HeapByteBuffer.
-
-(derive java.lang.String ::fileable)
-(derive java.io.File ::fileable)
 
 (defmulti #^{:doc "Converts argument into a DataInputStream, with
     little endian byte order. Argument may be an Input Stream, File,
@@ -59,15 +64,18 @@
              :arglists '([arg])}
   little-stream type)
 
+(derive java.lang.String ::fileable)
+(derive java.io.File ::fileable)
+
 (defmethod little-stream LittleEndianDataInputStream [^LittleEndianDataInputStream x] x)
 
 (defmethod little-stream InputStream [^InputStream x]
   (LittleEndianDataInputStream. x))
 
 (defmethod little-stream ::fileable [x]
-  (LittleEndianDataInputStream. (input-stream (file x))))
+  (LittleEndianDataInputStream. (input-stream (io/file x))))
 
-(defmethod little-stream *byte-array-type* [^bytes b]
+(defmethod little-stream io/*byte-array-type* [^bytes b]
   (LittleEndianDataInputStream. (input-stream b)))
 
 ;; ## Data Extraction
@@ -88,7 +96,7 @@
   "Generates a lazy seq of byte-arrays from a binary NOAA PREC/L
   file. Elements alternate between precipitation rate in mm / day and
   total # of gauges."
-  ([^InputStream stream] (lazy-months stream *forma-res*))
+  ([^InputStream stream] (lazy-months stream forma-res))
   ([^InputStream stream res]
      (let [arr-size (floats-for-res res)
            buf (byte-array arr-size)]

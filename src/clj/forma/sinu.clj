@@ -15,9 +15,9 @@
 
 ;; ## Constants
 
-(def *rho* 6371007.181)
-(def *x-tiles* 36)
-(def *y-tiles* 18)
+(def rho 6371007.181)
+(def x-tiles 36)
+(def y-tiles 18)
 
 (def pixels-at-res
   {:250 4800
@@ -52,7 +52,7 @@
 (defn sinu-xy
   "Computes the sinusoidal x and y coordinates for the supplied latitude and longitude (in radians)."
     [lat lon]
-  (scale *rho* [(* (cos lat) lon) lat]))
+  (scale rho [(* (cos lat) lon) lat]))
 
 (defn sinu-deg-xy
   "Computes the sinusoidal x and y coordinates for the supplied latitude and longitude (in degrees)."  
@@ -62,8 +62,8 @@
 (defn lat-long
   "Computes the latitude and longitude for a given set of sinusoidal map coordinates (in meters)."
   [x y]
-  (let [lat (/ y *rho*)
-        lon (/ x (* *rho* (cos lat)))]
+  (let [lat (/ y rho)
+        lon (/ x (* rho (cos lat)))]
     (map to-deg [lat lon])))
 
 
@@ -79,7 +79,7 @@
 (defn pixel-length
   "The length, in meters, of the edge of a pixel at a given resolution."
   [res]
-  (let [pixel-span (/ (- max-y min-y) *y-tiles*)
+  (let [pixel-span (/ (- max-y min-y) y-tiles)
         total-pixels (pixels-at-res res)]
     (/ pixel-span total-pixels)))
 
