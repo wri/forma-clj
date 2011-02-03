@@ -1,19 +1,15 @@
-;; First step will be to write a conversion between julian time and
-;; the time periods we deal with in FORMA.
-
 (ns forma.conversion
   (:use (clojure.contrib.generic [math-functions :only (ceil)])
         (clj-time [core :only (date-time in-minutes interval)]
-                  [coerce :only (from-string)])))
+                  [coerce :only (from-string)]))
+  (:import [org.joda.time DateTime]))
 
-;; TODO -- update this for 250 meter data. I think the period is half.
+;; TODO -- update this for 250 meter data, and take resolution as an
+;; input. (I think the period is 16 days.) This is as easy as changing
+;; period-length to a map -- then we can call (period-length res) and
+;; get the proper value.
 (def modis-start (date-time 2000))
 (def period-length 32.0)
-
-(defn in-periods [interval]
-  (let [days (in-days interval)
-        period (/ days period-length)]
-    ((comp int ceil) period)))
 
 (defn in-days
   "Returns the number of days spanned by the given interval."
@@ -23,9 +19,27 @@
         days (/ hours 24)]
     (int days)))
 
-(defn julian->period
-  "Converts a given input date string into an interval from the MODIS
-  beginnings, as specified by modis-start."
+(defn in-periods [interval]
+  (let [days (in-days interval)
+        period (/ days period-length)]
+    ((comp int ceil) period)))
+
+(defmulti julian->period
+    "Converts a given input date into an interval from the MODIS
+  beginnings, as specified by modis-start. Accepts DateTime objects,
+  strings that can be coerced into dates, or an arbitrary number of
+  integers. See clj-time's date-time and from-string for more
+  information."
+    (fn [x & _] (type x)))
+
+(defmethod julian->period DateTime
+  [date]
+  (in-periods (interval modis-start date)))
+
+(defmethod julian->period String
   [str]
-  (let [date (from-string str)]
-    (in-periods (interval modis-start date))))
+  (julian->period (from-string str)))
+
+(defmethod julian->period Integer
+  [& int-pieces]
+  (julian->period (apply date-time int-pieces)))

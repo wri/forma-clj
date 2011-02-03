@@ -51,10 +51,13 @@
   "Attempts to coerce the given argument to an input stream -- see
   clojure.contrib.io/input-stream. Supports gzipped files."
   [arg]
-  (try
-      (GZIPInputStream. (io/input-stream arg))
+  (let [^InputStream stream (io/input-stream arg)]
+    (try
+      (.mark stream 0)
+      (GZIPInputStream. stream)
       (catch java.io.IOException e
-        (io/input-stream arg))))
+        (.reset stream)
+        stream))))
 
 ;;Java reads its byte arrays in using big endian format -- this rain
 ;;data was written in little endian format. The way to get these
@@ -62,25 +65,25 @@
 ;;allow a number of ways for a little-endian binary file to be
 ;;accessed using a HeapByteBuffer.
 
-(defmulti #^{:doc "Converts argument into a DataInputStream, with
-    little endian byte order. Argument may be an Input Stream, File,
-    String, byte array, or another LittleEndianDataInputStream. If the
-    latter is true, acts as identity."
-             :arglists '([arg])}
-  little-stream type)
+(defmulti little-stream
+  "Converts argument into a DataInputStream, with little endian byte
+    order. Argument may be an Input Stream, File, String, byte array,
+    or another LittleEndianDataInputStream. If the latter is true,
+    acts as identity."
+  type)
 
 (derive java.lang.String ::fileable)
 (derive java.io.File ::fileable)
 
-(defmethod little-stream LittleEndianDataInputStream [^LittleEndianDataInputStream x] x)
+(defmethod little-stream LittleEndianDataInputStream [x] x)
 
-(defmethod little-stream InputStream [^InputStream x]
+(defmethod little-stream InputStream [x]
   (LittleEndianDataInputStream. x))
 
 (defmethod little-stream ::fileable [x]
   (little-stream (input-stream (io/file x))))
 
-(defmethod little-stream io/*byte-array-type* [^bytes b]
+(defmethod little-stream io/*byte-array-type* [b]
   (little-stream (input-stream b)))
 
 ;; ## Data Extraction
