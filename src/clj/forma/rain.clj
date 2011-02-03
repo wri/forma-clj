@@ -4,6 +4,11 @@
 ;; file, with lots of Java support. Might be worthwhile to code that
 ;; up as a separate input, just in case. (Support for OpenCDF files
 ;; would sure be nice.)
+;; The other issue we have in this body of code is a lack of
+;; with-open. As I'm doing IO with lazy seqs, I simply have to trust
+;; that those lazy seqs are going to bottom out, as the end of the
+;; lazy seq calls close. As long as they're realized, we're good to
+;;go.
 
 (ns forma.rain
   (:use cascalog.api
@@ -73,10 +78,10 @@
   (LittleEndianDataInputStream. x))
 
 (defmethod little-stream ::fileable [x]
-  (LittleEndianDataInputStream. (input-stream (io/file x))))
+  (little-stream (input-stream (io/file x))))
 
 (defmethod little-stream io/*byte-array-type* [^bytes b]
-  (LittleEndianDataInputStream. (input-stream b)))
+  (little-stream (input-stream b)))
 
 ;; ## Data Extraction
 
@@ -102,7 +107,8 @@
            buf (byte-array arr-size)]
        (if (pos? (.read stream buf))
          (lazy-seq
-          (cons buf (lazy-months stream)))))))
+          (cons buf (lazy-months stream)))
+         (.close stream)))))
 
 (defn all-months
   "Returns a lazy seq of all months inside of a yearly rain array."
@@ -111,7 +117,6 @@
                  (take-nth 2 (lazy-months stream))))
 
 ;; ## Cascalog Queries
-;; [TODO] Add in with-open, where appropriate.
 
 (defmapcatop
   #^{:doc "Unpacks a yearly PREC/L binary file, and returns its
