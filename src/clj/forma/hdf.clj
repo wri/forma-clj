@@ -1,13 +1,15 @@
 (ns forma.hdf
-  (:use cascalog.api
-        forma.hadoop)
+  (:use (cascalog [api :only (defmapop defmapcatop)]
+                  [io :only (temp-dir)])
+        (forma [hadoop :only (get-bytes)])
+        (clojure.contrib [math :only (abs)]
+                         [io :only (file copy delete-file-recursively)]
+                         [string :only (substring? as-str)]))
   (:import [java.util Map$Entry Hashtable]
            [java.io File]
            [org.gdal.gdal gdal Dataset Band]
            [org.gdal.gdalconst gdalconstConstants]
-           [org.apache.hadoop.io BytesWritable])
-  (:require [cascalog [ops :as c] [workflow :as w] [io :as io]]
-            [clojure.contrib [math :as m] [io :as i] [string :as s]]))
+           [org.apache.hadoop.io BytesWritable]))
 
 (set! *warn-on-reflection* true)
 
@@ -45,7 +47,7 @@ MODIS subdataset keys."}
   "Returns the metadata hashtable for the supplied (opened) MODIS file."
   ([^Dataset modis arg]
      (.GetMetadata_Dict modis arg))
-  ([^Dataset modis]
+  ([modis]
      (metadata modis "")))
 
 (defn lookup
@@ -53,14 +55,17 @@ MODIS subdataset keys."}
   [key ^Hashtable table]
   (.get table key))
 
-(defn subdataset-key
-  "For a given Hashtable entry, returns the associated key in
-  modis-subsets."
+(defn split-entry
+  "Splits a given Entry into its map and key."
   [^Map$Entry entry]
-  (let [val (.getValue entry)
-        key (.getKey entry)]
-    (some #(if (s/substring? (% modis-subsets) val) %)
-          (keys modis-subsets))))
+  (vector (.getValue entry) (.getKey entry)))
+
+(defn subdataset-key
+  "For a given Hashtable value, returns the associated key in
+  modis-subsets."
+  [val]
+  (some #(if (substring? (% modis-subsets) val) (as-str %))
+          (keys modis-subsets)))
 
 (defn subdataset-filter
   "Generates a predicate function that compares Hashtable entries to a
@@ -68,11 +73,10 @@ MODIS subdataset keys."}
    modis-subsets."
   [good-keys]
   (let [kept-substrings (map modis-subsets good-keys)]
-    (fn [^Map$Entry entry]
-      (let [val (.getValue entry)
-            key (.getKey entry)]
-        (and (s/substring? "_NAME" key)
-             (some #(s/substring? % val) kept-substrings))))))
+    (fn [entry]
+      (let [[val key] (split-entry entry)]
+        (and (substring? "_NAME" key)
+             (some #(substring? % val) kept-substrings))))))
 
 (def forma-dataset? (subdataset-filter forma-subsets))
 
@@ -80,13 +84,14 @@ MODIS subdataset keys."}
   "Accepts an entry in the SUBDATASETS Hashtable of a MODIS Dataset,
    and returns a 2-tuple with the forma dataset key and the Dataset
    object."
-  [^Map$Entry entry]
-  (vector (subdataset-key entry) (gdal/Open (.getValue entry))))
+  [entry]
+  (let [[path] (split-entry entry)]
+    (vector (subdataset-key path) (gdal/Open path))))
 
 (defn subdatasets
   "Returns the SUBDATASETS metadata Hashtable for a given filepath."
-  [^File hdf-file]
-  (let [path (.toString hdf-file)]
+  [hdf-file]
+  (let [path (str hdf-file)]
     (metadata (gdal/Open path) "SUBDATASETS")))
 
 (defn raster-array
@@ -107,6 +112,12 @@ MODIS subdataset keys."}
         sample (+ line index)]
     (vector line sample)))
 
+(defn split-id
+  "Splits the TileID metadata string into integer x and y components."
+  [tileid]
+  (let [[_ _ tile-x tile-y] (re-find #"(\d{2})(\d{3})(\d{3})" tileid)]
+    (map #(Integer/parseInt %) [tile-x tile-y])))
+
 ;; ##Cascalog Custom Functions
 ;;These guys actually get called by the queries inside of core.
 
@@ -114,7 +125,7 @@ MODIS subdataset keys."}
   #^{:doc "Generates metadata values for a given unpacked MODIS
 Dataset and a seq of keys."}
   [meta-values [meta-keys]] [modis]
-  (let [^Hashtable metadict (metadata modis)]
+  (let [metadict (metadata modis)]
     (map #(lookup % metadict) meta-keys)))
 
 (defmapcatop
@@ -127,15 +138,15 @@ as a 1-tuple."}
   ([]
      (do
        (gdal/AllRegister)
-       (io/temp-dir "hdf")))
+       (temp-dir "hdf")))
   ([tdir ^BytesWritable stream]
-     (let [hash (Integer/toString (m/abs (.hashCode stream)))
-           tfile (i/file tdir hash)
+     (let [hash (str (abs (.hashCode stream)))
+           tfile (file tdir hash)
            bytes (get-bytes stream)]
        (do
-         (i/copy (get-bytes stream) tfile)
+         (copy (get-bytes stream) tfile)
          (map make-subdataset
               (filter forma-dataset?
                       (subdatasets tfile))))))
   ([tdir]
-     (i/delete-file-recursively tdir)))
+     (delete-file-recursively tdir)))

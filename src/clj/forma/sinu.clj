@@ -11,7 +11,7 @@
 ;; be a faster way to do this!
 
 (ns forma.sinu
-  (:use [clojure.contrib.generic.math-functions :only (cos)]))
+  (:use (clojure.contrib.generic [math-functions :only (cos)])))
 
 ;; ## Constants
 

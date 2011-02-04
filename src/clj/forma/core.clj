@@ -1,41 +1,78 @@
 (ns forma.core
-  (:use cascalog.api)
-  (:import [forma WholeFile]
-           [cascading.tuple Fields])
-  (:require [cascalog [vars :as v] [ops :as c] [workflow :as w]]
-            [forma [hdf :as h] [rain :as r]]))
+  (:use cascalog.api
+        (forma [sources :only (all-files files-with-names)]
+               [conversion :only (to-period)]))
+    (:require (cascalog [vars :as v]
+                        [ops :as c])
+            (forma [hdf :as h]
+                   [rain :as r])))
 
-;; ## Tap Functions
-;; These help define the source tap that will slurp up files from a
-;; local file, remote file, or S3 bucket.
 
-(defn whole-file
-  "Custom scheme for dealing with entire files."
-  [field-names]
-  (WholeFile. (w/fields field-names)))
+;; ## Example Queries
 
-(defn hfs-wholefile
-  "Creates a tap on HDFS using the wholefile format. Guaranteed not
-   to chop files up! Required for unsupported compression formats like HDF."
-  [path]
-  (w/hfs-tap (whole-file Fields/ALL) path))
+(defmapop
+  #^{:doc "implements a re-find, and returns the matches, not
+the original string."}
+  [re-group [pattern]] [str]
+  (let [matches (re-find pattern str)]
+    (rest matches)))
 
-(defmacro casca-fn
-  "Expands to a function that pulls the fields v2 from hfs-wholefile,
-   and returns the fields v1."
-  [name doc v1 v2]
-  `(defn ~name ~doc [dir#]
-     (<- ~(vec v1) ((hfs-wholefile dir#) ~@v2))))
+(defn modis-chunks
+  "Currently returns dataset, tile, period - no data! Soon, this will
+  actually stream chunks of MODIS data out into the world."
+  [hdf-source]
+  (let [keys ["TileID" "PRODUCTIONDATETIME"]]
+    (<- [?dataset ?tile ?period]
+        (hdf-source ?hdf)
+        (h/unpack ?hdf :> ?dataset ?freetile)
+        (h/meta-values [keys] ?freetile :> ?tileid ?juliantime)
+        (re-group [#"(\d{2})(\d{6})"] ?tileid :> ?prefix ?tile)
+        (to-period ?juliantime :> ?period)
+        (:distinct false))))
 
-(casca-fn all-files
-          "Subquery to return all files in the supplied directory."
-          [?file] [?filename ?file])
+(defn tile-metadata
+  "Processes all HDF files in the supplied directory, and prints the
+dataset names, tiles, time periods, and their associated counts to
+standard out."
+  [nasa-dir]
+  (let [nasa-files (all-files nasa-dir)
+        metadata (modis-chunks nasa-files)]
+    (?<- (stdout) [?dataset ?tile ?period ?count]
+         (metadata ?dataset ?tile ?period)
+         (c/count ?count))))
 
-(casca-fn files-with-names
-          "Subquery to return all files, along with their filenames."
-          [?filename ?file] [?filename ?file])
+;; TODO -- convert filename and month into julian time period.
+;; TODO -- Check the FORMA code to see how we decide time periods for
+;; these bad boys. Do we just assume the first of the month?
+(defn rain-months
+  "Test query! Returns the count of output data sets for each month,
+   from 0 to 11."
+  [rain-dir]
+  (let [rain-files (files-with-names rain-dir)]
+    (?<- (stdout) [?filename ?month ?count]
+         (rain-files ?filename ?file)
+         (r/rain-months ?file :> ?month ?month-data)
+         (c/count ?count))))
 
-;; ##Subqueries
+;; ## Works in Progress
+
+;; These are meant to be ignored for now -- we've make great use of
+;; them once we have the ability to serialize a MODIS dataset using
+;; hadoop. I just have to write the class that lets us do this, and
+;; decide on a serialization mechanism. (I'm thinking that we'll go
+;; well to simply serialize the float array, or int array, underlying
+;; the whole thing.)
+
+(defn same-tiles
+  "Refactored version of tile metadata. NOT finished! To get this
+  done, the datasets themselves need a serializer. [TODO] verify if
+  add-metadata will work here."
+  [nasa-dir]
+  (let [nasa-files (unpacked-modis nasa-dir)]
+    (?<- (stdout) [?tileid ?count]
+         (nasa-files ?dataset ?unpacked)
+         (add-metadata ?unpacked ["TileID"] :> ?tileid)
+         (c/count ?count))))
 
 (defn add-metadata
   "Takes a seq of keys and an unpacked modis tile, and returns
@@ -50,60 +87,10 @@
 ;; I'll go ahead and refactor this.
 
 (defn unpacked-modis
-  "Returns a stream of 1-tuples containing serialized gdal Datasets with their associated tags."
+  "Returns a stream of 1-tuples containing serialized gdal Datasets
+  with their associated tags."
   [nasa-dir]
   (let [nasa-files (all-files nasa-dir)]
     (<- [?dataset ?unpacked]
         (nasa-files ?hdf)
         (h/unpack ?hdf :> ?dataset ?unpacked))))
-
-;; ## Full Example Queries
-
-(defn file-count
-  "Prints the total count of files in a given directory to stdout."
-  [dir]
-  (let [files (all-files dir)]
-    (?<- (stdout) [?count]
-     (files ?file)
-     (c/count ?count))))
-
-(defn modis-chunks
-  "Chunker currently returns the TileID and Julian time.
-   [TODO] figure out what metadata we need associated with each chunk."
-  [hdf-source]
-  (let [keys ["TileID" "PRODUCTIONDATETIME"]]
-    (<- [?tileid ?juliantime]
-        (hdf-source ?hdf)
-        (h/unpack ?hdf :> ?dataset ?freetile)
-        (h/meta-values [keys] ?freetile :> ?tileid ?juliantime)
-        (:distinct false))))
-
-(defn unique-tiles
-  "Processes all HDF files in the supplied directory, and prints the TileIDs
-   and their associated counts to standard out."
-  [nasa-dir]
-  (let [nasa-files (all-files nasa-dir)
-        chunks (modis-chunks nasa-files)]
-    (?<- (stdout) [?tileid ?count]
-         (chunks ?tileid ?juliantime)
-         (c/count ?count))))
-
-(defn same-tiles
-  "Refactored version of unique tiles. NOT finished!
-   [TODO] verify if add-metadata will work here."
-  [nasa-dir]
-  (let [nasa-files (unpacked-modis nasa-dir)]
-    (?<- (stdout) [?tileid ?count]
-         (nasa-files ?dataset ?unpacked)
-         (add-metadata ?unpacked ["TileID"] :> ?tileid)
-         (c/count ?count))))
-
-(defn rain-months
-  "Test query! Returns the count of output data sets for each month, from
-   0 to 11."
-  [rain-dir]
-  (let [rain-files (files-with-names rain-dir)]
-    (?<- (stdout) [?filename ?month ?count]
-         (rain-files ?filename ?file)
-         (r/rain-months ?file :> ?month ?month-data)
-         (c/count ?count))))

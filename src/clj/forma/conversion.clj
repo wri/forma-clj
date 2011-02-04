@@ -1,5 +1,6 @@
 (ns forma.conversion
-  (:use (clojure.contrib.generic [math-functions :only (ceil)])
+  (:use (cascalog [api :only (defmapop)])
+        (clojure.contrib.generic [math-functions :only (ceil)])
         (clj-time [core :only (date-time in-minutes interval)]
                   [coerce :only (from-string)]))
   (:import [org.joda.time DateTime]))
@@ -28,7 +29,7 @@
     "Converts a given input date into an interval from the MODIS
   beginnings, as specified by modis-start. Accepts DateTime objects,
   strings that can be coerced into dates, or an arbitrary number of
-  integers. See clj-time's date-time and from-string for more
+  integer pieces. See clj-time's date-time and from-string for more
   information."
     (fn [x & _] (type x)))
 
@@ -43,3 +44,7 @@
 (defmethod julian->period Integer
   [& int-pieces]
   (julian->period (apply date-time int-pieces)))
+
+;; Cascalog query to access multimethod, until issue gets fixed.
+(defmapop to-period [date]
+  (julian->period date))

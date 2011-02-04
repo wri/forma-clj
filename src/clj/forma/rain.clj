@@ -20,11 +20,8 @@
 
 (set! *warn-on-reflection* true)
 
-(def test-zip "/Users/sritchie/Desktop/FORMA/RainTest/precl_mon_v1.0.lnx.2001.gri0.5m.gz")
-(def test-file "/Users/sritchie/Desktop/FORMA/RainTest/precl_mon_v1.0.lnx.2001.gri0.5m")
-
 (def float-bytes (/ ^Integer (Float/SIZE)
-                      ^Integer (Byte/SIZE)))
+                    ^Integer (Byte/SIZE)))
 
 (def map-dimensions [180 360])
 (def forma-res 0.5)
@@ -104,7 +101,7 @@
   "Generates a lazy seq of byte-arrays from a binary NOAA PREC/L
   file. Elements alternate between precipitation rate in mm / day and
   total # of gauges."
-  ([^InputStream stream] (lazy-months stream forma-res))
+  ([stream] (lazy-months stream forma-res))
   ([^InputStream stream res]
      (let [arr-size (floats-for-res res)
            buf (byte-array arr-size)]
@@ -115,9 +112,9 @@
 
 (defn all-months
   "Returns a lazy seq of all months inside of a yearly rain array."
-  [^InputStream stream]
-    (map-indexed #(vector %1 (lazy-floats (little-stream %2)))
-                 (take-nth 2 (lazy-months stream))))
+  [stream]
+  (map-indexed #(vector %1 (lazy-floats (little-stream %2)))
+               (take-nth 2 (lazy-months stream))))
 
 ;; ## Cascalog Queries
 
@@ -125,6 +122,6 @@
   #^{:doc "Unpacks a yearly PREC/L binary file, and returns its
     months as a lazy sequence."}
   rain-months
-  [^BytesWritable stream]
+  [stream]
   (let [bytes (get-bytes stream)]
     (all-months (input-stream bytes))))
