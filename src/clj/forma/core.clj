@@ -63,25 +63,6 @@ standard out."
 ;; well to simply serialize the float array, or int array, underlying
 ;; the whole thing.)
 
-(defn same-tiles
-  "Refactored version of tile metadata. NOT finished! To get this
-  done, the datasets themselves need a serializer. [TODO] verify if
-  add-metadata will work here."
-  [nasa-dir]
-  (let [nasa-files (unpacked-modis nasa-dir)]
-    (?<- (stdout) [?tileid ?count]
-         (nasa-files ?dataset ?unpacked)
-         (add-metadata ?unpacked ["TileID"] :> ?tileid)
-         (c/count ?count))))
-
-(defn add-metadata
-  "Takes a seq of keys and an unpacked modis tile, and returns
-   a number of fields based on the size of the input sequence."
-  [modis keys]
-  (let [outargs (v/gen-nullable-vars (count keys))]
-    (<- outargs (modis ?freetile)
-        (h/meta-values [keys] ? :>> outargs))))
-
 ;; We currently can't have a subquery that returns any sort
 ;; of custom dataset. Once I get a response on the cascalog user group,
 ;; I'll go ahead and refactor this.
@@ -94,3 +75,22 @@ standard out."
     (<- [?dataset ?unpacked]
         (nasa-files ?hdf)
         (h/unpack ?hdf :> ?dataset ?unpacked))))
+
+(defn add-metadata
+  "Takes a seq of keys and an unpacked modis tile, and returns
+   a number of fields based on the size of the input sequence."
+  [modis keys]
+  (let [outargs (v/gen-nullable-vars (count keys))]
+    (<- outargs (modis ?freetile)
+        (h/meta-values [keys] ? :>> outargs))))
+
+(defn same-tiles
+  "Refactored version of tile metadata. NOT finished! To get this
+  done, the datasets themselves need a serializer. [TODO] verify if
+  add-metadata will work here."
+  [nasa-dir]
+  (let [nasa-files (unpacked-modis nasa-dir)]
+    (?<- (stdout) [?tileid ?count]
+         (nasa-files ?dataset ?unpacked)
+         (add-metadata ?unpacked ["TileID"] :> ?tileid)
+         (c/count ?count))))
