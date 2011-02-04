@@ -1,7 +1,8 @@
 (ns forma.playground
   (:use cascalog.api
         forma.sources)
-  (:require (cascalog [ops :as c])))
+  (:require (clojure.contrib.http [agent :as h])
+            (cascalog [ops :as c])))
 
 (defn file-count
   "Prints the total count of files in a given directory to stdout."
@@ -10,3 +11,14 @@
     (?<- (stdout) [?count]
      (files ?file)
      (c/count ?count))))
+
+(defmapop add-bytes [file]
+  (byte-array 10))
+
+(defn files-with-bytes
+  "Test of byte array serialization."
+  [dir]
+  (let [files (all-files dir)]
+    (?<- (stdout) [?bytes]
+     (files ?file)
+     (add-bytes ?file :> ?floats))))

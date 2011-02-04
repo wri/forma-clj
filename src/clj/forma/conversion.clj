@@ -9,6 +9,7 @@
 ;; input. (I think the period is 16 days.) This is as easy as changing
 ;; period-length to a map -- then we can call (period-length res) and
 ;; get the proper value.
+
 (def modis-start (date-time 2000))
 (def period-length 32.0)
 
