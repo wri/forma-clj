@@ -31,11 +31,6 @@ MODIS subdataset keys."}
    :sunz "sun zenith"})
 
 (def
-  #^{:doc "Default set of data for FORMA processing."}
-  forma-subsets
-  #{:ndvi :evi :qual :reli})
-
-(def
   #^{:doc "Arbitrary number of pixels in a chunk of MODIS data."}
   chunk-size
   24000)
@@ -77,15 +72,16 @@ MODIS subdataset keys."}
   (some #(if (substring? (% modis-subsets) str) (as-str %))
           (keys modis-subsets)))
 
-(defn forma-dataset?
-  "Predicate that checks the a Hashtable entry from the SUBDATASETS
-   metadata dictionary against a list of acceptable datasets, found in
-   forma-subsets."
-  [entry]
-  (let [substrings (map modis-subsets forma-subsets)
-        [val key] (split-entry entry)]
-    (and (substring? "_NAME" key)
-         (some #(substring? % val) substrings))))
+(defn dataset-filter
+  "Generates a predicate function that checks the a Hashtable entry
+   from the SUBDATASETS metadata dictionary against a supplied set of
+   acceptable datasets."
+  [good-keys]
+  (let [substrings (map modis-subsets good-keys)]
+    (fn [entry]
+      (let [[val key] (split-entry entry)]
+        (and (substring? "_NAME" key)
+             (some #(substring? % val) substrings))))))
 
 (defn make-subdataset
   "Accepts an entry from the SUBDATASETS Hashtable of a MODIS Dataset,
@@ -134,7 +130,7 @@ gdal formats, Creates a temp directory, then saves the byte array to
 disk. This byte array is processed with gdal. On teardown, the temp
 directory is destroyed. Function returns the decompressed MODIS file
 as a 1-tuple."}
-  unpack {:stateful true}
+  [unpack [to-keep]] {:stateful true}
   ([]
      (do
        (gdal/AllRegister)
@@ -142,11 +138,12 @@ as a 1-tuple."}
   ([tdir ^BytesWritable stream]
      (let [hash (str (abs (.hashCode stream)))
            tfile (file tdir hash)
-           bytes (get-bytes stream)]
+           bytes (get-bytes stream)
+           keep-dataset? (dataset-filter to-keep)]
        (do
          (copy (get-bytes stream) tfile)
          (map make-subdataset
-              (filter forma-dataset?
+              (filter keep-dataset?
                       (subdatasets-dict tfile))))))
   ([tdir]
      (delete-file-recursively tdir)))

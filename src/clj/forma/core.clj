@@ -8,6 +8,11 @@
                    [rain :as r])))
 
 
+(def
+  #^{:doc "MODIS datasets required for FORMA processing."}
+  forma-subsets
+  #{:ndvi :evi :qual :reli})
+
 ;; ## Example Queries
 
 (defmapop
@@ -24,7 +29,7 @@ the original string."}
   (let [keys ["TileID" "PRODUCTIONDATETIME"]]
     (<- [?dataset ?tile ?period]
         (hdf-source ?hdf)
-        (h/unpack ?hdf :> ?dataset ?freetile)
+        (h/unpack [forma-subsets] ?hdf :> ?dataset ?freetile)
         (h/meta-values [keys] ?freetile :> ?tileid ?juliantime)
         (re-group [#"(\d{2})(\d{6})"] ?tileid :> ?prefix ?tile)
         (to-period ?juliantime :> ?period)
