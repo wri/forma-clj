@@ -41,7 +41,6 @@ MODIS subdataset keys."}
   24000)
 
 ;; ##Helper Functions
-;; These are organized fairly well... more docs later.
 
 (defn metadata
   "Returns the metadata hashtable for the supplied (opened) MODIS file."
@@ -61,34 +60,32 @@ MODIS subdataset keys."}
   (vector (.getValue entry) (.getKey entry)))
 
 (defn subdataset-key
-  "For a given Hashtable value, returns the associated key in
-  modis-subsets."
-  [val]
-  (some #(if (substring? (% modis-subsets) val) (as-str %))
+  "Takes a long-form description of a NASA MODIS dataset, and checks
+  to see if any of the values of the modis-subsets map can be found as
+  substrings. If we find one, we return the associated key, cast to a
+  String."
+  [str]
+  (some #(if (substring? (% modis-subsets) str) (as-str %))
           (keys modis-subsets)))
 
-(defn subdataset-filter
-  "Generates a predicate function that compares Hashtable entries to a
-   supplied set of acceptable keys. These keys should exist in
-   modis-subsets."
-  [good-keys]
-  (let [kept-substrings (map modis-subsets good-keys)]
-    (fn [entry]
-      (let [[val key] (split-entry entry)]
-        (and (substring? "_NAME" key)
-             (some #(substring? % val) kept-substrings))))))
-
-(def forma-dataset? (subdataset-filter forma-subsets))
+(defn forma-dataset?
+  "Predicate that checks the a Hashtable entry from the SUBDATASETS
+   metadata dictionary against a list of acceptable datasets, found in
+   forma-subsets."
+  [entry]
+  (let [substrings (map modis-subsets forma-subsets)
+        [val key] (split-entry entry)]
+    (and (substring? "_NAME" key)
+         (some #(substring? % val) substrings))))
 
 (defn make-subdataset
-  "Accepts an entry in the SUBDATASETS Hashtable of a MODIS Dataset,
-   and returns a 2-tuple with the forma dataset key and the Dataset
-   object."
+  "Accepts an entry from the SUBDATASETS Hashtable of a MODIS Dataset,
+   and returns a 2-tuple - (modis-subsets key, Dataset)."
   [entry]
   (let [[path] (split-entry entry)]
     (vector (subdataset-key path) (gdal/Open path))))
 
-(defn subdatasets
+(defn subdatasets-dict
   "Returns the SUBDATASETS metadata Hashtable for a given filepath."
   [hdf-file]
   (let [path (str hdf-file)]
@@ -113,13 +110,13 @@ MODIS subdataset keys."}
     (vector line sample)))
 
 (defn split-id
-  "Splits the TileID metadata string into integer x and y components."
+  "Splits the TileID metadata string into integer x and y,
+  representing MODIS tile coordinates."
   [tileid]
   (let [[_ _ tile-x tile-y] (re-find #"(\d{2})(\d{3})(\d{3})" tileid)]
     (map #(Integer/parseInt %) [tile-x tile-y])))
 
 ;; ##Cascalog Custom Functions
-;;These guys actually get called by the queries inside of core.
 
 (defmapop
   #^{:doc "Generates metadata values for a given unpacked MODIS
@@ -131,7 +128,7 @@ Dataset and a seq of keys."}
 (defmapcatop
   #^{:doc "Stateful approach to unpacking HDF files. Registers all
 gdal formats, Creates a temp directory, then saves the byte array to
-disk. This byte array is processed with gdal, and then the temp
+disk. This byte array is processed with gdal. On teardown, the temp
 directory is destroyed. Function returns the decompressed MODIS file
 as a 1-tuple."}
   unpack {:stateful true}
@@ -147,6 +144,6 @@ as a 1-tuple."}
          (copy (get-bytes stream) tfile)
          (map make-subdataset
               (filter forma-dataset?
-                      (subdatasets tfile))))))
+                      (subdatasets-dict tfile))))))
   ([tdir]
      (delete-file-recursively tdir)))
