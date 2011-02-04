@@ -44,10 +44,19 @@ MODIS subdataset keys."}
 
 (defn metadata
   "Returns the metadata hashtable for the supplied (opened) MODIS file."
-  ([^Dataset modis arg]
-     (.GetMetadata_Dict modis arg))
+  ([^Dataset modis key]
+     (.GetMetadata_Dict modis key))
   ([modis]
      (metadata modis "")))
+
+(defn subdatasets-dict
+  "Returns the SUBDATASETS metadata Hashtable for a given filepath."
+  [hdf-file]
+  (let [path (str hdf-file)
+        dataset (gdal/Open path)]
+    (try
+      (metadata dataset "SUBDATASETS")
+      (finally (.delete dataset)))))
 
 (defn lookup
   "Looks up a key in the supplied hashtable."
@@ -84,12 +93,6 @@ MODIS subdataset keys."}
   [entry]
   (let [[path] (split-entry entry)]
     (vector (subdataset-key path) (gdal/Open path))))
-
-(defn subdatasets-dict
-  "Returns the SUBDATASETS metadata Hashtable for a given filepath."
-  [hdf-file]
-  (let [path (str hdf-file)]
-    (metadata (gdal/Open path) "SUBDATASETS")))
 
 (defn raster-array
   "Unpacks the data inside of a MODIS band into a 1xN integer array."
