@@ -14,8 +14,9 @@
   (WholeFile. (w/fields field-names)))
 
 (defn hfs-wholefile
-  "Creates a tap on HDFS using the wholefile format. Guaranteed not
-   to chop files up! Required for unsupported compression formats like HDF."
+  "Creates a tap on HDFS using the wholefile format. Guaranteed not to
+   chop files up! Required for unsupported compression formats like
+   HDF."
   [path]
   (w/hfs-tap (whole-file Fields/ALL) path))
 

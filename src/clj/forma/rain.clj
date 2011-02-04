@@ -3,12 +3,17 @@
 ;; should note that the 2.5 degree data is available as an OpenCDF
 ;; file, with lots of Java support. Might be worthwhile to code that
 ;; up as a separate input, just in case. (Support for OpenCDF files
-;; would sure be nice.)
-;; The other issue we have in this body of code is a lack of
-;; with-open. As I'm doing IO with lazy seqs, I simply have to trust
-;; that those lazy seqs are going to bottom out, as the end of the
-;; lazy seq calls close. As long as they're realized, we're good to
-;;go.
+;; would sure be nice.)  The other issue we have in this body of code
+;; is a lack of with-open. As I'm doing IO with lazy seqs, I simply
+;; have to trust that those lazy seqs are going to bottom out, as the
+;; end of the lazy seq calls close. As long as they're realized, we're
+;; good to go.
+
+;; Java reads its byte arrays in using big endian format -- this rain
+;; data was written in little endian format. The way to get these
+;; numbers in is to swap them around. In the following multimethod, we
+;; allow a number of ways for a little-endian binary file to be
+;; accessed using a HeapByteBuffer.
 
 (ns forma.rain
   (:use cascalog.api
@@ -37,7 +42,8 @@
   (apply * (dimensions-at-res res)))
 
 (defn floats-for-res
-  "Length of the row of floats representing the earth at the specified resolution."
+  "Length of the row of floats (in # of bytes) representing the earth
+  at the specified resolution."
   [res]
   (* (area-at-res res)
      float-bytes))
@@ -45,8 +51,8 @@
 ;; ## Buffer Slurping
 
 (defn input-stream
-  "Attempts to coerce the given argument to an input stream -- see
-  clojure.contrib.io/input-stream. Supports gzipped files."
+  "Attempts to coerce the given argument to an InputStream, with added
+  support for gzipped files."
   [arg]
   (let [^InputStream stream (io/input-stream arg)]
     (try
@@ -55,12 +61,6 @@
       (catch java.io.IOException e
         (.reset stream)
         stream))))
-
-;;Java reads its byte arrays in using big endian format -- this rain
-;;data was written in little endian format. The way to get these
-;;numbers in is to swap them around. In the following multimethod, we
-;;allow a number of ways for a little-endian binary file to be
-;;accessed using a HeapByteBuffer.
 
 (defmulti little-stream
   "Converts argument into a DataInputStream, with little endian byte
@@ -89,7 +89,8 @@
 ;; FORMA have been done to the data, yet.)
 
 (defn lazy-floats
-  "Creates a lazy seq from the supplied byte buffer."
+  "Generates a lazy seq of floats from the supplied
+  DataInputStream. Floats are read in little-endian format."
   [^LittleEndianDataInputStream buf]
   (lazy-seq
    (try
@@ -111,7 +112,9 @@
          (.close stream)))))
 
 (defn all-months
-  "Returns a lazy seq of all months inside of a yearly rain array."
+  "Returns a lazy seq of precipitation data for all months inside of a
+  yearly rain array, represented as lazy seqs of floats. Note that we
+  skip data concerning # of gauges."
   [stream]
   (map-indexed #(vector %1 (lazy-floats (little-stream %2)))
                (take-nth 2 (lazy-months stream))))
@@ -120,7 +123,7 @@
 
 (defmapcatop
   #^{:doc "Unpacks a yearly PREC/L binary file, and returns its
-    months as a lazy sequence."}
+    months as a lazy sequence of float arrays."}
   rain-months
   [stream]
   (let [bytes (get-bytes stream)]

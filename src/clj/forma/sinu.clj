@@ -30,12 +30,14 @@
 (defn to-deg [angle] (Math/toDegrees angle))
 
 (defn distance
-  "Calculates distance of magnitude from the starting point in a given direction."
+  "Calculates distance of magnitude from the starting point in a given
+  direction."
   [dir start magnitude]
   (dir start magnitude))
 
 (defn scale
-  "Scales each element in a collection of numbers by the supplied factor."
+  "Scales each element in a collection of numbers by the supplied
+  factor."
   [fact sequence]
   (for [x sequence] (* x fact)))
 
@@ -50,17 +52,20 @@
   (second point))
 
 (defn sinu-xy
-  "Computes the sinusoidal x and y coordinates for the supplied latitude and longitude (in radians)."
-    [lat lon]
+  "Computes the sinusoidal x and y coordinates for the supplied
+  latitude and longitude (in radians)."
+  [lat lon]
   (scale rho [(* (cos lat) lon) lat]))
 
 (defn sinu-deg-xy
-  "Computes the sinusoidal x and y coordinates for the supplied latitude and longitude (in degrees)."  
+  "Computes the sinusoidal x and y coordinates for the supplied
+  latitude and longitude (in degrees)."
   [lat lon]
   (apply sinu-xy (map to-rad [lat lon])))
 
 (defn lat-long
-  "Computes the latitude and longitude for a given set of sinusoidal map coordinates (in meters)."
+  "Computes the latitude and longitude for a given set of sinusoidal
+  map coordinates (in meters)."
   [x y]
   (let [lat (/ y rho)
         lon (/ x (* rho (cos lat)))]
@@ -77,7 +82,8 @@
 (def max-y (y-coord (sinu-deg-xy 90 0)))
 
 (defn pixel-length
-  "The length, in meters, of the edge of a pixel at a given resolution."
+  "The length, in meters, of the edge of a pixel at a given
+  resolution."
   [res]
   (let [pixel-span (/ (- max-y min-y) y-tiles)
         total-pixels (pixels-at-res res)]
@@ -92,7 +98,8 @@
     (map + [sample line] (scale edge-pixels [mod-x mod-y]))))
 
 (defn map-coords
-  "Returns the map position in meters for a given MODIS tile coordinate at the specified resolution."
+  "Returns the map position in meters for a given MODIS tile
+  coordinate at the specified resolution."
   [mod-y mod-x line sample res]
   (let [edge-length (pixel-length res)
         half-edge (/ edge-length 2)
@@ -101,6 +108,7 @@
     (map distance [+ -] [min-x max-y] magnitudes)))
 
 (defn geo-coords
-  "Returns the latitude and longitude for a given group of MODIS tile coordinates at the specified resolution."
+  "Returns the latitude and longitude for a given group of MODIS tile
+  coordinates at the specified resolution."
   [mod-y mod-x line sample res]
   (apply lat-long (map-coords mod-y mod-x line sample res)))
