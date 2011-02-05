@@ -7,7 +7,6 @@
             (forma [hdf :as h]
                    [rain :as r])))
 
-
 (def
   #^{:doc "MODIS datasets required for FORMA processing."}
   forma-subsets

@@ -134,13 +134,13 @@ as a 1-tuple."}
      (do
        (gdal/AllRegister)
        (temp-dir "hdf")))
-  ([tdir ^BytesWritable stream]
+  ([tdir stream]
      (let [bytes (get-bytes stream)
-           tfile (file tdir (hash-str stream))
+           temp-hdf (file tdir (hash-str stream))
            keep? (dataset-filter to-keep)]
        (do
-         (copy bytes tfile)
+         (copy bytes temp-hdf)
          (map make-subdataset
-              (filter keep? (subdatasets-dict tfile))))))
+              (filter keep? (subdatasets-dict temp-hdf))))))
   ([tdir]
      (delete-file-recursively tdir)))
