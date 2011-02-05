@@ -26,14 +26,16 @@ the original string."}
   actually stream chunks of MODIS data out into the world."
   [hdf-source]
   (let [keys ["TileID" "PRODUCTIONDATETIME"]]
-    (<- [?dataset ?tile ?period]
+    (<- [?dataset ?res ?tile-x ?tile-y ?period]
         (hdf-source ?hdf)
         (h/unpack [forma-subsets] ?hdf :> ?dataset ?freetile)
         (h/meta-values [keys] ?freetile :> ?tileid ?juliantime)
-        (re-group [#"(\d{2})(\d{6})"] ?tileid :> ?prefix ?tile)
+        (h/split-id ?tileid :> ?res ?tile-x ?tile-y)        
+        ;; (re-group [#"(\d{2})(\d{6})"] ?tileid :> ?prefix ?tile)
         (to-period ?juliantime :> ?period)
         (:distinct false))))
 
+;; this guy shoul work.
 (defn tile-metadata
   "Processes all HDF files in the supplied directory, and prints the
 dataset names, tiles, time periods, and their associated counts to
@@ -41,8 +43,8 @@ standard out."
   [nasa-dir]
   (let [nasa-files (all-files nasa-dir)
         metadata (modis-chunks nasa-files)]
-    (?<- (stdout) [?dataset ?tile ?period ?count]
-         (metadata ?dataset ?tile ?period)
+    (?<- (stdout) [?dataset ?res ?tile-x ?tile-y ?period ?count]
+         (metadata ?dataset ?res ?tile-x ?tile-y ?period)
          (c/count ?count))))
 
 ;; TODO -- convert filename and month into julian time period.

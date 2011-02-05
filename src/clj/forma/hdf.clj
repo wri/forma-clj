@@ -3,8 +3,8 @@
         (cascalog [api :only (defmapop defmapcatop)]
                   [io :only (temp-dir)])
         (clojure.contrib [io :only (file copy delete-file-recursively)]
-                         [string :only (substring? as-str drop)]
                          [seq-utils :only (find-first)]))
+  (:require (clojure.contrib [string :as s]))
   (:import [java.util Hashtable]
            [java.io File]
            [org.gdal.gdal gdal Dataset Band]
@@ -14,6 +14,13 @@
 (set! *warn-on-reflection* true)
 
 ;; ##Constants
+
+(def res-map
+  #^{:doc "Map between the first digit in a MODIS TileID
+metadata value and the corresponding resolution."}
+  {:1 "1000"
+   :2 "500"
+   :4 "250"})
 
 (def
   #^{:doc "Map between symbols and chosen substrings of
@@ -59,7 +66,7 @@ MODIS subdataset keys."}
   (let [path (str hdf-file)
         dataset (gdal/Open path)]
     (try
-      (vals (filter #(substring? "_NAME" (key %))
+      (vals (filter #(s/substring? "_NAME" (key %))
                     (metadata dataset "SUBDATASETS")))
       (finally (.delete dataset)))))
 
@@ -71,8 +78,8 @@ MODIS subdataset keys."}
   substrings. If we find one, we return the associated key, cast to a
   String."
   [path]
-  (as-str (find-first #(substring? (% modis-subsets) path)
-                      (keys modis-subsets))))
+  (s/as-str (find-first #(s/substring? (% modis-subsets) path)
+                        (keys modis-subsets))))
 
 ;;  TODO-- check docs, since we now don't check against _NAME
 (defn dataset-filter
@@ -82,7 +89,7 @@ MODIS subdataset keys."}
   [good-keys]
   (let [substrings (map modis-subsets good-keys)]
     (fn [name]
-      (some #(substring? % name) substrings))))
+      (some #(s/substring? % name) substrings))))
 
 ;; TODO --update docs, since we're not accepting an entry anymore
 (defn make-subdataset
@@ -117,8 +124,9 @@ as a 1-tuple."}
      (delete-file-recursively tdir)))
 
 ;; ## Dataset Chunking
-;; This needs some more documentation, but these are the functions
-;; that deal with opened datasets.
+
+;; TODO -- This needs some more documentation, but these are the
+;; functions that deal with opened datasets.
 
 (defmapop
   #^{:doc "Generates metadata values for a given unpacked MODIS
@@ -126,6 +134,8 @@ Dataset and a seq of keys."}
   [meta-values [meta-keys]] [modis]
   (let [^Hashtable metadict (metadata modis)]
     (map #(.get metadict %) meta-keys)))
+
+;; ## Works in Progress, for now.
 
 (defn raster-array
   "Unpacks the data inside of a MODIS band into a 1xN integer array."
@@ -145,31 +155,54 @@ Dataset and a seq of keys."}
         sample (+ line index)]
     (vector line sample)))
 
-(defn parse-ints [coll]
-  (map #(Integer/parseInt %) coll))
+;; TODO -- add some good documentation here about what the next
+;; section is accomplishing. I want to check marginalia to see the
+;; best way to do this stuff.
 
-;; This is the final version of the function below -- I've included a
-;; few other ways of accomplishing the same thing, for demonstration
-;; purposes. Robin, Dan... enjoy!
-
-;; TODO -- modify this function to actually return the tile
-;; resolution, along with the tiling scheme. As described at this
-;; site:
+;; It's described here:
 ;; http://modis-250m.nascom.nasa.gov/developers/tileid.html
+
 ;; The first digit is used to identify the projection, while the
 ;; second digit is used to specify the tile size. 1 is 1km data (full
 ;; tile size) , 2 is quarter size (500m data), and 4 is 16th tile
 ;; size, or 250m data.
-(defn split-id
-  "Splits a TileID metadata string of the form \"DDXXXYYY\", where DD
-can be tossed, into integer representations of XXX and YYY. These
-represent MODIS tile coordinates."
+
+(defn parse-ints
+  "Converts all strings in the supplied collection to their integer
+  representation."
+  [coll]
+  (map #(Integer/parseInt %) coll))
+
+(defn tileid->res
+  "Returns a string representation of the resolution referenced by the
+supplied MODIS TileID."
   [tileid]
-    (parse-ints
+  (res-map (keyword (subs tileid 1 2))))
+
+(defn tileid->xy
+  "Extracts integer representations of the MODIS X and Y coordinates
+referenced by the supplied MODIS TileID."
+  [tileid]
+  (parse-ints
    (map (partial apply str)
-        (->> tileid (drop 2) (partition 3)))))
+        (->> tileid
+             (s/drop 2)
+             (partition 3)))))
+
+(defn split-id
+  "Returns a sequence containing the resolution, X and Y
+  coordinates (on the MODIS grid) referenced by the supplied MODIS
+  TileID."
+  [tileid]
+  (flatten
+   ((juxt tileid->res
+          tileid->xy) tileid)))
 
 ;; TODO -- show Dan and Robin, and remove these demonstration functions.
+
+;; Guys, are a few ways to accomplish the task solved by tileid->xy,
+;; shown above. I'm not sure I'm happy with the final version, so I've
+;; left these here for us to peruse together. Enjoy!
 
 ;; Misleading! Here, we're actually calling (subs tileid...) in the
 ;; first elements of each of the other vectors, not on each vector in
@@ -183,7 +216,7 @@ represent MODIS tile coordinates."
 ;; function that takes less arguments than that stuff needs. (in this
 ;; case, we get: the function (apply subs tileid ...), where the
 ;; ellipsis can be any group of arguments. Since we're mapping that,
-;; we get [2 5] and [5 8] fed in in turn.
+;; we get [2 5] and [5 8] fed in in turn.)
 (fn [tileid]
   (parse-ints
    (map (partial apply subs tileid) [[2 5] [5 8]])))
@@ -205,4 +238,4 @@ represent MODIS tile coordinates."
 (fn [tileid]
   (parse-ints
    (map (partial apply str)
-        (partition 3 (drop 2 tileid)))))
+        (partition 3 (s/drop 2 tileid)))))
