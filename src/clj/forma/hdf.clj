@@ -1,9 +1,8 @@
 (ns forma.hdf
-  (:use (cascalog [api :only (defmapop defmapcatop)]
+  (:use forma.hadoop
+        (cascalog [api :only (defmapop defmapcatop)]
                   [io :only (temp-dir)])
-        (forma [hadoop :only (get-bytes)])
-        (clojure.contrib [math :only (abs)]
-                         [io :only (file copy delete-file-recursively)]
+        (clojure.contrib [io :only (file copy delete-file-recursively)]
                          [string :only (substring? as-str)]))
   (:import [java.util Map$Entry Hashtable]
            [java.io File]
@@ -136,14 +135,12 @@ as a 1-tuple."}
        (gdal/AllRegister)
        (temp-dir "hdf")))
   ([tdir ^BytesWritable stream]
-     (let [hash (str (abs (.hashCode stream)))
-           tfile (file tdir hash)
-           bytes (get-bytes stream)
-           keep-dataset? (dataset-filter to-keep)]
+     (let [bytes (get-bytes stream)
+           tfile (file tdir (hash-str stream))
+           keep? (dataset-filter to-keep)]
        (do
-         (copy (get-bytes stream) tfile)
+         (copy bytes tfile)
          (map make-subdataset
-              (filter keep-dataset?
-                      (subdatasets-dict tfile))))))
+              (filter keep? (subdatasets-dict tfile))))))
   ([tdir]
      (delete-file-recursively tdir)))
