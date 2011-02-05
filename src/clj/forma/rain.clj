@@ -17,7 +17,7 @@
 
 (ns forma.rain
   (:use cascalog.api
-        forma.hadoop)
+        (forma [hadoop :only (get-bytes)]))
   (:require [clojure.contrib.io :as io])
   (:import [java.io File InputStream]
            [java.util.zip GZIPInputStream]

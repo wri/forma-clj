@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<!-- core-site.xml -->
+<configuration>
+	<property>
+		<name>io.serializations</name>
+		<value>forma.FloatsSerialization,forma.IntsSerialization,cascading.tuple.hadoop.BytesSerialization,cascading.tuple.hadoop.TupleSerialization,org.apache.hadoop.io.serializer.WritableSerialization</value>
+	</property>
+</configuration>
