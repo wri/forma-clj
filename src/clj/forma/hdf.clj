@@ -123,19 +123,11 @@ as a 1-tuple."}
   ([tdir]
      (delete-file-recursively tdir)))
 
-;; ## Dataset Chunking
+;; ## Chunking Functions
 
 ;; TODO -- This needs some more documentation, but these are the
-;; functions that deal with opened datasets.
-
-(defmapop
-  #^{:doc "Generates metadata values for a given unpacked MODIS
-Dataset and a seq of keys."}
-  [meta-values [meta-keys]] [modis]
-  (let [^Hashtable metadict (metadata modis)]
-    (map #(.get metadict %) meta-keys)))
-
-;; ## Works in Progress, for now.
+;; functions that open datasets, and chunk the resulting integer
+;; arrays.
 
 (defn raster-array
   "Unpacks the data inside of a MODIS band into a 1xN integer array."
@@ -154,6 +146,15 @@ Dataset and a seq of keys."}
   (let [line (* chunk chunk-size)
         sample (+ line index)]
     (vector line sample)))
+
+;; ## Metadata Parsing
+
+(defmapop
+  #^{:doc "Generates metadata values for a given unpacked MODIS
+Dataset and a seq of keys."}
+  [meta-values [meta-keys]] [modis]
+  (let [^Hashtable metadict (metadata modis)]
+    (map #(.get metadict %) meta-keys)))
 
 ;; TODO -- add some good documentation here about what the next
 ;; section is accomplishing. I want to check marginalia to see the
@@ -198,7 +199,7 @@ referenced by the supplied MODIS TileID."
    ((juxt tileid->res
           tileid->xy) tileid)))
 
-;; TODO -- show Dan and Robin, and remove these demonstration functions.
+;; ## Fun Examples!
 
 ;; Guys, are a few ways to accomplish the task solved by tileid->xy,
 ;; shown above. I'm not sure I'm happy with the final version, so I've
@@ -230,7 +231,7 @@ referenced by the supplied MODIS TileID."
   (parse-ints
    ((juxt #(subs % 2 5) #(subs % 5 8)) tileid)))
 
-;; This is the same as the final; it actually compiles to the same
+;; This is the same as the next one; it actually compiles to the same
 ;; byte code, I'm just not using the threading macro here. I don't
 ;; know if the threading macro makes the code more clear, in this
 ;; case, but it's a good example of little tweaks for readability,
@@ -239,3 +240,15 @@ referenced by the supplied MODIS TileID."
   (parse-ints
    (map (partial apply str)
         (partition 3 (s/drop 2 tileid)))))
+
+;; The referenced one, with the threading macro. (This is the one I
+;; ended up going with.) As you can see, it takes each thing, evaluates
+;; it, and inserts it as the last thing in the next entry. So, here we
+;; have tileid inserted, making (s/drop 2 tileid). The whole thing
+;; expands to the code above.
+(fn [tileid]
+  (parse-ints
+   (map (partial apply str)
+        (->> tileid
+             (s/drop 2)
+             (partition 3)))))
