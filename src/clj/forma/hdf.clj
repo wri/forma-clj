@@ -3,7 +3,8 @@
         (cascalog [api :only (defmapop defmapcatop)]
                   [io :only (temp-dir)])
         (clojure.contrib [io :only (file copy delete-file-recursively)]
-                         [string :only (substring? as-str)]))
+                         [string :only (substring? as-str)]
+                         [seq-utils :only (find-first)]))
   (:import [java.util Hashtable]
            [java.io File]
            [org.gdal.gdal gdal Dataset Band]
@@ -34,7 +35,7 @@ MODIS subdataset keys."}
   chunk-size
   24000)
 
-;; ##Helper Functions
+;; ## MODIS Unpacking
 
 (defn metadata
   "Returns the metadata hashtable for the supplied (opened) MODIS file."
@@ -43,9 +44,13 @@ MODIS subdataset keys."}
   ([modis]
      (metadata modis "")))
 
-
 ;; TODO -- describe why we only take the names business. It's because we're
 ;; skipping the descriptions.
+;; The MODIS SUBDATASET dictionary holds entries of the form:
+;; Key: SUBDATASET_2_NAME
+;; Val: HDF4_EOS:EOS_GRID:"/path/to/modis.hdf":MOD_Grid_monthly_1km_VI:1 km
+;; monthly EVI
+;; Key: SUBDATASET_4_DESC
 
 (defn subdataset-names
   "Returns the NAME entries of the SUBDATASETS metadata Hashtable for
@@ -58,23 +63,17 @@ MODIS subdataset keys."}
                     (metadata dataset "SUBDATASETS")))
       (finally (.delete dataset)))))
 
-;; The MODIS SUBDATASET dictionary holds entries of the form:
-;; Key: SUBDATASET_2_NAME
-;; Val: HDF4_EOS:EOS_GRID:"/path/to/modis.hdf":MOD_Grid_monthly_1km_VI:1 km
-;; monthly EVI
-;; Key: SUBDATASET_4_DESC
-
-;; TODO --udpate docs
+;; TODO --update docs, since we now don't unpack the entry.
 (defn subdataset-key
   "Takes a long-form path to a MODIS subdataset, and checks
   to see if any of the values of the modis-subsets map can be found as
   substrings. If we find one, we return the associated key, cast to a
   String."
   [path]
-  (some #(if (substring? (% modis-subsets) path) (as-str %))
-        (keys modis-subsets)))
+  (as-str (find-first #(substring? (% modis-subsets) path)
+                      (keys modis-subsets))))
 
-;;  TODO-- check docs
+;;  TODO-- check docs, since we now don't check against _NAME
 (defn dataset-filter
   "Generates a predicate function that checks the a subdataset name
    from the SUBDATASETS metadata dictionary against a supplied set of
@@ -84,7 +83,7 @@ MODIS subdataset keys."}
     (fn [name]
       (some #(substring? % name) substrings))))
 
-;; TODO --update docs
+;; TODO --update docs, since we're not accepting an entry anymore
 (defn make-subdataset
   "Accepts an entry from the SUBDATASETS Hashtable of a MODIS
  Dataset (remember, this is just a path to the subdataset), and
@@ -120,17 +119,12 @@ as a 1-tuple."}
 ;; This needs some more documentation, but these are the functions
 ;; that deal with opened datasets.
 
-(defn lookup
-  "Looks up a the value for a given key in the supplied hashtable."
-  [key ^Hashtable table]
-  (.get table key))
-
 (defmapop
   #^{:doc "Generates metadata values for a given unpacked MODIS
 Dataset and a seq of keys."}
   [meta-values [meta-keys]] [modis]
-  (let [metadict (metadata modis)]
-    (map #(lookup % metadict) meta-keys)))
+  (let [^Hashtable metadict (metadata modis)]
+    (map #(.get metadict %) meta-keys)))
 
 (defn split-id
   "Splits the TileID metadata string into integer x and y,
