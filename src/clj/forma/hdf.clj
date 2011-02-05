@@ -3,7 +3,7 @@
         (cascalog [api :only (defmapop defmapcatop)]
                   [io :only (temp-dir)])
         (clojure.contrib [io :only (file copy delete-file-recursively)]
-                         [string :only (substring? as-str)]
+                         [string :only (substring? as-str drop)]
                          [seq-utils :only (find-first)]))
   (:import [java.util Hashtable]
            [java.io File]
@@ -62,6 +62,7 @@ MODIS subdataset keys."}
       (vals (filter #(substring? "_NAME" (key %))
                     (metadata dataset "SUBDATASETS")))
       (finally (.delete dataset)))))
+
 
 ;; TODO --update docs, since we now don't unpack the entry.
 (defn subdataset-key
@@ -126,13 +127,6 @@ Dataset and a seq of keys."}
   (let [^Hashtable metadict (metadata modis)]
     (map #(.get metadict %) meta-keys)))
 
-(defn split-id
-  "Splits the TileID metadata string into integer x and y,
-  representing MODIS tile coordinates."
-  [tileid]
-  (let [[_ _ tile-x tile-y] (re-find #"(\d{2})(\d{3})(\d{3})" tileid)]
-    (map #(Integer/parseInt %) [tile-x tile-y])))
-
 (defn raster-array
   "Unpacks the data inside of a MODIS band into a 1xN integer array."
   [^Dataset data]
@@ -150,3 +144,65 @@ Dataset and a seq of keys."}
   (let [line (* chunk chunk-size)
         sample (+ line index)]
     (vector line sample)))
+
+(defn parse-ints [coll]
+  (map #(Integer/parseInt %) coll))
+
+;; This is the final version of the function below -- I've included a
+;; few other ways of accomplishing the same thing, for demonstration
+;; purposes. Robin, Dan... enjoy!
+
+;; TODO -- modify this function to actually return the tile
+;; resolution, along with the tiling scheme. As described at this
+;; site:
+;; http://modis-250m.nascom.nasa.gov/developers/tileid.html
+;; The first digit is used to identify the projection, while the
+;; second digit is used to specify the tile size. 1 is 1km data (full
+;; tile size) , 2 is quarter size (500m data), and 4 is 16th tile
+;; size, or 250m data.
+(defn split-id
+  "Splits a TileID metadata string of the form \"DDXXXYYY\", where DD
+can be tossed, into integer representations of XXX and YYY. These
+represent MODIS tile coordinates."
+  [tileid]
+    (parse-ints
+   (map (partial apply str)
+        (->> tileid (drop 2) (partition 3)))))
+
+;; TODO -- show Dan and Robin, and remove these demonstration functions.
+
+;; Misleading! Here, we're actually calling (subs tileid...) in the
+;; first elements of each of the other vectors, not on each vector in
+;; turn. I won't go with something like this; it works, but it's confusing.
+(fn [tileid]
+  (parse-ints
+   (map (partial subs tileid) [2 5] [5 8])))
+
+;; This is a little bit better, but not really. Now we have a vector
+;; of vectors -- partial takes the stuff after it, and builds a
+;; function that takes less arguments than that stuff needs. (in this
+;; case, we get: the function (apply subs tileid ...), where the
+;; ellipsis can be any group of arguments. Since we're mapping that,
+;; we get [2 5] and [5 8] fed in in turn.
+(fn [tileid]
+  (parse-ints
+   (map (partial apply subs tileid) [[2 5] [5 8]])))
+
+;; Another way to do the same thing. In this case, juxt gives us a
+;; sequence that is the juxtaposition of all of the functions. When we
+;; send in an argument, we get the juxtaposition of the results -- in
+;; this case, ((subs tileid 2 5) (subs tileid 5 8)), where subs is
+;; substring (as above).
+(fn [tileid]
+  (parse-ints
+   ((juxt #(subs % 2 5) #(subs % 5 8)) tileid)))
+
+;; This is the same as the final; it actually compiles to the same
+;; byte code, I'm just not using the threading macro here. I don't
+;; know if the threading macro makes the code more clear, in this
+;; case, but it's a good example of little tweaks for readability,
+;; independent of performance.
+(fn [tileid]
+  (parse-ints
+   (map (partial apply str)
+        (partition 3 (drop 2 tileid)))))
