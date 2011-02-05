@@ -13,22 +13,24 @@
      (files ?file)
      (c/count ?count))))
 
-(defn add-bytes [file]
-  (float-array 10 3.2))
-
-
+(defn add-floats
+  "Returns a float array, for the purpose of stacking on to the end of
+  a tuple. If the returned field works as a subquery result, we're in
+  business."
+  [file]
+  (float-array 10 12))
 
 (defn get-floats
-  "Test of byte array serialization."
+  "Subquery to test float array serialization."
   [dir]
   (let [files (files-with-names dir)]
     (<- [?filename ?floats]
         (files ?filename ?file)
-        (add-bytes ?file :> ?floats)
+        (add-floats ?file :> ?floats)
         (:distinct false))))
 
 (defn files-with-bytes
-  "Test of byte array serialization."
+  "Test of float array serialization."
   [dir]
   (let [stuff (get-floats dir)]
       (?<- (stdout) [?filename ?floats ?num]
