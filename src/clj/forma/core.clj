@@ -14,16 +14,23 @@
 
 ;; ## Example Queries
 
-(defmapop
-  #^{:doc "implements a re-find, and returns the matches, not
-the original string."}
-  [re-group [pattern]] [str]
-  (let [matches (re-find pattern str)]
-    (rest matches)))
+;; TODO -- comment here on why we don't split this up into a
+;; subquery. it's because the FORMA datasets themselves can't actually
+;; be serialized over Hadoop, as no serializer can be registered. As
+;; such, first we need to convert them into some sort of serializable
+;; int array, plus associated metadata. This query (must be renamed)
+;; will return the data array, plus all metadata that we'll want over
+;; the course of the calculations.
+
+;; The next step here will be to write a query that grabs data from a
+;; number of different datasources, and aggregates them together.
+
+;; TODO --some research on cascalog and cascading to see how we do a
+;; join of data; we want a query that will give us absolutely all of
+;; the chunks, for any dataset we like.
 
 (defn modis-chunks
-  "Currently returns dataset, tile, period - no data! Soon, this will
-  actually stream chunks of MODIS data out into the world."
+  "Current returns some metadata -- soon will return all chunks."
   [hdf-source]
   (let [keys ["TileID" "PRODUCTIONDATETIME"]]
     (<- [?dataset ?res ?tile-x ?tile-y ?period]
@@ -31,15 +38,13 @@ the original string."}
         (h/unpack [forma-subsets] ?hdf :> ?dataset ?freetile)
         (h/meta-values [keys] ?freetile :> ?tileid ?juliantime)
         (h/split-id ?tileid :> ?res ?tile-x ?tile-y)        
-        ;; (re-group [#"(\d{2})(\d{6})"] ?tileid :> ?prefix ?tile)
         (to-period ?juliantime :> ?period)
         (:distinct false))))
 
 ;; this guy shoul work.
 (defn tile-metadata
-  "Processes all HDF files in the supplied directory, and prints the
-dataset names, tiles, time periods, and their associated counts to
-standard out."
+  "Processes all HDF files in the supplied directory and prints
+  metadata to stdout. Just here for testing purposes, for now."
   [nasa-dir]
   (let [nasa-files (all-files nasa-dir)
         metadata (modis-chunks nasa-files)]
