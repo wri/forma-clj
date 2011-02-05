@@ -4,7 +4,7 @@
                   [io :only (temp-dir)])
         (clojure.contrib [io :only (file copy delete-file-recursively)]
                          [string :only (substring? as-str)]))
-  (:import [java.util Map$Entry Hashtable]
+  (:import [java.util Hashtable]
            [java.io File]
            [org.gdal.gdal gdal Dataset Band]
            [org.gdal.gdalconst gdalconstConstants]
@@ -43,85 +43,56 @@ MODIS subdataset keys."}
   ([modis]
      (metadata modis "")))
 
-(defn subdatasets-dict
-  "Returns the SUBDATASETS metadata Hashtable for a given filepath."
+
+;; TODO -- describe why we only take the names business. It's because we're
+;; skipping the descriptions.
+
+(defn subdataset-names
+  "Returns the NAME entries of the SUBDATASETS metadata Hashtable for
+  a given filepath."
   [hdf-file]
   (let [path (str hdf-file)
         dataset (gdal/Open path)]
     (try
-      (metadata dataset "SUBDATASETS")
+      (vals (filter #(substring? "_NAME" (key %))
+                    (metadata dataset "SUBDATASETS")))
       (finally (.delete dataset)))))
 
-(defn lookup
-  "Looks up a key in the supplied hashtable."
-  [key ^Hashtable table]
-  (.get table key))
+;; The MODIS SUBDATASET dictionary holds entries of the form:
+;; Key: SUBDATASET_2_NAME
+;; Val: HDF4_EOS:EOS_GRID:"/path/to/modis.hdf":MOD_Grid_monthly_1km_VI:1 km
+;; monthly EVI
+;; Key: SUBDATASET_4_DESC
 
-(defn split-entry
-  "Splits a given Entry into its map and key."
-  [^Map$Entry entry]
-  (vector (.getValue entry) (.getKey entry)))
-
+;; TODO --udpate docs
 (defn subdataset-key
-  "Takes a long-form description of a NASA MODIS dataset, and checks
+  "Takes a long-form path to a MODIS subdataset, and checks
   to see if any of the values of the modis-subsets map can be found as
   substrings. If we find one, we return the associated key, cast to a
   String."
-  [str]
-  (some #(if (substring? (% modis-subsets) str) (as-str %))
-          (keys modis-subsets)))
+  [path]
+  (some #(if (substring? (% modis-subsets) path) (as-str %))
+        (keys modis-subsets)))
 
+;;  TODO-- check docs
 (defn dataset-filter
-  "Generates a predicate function that checks the a Hashtable entry
+  "Generates a predicate function that checks the a subdataset name
    from the SUBDATASETS metadata dictionary against a supplied set of
    acceptable datasets."
   [good-keys]
   (let [substrings (map modis-subsets good-keys)]
-    (fn [entry]
-      (let [[val key] (split-entry entry)]
-        (and (substring? "_NAME" key)
-             (some #(substring? % val) substrings))))))
+    (fn [name]
+      (some #(substring? % name) substrings))))
 
+;; TODO --update docs
 (defn make-subdataset
-  "Accepts an entry from the SUBDATASETS Hashtable of a MODIS Dataset,
-   and returns a 2-tuple - (modis-subsets key, Dataset)."
-  [entry]
-  (let [[path] (split-entry entry)]
-    (vector (subdataset-key path) (gdal/Open path))))
-
-(defn raster-array
-  "Unpacks the data inside of a MODIS band into a 1xN integer array."
-  [^Dataset data]
-  (let [^Band band (.GetRasterBand data 1)
-        type (gdalconstConstants/GDT_UInt16)
-        width (.GetXSize band)
-        height (.GetYSize band)
-        ret (int-array (* width height))]
-    (do (.ReadRaster band 0 0 width height type ret) ret)))
-
-(defn tile-position
-  "For a given MODIS chunk and index within that chunk, returns [line,
-  sample] within the MODIS tile."
-  [chunk index]
-  (let [line (* chunk chunk-size)
-        sample (+ line index)]
-    (vector line sample)))
-
-(defn split-id
-  "Splits the TileID metadata string into integer x and y,
-  representing MODIS tile coordinates."
-  [tileid]
-  (let [[_ _ tile-x tile-y] (re-find #"(\d{2})(\d{3})(\d{3})" tileid)]
-    (map #(Integer/parseInt %) [tile-x tile-y])))
+  "Accepts an entry from the SUBDATASETS Hashtable of a MODIS
+ Dataset (remember, this is just a path to the subdataset), and
+ returns a 2-tuple - (modis-subsets key, Dataset)."
+  [path]
+  (vector (subdataset-key path) (gdal/Open path)))
 
 ;; ##Cascalog Custom Functions
-
-(defmapop
-  #^{:doc "Generates metadata values for a given unpacked MODIS
-Dataset and a seq of keys."}
-  [meta-values [meta-keys]] [modis]
-  (let [metadict (metadata modis)]
-    (map #(lookup % metadict) meta-keys)))
 
 (defmapcatop
   #^{:doc "Stateful approach to unpacking HDF files. Registers all
@@ -141,6 +112,47 @@ as a 1-tuple."}
        (do
          (copy bytes temp-hdf)
          (map make-subdataset
-              (filter keep? (subdatasets-dict temp-hdf))))))
+              (filter keep? (subdataset-names temp-hdf))))))
   ([tdir]
      (delete-file-recursively tdir)))
+
+;; ## Dataset Chunking
+;; This needs some more documentation, but these are the functions
+;; that deal with opened datasets.
+
+(defn lookup
+  "Looks up a the value for a given key in the supplied hashtable."
+  [key ^Hashtable table]
+  (.get table key))
+
+(defmapop
+  #^{:doc "Generates metadata values for a given unpacked MODIS
+Dataset and a seq of keys."}
+  [meta-values [meta-keys]] [modis]
+  (let [metadict (metadata modis)]
+    (map #(lookup % metadict) meta-keys)))
+
+(defn split-id
+  "Splits the TileID metadata string into integer x and y,
+  representing MODIS tile coordinates."
+  [tileid]
+  (let [[_ _ tile-x tile-y] (re-find #"(\d{2})(\d{3})(\d{3})" tileid)]
+    (map #(Integer/parseInt %) [tile-x tile-y])))
+
+(defn raster-array
+  "Unpacks the data inside of a MODIS band into a 1xN integer array."
+  [^Dataset data]
+  (let [^Band band (.GetRasterBand data 1)
+        type (gdalconstConstants/GDT_UInt16)
+        width (.GetXSize band)
+        height (.GetYSize band)
+        ret (int-array (* width height))]
+    (do (.ReadRaster band 0 0 width height type ret) ret)))
+
+(defn tile-position
+  "For a given MODIS chunk and index within that chunk, returns [line,
+  sample] within the MODIS tile."
+  [chunk index]
+  (let [line (* chunk chunk-size)
+        sample (+ line index)]
+    (vector line sample)))
