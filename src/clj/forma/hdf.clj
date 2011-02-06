@@ -1,9 +1,8 @@
 (ns forma.hdf
-  (:use forma.hadoop
-        (cascalog [api :only (defmapop defmapcatop)]
-                  [io :only (temp-dir)])
+  (:use (forma hadoop [conversion :only (to-period)])
+        (cascalog api [io :only (temp-dir)])
         (clojure.contrib [io :only (file copy delete-file-recursively)]
-                         [seq-utils :only (find-first)]))
+                         [seq-utils :only (find-first indexed)]))
   (:require (clojure.contrib [string :as s]))
   (:import [java.util Hashtable]
            [java.io File]
@@ -13,19 +12,14 @@
 
 (set! *warn-on-reflection* true)
 
-;; ##Constants
+;; ## Constants
 
-(def res-map
-  #^{:doc "Map between the first digit in a MODIS TileID
-metadata value and the corresponding resolution."}
-  {:1 "1000"
-   :2 "500"
-   :4 "250"})
-
-(def
-  #^{:doc "Map between symbols and chosen substrings of
-MODIS subdataset keys."}
-  modis-subsets
+(def modis-subsets
+  #^{:doc "Map between MODIS dataset identifiers (arbitrarily chosen
+by the REDD team) and corresponding unique substrings, culled from
+values in the SUBDATASETS hashtable of MOD13A3 HDF file. No simple,
+descriptive tag exists within the metadata, as of 2/05/2011, so this
+ends up being the best solution."}
   {:evi "monthly EVI"
    :qual "VI Quality"
    :red "red reflectance"
@@ -37,15 +31,17 @@ MODIS subdataset keys."}
    :ndvi "NDVI"
    :sunz "sun zenith"})
 
-(def
-  #^{:doc "Arbitrary number of pixels in a chunk of MODIS data."}
-  chunk-size
-  24000)
+(def #^{:doc "Arbitrary number of pixels slurped at a time off of a
+MODIS raster band. For 1km data, each MODIS tile is 1200x1200 pixels;
+dealing with each pixel individually would incur unacceptable IO costs
+within hadoop. We currently fix the chunk size at 24,000, resulting in
+60 chunks per 1km data. Sharper resolution -> more chunks!"}
+chunk-size 24000)
 
 ;; ## MODIS Unpacking
 
 (defn metadata
-  "Returns the metadata hashtable for the supplied (opened) MODIS file."
+  "Returns the metadata hashtable for the supplied MODIS Dataset."
   ([^Dataset modis key]
      (.GetMetadata_Dict modis key))
   ([modis]
@@ -101,13 +97,12 @@ MODIS subdataset keys."}
 
 ;; ##Cascalog Custom Functions
 
-(defmapcatop
+(defmapcatop [unpack [to-keep]] {:stateful true}
   #^{:doc "Stateful approach to unpacking HDF files. Registers all
 gdal formats, Creates a temp directory, then saves the byte array to
 disk. This byte array is processed with gdal. On teardown, the temp
 directory is destroyed. Function returns the decompressed MODIS file
 as a 1-tuple."}
-  [unpack [to-keep]] {:stateful true}
   ([]
      (do
        (gdal/AllRegister)
@@ -129,30 +124,23 @@ as a 1-tuple."}
 ;; functions that open datasets, and chunk the resulting integer
 ;; arrays.
 
-(defn raster-array
-  "Unpacks the data inside of a MODIS band into a 1xN integer array."
+(defmapcatop raster-chunks
+  #^{:doc "Unpacks the data inside of a MODIS band into a lazy
+sequence of chunks. See chunk-length for the default size."}
   [^Dataset data]
   (let [^Band band (.GetRasterBand data 1)
-        type (gdalconstConstants/GDT_UInt16)
         width (.GetXSize band)
         height (.GetYSize band)
         ret (int-array (* width height))]
-    (do (.ReadRaster band 0 0 width height type ret) ret)))
-
-(defn tile-position
-  "For a given MODIS chunk and index within that chunk, returns [line,
-  sample] within the MODIS tile."
-  [chunk index]
-  (let [line (* chunk chunk-size)
-        sample (+ line index)]
-    (vector line sample)))
+    (.ReadRaster band 0 0 width height ret)
+    (indexed (partition chunk-size ret))))
 
 ;; ## Metadata Parsing
 
-(defmapop
+(defmapop [meta-values [meta-keys]]
   #^{:doc "Generates metadata values for a given unpacked MODIS
 Dataset and a seq of keys."}
-  [meta-values [meta-keys]] [modis]
+  [modis]
   (let [^Hashtable metadict (metadata modis)]
     (map #(.get metadict %) meta-keys)))
 
@@ -174,6 +162,13 @@ Dataset and a seq of keys."}
   [coll]
   (map #(Integer/parseInt %) coll))
 
+(def res-map
+  #^{:doc "Map between the first digit in a MODIS TileID
+metadata value and the corresponding resolution."}
+  {:1 "1000"
+   :2 "500"
+   :4 "250"})
+
 (defn tileid->res
   "Returns a string representation of the resolution referenced by the
 supplied MODIS TileID."
@@ -186,9 +181,7 @@ referenced by the supplied MODIS TileID."
   [tileid]
   (parse-ints
    (map (partial apply str)
-        (->> tileid
-             (s/drop 2)
-             (partition 3)))))
+        (partition 3 (subs tileid 2)))))
 
 (defn split-id
   "Returns a sequence containing the resolution, X and Y
@@ -198,6 +191,36 @@ referenced by the supplied MODIS TileID."
   (flatten
    ((juxt tileid->res
           tileid->xy) tileid)))
+
+;; ## The Chunker!
+;; TODO -- Explain why the damned thing is so long! (that's what she
+;; said?)
+;; We currently can't have a subquery that returns any sort
+;; of custom dataset. Once I get a response on the cascalog user group,
+;; I'll go ahead and refactor this.
+
+(defn modis-chunks
+  "Current returns some metadata -- soon will return all chunks."
+  [source datasets]
+  (let [keys ["TileID" "PRODUCTIONDATETIME"]]
+    (<- [?dataset ?res ?tile-x ?tile-y ?period ?chunkid ?chunk]
+        (source ?filename ?hdf)
+        (unpack [datasets] ?hdf :> ?dataset ?freetile)
+        (meta-values [keys] ?freetile :> ?tileid ?juliantime)
+        (split-id ?tileid :> ?res ?tile-x ?tile-y)        
+        (to-period ?juliantime :> ?period)
+        (raster-chunks ?freetile :> ?chunkid ?chunk)
+        (:distinct false))))
+
+;; We're going to need this at some point, I'm just not sure where.
+
+(defn tile-position
+  "For a given MODIS chunk and index within that chunk, returns [line,
+  sample] within the MODIS tile."
+  [chunk index]
+  (let [line (* chunk chunk-size)
+        sample (+ line index)]
+    (vector line sample)))
 
 ;; ## Fun Examples!
 
@@ -241,14 +264,33 @@ referenced by the supplied MODIS TileID."
    (map (partial apply str)
         (partition 3 (s/drop 2 tileid)))))
 
-;; The referenced one, with the threading macro. (This is the one I
-;; ended up going with.) As you can see, it takes each thing, evaluates
-;; it, and inserts it as the last thing in the next entry. So, here we
-;; have tileid inserted, making (s/drop 2 tileid). The whole thing
-;; expands to the code above.
+;; The referenced one, with the threading macro. As you can see, it
+;; takes each thing, evaluates it, and inserts it as the last thing in
+;; the next entry. So, here we have tileid inserted, making (s/drop 2
+;; tileid). The whole thing expands to the code above.
+;; BE CAREFUL with this! It's a really good solution, but only when it
+;; makes things clear -- not when it's used as a way to think
+;; iteratively. There's usually some transformation on a list that you
+;; can do to get the same effects as the threading macro. (Once we all
+;; learn to code the Clojure Way, this stuff will be fine :)
 (fn [tileid]
   (parse-ints
    (map (partial apply str)
         (->> tileid
              (s/drop 2)
              (partition 3)))))
+
+;; I ended up going with this bad boy, because it looked closest to my
+;; other function, tileid->res. Look at them together, to see how
+;; they're sort of similar:
+;;
+;; (defn tileid->res
+;;   "Returns a string representation of the resolution referenced by the
+;; supplied MODIS TileID."
+;;   [tileid]
+;;   (res-map (keyword (subs tileid 1 2))))
+;;
+(fn [tileid]
+  (parse-ints
+   (map (partial apply str)
+        (partition 3 (subs tileid 2)))))

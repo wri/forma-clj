@@ -18,7 +18,7 @@
   [dir]
   (let [files (all-files dir)]
     (?<- (stdout) [?count]
-     (files ?file)
+     (files ?filename ?file)
      (c/count ?count))))
 
 (defn add-floats
@@ -26,18 +26,18 @@
   a tuple. If the returned field works as a subquery result, we're in
   business."
   [file]
-  (float-array 10 12))
+  (float-array 23 3.2))
 
 (defn get-floats
   "Subquery to test float array serialization."
   [dir]
-  (let [files (files-with-names dir)]
+  (let [files (all-files dir)]
     (<- [?filename ?floats]
         (files ?filename ?file)
         (add-floats ?file :> ?floats)
         (:distinct false))))
 
-(defn files-with-bytes
+(defn files-with-floats
   "Test of float array serialization."
   [dir]
   (let [stuff (get-floats dir)]
