@@ -10,6 +10,10 @@
 ;; to take, roughly, 90 minutes (distributed across machines). Gotta
 ;; be a faster way to do this!
 
+;;TODO -- document, inside of these functions, what a sinusoidal
+;;projection actually is, with some links to understanding the general
+;;idea behind all of this stuff.
+
 (ns forma.sinu
   (:use (clojure.contrib.generic [math-functions :only (cos)])))
 

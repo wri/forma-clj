@@ -1,9 +1,9 @@
 (ns forma.hdf
   (:use (forma hadoop [conversion :only (to-period)])
         (cascalog api [io :only (temp-dir)])
-        (clojure.contrib [io :only (file copy delete-file-recursively)]
-                         [seq-utils :only (find-first indexed)]))
-  (:require (clojure.contrib [string :as s]))
+        (clojure.contrib [seq-utils :only (find-first indexed)]))
+  (:require (clojure.contrib [string :as s]
+                             [io :as io]))
   (:import [java.util Hashtable]
            [java.io File]
            [org.gdal.gdal gdal Dataset Band]
@@ -102,14 +102,14 @@ as a 1-tuple."}
        (temp-dir "hdf")))
   ([tdir stream]
      (let [bytes (get-bytes stream)
-           temp-hdf (file tdir (hash-str stream))
+           temp-hdf (io/file tdir (hash-str stream))
            keep? (dataset-filter to-keep)]
        (do
-         (copy bytes temp-hdf)
+         (io/copy bytes temp-hdf)
          (map make-subdataset
               (filter keep? (subdataset-names temp-hdf))))))
   ([tdir]
-     (delete-file-recursively tdir)))
+     (io/delete-file-recursively tdir)))
 
 ;; ## Chunking Functions
 
