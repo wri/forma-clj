@@ -47,7 +47,7 @@
   ^{:doc "Extracts ."}
   [filename month]
   (let [year (Integer/parseInt (first (re-find #"(\d{4})" filename)))]
-    (julian->period year month res)))
+    [res (julian->period year month res)]))
 
 ;; This has some fundamental errors. For example, what do we do for
 ;; rain data when we start getting in to higher resolution MODIS?
@@ -62,5 +62,5 @@
      (let [rain-files (all-files rain-dir)]
        (?<- (stdout) [?dataset ?res ?period]
             (rain-files ?filename ?file)
-            (extract-period [res] ?filename ?month :> ?period)
+            (extract-period [res] ?filename ?month :> ?res ?period)
             (r/unpack-rain ?file :> ?dataset ?month ?month-data)))))
