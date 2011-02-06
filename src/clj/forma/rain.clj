@@ -19,7 +19,7 @@
   (:use cascalog.api
         (forma sinu
                [hadoop :only (get-bytes)]))
-  (:require [clojure.contrib.io :as io])
+  (:require (clojure.contrib [io :as io]))
   (:import [java.io File InputStream]
            [java.util.zip GZIPInputStream]
            [forma LittleEndianDataInputStream]))
@@ -31,6 +31,10 @@
 
 (def map-dimensions [180 360])
 (def forma-res 0.5)
+
+(defn sqr
+  "Returns the square of x."
+  [x] (* x x))
 
 (defn dimensions-at-res
   "returns the pixel dimensions at the specified pixel width (in degrees)."
@@ -53,7 +57,11 @@
 
 (defn input-stream
   "Attempts to coerce the given argument to an InputStream, with added
-  support for gzipped files."
+  support for gzipped files. If the input argument does point to a
+  gzipped file, the default buffer will be sized to fit one NOAA
+  PREC/L binary data file at 0.5 degree resolution, or 24 groups of (*
+  360 720) floats. To make sure that the returned GZIPInputStream will
+  fully read into a supplied byte array, see forma.rain/force-fill."
   [arg]
   (let [^InputStream stream (io/input-stream arg)
         rainbuf-size (* 24 (floats-for-res forma-res))]
@@ -64,26 +72,12 @@
         (.reset stream)
         stream))))
 
-(defmulti little-stream
-  "Converts argument into a DataInputStream, with little endian byte
-    order. Argument may be an Input Stream, File, String, byte array,
-    or another LittleEndianDataInputStream. If the latter is true,
-    acts as identity."
-  type)
-
-(derive java.lang.String ::fileable)
-(derive java.io.File ::fileable)
-
-(defmethod little-stream LittleEndianDataInputStream [x] x)
-
-(defmethod little-stream InputStream [x]
-  (LittleEndianDataInputStream. x))
-
-(defmethod little-stream ::fileable [x]
-  (little-stream (input-stream (io/file x))))
-
-(defmethod little-stream io/*byte-array-type* [b]
-  (little-stream (input-stream b)))
+(defn little-stream
+  "Returns a little endian DataInputStream opened up on the supplied
+  argument. See clojure.contrib.io/input-stream for acceptable
+  argument types."
+  [x]
+  (LittleEndianDataInputStream. (input-stream x)))
 
 ;; ## Data Extraction
 
@@ -152,10 +146,6 @@ objects."}
   [stream]
   (let [bytes (get-bytes stream)]
     (rain-tuples (input-stream bytes))))
-
-(defn sqr
-  "Returns the square of x."
-  [x] (* x x))
 
 (defmapcatop [rain-chunks [chunk-size]]
   ^{:doc "Takes in data for a single month of rain data, and converts
