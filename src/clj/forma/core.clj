@@ -7,7 +7,7 @@
                    [rain :as r])))
 
 (def forma-subsets
-  #^{:doc "MODIS datasets required for FORMA processing."}
+  ^{:doc "MODIS datasets required for FORMA processing."}
   #{:ndvi :evi :qual :reli})
 
 ;; ## Test Queries

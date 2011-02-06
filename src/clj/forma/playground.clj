@@ -10,8 +10,7 @@
   (:use cascalog.api
         forma.hadoop
         forma.sources)
-  (:require (clojure.contrib.http [agent :as h])
-            (cascalog [ops :as c])))
+  (:require (cascalog [ops :as c])))
 
 (defn file-count
   "Prints the total count of files in a given directory to stdout."

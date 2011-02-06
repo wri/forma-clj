@@ -15,7 +15,7 @@
 ;; ## Constants
 
 (def modis-subsets
-  #^{:doc "Map between MODIS dataset identifiers (arbitrarily chosen
+  ^{:doc "Map between MODIS dataset identifiers (arbitrarily chosen
 by the REDD team) and corresponding unique substrings, culled from
 values in the SUBDATASETS hashtable of MOD13A3 HDF file. No simple,
 descriptive tag exists within the metadata, as of 2/05/2011, so this
@@ -31,7 +31,8 @@ ends up being the best solution."}
    :ndvi "NDVI"
    :sunz "sun zenith"})
 
-(def #^{:doc "Arbitrary number of pixels slurped at a time off of a
+(def
+  ^{:doc "Arbitrary number of pixels slurped at a time off of a
 MODIS raster band. For 1km data, each MODIS tile is 1200x1200 pixels;
 dealing with each pixel individually would incur unacceptable IO costs
 within hadoop. We currently fix the chunk size at 24,000, resulting in
@@ -98,7 +99,7 @@ chunk-size 24000)
 ;; ##Cascalog Custom Functions
 
 (defmapcatop [unpack [to-keep]] {:stateful true}
-  #^{:doc "Stateful approach to unpacking HDF files. Registers all
+  ^{:doc "Stateful approach to unpacking HDF files. Registers all
 gdal formats, Creates a temp directory, then saves the byte array to
 disk. This byte array is processed with gdal. On teardown, the temp
 directory is destroyed. Function returns the decompressed MODIS file
@@ -125,7 +126,7 @@ as a 1-tuple."}
 ;; arrays.
 
 (defmapcatop raster-chunks
-  #^{:doc "Unpacks the data inside of a MODIS band into a lazy
+  ^{:doc "Unpacks the data inside of a MODIS band into a lazy
 sequence of chunks. See chunk-length for the default size."}
   [^Dataset data]
   (let [^Band band (.GetRasterBand data 1)
@@ -138,7 +139,7 @@ sequence of chunks. See chunk-length for the default size."}
 ;; ## Metadata Parsing
 
 (defmapop [meta-values [meta-keys]]
-  #^{:doc "Generates metadata values for a given unpacked MODIS
+  ^{:doc "Generates metadata values for a given unpacked MODIS
 Dataset and a seq of keys."}
   [modis]
   (let [^Hashtable metadict (metadata modis)]
@@ -163,7 +164,7 @@ Dataset and a seq of keys."}
   (map #(Integer/parseInt %) coll))
 
 (def res-map
-  #^{:doc "Map between the first digit in a MODIS TileID
+  ^{:doc "Map between the first digit in a MODIS TileID
 metadata value and the corresponding resolution."}
   {:1 "1000"
    :2 "500"
