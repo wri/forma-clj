@@ -1,6 +1,7 @@
 (ns forma.core
   (:use cascalog.api
-        (forma [sources :only (all-files)]))
+        (forma [sources :only (all-files)]
+               conversion))
     (:require (cascalog [vars :as v]
                         [ops :as c])
             (forma [hdf :as h]
@@ -9,6 +10,8 @@
 (def forma-subsets
   ^{:doc "MODIS datasets required for FORMA processing."}
   #{:ndvi :evi :qual :reli})
+
+(def forma-res "1000")
 
 ;; ## Test Queries
 
@@ -35,28 +38,29 @@
   [dir]
   (let [source (all-files dir)
         chunks (h/modis-chunks source forma-subsets)]
-    (?<- (stdout) [?dataset ?res ?tile-x ?tile-y ?period ?count]
+    (?<- (stdout)
+         [?dataset ?res ?tile-x ?tile-y ?period ?count]
          (chunks ?dataset ?res ?tile-x ?tile-y ?period ?chunkid ?chunk)
          (c/count ?count))))
 
-;; TODO -- convert filename and month into julian time period.
-;; TODO -- Check the FORMA code to see how we decide time periods for
-;; these bad boys. Do we just assume the first of the month?
+(defmapop [extract-period [res]]
+  ^{:doc "Extracts ."}
+  [filename month]
+  (let [year (Integer/parseInt (first (re-find #"(\d{4})" filename)))]
+    (julian->period year month res)))
+
+;; This has some fundamental errors. For example, what do we do for
+;; rain data when we start getting in to higher resolution MODIS?
+;; We're going to have all of these gaps in the periods.
+
 (defn rain-months
-  "Test query! Returns the count of output data sets for each month,
-   from 0 to 11."
-  [rain-dir]
-  (let [rain-files (all-files rain-dir)]
-    (?<- (stdout) [?filename ?month ?count]
-         (rain-files ?filename ?file)
-         (r/rain-months ?file :> ?month ?month-data)
-         (c/count ?count))))
-
-;; ## Works in Progress
-
-;; These are meant to be ignored for now -- we've make great use of
-;; them once we have the ability to serialize a MODIS dataset using
-;; hadoop. I just have to write the class that lets us do this, and
-;; decide on a serialization mechanism. (I'm thinking that we'll go
-;; well to simply serialize the float array, or int array, underlying
-;; the whole thing.)
+  "Test query! Returns redundant filenames, and a month variable
+  corresponding to each rain dataset within the supplied directory."
+  ([rain-dir]
+     (rain-months rain-dir forma-res))
+  ([rain-dir res]
+     (let [rain-files (all-files rain-dir)]
+       (?<- (stdout) [?dataset ?res ?period]
+            (rain-files ?filename ?file)
+            (extract-period [res] ?filename ?month :> ?period)
+            (r/unpack-rain ?file :> ?dataset ?month ?month-data)))))

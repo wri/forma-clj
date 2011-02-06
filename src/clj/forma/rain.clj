@@ -54,10 +54,11 @@
   "Attempts to coerce the given argument to an InputStream, with added
   support for gzipped files."
   [arg]
-  (let [^InputStream stream (io/input-stream arg)]
+  (let [^InputStream stream (io/input-stream arg)
+        rainbuf-size (* 24 (floats-for-res forma-res))]
     (try
       (.mark stream 0)
-      (GZIPInputStream. stream)
+      (GZIPInputStream. stream rainbuf-size)
       (catch java.io.IOException e
         (.reset stream)
         stream))))
@@ -98,6 +99,21 @@
      (catch java.io.IOException e
        (.close buf)))))
 
+(defn force-fill
+  "Forces the given stream to fill the supplied buffer. In certain
+  cases, such as when a GZIPInputStream doesn't have a large enough
+  buffer by default, the stream simply won't load the requested number
+  of bytes. We keep trying until the damned thing is full."
+  [^InputStream stream buffer]
+  (loop [len (count buffer)
+         off 0]
+    (let [read (.read stream buffer off len)
+          newlen (- len read)
+          newoff (+ off read)]
+      (cond (neg? read) read
+            (zero? newlen) (count buffer)
+            :else (recur newlen newoff)))))
+
 (defn lazy-months
   "Generates a lazy seq of byte-arrays from a binary NOAA PREC/L
   file. Elements alternate between precipitation rate in mm / day and
@@ -106,25 +122,32 @@
   ([^InputStream stream res]
      (let [arr-size (floats-for-res res)
            buf (byte-array arr-size)]
-       (if (pos? (.read stream buf))
+       (if (pos? (force-fill stream buf))
          (lazy-seq
           (cons buf (lazy-months stream)))
          (.close stream)))))
 
-(defn all-months
-  "Returns a lazy seq of precipitation data for all months inside of a
-  yearly rain array, represented as lazy seqs of floats. Note that we
-  skip data concerning # of gauges."
+(defn make-tuple
+  "Generates a 3-tuple for NOAA PREC/L months. We increment the index,
+  in this case, to make the number correspond to a month of the year,
+  rather than an index in a seq."
+  [index month]
+  (vector "precl" (inc index) (little-stream month)))
+
+(defn rain-tuples
+  "Returns a lazy seq of 3-tuples representing NOAA PREC/L rain
+  data. Note that we take every other element in the lazy-months seq,
+  skipping data concerning # of gauges."
   [stream]
-  (map-indexed #(vector %1 (lazy-floats (little-stream %2)))
-               (take-nth 2 (lazy-months stream))))
+  (map-indexed make-tuple (take-nth 2 (lazy-months stream))))
 
 ;; ## Cascalog Queries
 
-(defmapcatop
-  #^{:doc "Unpacks a yearly PREC/L binary file, and returns its
-    months as a lazy sequence of float arrays."}
-  rain-months
+(defmapcatop unpack-rain
+  ^{:doc "Unpacks a PREC/L binary file for a given year, and returns a
+lazy sequence of 3-tuples, in the form of (dataset, month,
+data). Assumes that binary files are packaged as hadoop BytesWritable
+objects."}
   [stream]
   (let [bytes (get-bytes stream)]
-    (all-months (input-stream bytes))))
+    (rain-tuples (input-stream bytes))))

@@ -98,7 +98,7 @@ chunk-size 24000)
 
 ;; ##Cascalog Custom Functions
 
-(defmapcatop [unpack [to-keep]] {:stateful true}
+(defmapcatop [unpack-modis [to-keep]] {:stateful true}
   ^{:doc "Stateful approach to unpacking HDF files. Registers all
 gdal formats, Creates a temp directory, then saves the byte array to
 disk. This byte array is processed with gdal. On teardown, the temp
@@ -194,25 +194,30 @@ referenced by the supplied MODIS TileID."
           tileid->xy) tileid)))
 
 ;; ## The Chunker!
-;; TODO -- Explain why the damned thing is so long! (that's what she
-;; said?)
-;; We currently can't have a subquery that returns any sort
-;; of custom dataset. Once I get a response on the cascalog user group,
-;; I'll go ahead and refactor this.
 
 (defn modis-chunks
-  "Current returns some metadata -- soon will return all chunks."
+  "Takes a source, either (hfs-wholefile dir) or (hfs-seqfile dir),
+  and returns a number of 7-tuples that fully describe chunks of MODIS
+  data for the supplied datasets. This function currently can't be
+  refactored, as the gdal.Dataset object doesn't implement
+  Serializable. This forces us to completely tease apart the HDF files
+  at the source before we can return tuples from the subquery. Chunks
+  are represented as seqs of floats. Be sure to convert to vector
+  before running any sort of data analysis, as (seqs require linear
+  time for lookups)."
   [source datasets]
   (let [keys ["TileID" "PRODUCTIONDATETIME"]]
     (<- [?dataset ?res ?tile-x ?tile-y ?period ?chunkid ?chunk]
         (source ?filename ?hdf)
-        (unpack [datasets] ?hdf :> ?dataset ?freetile)
+        (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
         (meta-values [keys] ?freetile :> ?tileid ?juliantime)
         (split-id ?tileid :> ?res ?tile-x ?tile-y)        
-        (to-period ?juliantime :> ?period)
+        (to-period ?juliantime ?res :> ?period)
         (raster-chunks ?freetile :> ?chunkid ?chunk)
         (:distinct false))))
 
+
+;; TODO - find a home for this function.
 ;; We're going to need this at some point, I'm just not sure where.
 
 (defn tile-position
