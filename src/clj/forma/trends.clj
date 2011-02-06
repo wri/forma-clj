@@ -1,4 +1,7 @@
-;; This is where we'll be implementing OLS regression.
+;; This is where we'll be implementing OLS, using either infer or
+;; incanter on the resulting matrices. Again, we should make sure that
+;; we're operating on vectors, not seqs. (Turn a seq into a vector be
+;; calling vec on it.)
 
 (ns forma.trends
   (:use cascalog.api))
