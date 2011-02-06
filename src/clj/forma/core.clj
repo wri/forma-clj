@@ -13,6 +13,25 @@
 
 (def forma-res "1000")
 
+(def
+  ^{:doc "Arbitrary number of pixels slurped at a time off of a
+MODIS raster band. For 1km data, each MODIS tile is 1200x1200 pixels;
+dealing with each pixel individually would incur unacceptable IO costs
+within hadoop. We currently fix the chunk size at 24,000, resulting in
+60 chunks per 1km data. Sharper resolution -> more chunks!"}
+  chunk-size 24000)
+
+;; TODO - find a home for this function.
+;; We're going to need this at some point, I'm just not sure where.
+
+(defn tile-position
+  "For a given MODIS chunk and index within that chunk, returns [line,
+  sample] within the MODIS tile."
+  [chunk index]
+  (let [line (* chunk chunk-size)
+        sample (+ line index)]
+    (vector line sample)))
+
 ;; ## Test Queries
 
 ;; TODO -- comment here on why we don't split this up into a
@@ -37,14 +56,17 @@
   and displays the count alongside some other nice metadata."
   [dir]
   (let [source (all-files dir)
-        chunks (h/modis-chunks source forma-subsets)]
+        chunks (h/modis-chunks source forma-subsets chunk-size)]
     (?<- (stdout)
          [?dataset ?res ?tile-x ?tile-y ?period ?count]
          (chunks ?dataset ?res ?tile-x ?tile-y ?period ?chunkid ?chunk)
          (c/count ?count))))
 
 (defmapop [extract-period [res]]
-  ^{:doc "Extracts ."}
+  ^{:doc "Extracts the year from a NOAA PREC/L filename, assuming that
+  the year is the only group of 4 digits. pairs it with the supplied
+  month, and converts both into a time period, with units in months
+  from the MODIS start date as defined in conversion.clj."}
   [filename month]
   (let [year (Integer/parseInt (first (re-find #"(\d{4})" filename)))]
     [res (julian->period year month res)]))

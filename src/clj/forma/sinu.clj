@@ -63,15 +63,6 @@
   [lat lon]
   (apply sinu-xy (map to-rad [lat lon])))
 
-(defn lat-long
-  "Computes the latitude and longitude for a given set of sinusoidal
-  map coordinates (in meters)."
-  [x y]
-  (let [lat (/ y rho)
-        lon (/ x (* rho (cos lat)))]
-    (map to-deg [lat lon])))
-
-
 ;; These are the meter values of the minimum possible x and y values
 ;; on a sinusoidal projection. Things get weird at the corners, so I
 ;; compute the minimum x and y values separately, along the
@@ -80,6 +71,17 @@
 (def min-x (x-coord (sinu-deg-xy 0 -180)))
 (def min-y (y-coord (sinu-deg-xy -90 0)))
 (def max-y (y-coord (sinu-deg-xy 90 0)))
+
+;; ## Conversion Functions
+
+(defn lat-long
+  "Computes the latitude and longitude for a given set of sinusoidal
+  map coordinates (in meters)."
+  [x y]
+  (let [lat (/ y rho)
+        lon (/ x (* rho (cos lat)))]
+    (map to-deg [lat lon])))
+
 
 (defn pixel-length
   "The length, in meters, of the edge of a pixel at a given

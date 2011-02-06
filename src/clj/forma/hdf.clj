@@ -31,14 +31,6 @@ ends up being the best solution."}
    :ndvi "NDVI"
    :sunz "sun zenith"})
 
-(def
-  ^{:doc "Arbitrary number of pixels slurped at a time off of a
-MODIS raster band. For 1km data, each MODIS tile is 1200x1200 pixels;
-dealing with each pixel individually would incur unacceptable IO costs
-within hadoop. We currently fix the chunk size at 24,000, resulting in
-60 chunks per 1km data. Sharper resolution -> more chunks!"}
-chunk-size 24000)
-
 ;; ## MODIS Unpacking
 
 (defn metadata
@@ -125,7 +117,7 @@ as a 1-tuple."}
 ;; functions that open datasets, and chunk the resulting integer
 ;; arrays.
 
-(defmapcatop raster-chunks
+(defmapcatop [raster-chunks [chunk-size]]
   ^{:doc "Unpacks the data inside of a MODIS band into a lazy
 sequence of chunks. See chunk-length for the default size."}
   [^Dataset data]
@@ -164,7 +156,7 @@ Dataset and a seq of keys."}
   (map #(Integer/parseInt %) coll))
 
 (def res-map
-  ^{:doc "Map between the first digit in a MODIS TileID
+  ^{:doc "Map between the second digit in a MODIS TileID
 metadata value and the corresponding resolution."}
   {:1 "1000"
    :2 "500"
@@ -205,28 +197,17 @@ referenced by the supplied MODIS TileID."
   are represented as seqs of floats. Be sure to convert to vector
   before running any sort of data analysis, as (seqs require linear
   time for lookups)."
-  [source datasets]
+  [source datasets chunk-size]
   (let [keys ["TileID" "PRODUCTIONDATETIME"]]
     (<- [?dataset ?res ?tile-x ?tile-y ?period ?chunkid ?chunk]
         (source ?filename ?hdf)
         (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
+        (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk)
         (meta-values [keys] ?freetile :> ?tileid ?juliantime)
         (split-id ?tileid :> ?res ?tile-x ?tile-y)        
         (to-period ?juliantime ?res :> ?period)
-        (raster-chunks ?freetile :> ?chunkid ?chunk)
         (:distinct false))))
 
-
-;; TODO - find a home for this function.
-;; We're going to need this at some point, I'm just not sure where.
-
-(defn tile-position
-  "For a given MODIS chunk and index within that chunk, returns [line,
-  sample] within the MODIS tile."
-  [chunk index]
-  (let [line (* chunk chunk-size)
-        sample (+ line index)]
-    (vector line sample)))
 
 ;; ## Fun Examples!
 

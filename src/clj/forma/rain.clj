@@ -17,7 +17,8 @@
 
 (ns forma.rain
   (:use cascalog.api
-        (forma [hadoop :only (get-bytes)]))
+        (forma sinu
+               [hadoop :only (get-bytes)]))
   (:require [clojure.contrib.io :as io])
   (:import [java.io File InputStream]
            [java.util.zip GZIPInputStream]
@@ -151,3 +152,17 @@ objects."}
   [stream]
   (let [bytes (get-bytes stream)]
     (rain-tuples (input-stream bytes))))
+
+(defn sqr
+  "Returns the square of x."
+  [x] (* x x))
+
+(defmapcatop [rain-chunks [chunk-size]]
+  ^{:doc "Takes in data for a single month of rain data, and converts
+  it into chunks for use in FORMA."}
+  [data res]
+  (let [edge-length (pixels-at-res (keyword res))]
+    (for [xtile (range x-tiles)
+          ytile (range y-tiles)
+          chunk (range (/ (sqr edge-length) chunk-size))]
+      [xtile ytile chunk])))
