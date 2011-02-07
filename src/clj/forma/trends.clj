@@ -13,3 +13,24 @@ them by building a time series vector of vectors. Entering chunks
 should be sorted in descending order."}
   timeseries [chunks]
   [(apply conj [] chunks)])
+
+(defn transpose
+  "Matrix transpose. Transforms
+
+ [[1 2 3]
+  [4 5 6]
+  [7 8 9]]
+
+into:
+
+ [[1 4 7]
+  [2 5 8]
+  [3 6 9]]
+
+The code works because map applies the given function to the first
+  arguments of all the supplied collections, then the second, etc, all
+  down the line. The apply allows us to apply this to any number of
+  collections. So, we make a vector out of all of the firsts, then the
+  seconds, etc."
+  [a]
+  (vec (apply map vector a)))
