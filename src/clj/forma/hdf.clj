@@ -15,13 +15,13 @@
 ;; ## Constants
 
 (def
-  ^{:doc "Map between MODIS dataset identifiers (arbitrarily chosen
-by the REDD team) and corresponding unique substrings, culled from
-values in the SUBDATASETS hashtable of MOD13A3 HDF file. No simple,
-descriptive tag exists within the metadata, as of 2/05/2011, so this
-ends up being the best solution."}
-  modis-subsets
-  {:evi "monthly EVI"
+  ^{:doc "Map between MODIS dataset identifiers (arbitrarily chosen by
+  the REDD team) and corresponding unique substrings, culled from
+  values in the \"NAMES\" entries of the SUBDATASETS hashtable of
+  MOD13A3 HDF file. No simple, descriptive tag exists within the
+  metadata, as of 2/05/2011, so this ends up being the best
+  solution."}
+  modis-subsets {:evi "monthly EVI"
    :qual "VI Quality"
    :red "red reflectance"
    :nir "NIR reflectance"
@@ -41,17 +41,26 @@ ends up being the best solution."}
   ([modis]
      (metadata modis "")))
 
-;; TODO -- describe why we only take the names business. It's because we're
-;; skipping the descriptions.
-;; The MODIS SUBDATASET dictionary holds entries of the form:
+
+;; Every MODIS file (archived in HDF4) packages a number of different
+;; datasets; 9, in the case of the MOD13A3 product. The paths to these
+;; are contained within the "SUBDATASETS" metadata dictionary of the
+;; wrapping archive. This dictionary contains 18 groups of K-V pairs,
+;; or 2 per dataset:
+;;
 ;; Key: SUBDATASET_2_NAME
 ;; Val: HDF4_EOS:EOS_GRID:"/path/to/modis.hdf":MOD_Grid_monthly_1km_VI:1 km
 ;; monthly EVI
 ;; Key: SUBDATASET_4_DESC
+;; Val: [1200x1200] 1 km monthly EVI MOD_Grid_monthly_1km_VI (16-bit
+;; integer)
+;;
+;; We're only interested in the names, as these alone allow us to
+;; uniquely identify each dataset.
 
 (defn subdataset-names
   "Returns the NAME entries of the SUBDATASETS metadata Hashtable for
-  a given filepath."
+  the dataset at a given filepath."
   [hdf-file]
   (let [path (str hdf-file)
         dataset (gdal/Open path)]
@@ -66,7 +75,7 @@ ends up being the best solution."}
   "Takes a long-form path to a MODIS subdataset, and checks to see if
   any of the values of the modis-subsets map can be found as
   substrings. If we find one, we return the associated key, cast to a
-  String."
+  string."
   [path]
   (s/as-str (find-first #(s/substring? (% modis-subsets) path)
                         (keys modis-subsets))))
