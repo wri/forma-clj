@@ -58,5 +58,4 @@ Some stuff on how to actually use this damned project, tips on Clojure developme
 REPL and Visor
 --------------
 
-
 [Visor](http://visor.binaryage.com/) is totally awesome. Download it!

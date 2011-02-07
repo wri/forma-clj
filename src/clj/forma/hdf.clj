@@ -14,12 +14,13 @@
 
 ;; ## Constants
 
-(def modis-subsets
+(def
   ^{:doc "Map between MODIS dataset identifiers (arbitrarily chosen
 by the REDD team) and corresponding unique substrings, culled from
 values in the SUBDATASETS hashtable of MOD13A3 HDF file. No simple,
 descriptive tag exists within the metadata, as of 2/05/2011, so this
 ends up being the best solution."}
+  modis-subsets
   {:evi "monthly EVI"
    :qual "VI Quality"
    :red "red reflectance"
@@ -151,20 +152,22 @@ Dataset and a seq of keys."}
 
 (defn parse-ints
   "Converts all strings in the supplied collection to their integer
-  representation."
+  representations."
   [coll]
   (map #(Integer/parseInt %) coll))
 
-(def res-map
-  ^{:doc "Map between the second digit in a MODIS TileID
-metadata value and the corresponding resolution."}
+(def
+  ^{:doc "Map between the second digit in a MODIS TileID metadata
+value and the corresponding resolution of the tile data."}
+  res-map
   {:1 "1000"
    :2 "500"
    :4 "250"})
 
 (defn tileid->res
-  "Returns a string representation of the resolution referenced by the
-supplied MODIS TileID."
+  "Returns a string representation of the resolution (in meters) of
+the tile data referenced by the supplied TileID.The second character
+of a MODIS TileID acts as a key to retrieve this data."
   [tileid]
   (res-map (keyword (subs tileid 1 2))))
 

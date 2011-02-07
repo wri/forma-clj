@@ -1,18 +1,15 @@
-;; I want to go ahead and rewrite the code found at this site:
-;; http://landweb.nascom.nasa.gov/developers/tilemap/note.html Now, as
-;; referenced here:
+;; Now, as referenced here:
 ;; http://www.dfanning.com/map_tips/modis_overlay.html this os what
-;; NASA stopped using integerized sinusoidal projection in
-;; collection 3, and moved on to strictly sinusoidal in collection
-;; 4. I believe that NDVI uses a straight up sinusoidal, so that's all
-;; we need to worry about.  38,800 chunks for the 1km data means that
-;; to do a straight lookup for everything on the rain table is going
-;; to take, roughly, 90 minutes (distributed across machines). Gotta
-;; be a faster way to do this!
+;; NASA stopped using integerized sinusoidal projection in collection
+;; 3, and moved on to strictly sinusoidal in collection 4. I believe
+;; that NDVI uses a straight up sinusoidal, so that's all we need to
+;; worry about.
 
 ;;TODO -- document, inside of these functions, what a sinusoidal
 ;;projection actually is, with some links to understanding the general
-;;idea behind all of this stuff.
+;;idea behind all of this stuff. The code here recreates the
+;;functionality found at the MODLAND Tile Calculator:
+;;http://landweb.nascom.nasa.gov/developers/tilemap/note.html.
 
 (ns forma.sinu
   (:use (clojure.contrib.generic [math-functions :only (cos)])))
@@ -23,10 +20,24 @@
 (def x-tiles 36)
 (def y-tiles 18)
 
+(def
+  #^{:doc "Set of coordinate pairs for all MODIS tiles that contain
+actual data. This set is calculated by taking a vector of offsets,
+representing the first horizontal tile containing data for each row of
+tiles. (For example, the data for row 1 begins with tile 14,
+horizontal.)  For a visual representation of the MODIS grid and its
+available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
+good-tiles
+  (let [offsets [14 11 9 6 4 2 1 0 0 0 0 1 2 4 6 9 11 14]]
+    (set (for [y-tile (range 18)
+               x-tile (let [shift (offsets y-tile)]
+                        (range shift (- 36 shift)))]
+           [x-tile y-tile]))))
+
 (def pixels-at-res
-  {:250 4800
-   :500 2400
-   :1000 1200})
+  {"250" 4800
+   "500" 2400
+   "1000" 1200})
 
 ;; ## Helper Functions
 
@@ -117,4 +128,5 @@
   "Returns the latitude and longitude for a given group of MODIS tile
   coordinates at the specified resolution."
   [mod-y mod-x line sample res]
-  (apply lat-long (map-coords mod-y mod-x line sample res)))
+  (apply lat-long
+         (map-coords mod-y mod-x line sample (str res))))

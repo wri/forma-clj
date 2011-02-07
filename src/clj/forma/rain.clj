@@ -16,7 +16,8 @@
 ;; accessed using a HeapByteBuffer.
 
 (ns forma.rain
-  (:use cascalog.api
+  (:use (cascalog [api :exclude (union)])
+        (clojure [set :only (union)])
         (forma sinu
                [hadoop :only (get-bytes)]))
   (:require (clojure.contrib [io :as io]))
@@ -25,9 +26,6 @@
            [forma LittleEndianDataInputStream]))
 
 (set! *warn-on-reflection* true)
-
-(def float-bytes (/ ^Integer (Float/SIZE)
-                    ^Integer (Byte/SIZE)))
 
 (def map-dimensions [180 360])
 (def forma-res 0.5)
@@ -46,12 +44,14 @@
   [res]
   (apply * (dimensions-at-res res)))
 
+(def float-bytes (/ ^Integer (Float/SIZE)
+                    ^Integer (Byte/SIZE)))
+
 (defn floats-for-res
   "Length of the row of floats (in # of bytes) representing the earth
   at the specified resolution."
   [res]
-  (* (area-at-res res)
-     float-bytes))
+  (* (area-at-res res) float-bytes))
 
 ;; ## Buffer Slurping
 
@@ -138,21 +138,69 @@
 
 ;; ## Cascalog Queries
 
-(defmapcatop unpack-rain
+(defmapcatop
   ^{:doc "Unpacks a PREC/L binary file for a given year, and returns a
 lazy sequence of 3-tuples, in the form of (dataset, month,
 data). Assumes that binary files are packaged as hadoop BytesWritable
 objects."}
-  [stream]
+  unpack-rain [stream]
   (let [bytes (get-bytes stream)]
     (rain-tuples (input-stream bytes))))
 
+;; ## Resampling of Rain Data
+;; I'm going to stop in the middle of this, as I know I'm not doing a
+;; good job -- but we're almost done, here. The general idea is to
+;; take in a rain data month, and generate a list comprehension with
+;; every possible chunk at the current resolution. This will stream
+;; out a lazy seq of 4 tuples, containing rain data for a given MODIS
+;; chunk, only for valid MODIS tiles. If any functions don't make
+;; sense, look at sinu.clj. This matches up with stuff over there.
+
+(defn valid-modis?
+  "Checks a MODIS tile coordinate against the set of all MODIS tiles
+  with some form of valid data within them. See
+  http://remotesensing.unh.edu/modis/modis.shtml for a clear picture
+  of which tiles are considered valid."
+  [x y]
+  (contains? good-tiles [x y]))
+
+(defn tile-position
+  "For a given MODIS chunk and index within that chunk, returns [line,
+  sample] within the MODIS tile."
+  [chunk index chunk-size]
+  (let [line (* chunk chunk-size)
+        sample (+ line index)]
+    (vector line sample)))
+
+;; TODO -- the order of arguments here is backwards, in relation to
+;; the other stuff inside of sinu.clj. DECIDE what we're
+;; going to do, with these damned argumentions, and fix it up!
+;; AL
+(defn rain-index
+  "INCOMPLETE. Returns the index inside a rain data vector for the
+  given inputs."
+  [mod-x mod-y line sample res]
+  (geo-coords mod-y mod-x line sample res))
+
+(defn resample
+  "Takes in a month's worth of PREC/L rain data, and returns a lazy
+  seq of data samples for supplied MODIS chunk coordinates."
+  [data res xtile ytile chunk chunk-size]
+  (let [rain (vec data)]
+    (for [x (range chunk-size)]
+      (let [[line sample] (tile-position chunk x chunk-size)
+            index (rain-index xtile ytile line sample res)]
+        (rain index)))))
+
 (defmapcatop [rain-chunks [chunk-size]]
-  ^{:doc "Takes in data for a single month of rain data, and converts
-  it into chunks for use in FORMA."}
+  ^{:doc "Takes in data for a single month of rain data, and resamples
+  it to the MODIS sinusoidal grid at the supplied resolution. Returns
+  4-tuples, looking like (xtile, ytile, chunk, chunkdata-seq)."}
   [data res]
-  (let [edge-length (pixels-at-res (keyword res))]
+  (let [edge-length (pixels-at-res res)]
     (for [xtile (range x-tiles)
           ytile (range y-tiles)
-          chunk (range (/ (sqr edge-length) chunk-size))]
-      [xtile ytile chunk])))
+          chunk (range (/ (sqr edge-length) chunk-size))
+          :when (valid-modis? xtile ytile)]
+      (let [chunk-seq (resample data res xtile ytile chunk chunk-size)]
+        [xtile ytile chunk chunk-seq]))))

@@ -6,10 +6,10 @@
 (ns forma.trends
   (:use cascalog.api))
 
-(defbufferop timeseries
+(defbufferop
   ^{:doc "Takes in a number of vectors, pre-sorted by time period,
 representing the same MODIS chunk within a dataset, and aggregates
 them by building a time series vector of vectors. Entering chunks
 should be sorted in descending order."}
-  [chunks]
+  timeseries [chunks]
   [(apply conj [] chunks)])

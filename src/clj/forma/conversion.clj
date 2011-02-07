@@ -5,6 +5,8 @@
                   [coerce :only (from-string)]))
   (:import [org.joda.time DateTime]))
 
+(set! *warn-on-reflection* true)
+
 ;; TODO -- update this for 250 meter data, and take resolution as an
 ;; input. (I think the period is 16 days.) This is as easy as changing
 ;; period-length to a map -- then we can call (period-length res) and
@@ -12,9 +14,10 @@
 
 (def modis-start (date-time 2000))
 
-(def period-length
+(def
   ^{:doc "Length of a period, according to FORMA, keyed by MODIS
   resolution."}
+  period-length
   {"1000" 32.0
    "250" 16.0})
 
