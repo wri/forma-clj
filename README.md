@@ -1,11 +1,5 @@
-===================
-FORMA meets Hadoop.
-===================
-
-cg
-
-Introduction
-============
+Introduction: FORMA meets Hadoop.
+=================================
 
 FORMA's making it happen in 2011. Clojure, Cascalog, Hadoop... What the hell? It's cool. I'll tell you.
 
@@ -49,7 +43,7 @@ That'll get you set up to run code within the project.
 TextMate Support for Clojure
 ----------------------------
 
-Check out a great setup for Textmate and Clojure[here](https://github.com/swannodette/textmate-clojure).
+Check out a great setup for Textmate and Clojure [here](https://github.com/swannodette/textmate-clojure).
 
 Emacs and Aquamacs
 ------------------
