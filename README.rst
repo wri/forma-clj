@@ -13,18 +13,43 @@ Installation
 Leiningen and Clojure
 ---------------------
 
-Instructions on getting leiningen, running "lein deps", etc.
+The first thing you'll need to run forma-hadoop is 
+`leiningen<https://github.com/technomancy/leiningen>`_, a self-styled "build tool for Clojure designed to not set your hair on fire". Download the leiningen script from 
+`here<build tool for Clojure designed to not set your hair on fire>`_ (right click and hit "Save as"), save it into ~/bin, and run the following commands at the terminal::
+
+	$ cd ~/bin
+	$ chmod +x lein
+	$ lein help
+
+And that's it. (If that last step failed, ~/bin probably isn't on your path. Run::
+
+	$ echo $PATH
+	
+and put the script in one of those directories.)
 
 GDAL Java bindings
 ------------------
 
-The attached bindings were built for GDAL 1.8.0; specifically, the Macports hdf4 variant. To install gdal properly, get Macports, and run...
+The attached bindings were built for GDAL 1.8.0; specifically, the Macports hdf4 variant. To install GDAL properly, download the `MacPorts<http://www.macports.org/install.php>`_ DMG for Snow Leopard, and install away.
 
+once this is done, run the following commands at the terminal::
+
+	$ sudo port -v selfupdate
+	$ sudo port install gdal +hdf4
+	
+This will install GDAL 1.8.0 into /opt/local. It won't disturb any other version; we just need it to be in this particular directory because the native java bindings will be looking there.
+
+Finally, ask Sam for the Java native bindings, and put them into::
+
+	/Library/Java/Extensions
+	
+That'll get you set up to run code within the project.
 
 TextMate Support for Clojure
 ----------------------------
 
-Talk about the textmate bundle, cake, and visor.
+Check out a great setup for Textmate and Clojure 
+`here<https://github.com/swannodette/textmate-clojure>`_.
 
 Emacs and Aquamacs
 ------------------
@@ -40,5 +65,6 @@ REPL and Visor
 --------------
 
 
+`Visor<http://visor.binaryage.com/>`_ is totally awesome. Download it!
 
 Copyright (C) 2010 Threadlock Design.
