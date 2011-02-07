@@ -154,7 +154,7 @@ objects."}
 
 ;; (Note that none of the various matrix transformations required by
 ;; FORMA have been done to the data, yet. We need to account for the
-;; horizontal swap and vertical flip, when we do our index lookup.
+;; horizontal swap and vertical flip, when we do our index lookup.)
 
 (defn valid-modis?
   "Checks a MODIS tile coordinate against the set of all MODIS tiles
