@@ -2,6 +2,8 @@
 FORMA meets Hadoop.
 ===================
 
+cg
+
 Introduction
 ============
 
@@ -13,9 +15,8 @@ Installation
 Leiningen and Clojure
 ---------------------
 
-The first thing you'll need to run forma-hadoop is 
-`leiningen<https://github.com/technomancy/leiningen>`_, a self-styled "build tool for Clojure designed to not set your hair on fire". Download the leiningen script from 
-`here<build tool for Clojure designed to not set your hair on fire>`_ (right click and hit "Save as"), save it into ~/bin, and run the following commands at the terminal::
+The first thing you'll need to run forma-hadoop is [leiningen](https://github.com/technomancy/leiningen), a self-styled "build tool for Clojure designed to not set your hair on fire". Download the leiningen script from 
+[here](https://github.com/technomancy/leiningen/raw/stable/bin/lein) (right click and hit "Save as"), save it into ~/bin, and run the following commands at the terminal::
 
 	$ cd ~/bin
 	$ chmod +x lein
@@ -30,7 +31,7 @@ and put the script in one of those directories.)
 GDAL Java bindings
 ------------------
 
-The attached bindings were built for GDAL 1.8.0; specifically, the Macports hdf4 variant. To install GDAL properly, download the `MacPorts<http://www.macports.org/install.php>`_ DMG for Snow Leopard, and install away.
+The attached bindings were built for GDAL 1.8.0; specifically, the Macports hdf4 variant. To install GDAL properly, download the [MacPorts](http://www.macports.org/install.php) DMG for Snow Leopard, and install away.
 
 once this is done, run the following commands at the terminal::
 
@@ -48,8 +49,7 @@ That'll get you set up to run code within the project.
 TextMate Support for Clojure
 ----------------------------
 
-Check out a great setup for Textmate and Clojure 
-`here<https://github.com/swannodette/textmate-clojure>`_.
+Check out a great setup for Textmate and Clojure[here](https://github.com/swannodette/textmate-clojure).
 
 Emacs and Aquamacs
 ------------------
@@ -65,6 +65,4 @@ REPL and Visor
 --------------
 
 
-`Visor<http://visor.binaryage.com/>`_ is totally awesome. Download it!
-
-Copyright (C) 2010 Threadlock Design.
+[Visor](http://visor.binaryage.com/) is totally awesome. Download it!
