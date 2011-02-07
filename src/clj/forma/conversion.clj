@@ -35,12 +35,12 @@
     ((comp int ceil) period)))
 
 (defmulti julian->period
-    "Converts a given input date into an interval from the MODIS
+  "Converts a given input date into an interval from the MODIS
   beginnings, as specified by modis-start. Periods begin counting from
   1. This function accepts DateTime objects, strings that can be
   coerced into dates, or an arbitrary number of integer pieces. See
   clj-time's date-time and from-string for more information."
-    (fn [x & _] (type x)))
+  (fn [x & _] (type x)))
 
 (defmethod julian->period DateTime
   [date res]

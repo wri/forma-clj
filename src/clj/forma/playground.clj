@@ -17,8 +17,8 @@
   [dir]
   (let [files (all-files dir)]
     (?<- (stdout) [?count]
-     (files ?filename ?file)
-     (c/count ?count))))
+         (files ?filename ?file)
+         (c/count ?count))))
 
 (defn add-floats
   "Returns a float array, for the purpose of stacking on to the end of
@@ -40,6 +40,6 @@
   "Test of float array serialization."
   [dir]
   (let [stuff (get-floats dir)]
-      (?<- (stdout) [?filename ?floats ?num]
-           (stuff ?filename ?floats)
-           (last ?floats :> ?num))))
+    (?<- (stdout) [?filename ?floats ?num]
+         (stuff ?filename ?floats)
+         (last ?floats :> ?num))))

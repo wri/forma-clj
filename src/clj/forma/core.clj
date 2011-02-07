@@ -2,8 +2,8 @@
   (:use cascalog.api
         (forma [sources :only (all-files)]
                conversion))
-    (:require (cascalog [vars :as v]
-                        [ops :as c])
+  (:require (cascalog [vars :as v]
+                      [ops :as c])
             (forma [hdf :as h]
                    [rain :as r])))
 
