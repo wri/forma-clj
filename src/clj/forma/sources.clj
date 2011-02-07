@@ -6,7 +6,9 @@
 
 ;; ## Tap Functions
 ;; These define the source tap that will slurp up files from a local
-;; file, remote file, or S3 bucket.
+;; file, remote file, or S3 bucket. See documentation on Cascading's
+;; HFS scheme for more information:
+;; http://www.cascading.org/1.2/javadoc/cascading/tap/Hfs.html
 
 (defn whole-file
   "Custom scheme for dealing with entire files."

@@ -9,12 +9,6 @@
 ;; end of the lazy seq calls close. As long as they're realized, we're
 ;; good to go.
 
-;; Java reads its byte arrays in using big endian format -- this rain
-;; data was written in little endian format. The way to get these
-;; numbers in is to swap them around. In the following multimethod, we
-;; allow a number of ways for a little-endian binary file to be
-;; accessed using a HeapByteBuffer.
-
 (ns forma.rain
   (:use (cascalog [api :exclude (union)])
         (clojure [set :only (union)])
@@ -72,6 +66,11 @@
         (.reset stream)
         stream))))
 
+;; Java reads its byte arrays in using big endian format -- this rain
+;; data was written in little endian format. The way to get these
+;; numbers in is to swap them around. Here, we provide a method for a
+;; little-endian binary file to be accessed using its own custom DataInputStream.
+
 (defn little-stream
   "Returns a little endian DataInputStream opened up on the supplied
   argument. See clojure.contrib.io/input-stream for acceptable
@@ -80,9 +79,6 @@
   (LittleEndianDataInputStream. (input-stream x)))
 
 ;; ## Data Extraction
-
-;; (Note that none of the various matrix transformations required by
-;; FORMA have been done to the data, yet.)
 
 (defn lazy-floats
   "Generates a lazy seq of floats from the supplied
@@ -155,6 +151,10 @@ objects."}
 ;; out a lazy seq of 4 tuples, containing rain data for a given MODIS
 ;; chunk, only for valid MODIS tiles. If any functions don't make
 ;; sense, look at sinu.clj. This matches up with stuff over there.
+
+;; (Note that none of the various matrix transformations required by
+;; FORMA have been done to the data, yet. We need to account for the
+;; horizontal swap and vertical flip, when we do our index lookup.
 
 (defn valid-modis?
   "Checks a MODIS tile coordinate against the set of all MODIS tiles

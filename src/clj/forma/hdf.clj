@@ -60,11 +60,11 @@ ends up being the best solution."}
                     (metadata dataset "SUBDATASETS")))
       (finally (.delete dataset)))))
 
-
 ;; TODO --update docs, since we now don't unpack the entry.
+
 (defn subdataset-key
-  "Takes a long-form path to a MODIS subdataset, and checks
-  to see if any of the values of the modis-subsets map can be found as
+  "Takes a long-form path to a MODIS subdataset, and checks to see if
+  any of the values of the modis-subsets map can be found as
   substrings. If we find one, we return the associated key, cast to a
   String."
   [path]
@@ -73,19 +73,19 @@ ends up being the best solution."}
 
 ;;  TODO-- check docs, since we now don't check against _NAME
 (defn dataset-filter
-  "Generates a predicate function that checks the a subdataset name
-   from the SUBDATASETS metadata dictionary against a supplied set of
+  "Generates a predicate function that checks a name from the
+   SUBDATASETS metadata dictionary against a supplied set of
    acceptable datasets."
   [good-keys]
   (let [substrings (map modis-subsets good-keys)]
     (fn [name]
       (some #(s/substring? % name) substrings))))
 
-;; TODO --update docs, since we're not accepting an entry anymore
 (defn make-subdataset
-  "Accepts an entry from the SUBDATASETS Hashtable of a MODIS
- Dataset (remember, this is just a path to the subdataset), and
- returns a 2-tuple - (modis-subsets key, Dataset)."
+  "Accepts a filepath the SUBDATASETS dictionary of a MODIS Dataset,
+ and returns a 2-tuple consisting of the modis-subsets key (\"ndvi\")
+  and a gdal.Dataset object representing the unpacked MODIS
+  data."
   [path]
   (vector (subdataset-key path) (gdal/Open path)))
 
@@ -114,13 +114,11 @@ as a 1-tuple."}
 
 ;; ## Chunking Functions
 
-;; TODO -- This needs some more documentation, but these are the
-;; functions that open datasets, and chunk the resulting integer
-;; arrays.
-
 (defmapcatop [raster-chunks [chunk-size]]
-  ^{:doc "Unpacks the data inside of a MODIS band into a lazy
-sequence of chunks. See chunk-length for the default size."}
+  ^{:doc "Unpacks the data inside of a MODIS band and partitions it
+  into chunks sized according to the supplied value. Specifically,
+  returns a lazy sequence of 2-tuples a lazy sequence of 2-tuples of
+  the form (chunk-index, int-array)."}
   [^Dataset data]
   (let [^Band band (.GetRasterBand data 1)
         width (.GetXSize band)
@@ -132,15 +130,16 @@ sequence of chunks. See chunk-length for the default size."}
 ;; ## Metadata Parsing
 
 (defmapop [meta-values [meta-keys]]
-  ^{:doc "Generates metadata values for a given unpacked MODIS
-Dataset and a seq of keys."}
+  ^{:doc "Returns metadata values for a given unpacked MODIS Dataset
+and a seq of keys."}
   [modis]
   (let [^Hashtable metadict (metadata modis)]
     (map #(.get metadict %) meta-keys)))
 
 ;; TODO -- add some good documentation here about what the next
 ;; section is accomplishing. I want to check marginalia to see the
-;; best way to do this stuff.
+;; best way to do this stuff. We might actually want to break this out
+;; into its own file.
 
 ;; It's described here:
 ;; http://modis-250m.nascom.nasa.gov/developers/tileid.html
@@ -210,7 +209,6 @@ referenced by the supplied MODIS TileID."
         (split-id ?tileid :> ?res ?tile-x ?tile-y)        
         (to-period ?juliantime ?res :> ?period)
         (:distinct false))))
-
 
 ;; ## Fun Examples!
 
