@@ -38,7 +38,9 @@ For the adventurous!
 Getting Started
 ===============
 
-Some stuff on how to actually use this damned project, tips on Clojure development.
+I recommend trying out  [labrepl](git://github.com/relevance/labrepl.git). To get this done, make sure to remove the "autodoc" line from the dev dependencies!
+
+Some other stuff on how to actually use this damned project, tips on Clojure development.
 
 REPL and Visor
 --------------
