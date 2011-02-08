@@ -7,7 +7,7 @@
                  [incanter "1.2.3"]
                  [cascalog "1.7.0-SNAPSHOT"]
                  [clj-time "0.3.0-SNAPSHOT"]
-                 [org.clojars.sritchie09/gdal-java-native "1.8.1"]
+                 [org.clojars.sritchie09/gdal-java-native "1.9.0"]
                  ]
   :repositories {"conjars" "http://conjars.org/repo/"}
   :dev-dependencies [
