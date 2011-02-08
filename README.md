@@ -10,7 +10,7 @@ Leiningen and Clojure
 ---------------------
 
 The first thing you'll need to run forma-hadoop is [leiningen](https://github.com/technomancy/leiningen), a self-styled "build tool for Clojure designed to not set your hair on fire". Download the leiningen script from 
-[here](https://github.com/technomancy/leiningen/raw/stable/bin/lein) (right click and hit "Save as"), save it into ~/bin, and run the following commands at the terminal::
+[here](https://github.com/technomancy/leiningen/raw/stable/bin/lein) (right click and hit "Save Link As"), save it into ~/bin, and run the following commands at the terminal::
 
 	$ cd ~/bin
 	$ chmod +x lein
