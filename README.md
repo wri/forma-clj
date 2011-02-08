@@ -6,21 +6,10 @@ FORMA's making it happen in 2011. Clojure, Cascalog, Hadoop... What the hell? It
 Installation
 ============
 
-Leiningen and Clojure
+Cake and Clojure
 ---------------------
 
-The first thing you'll need to run forma-hadoop is [leiningen](https://github.com/technomancy/leiningen), a self-styled "build tool for Clojure designed to not set your hair on fire". Download the leiningen script from 
-[here](https://github.com/technomancy/leiningen/raw/stable/bin/lein) (right click and hit "Save Link As"), save it into ~/bin, and run the following commands at the terminal::
-
-	$ cd ~/bin
-	$ chmod +x lein
-	$ lein help
-
-And that's it. (If that last step failed, ~/bin probably isn't on your path. Run::
-
-	$ echo $PATH
-	
-and put the script in one of those directories.)
+The first thing you'll need to run forma-hadoop is [cake](https://github.com/ninjudd/cake), a self-styled "tasty build tool for Clojure". Follow the instructions at the github page to get it installed!
 
 GDAL Java bindings
 ------------------
@@ -34,16 +23,12 @@ once this is done, run the following commands at the terminal::
 	
 This will install GDAL 1.8.0 into /opt/local. It won't disturb any other version; we just need it to be in this particular directory because the native java bindings will be looking there.
 
-Finally, ask Sam for the Java native bindings, and put them into::
-
-	/Library/Java/Extensions
-	
-That'll get you set up to run code within the project.
-
 TextMate Support for Clojure
 ----------------------------
 
-Check out a great setup for Textmate and Clojure [here](https://github.com/swannodette/textmate-clojure).
+Check out a great setup for Textmate and Clojure [here](https://github.com/swannodette/textmate-clojure). It makes excellent use of cake.
+
+(Also, go into Preferences, Advanced, Shell Variables, and set TM_SOFT_TABS to YES. This will keep us using spaces, not tabs.)
 
 Emacs and Aquamacs
 ------------------
