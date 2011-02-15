@@ -161,16 +161,16 @@ objects."}
   with some form of valid data within them. See
   http://remotesensing.unh.edu/modis/modis.shtml for a clear picture
   of which tiles are considered valid."
-  [x y]
-  (contains? good-tiles [x y]))
+  [h v]
+  (contains? good-tiles [h v]))
 
 (defn tile-position
-  "For a given MODIS chunk and index within that chunk, returns [line,
-  sample] within the MODIS tile."
+  "For a given MODIS chunk and index within that chunk, returns
+  [sample, line] within the MODIS tile."
   [chunk index chunk-size]
   (let [line (* chunk chunk-size)
         sample (+ line index)]
-    (vector line sample)))
+    [sample line]))
 
 ;; TODO -- the order of arguments here is backwards, in relation to
 ;; the other stuff inside of sinu.clj. DECIDE what we're
@@ -179,28 +179,28 @@ objects."}
 (defn rain-index
   "INCOMPLETE. Returns the index inside a rain data vector for the
   given inputs."
-  [mod-x mod-y line sample res]
-  (geo-coords mod-y mod-x line sample res))
+  [mod-h mod-v sample line res]
+  (geo-coords mod-h mod-v sample line res))
 
 (defn resample
   "Takes in a month's worth of PREC/L rain data, and returns a lazy
   seq of data samples for supplied MODIS chunk coordinates."
-  [data res xtile ytile chunk chunk-size]
+  [data res htile vtile chunk chunk-size]
   (let [rain (vec data)]
-    (for [x (range chunk-size)]
-      (let [[line sample] (tile-position chunk x chunk-size)
-            index (rain-index xtile ytile line sample res)]
+    (for [pixel (range chunk-size)]
+      (let [[sample line] (tile-position chunk pixel chunk-size)
+            index (rain-index htile vtile sample line res)]
         (rain index)))))
 
 (defmapcatop [rain-chunks [chunk-size]]
   ^{:doc "Takes in data for a single month of rain data, and resamples
   it to the MODIS sinusoidal grid at the supplied resolution. Returns
-  4-tuples, looking like (xtile, ytile, chunk, chunkdata-seq)."}
+  4-tuples, looking like (htile, vtile, chunk, chunkdata-seq)."}
   [data res]
   (let [edge-length (pixels-at-res res)]
-    (for [xtile (range x-tiles)
-          ytile (range y-tiles)
+    (for [htile (range h-tiles)
+          vtile (range v-tiles)
           chunk (range (/ (sqr edge-length) chunk-size))
-          :when (valid-modis? xtile ytile)]
-      (let [chunk-seq (resample data res xtile ytile chunk chunk-size)]
-        [xtile ytile chunk chunk-seq]))))
+          :when (valid-modis? htile vtile)]
+      (let [chunk-seq (resample data res htile vtile chunk chunk-size)]
+        [htile vtile chunk chunk-seq]))))

@@ -69,32 +69,28 @@
                     (metadata dataset "SUBDATASETS")))
       (finally (.delete dataset)))))
 
-;; TODO --update docs, since we now don't unpack the entry.
-
 (defn subdataset-key
   "Takes a long-form path to a MODIS subdataset, and checks to see if
   any of the values of the modis-subsets map can be found as
   substrings. If we find one, we return the associated key, cast to a
-  string."
+  string -- 'ndvi', for example."
   [path]
   (s/as-str (find-first #(s/substring? (% modis-subsets) path)
                         (keys modis-subsets))))
 
-;;  TODO-- check docs, since we now don't check against _NAME
 (defn dataset-filter
   "Generates a predicate function that checks a name from the
-   SUBDATASETS metadata dictionary against a supplied set of
-   acceptable datasets."
+   SUBDATASETS metadata dictionary against the supplied collection of
+   acceptable dataset keys."
   [good-keys]
   (let [substrings (map modis-subsets good-keys)]
     (fn [name]
       (some #(s/substring? % name) substrings))))
 
 (defn make-subdataset
-  "Accepts a filepath the SUBDATASETS dictionary of a MODIS Dataset,
+  "Accepts a filepath from the SUBDATASETS dictionary of a MODIS Dataset,
  and returns a 2-tuple consisting of the modis-subsets key (\"ndvi\")
-  and a gdal.Dataset object representing the unpacked MODIS
-  data."
+  and a gdal.Dataset object representing the unpacked MODIS data."
   [path]
   (vector (subdataset-key path) (gdal/Open path)))
 
@@ -210,84 +206,11 @@ referenced by the supplied MODIS TileID."
   time for lookups)."
   [source datasets chunk-size]
   (let [keys ["TileID" "PRODUCTIONDATETIME"]]
-    (<- [?dataset ?res ?tile-x ?tile-y ?period ?chunkid ?chunk]
+    (<- [?dataset ?res ?tile-h ?tile-v ?period ?chunkid ?chunk]
         (source ?filename ?hdf)
         (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
         (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk)
         (meta-values [keys] ?freetile :> ?tileid ?juliantime)
-        (split-id ?tileid :> ?res ?tile-x ?tile-y)        
+        (split-id ?tileid :> ?res ?tile-h ?tile-v)        
         (to-period ?juliantime ?res :> ?period)
         (:distinct false))))
-
-;; ## Fun Examples!
-
-;; Guys, are a few ways to accomplish the task solved by tileid->xy,
-;; shown above. I'm not sure I'm happy with the final version, so I've
-;; left these here for us to peruse together. Enjoy!
-
-;; Misleading! Here, we're actually calling (subs tileid...) in the
-;; first elements of each of the other vectors, not on each vector in
-;; turn. I won't go with something like this; it works, but it's confusing.
-(fn [tileid]
-  (parse-ints
-   (map (partial subs tileid) [2 5] [5 8])))
-
-;; This is a little bit better, but not really. Now we have a vector
-;; of vectors -- partial takes the stuff after it, and builds a
-;; function that takes less arguments than that stuff needs. (in this
-;; case, we get: the function (apply subs tileid ...), where the
-;; ellipsis can be any group of arguments. Since we're mapping that,
-;; we get [2 5] and [5 8] fed in in turn.)
-(fn [tileid]
-  (parse-ints
-   (map (partial apply subs tileid) [[2 5] [5 8]])))
-
-;; Another way to do the same thing. In this case, juxt gives us a
-;; sequence that is the juxtaposition of all of the functions. When we
-;; send in an argument, we get the juxtaposition of the results -- in
-;; this case, ((subs tileid 2 5) (subs tileid 5 8)), where subs is
-;; substring (as above).
-(fn [tileid]
-  (parse-ints
-   ((juxt #(subs % 2 5) #(subs % 5 8)) tileid)))
-
-;; This is the same as the next one; it actually compiles to the same
-;; byte code, I'm just not using the threading macro here. I don't
-;; know if the threading macro makes the code more clear, in this
-;; case, but it's a good example of little tweaks for readability,
-;; independent of performance.
-(fn [tileid]
-  (parse-ints
-   (map (partial apply str)
-        (partition 3 (s/drop 2 tileid)))))
-
-;; The referenced one, with the threading macro. As you can see, it
-;; takes each thing, evaluates it, and inserts it as the last thing in
-;; the next entry. So, here we have tileid inserted, making (s/drop 2
-;; tileid). The whole thing expands to the code above.
-;; BE CAREFUL with this! It's a really good solution, but only when it
-;; makes things clear -- not when it's used as a way to think
-;; iteratively. There's usually some transformation on a list that you
-;; can do to get the same effects as the threading macro. (Once we all
-;; learn to code the Clojure Way, this stuff will be fine :)
-(fn [tileid]
-  (parse-ints
-   (map (partial apply str)
-        (->> tileid
-             (s/drop 2)
-             (partition 3)))))
-
-;; I ended up going with this bad boy, because it looked closest to my
-;; other function, tileid->res. Look at them together, to see how
-;; they're sort of similar:
-;;
-;; (defn tileid->res
-;;   "Returns a string representation of the resolution referenced by the
-;; supplied MODIS TileID."
-;;   [tileid]
-;;   (res-map (keyword (subs tileid 1 2))))
-;;
-(fn [tileid]
-  (parse-ints
-   (map (partial apply str)
-        (partition 3 (subs tileid 2)))))

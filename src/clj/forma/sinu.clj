@@ -17,8 +17,8 @@
 ;; ## Constants
 
 (def rho 6371007.181)
-(def x-tiles 36)
-(def y-tiles 18)
+(def h-tiles 36)
+(def v-tiles 18)
 
 (def
   #^{:doc "Set of coordinate pairs for all MODIS tiles that contain
@@ -29,10 +29,10 @@ horizontal.)  For a visual representation of the MODIS grid and its
 available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
   good-tiles
   (let [offsets [14 11 9 6 4 2 1 0 0 0 0 1 2 4 6 9 11 14]]
-    (set (for [y-tile (range 18)
-               x-tile (let [shift (offsets y-tile)]
-                        (range shift (- 36 shift)))]
-           [x-tile y-tile]))))
+    (set (for [v-tile (range v-tiles)
+               h-tile (let [shift (offsets v-tile)]
+                        (range shift (- h-tiles shift)))]
+           [h-tile v-tile]))))
 
 (def pixels-at-res
   {"250" 4800
@@ -102,7 +102,7 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
   "The length, in meters, of the edge of a pixel at a given
   resolution."
   [res]
-  (let [pixel-span (/ (- max-y min-y) y-tiles)
+  (let [pixel-span (/ (- max-y min-y) v-tiles)
         total-pixels (pixels-at-res res)]
     (/ pixel-span total-pixels)))
 
@@ -110,23 +110,23 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
 
 (defn pixel-coords
   "returns the row and dimension of the pixel on the global MODIS grid."
-  [mod-y mod-x line sample res]
+  [mod-h mod-v sample line res]
   (let [edge-pixels (pixels-at-res res)]
-    (map + [sample line] (scale edge-pixels [mod-x mod-y]))))
+    (map + [sample line] (scale edge-pixels [mod-h mod-v]))))
 
 (defn map-coords
   "Returns the map position in meters for a given MODIS tile
   coordinate at the specified resolution."
-  [mod-y mod-x line sample res]
+  [mod-h mod-v sample line res]
   (let [edge-length (pixel-length res)
         half-edge (/ edge-length 2)
-        pix-pos (pixel-coords mod-y mod-x line sample res)
+        pix-pos (pixel-coords mod-h mod-v sample line res)
         magnitudes (map #(+ half-edge %) (scale edge-length pix-pos))]
     (map distance [+ -] [min-x max-y] magnitudes)))
 
 (defn geo-coords
   "Returns the latitude and longitude for a given group of MODIS tile
   coordinates at the specified resolution."
-  [mod-y mod-x line sample res]
+  [mod-h mod-v sample line res]
   (apply lat-long
-         (map-coords mod-y mod-x line sample (str res))))
+         (map-coords mod-h mod-v sample line (str res))))
