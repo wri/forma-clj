@@ -185,22 +185,22 @@ objects."}
 (defn resample
   "Takes in a month's worth of PREC/L rain data, and returns a lazy
   seq of data samples for supplied MODIS chunk coordinates."
-  [data res htile vtile chunk chunk-size]
+  [data res mod-h mod-v chunk chunk-size]
   (let [rain (vec data)]
     (for [pixel (range chunk-size)]
       (let [[sample line] (tile-position chunk pixel chunk-size)
-            index (rain-index htile vtile sample line res)]
+            index (rain-index mod-h mod-v sample line res)]
         (rain index)))))
 
 (defmapcatop [rain-chunks [chunk-size]]
   ^{:doc "Takes in data for a single month of rain data, and resamples
   it to the MODIS sinusoidal grid at the supplied resolution. Returns
-  4-tuples, looking like (htile, vtile, chunk, chunkdata-seq)."}
+  4-tuples, looking like (mod-h, mod-v, chunk, chunkdata-seq)."}
   [data res]
   (let [edge-length (pixels-at-res res)]
-    (for [htile (range h-tiles)
-          vtile (range v-tiles)
+    (for [mod-h (range h-tiles)
+          mod-v (range v-tiles)
           chunk (range (/ (sqr edge-length) chunk-size))
-          :when (valid-modis? htile vtile)]
-      (let [chunk-seq (resample data res htile vtile chunk chunk-size)]
-        [htile vtile chunk chunk-seq]))))
+          :when (valid-modis? mod-h mod-v)]
+      (let [chunk-seq (resample data res mod-h mod-v chunk chunk-size)]
+        [mod-h mod-v chunk chunk-seq]))))
