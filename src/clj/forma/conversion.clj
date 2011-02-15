@@ -34,7 +34,7 @@
         period (/ days length)]
     ((comp int ceil) period)))
 
-(defmulti julian->period
+(defmulti datetime->period
   "Converts a given input date into an interval from the MODIS
   beginnings, as specified by modis-start. Periods begin counting from
   1. This function accepts DateTime objects, strings that can be
@@ -42,21 +42,21 @@
   clj-time's date-time and from-string for more information."
   (fn [x & _] (type x)))
 
-(defmethod julian->period DateTime
+(defmethod datetime->period DateTime
   [date res]
   (inc (in-periods (period-length res)
                    (interval modis-start date))))
 
-(defmethod julian->period String
+(defmethod datetime->period String
   [str res]
-  (julian->period (from-string str) res))
+  (datetime->period (from-string str) res))
 
-(defmethod julian->period Integer
+(defmethod datetime->period Integer
   [& args]
   (let [res (last args)
         int-pieces (butlast args)]
-    (julian->period (apply date-time int-pieces) res)))
+    (datetime->period (apply date-time int-pieces) res)))
 
 ;; Cascalog query to access multimethod, until issue gets fixed.
 (defmapop to-period [date res]
-  (julian->period date res))
+  (datetime->period date res))

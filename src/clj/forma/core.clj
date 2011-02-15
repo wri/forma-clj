@@ -55,7 +55,7 @@ within hadoop. We currently fix the chunk size at 24,000, resulting in
   from the MODIS start date as defined in conversion.clj."}
   [filename month]
   (let [year (Integer/parseInt (first (re-find #"(\d{4})" filename)))]
-    [res (julian->period year month res)]))
+    [res (datetime->period year month res)]))
 
 (defn rain-months
   "Test query! Returns the first few pieces of metadata for

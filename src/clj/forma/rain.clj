@@ -172,10 +172,6 @@ objects."}
         sample (+ line index)]
     [sample line]))
 
-;; TODO -- the order of arguments here is backwards, in relation to
-;; the other stuff inside of sinu.clj. DECIDE what we're
-;; going to do, with these damned argumentions, and fix it up!
-;; AL
 (defn rain-index
   "INCOMPLETE. Returns the index inside a rain data vector for the
   given inputs."
