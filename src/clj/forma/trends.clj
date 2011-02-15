@@ -34,3 +34,12 @@ The code works because map applies the given function to the first
   seconds, etc."
   [a]
   (vec (apply map vector a)))
+
+(defn walk-matrix
+  "Walks along the rows and columns of a matrix at the given window
+  size, returning all (window x window) snapshots."
+  [m window]
+  (mapcat (comp
+           (partial apply map vector)
+           (partial map (partial partition window 1)))
+          (partition window 1 m)))

@@ -1,5 +1,5 @@
 (ns forma.hdf
-  (:use (forma hadoop [conversion :only (to-period)])
+  (:use (forma hadoop [conversion :only (datetime->period)])
         (cascalog api [io :only (temp-dir)])
         (clojure.contrib [seq-utils :only (find-first indexed)]))
   (:require (clojure.contrib [string :as s]
@@ -192,6 +192,14 @@ referenced by the supplied MODIS TileID."
    ((juxt tileid->res
           tileid->xy) tileid)))
 
+;; ## Period Parser
+
+;; TODO -- better docs.
+(defmapop to-period [res date]
+  (apply datetime->period
+         res
+         (parse-ints (re-seq #"\d+" date))))
+
 ;; ## The Chunker!
 
 (defn modis-chunks
@@ -205,12 +213,12 @@ referenced by the supplied MODIS TileID."
   before running any sort of data analysis, as (seqs require linear
   time for lookups)."
   [source datasets chunk-size]
-  (let [keys ["TileID" "PRODUCTIONDATETIME"]]
+  (let [keys ["TileID" "RANGEBEGINNINGDATE"]]
     (<- [?dataset ?res ?tile-h ?tile-v ?period ?chunkid ?chunk]
         (source ?filename ?hdf)
         (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
         (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk)
         (meta-values [keys] ?freetile :> ?tileid ?datestring)
-        (split-id ?tileid :> ?res ?tile-h ?tile-v)        
-        (to-period ?datestring ?res :> ?period)
+        (split-id ?tileid :> ?res ?tile-h ?tile-v)
+        (to-period ?res ?datestring :> ?period)
         (:distinct false))))

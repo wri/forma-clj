@@ -41,8 +41,8 @@ within hadoop. We currently fix the chunk size at 24,000, resulting in
   (let [source (all-files dir)
         chunks (h/modis-chunks source forma-subsets chunk-size)]
     (?<- (stdout)
-         [?dataset ?res ?tile-x ?tile-y ?period ?count]
-         (chunks ?dataset ?res ?tile-x ?tile-y ?period ?chunkid ?chunk)
+         [?dataset ?res ?tile-h ?tile-v ?period ?count]
+         (chunks ?dataset ?res ?tile-h ?tile-v ?period ?chunkid ?chunk)
          (c/count ?count))))
 
 ;; Now, on to the rain data. We might want to move this over into
@@ -55,7 +55,7 @@ within hadoop. We currently fix the chunk size at 24,000, resulting in
   from the MODIS start date as defined in conversion.clj."}
   [filename month]
   (let [year (Integer/parseInt (first (re-find #"(\d{4})" filename)))]
-    [res (datetime->period year month res)]))
+    [res (datetime->period res year month)]))
 
 (defn rain-months
   "Test query! Returns the first few pieces of metadata for
