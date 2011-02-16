@@ -9,6 +9,7 @@
 (ns forma.playground
   (:use cascalog.api
         forma.hadoop
+        forma.rain
         forma.sources)
   (:require (cascalog [ops :as c])))
 

@@ -14,7 +14,8 @@
         (clojure [set :only (union)])
         (forma sinu
                [hadoop :only (get-bytes)]))
-  (:require (clojure.contrib [io :as io]))
+  (:require (clojure.contrib [io :as io]
+                             [math :as m]))
   (:import [java.io File InputStream]
            [java.util.zip GZIPInputStream]
            [forma LittleEndianDataInputStream]))
@@ -172,27 +173,27 @@ objects."}
         sample (+ line index)]
     [sample line]))
 
+;; TODO -- rename this, docstring.
+(defn index [res x]
+  (int (m/floor (* x (/ res)))))
+
+;; TODO -- rename this. rename in rain-ndex above.
+;; Also, get these 720s, and the forma-res, out of there!
+(defn indy [lat lon]
+  (let [forma-idx (partial index forma-res)
+        lon-idx (forma-idx (m/abs lon))
+        lat-idx (forma-idx (+ lat 90))]
+    (vector lat-idx
+            (if (neg? lon)
+              (- (dec 720) lon-idx)
+              lon-idx))))
+
 ;; TODO -- comment, get rid of the 720.
 (defn rain-index
   [mod-h mod-v sample line res]
   (let [[lat lon] (geo-coords mod-h mod-v sample line res)
         [row col] (indy lat lon)]
     (+ (* row 720) col)))
-
-;; TODO -- rename this, docstring.
-(defn index [res x]
-  (int (floor (* x (/ res)))))
-
-;; TODO -- rename this. rename in rain-ndex above.
-;; Also, get these 720s, and the forma-res, out of there!
-(defn indy [lat lon]
-  (let [forma-idx (partial index forma-res)
-        lon-idx (forma-idx (abs lon))
-        lat-idx (forma-idx (+ lat 90))]
-    (vector lat-idx
-            (if (neg? lon)
-              (- (dec 720) lon-idx)
-              lon-idx))))
 
 ;; TODO -- rename this from resample.
 ;; TODO -- can we just return index, here?  Then, we could have, for
@@ -218,6 +219,7 @@ objects."}
 ;; rain month. We want to convert this so that it generates the MAPS
 ;; of all chunks! Then, we'll feed this whole business in with each
 ;; month, and (map month-data idx-seq).
+;; TODO -- change name, and docstring.
 (defmapcatop [rain-chunks [chunk-size]]
   ^{:doc "Takes in data for a single month of rain data, and resamples
   it to the MODIS sinusoidal grid at the supplied resolution. Returns
