@@ -1,5 +1,5 @@
 (ns forma.conversion
-  (:use (clj-time [core :only (date-time year month day)])
+  (:use (clj-time [core :only (date-time year month in-minutes interval)])
         (clojure.contrib [math :only (ceil)])))
 
 ;; In developing the time period conversion functions, we noticed that
@@ -20,6 +20,21 @@
 
 (def ref-date (date-time 2000))
 
+(defn in-days
+  "Returns the number of days spanned by the given interval."
+  [interval]
+  (let [mins (in-minutes interval)
+        hours (/ mins 60)
+        days (/ hours 24)]
+    (int days)))
+
+(defn julian
+  "Returns the julian day index of a given date."
+  [a]
+  (in-days
+   (interval (date-time (year a))
+             a)))
+
 (defn delta [f a b] (- (f b) (f a)))
 
 (defn per-year
@@ -27,21 +42,21 @@
   be found in a year. Includes the final period, even if that period
   isn't full."
   [unit span]
-  (let [m {day 365 month 12}]
+  (let [m {julian 365 month 12}]
     (ceil (/ (m unit) span))))
 
 (defn delta-periods
   "Calculates the difference between the supplied start and end dates
-  in span-sized groups of unit (months or days). [unit span] could be
-  [day 16], for example."
+  in span-sized groups of unit (months or julians). [unit span] could be
+  [julian 16], for example."
   [unit span start end]
   (let [[years units] (map #(delta % start end) [year unit])]
     (+ (* years (per-year unit span))
        (quot units span))))
 
 (def months (partial delta-periods month 1))
-(def sixteens (partial delta-periods day 16))
-(def eights (partial delta-periods day 8))
+(def sixteens (partial delta-periods julian 16))
+(def eights (partial delta-periods julian 8))
 
 (def period-func
   {"1000" months

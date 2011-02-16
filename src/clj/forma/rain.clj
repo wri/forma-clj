@@ -21,7 +21,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def map-dimensions [180 360])
+(def map-dimensions [360 180])
 (def forma-res 0.5)
 
 (defn sqr
