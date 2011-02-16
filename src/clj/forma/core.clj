@@ -52,7 +52,7 @@ within hadoop. We currently fix the chunk size at 24,000, resulting in
   ^{:doc "Extracts the year from a NOAA PREC/L filename, assuming that
   the year is the only group of 4 digits. pairs it with the supplied
   month, and converts both into a time period, with units in months
-  from the MODIS start date as defined in conversion.clj."}
+  from the reference start date as defined in conversion.clj."}
   [filename month]
   (let [year (Integer/parseInt (first (re-find #"(\d{4})" filename)))]
     [res (datetime->period res year month)]))

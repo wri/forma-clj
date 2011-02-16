@@ -31,7 +31,7 @@
 (defn dimensions-at-res
   "returns the pixel dimensions at the specified pixel width (in degrees)."
   [res]
-  (map #(int (/ % res)) map-dimensions))
+  (map #(quot % res) map-dimensions))
 
 (defn area-at-res
   "Area of pixel grid at supplied resolution."

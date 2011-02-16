@@ -1,29 +1,54 @@
 (ns forma.conversion
-  (:use (clj-time [core :only (date-time year month)])))
+  (:use (clj-time [core :only (date-time year month day)])
+        (clojure.contrib [math :only (ceil)])))
 
-;; TODO -- double check this, do some research, add to doc string.
 
-(def
-  ^{:doc "Date of the first valid MODIS."}
-  ref-start
-  (date-time 2000 02))
+
+;; We have to pick some sort of reference starting point, and the
+;; first of january is as good as any!
+;; TODO -- flesh this out. Why the first?
+(def ref-date (date-time 2000))
 
 (defn delta [f a b] (- (f b) (f a)))
 
-;; TODO -- make this use resolution in some way.
-(defn delta-period
-  [res start end]
-  (let [year-diff (delta year start end)
-        month-diff (delta month start end)]
-    (+ (* 12 year-diff) month-diff)))
+(defn per-year
+  "Calculates how many periods of the given span of supplied units can
+  be found in a year. Includes the final period, even if that period
+  isn't full.
 
-;; TODO: UPDATE DOCS
+  Example usage:
+  (per-year day 16)
+  => 23"
+  [unit span]
+  (ceil
+   (/ (condp = unit
+          day 365
+          month 12
+          year 1)
+      span)))
+
+(defn delta-periods
+  "TODO --write doc string."
+  [unit span start end]
+  (let [[years units] (map #(delta % start end) [year unit])]
+    (+ (* years (per-year unit span))
+       (quot units span))))
+
+(def months (partial delta-periods month 1))
+(def sixteens (partial delta-periods day 16))
+(def eights (partial delta-periods day 8))
+
+(def period-func
+  {"1000" months
+   "500" sixteens
+   "250" sixteens})
+
 (defn datetime->period
-   "Converts a given input date into an interval from the MODIS
-  beginnings, as specified by modis-start. This function accepts
-  DateTime objects, strings that can be coerced into dates, or an
-  arbitrary number of integer pieces. (The last of these must be a
-  string representation of a resolution, such as \"1000\". See
-  clj-time's date-time and from-string for more information."
+  "Converts a given set of date pieces into a reference time interval
+at the same temporal resolution as a MODIS product at the supplied
+resolution. Input can be any number of pieces of a date, from greatest
+to least significance. See clj-time's date-time function for more
+information."
   [res & int-pieces]
-  (delta-period res ref-start (apply date-time int-pieces)))
+  (let [date (apply date-time int-pieces)]
+    ((period-func res) ref-date date)))
