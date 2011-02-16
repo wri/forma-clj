@@ -2,9 +2,22 @@
   (:use (clj-time [core :only (date-time year month day)])
         (clojure.contrib [math :only (ceil)])))
 
-;; We have to pick some sort of reference starting point, and the
-;; first of january is as good as any!
-;; TODO -- flesh this out. Why the first?
+;; In developing the time period conversion functions, we noticed that
+;; as long as the time period remained consistent from dataset to
+;; dataset, the actual reference point, the zero-month, became
+;; irrelevant. We chose the year 2000 because the MODIS system
+;; recorded its earliest data in February of that year. MODIS indexing
+;; will begin at 1, while NOAA PREC/L rainfall data, for example, will
+;; begin at 0. For the purposes of our algorithm, we'll drop any
+;; indices that hang off the ends, when the datasets are joined. (The
+;; rain data's first month will be hacked off, as will later NDVI
+;; months, if they don't match up with some index of rain data.)
+;;
+;; We keep this reference point throughout calculations of 16 day time
+;; periods as well, as NASA's 16 day collection can be found at 16 day
+;; offsets through the year. The final 16 day set is never full,
+;; though its day count is either 13 or 14, depending on leap year status.
+
 (def ref-date (date-time 2000))
 
 (defn delta [f a b] (- (f b) (f a)))
