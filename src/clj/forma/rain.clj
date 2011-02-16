@@ -172,11 +172,38 @@ objects."}
         sample (+ line index)]
     [sample line]))
 
+;; TODO -- comment, get rid of the 720.
 (defn rain-index
-  "INCOMPLETE. Returns the index inside a rain data vector for the
-  given inputs."
   [mod-h mod-v sample line res]
-  (geo-coords mod-h mod-v sample line res))
+  (let [[lat lon] (geo-coords mod-h mod-v sample line res)
+        [row col] (indy lat lon)]
+    (+ (* row 720) col)))
+
+;; TODO -- rename this, docstring.
+(defn index [res x]
+  (int (floor (* x (/ res)))))
+
+;; TODO -- rename this. rename in rain-ndex above.
+;; Also, get these 720s, and the forma-res, out of there!
+(defn indy [lat lon]
+  (let [forma-idx (partial index forma-res)
+        lon-idx (forma-idx (abs lon))
+        lat-idx (forma-idx (+ lat 90))]
+    (vector lat-idx
+            (if (neg? lon)
+              (- (dec 720) lon-idx)
+              lon-idx))))
+
+;; TODO -- rename this from resample.
+;; TODO -- can we just return index, here?  Then, we could have, for
+;; an input of chunk size, data, resolution -- we'd actually just need
+;; chunk-size and resolution as inputs.  mod-h, mod-v, chunk,
+;; chunk-seq. But the chunk-seq would actually be the proper indices
+;; within the data!  So the results of this would be a huge business
+;; of those four parameters. Every months would need them all.
+;;
+;;It would take ALL of those and a given month -- and return all of
+;; the samples. But we'd be able to split these between everything.
 
 (defn resample
   "Takes in a month's worth of PREC/L rain data, and returns a lazy
@@ -184,10 +211,13 @@ objects."}
   [data res mod-h mod-v chunk chunk-size]
   (let [rain (vec data)]
     (for [pixel (range chunk-size)]
-      (let [[sample line] (tile-position chunk pixel chunk-size)
-            index (rain-index mod-h mod-v sample line res)]
-        (rain index)))))
+      (let [[sample line] (tile-position chunk pixel chunk-size)]
+        (rain-index mod-h mod-v sample line res)))))
 
+;; TODO -- this query currents generates all chunks for a specific
+;; rain month. We want to convert this so that it generates the MAPS
+;; of all chunks! Then, we'll feed this whole business in with each
+;; month, and (map month-data idx-seq).
 (defmapcatop [rain-chunks [chunk-size]]
   ^{:doc "Takes in data for a single month of rain data, and resamples
   it to the MODIS sinusoidal grid at the supplied resolution. Returns
@@ -198,5 +228,5 @@ objects."}
           mod-v (range v-tiles)
           chunk (range (/ (sqr edge-length) chunk-size))
           :when (valid-modis? mod-h mod-v)]
-      (let [chunk-seq (resample data res mod-h mod-v chunk chunk-size)]
-        [mod-h mod-v chunk chunk-seq]))))
+      (let [idx-seq (resample data res mod-h mod-v chunk chunk-size)]
+        [mod-h mod-v chunk idx-seq]))))
