@@ -2,8 +2,6 @@
   (:use (clj-time [core :only (date-time year month day)])
         (clojure.contrib [math :only (ceil)])))
 
-
-
 ;; We have to pick some sort of reference starting point, and the
 ;; first of january is as good as any!
 ;; TODO -- flesh this out. Why the first?
@@ -14,21 +12,15 @@
 (defn per-year
   "Calculates how many periods of the given span of supplied units can
   be found in a year. Includes the final period, even if that period
-  isn't full.
-
-  Example usage:
-  (per-year day 16)
-  => 23"
+  isn't full."
   [unit span]
-  (ceil
-   (/ (condp = unit
-          day 365
-          month 12
-          year 1)
-      span)))
+  (let [m {day 365 month 12}]
+    (ceil (/ (m unit) span))))
 
 (defn delta-periods
-  "TODO --write doc string."
+  "Calculates the difference between the supplied start and end dates
+  in span-sized groups of unit (months or days). [unit span] could be
+  [day 16], for example."
   [unit span start end]
   (let [[years units] (map #(delta % start end) [year unit])]
     (+ (* years (per-year unit span))
