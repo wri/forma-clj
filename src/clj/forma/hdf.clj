@@ -11,6 +11,10 @@
            [org.apache.hadoop.io BytesWritable]))
 
 (set! *warn-on-reflection* true)
+;; TODO document:
+;; http://tbrs.arizona.edu/project/MODIS/MOD13.C5-UsersGuide-HTML-v1.00/sect0005.html
+;; The terra products use regular production, while the aqua products
+;; use phased production.
 
 ;; ## Constants
 
