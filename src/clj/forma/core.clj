@@ -1,7 +1,6 @@
 (ns forma.core
   (:use cascalog.api
-        (forma [sources :only (all-files)]
-               conversion))
+        (forma [sources :only (all-files)]))
   (:require (cascalog [vars :as v]
                       [ops :as c])
             (forma [hdf :as h]
@@ -28,8 +27,7 @@ within hadoop. We currently fix the chunk size at 24,000, resulting in
   chunk-size 24000)
 
 ;; ## Demonstration Queries
-;; This first one deals with MODIS data.
-
+;; MODIS data first, then rain data.
 (defn chunk-test
   "Simple query that takes a directory containing MODIS HDF files, or
   a link directly to such a file, totals up the # of chunks per file,
@@ -45,28 +43,11 @@ within hadoop. We currently fix the chunk size at 24,000, resulting in
          (chunks ?dataset ?res ?tile-h ?tile-v ?period ?chunkid ?chunk)
          (c/count ?count))))
 
-;; Now, on to the rain data. We might want to move this over into
-;; rain.
-
-(defmapop [extract-period [res]]
-  ^{:doc "Extracts the year from a NOAA PREC/L filename, assuming that
-  the year is the only group of 4 digits. pairs it with the supplied
-  month, and converts both into a time period, with units in months
-  from the reference start date as defined in conversion.clj."}
-  [filename month]
-  (let [year (Integer/parseInt (first (re-find #"(\d{4})" filename)))]
-    [res (datetime->period res year month)]))
-
-(defn rain-months
-  "Test query! Returns the first few pieces of metadata for
-rain. Currently, we'll get a dataset name, a MODIS resolution, and the
-time period of the month datasets extracted from the input files. The
-default resolution is forma-res, as defined in core."
-  ([rain-dir]
-     (rain-months rain-dir forma-res))
-  ([rain-dir res]
-     (let [rain-files (all-files rain-dir)]
-       (?<- (stdout) [?dataset ?res ?period]
-            (rain-files ?filename ?file)
-            (extract-period [res] ?filename ?month :> ?res ?period)
-            (r/unpack-rain ?file :> ?dataset ?month ?month-data)))))
+(defn rain-test
+  "Like chunk-test, but checks the same thing for the rain data."
+  [m-res ll-res c-size tile-seq dir]
+  (let [source (all-files dir)
+        chunks (r/rain-chunks m-res ll-res c-size tile-seq dir)]
+    (?<- (stdout) [?dataset ?res ?period]
+         (chunks ?dataset ?res ?mod-h ?mod-v ?period ?chunkid ?chunk)
+         (c/count ?count))))

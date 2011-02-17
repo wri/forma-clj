@@ -1,3 +1,8 @@
+;; ## Hadoop
+
+;; Functions to interact directly with hadoop objects.
+;; TODO -- merge this with sources?
+
 (ns forma.hadoop
   (:use (clojure.contrib [math :only (abs)]))
   (:import [org.apache.hadoop.io BytesWritable]))

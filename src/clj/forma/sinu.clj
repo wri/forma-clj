@@ -1,3 +1,7 @@
+;; TODO -- talk about how this section essentially takes arc out of
+;; the picture, since we can now generate maps between any ordered
+;; lat, long data and the MODIS grid, at the supplied resolutions.
+
 ;; ## MODIS Reprojection
 ;;
 ;; If a dataset we need for our algorithm happens to be in a
@@ -19,7 +23,8 @@
 ;;
 ;; 1. Load every rain array onto each cluster, and map across
 ;;pregenerated indices;
-;; 1. load all
+;; 1. load all (TODO -- note that this file is all about resampling
+;;and reprojection. We're able to generate our chunk samples, here.
 ;; 1. load all
 ;;
 ;; of the rain data onto each node in the cluster, 
@@ -39,7 +44,6 @@
 
 (ns forma.sinu
   (:use cascalog.api
-        (forma [rain :only (forma-res)])
         (clojure.contrib.generic [math-functions :only
                                   (cos floor abs)])))
 
@@ -60,7 +64,7 @@ horizontal.)  For a visual representation of the MODIS grid and its
 available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
   good-tiles
   (let [offsets [14 11 9 6 4 2 1 0 0 0 0 1 2 4 6 9 11 14]]
-    (set (for [v-tile (range v-tiles)
+    (vec (for [v-tile (range v-tiles)
                h-tile (let [shift (offsets v-tile)]
                         (range shift (- h-tiles shift)))]
            [h-tile v-tile]))))
@@ -128,7 +132,6 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
         lon (/ x (* rho (cos lat)))]
     (map to-deg [lat lon])))
 
-
 (defn pixel-length
   "The length, in meters, of the edge of a pixel at a given
   resolution."
@@ -171,42 +174,47 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
 ;; chunk, only for valid MODIS tiles. If any functions don't make
 ;; sense, look at sinu.clj. This matches up with stuff over there.
 
-(defn valid-modis?
-  "Checks a MODIS tile coordinate against the set of all MODIS tiles
-  with some form of valid data within them. See
-  http://remotesensing.unh.edu/modis/modis.shtml for a clear picture
-  of which tiles are considered valid."
-  [h v]
-  (contains? good-tiles [h v]))
+(defn idx->colrow
+  "Takes an index within a row vector, and returns the appropriate row
+  and column within a square matrix with the supplied edge length."
+  [edge idx]
+  ((juxt #(mod % edge) #(quot % edge)) idx))
 
 (defn tile-position
   "For a given MODIS chunk and index within that chunk, returns
   [sample, line] within the MODIS tile."
-  [res chunk index chunk-size]
-  (let [pos (+ (* chunk chunk-size) index)
-        edge (pixels-at-res res)]
-    ((juxt #(mod % edge) #(quot % edge)) pos)))
+  [m-res chunk index chunk-size]
+  (idx->colrow (pixels-at-res m-res)
+               (+ index (* chunk chunk-size))))
 
 ;; TODO -- rename this, docstring.
-(defn index [res x]
+(defn index
+  "General index -- we use this in lon-index and lat-index below."
+  [res x]
   (int (floor (* x (/ res)))))
 
 ;; TODO -- rename this. rename in rain-ndex above.
-;; Also, get these 720s, and the forma-res, out of there!
-(defn indy [lat lon]
-  (let [forma-idx (partial index forma-res)
-        lon-idx (forma-idx (abs lon))
-        lat-idx (forma-idx (+ lat 90))]
+;; Also, get that 720 out of there, using ll-res!
+(defn indy
+  "Returns the PREC/L dataset coordinates, assuming a 720 x 360
+  grid. We get row and column out of this puppy."
+  [ll-res lat lon]
+  (let [lon-idx (index ll-res (abs lon))
+        lat-idx (index ll-res (+ lat 90))]
     (vector lat-idx
             (if (neg? lon)
               (- (dec 720) lon-idx)
               lon-idx))))
 
 ;; TODO -- comment, get rid of the 720.
+;; TODO -- make sure we can take the MODIS resolution and rain
+;; resolution as parameters here.
 (defn rain-index
-  [res mod-h mod-v sample line]
-  (let [[lat lon] (geo-coords mod-h mod-v sample line res)
-        [row col] (indy lat lon)]
+  "takes a modis coordinate, and returns the index within a row vector
+  containing a month of PREC/L data at 0.5 resolution."
+  [m-res ll-res mod-h mod-v sample line]
+  (let [[lat lon] (geo-coords mod-h mod-v sample line m-res)
+        [row col] (indy ll-res lat lon)]
     (+ (* row 720) col)))
 
 ;; TODO -- rename this from resample.
@@ -223,21 +231,20 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
 (defn resample
   "Takes in a month's worth of PREC/L rain data, and returns a lazy
   seq of data samples for supplied MODIS chunk coordinates."
-  [res mod-h mod-v chunk chunk-size]
-  (for [pixel (range chunk-size)]
-    (let [[sample line] (tile-position res chunk pixel chunk-size)]
-      (rain-index res mod-h mod-v sample line))))
+  [m-res ll-res mod-h mod-v chunk chunk-size]
+  (for [pixel (range chunk-size)
+        :let [[sample line] (tile-position m-res chunk pixel chunk-size)]]
+    (rain-index m-res ll-res mod-h mod-v sample line)))
 
-(defmapcatop [rain-chunks [chunk-size]]
-  ^{:doc "Takes in data for a single month of rain data, and resamples
-  it to the MODIS sinusoidal grid at the supplied resolution. Returns
-  4-tuples, looking like (mod-h, mod-v, chunk, chunkdata-seq)."}
-  [data res]
-  (let [edge-length (pixels-at-res res)
-        rain (vec data)]
-    (for [mod-h (range h-tiles)
-          mod-v (range v-tiles)
-          chunk (range (/ (#(% %) edge-length) chunk-size))
-          :when (valid-modis? mod-h mod-v)]
-      (let [idx-seq (resample res mod-h mod-v chunk chunk-size)]
-        [mod-h mod-v chunk (map rain idx-seq)]))))
+;; This guy samples each chunk. I think we can actually just call this
+;; particular function with a huge chunk size, if we want to do each tile.
+(defmapcatop [chunk-samples [m-res ll-res chunk-size]]
+  ^{:doc "Returns chunks of the indices within a lat lon array at the
+  specified resolution required to match up with modis chunks of the
+  supplied size, within the tile at the supplied MODIS coordinates."}
+  [mod-h mod-v]
+  (let [edge (pixels-at-res m-res)
+        numpix (#(* % %) edge)]
+    (for [chunk (range (/ numpix chunk-size))]
+      [chunk
+       (vec (resample m-res ll-res mod-h mod-v chunk chunk-size))])))

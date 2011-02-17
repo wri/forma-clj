@@ -1,3 +1,6 @@
+;; Documentation, again. What's the point of these guys? This lets us
+;; unpack a MODIS hdf file into the proper format.
+
 (ns forma.hdf
   (:use (forma hadoop [conversion :only (datetime->period)])
         (cascalog api [io :only (temp-dir)])

@@ -1,3 +1,10 @@
+;; TODO -- what's the point of this file? We allow someone to convert
+;; a date into either 16 day, 8 day, or monthly periods, as defined by
+;; MODIS.
+;; TODO -- should we change this so we can pass the function name
+;; directly? The point of this is that we need some way to deal with
+;; 1000m, 16 day data. Make a note in tracker to deal with this.
+
 (ns forma.conversion
   (:use (clj-time [core :only (date-time year month in-minutes interval)])
         (clojure.contrib [math :only (ceil)])))

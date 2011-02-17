@@ -1,3 +1,6 @@
+;; ## TODO -- information about the sources for data, here, and how
+;; ## we're supplementing the cascalog sources.2
+
 (ns forma.sources
   (:use cascalog.api)
   (:import [forma WholeFile]

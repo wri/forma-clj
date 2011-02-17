@@ -13,6 +13,26 @@
         forma.sources)
   (:require (cascalog [ops :as c])))
 
+(def age (memory-source-tap [
+  ["alice" 28]
+  ["bob" 33]
+  ["chris" 40]
+  ["david" 25]
+  ["emily" 25]
+  ["george" 31]
+  ["gary" 28]
+  ["kumar" 27]
+  ["luanne" 36]
+  ]))
+
+(def small-tiles (memory-source-tap [
+  [1 28]
+  [4 33]
+  [4 40]
+  [2 25]
+  [1 25]
+  ]))
+
 (defn file-count
   "Prints the total count of files in a given directory to stdout."
   [dir]
@@ -44,3 +64,22 @@
     (?<- (stdout) [?filename ?floats ?num]
          (stuff ?filename ?floats)
          (last ?floats :> ?num))))
+
+(def tiles (memory-source-tap good-tiles))
+
+(defmapop checker [h-tile] (list (vec (range 50 60))))
+
+(defmapop fives [arg]
+  (vector [8 7]))
+
+(defmapop mapper [f coll]
+  [(apply vector (map f coll))])
+
+(defn rain-tester []
+  (?<- (stdout) [?name ?period ?h-tile ?v-tile ?checked ?mapped]
+       (age ?name ?period)
+       (small-tiles ?h-tile ?v-tile)
+       (checker ?h-tile :> ?checked)
+       (fives ?v-tile :> ?fives)
+       (mapper ?checked ?fives :> ?mapped)
+       (identity 1 :> ?_)))
