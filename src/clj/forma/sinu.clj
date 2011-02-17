@@ -1,3 +1,29 @@
+;; ## MODIS Reprojection
+;;
+;; If a dataset we need for our algorithm happens to be in a
+;; projection different than the MODIS products, we need to reproject
+;; that data pixel coordinates on the MODIS grid. NOAA's PREC/L
+;; dataset, for example, was projected into WGS84; each pixel is 0.5
+;; degrees on a side. Back in python, we used a pregenerated set of
+;; indices for every MODIS tile. When we run `(map dataset
+;; new-coords)`, we obtain a vector of ordered rain data for every
+;; pixel within that particular MODIS tile.
+;;
+;; This worked well on one machine; in the original python version of
+;; the code, we load every bit of rain data into one massive array,
+;; and then cycle through the indices, one tile at a time.
+;;
+;; Parallelizing this process presented some issues. How would we
+;; split up the data? Because we can't know in advance which portion
+;; the rain data array we're going to need, we either need to:
+;;
+;; 1. Load every rain array onto each cluster, and map across
+;;pregenerated indices;
+;; 1. load all
+;; 1. load all
+;;
+;; of the rain data onto each node in the cluster, 
+
 ;; Now, as referenced here:
 ;; http://www.dfanning.com/map_tips/modis_overlay.html this os what
 ;; NASA stopped using integerized sinusoidal projection in collection
@@ -12,7 +38,12 @@
 ;;http://landweb.nascom.nasa.gov/developers/tilemap/note.html.
 
 (ns forma.sinu
-  (:use (clojure.contrib.generic [math-functions :only (cos)])))
+  (:use cascalog.api
+        (forma [rain :only (forma-res)])
+        (clojure.contrib.generic [math-functions :only
+                                  (cos floor abs)])))
+
+;; ## Inverse Sinusoidal Projection
 
 ;; ## Constants
 
@@ -130,3 +161,83 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
   [mod-h mod-v sample line res]
   (apply lat-long
          (map-coords mod-h mod-v sample line (str res))))
+
+;; ## Resampling of Rain Data
+;; I'm going to stop in the middle of this, as I know I'm not doing a
+;; good job -- but we're almost done, here. The general idea is to
+;; take in a rain data month, and generate a list comprehension with
+;; every possible chunk at the current resolution. This will stream
+;; out a lazy seq of 4 tuples, containing rain data for a given MODIS
+;; chunk, only for valid MODIS tiles. If any functions don't make
+;; sense, look at sinu.clj. This matches up with stuff over there.
+
+(defn valid-modis?
+  "Checks a MODIS tile coordinate against the set of all MODIS tiles
+  with some form of valid data within them. See
+  http://remotesensing.unh.edu/modis/modis.shtml for a clear picture
+  of which tiles are considered valid."
+  [h v]
+  (contains? good-tiles [h v]))
+
+(defn tile-position
+  "For a given MODIS chunk and index within that chunk, returns
+  [sample, line] within the MODIS tile."
+  [res chunk index chunk-size]
+  (let [pos (+ (* chunk chunk-size) index)
+        edge (pixels-at-res res)]
+    ((juxt #(mod % edge) #(quot % edge)) pos)))
+
+;; TODO -- rename this, docstring.
+(defn index [res x]
+  (int (floor (* x (/ res)))))
+
+;; TODO -- rename this. rename in rain-ndex above.
+;; Also, get these 720s, and the forma-res, out of there!
+(defn indy [lat lon]
+  (let [forma-idx (partial index forma-res)
+        lon-idx (forma-idx (abs lon))
+        lat-idx (forma-idx (+ lat 90))]
+    (vector lat-idx
+            (if (neg? lon)
+              (- (dec 720) lon-idx)
+              lon-idx))))
+
+;; TODO -- comment, get rid of the 720.
+(defn rain-index
+  [res mod-h mod-v sample line]
+  (let [[lat lon] (geo-coords mod-h mod-v sample line res)
+        [row col] (indy lat lon)]
+    (+ (* row 720) col)))
+
+;; TODO -- rename this from resample.
+;; TODO -- can we just return index, here?  Then, we could have, for
+;; an input of chunk size, data, resolution -- we'd actually just need
+;; chunk-size and resolution as inputs.  mod-h, mod-v, chunk,
+;; chunk-seq. But the chunk-seq would actually be the proper indices
+;; within the data!  So the results of this would be a huge business
+;; of those four parameters. Every months would need them all.
+;;
+;;It would take ALL of those and a given month -- and return all of
+;; the samples. But we'd be able to split these between everything.
+;; TODO -- update docstring.
+(defn resample
+  "Takes in a month's worth of PREC/L rain data, and returns a lazy
+  seq of data samples for supplied MODIS chunk coordinates."
+  [res mod-h mod-v chunk chunk-size]
+  (for [pixel (range chunk-size)]
+    (let [[sample line] (tile-position res chunk pixel chunk-size)]
+      (rain-index res mod-h mod-v sample line))))
+
+(defmapcatop [rain-chunks [chunk-size]]
+  ^{:doc "Takes in data for a single month of rain data, and resamples
+  it to the MODIS sinusoidal grid at the supplied resolution. Returns
+  4-tuples, looking like (mod-h, mod-v, chunk, chunkdata-seq)."}
+  [data res]
+  (let [edge-length (pixels-at-res res)
+        rain (vec data)]
+    (for [mod-h (range h-tiles)
+          mod-v (range v-tiles)
+          chunk (range (/ (#(% %) edge-length) chunk-size))
+          :when (valid-modis? mod-h mod-v)]
+      (let [idx-seq (resample res mod-h mod-v chunk chunk-size)]
+        [mod-h mod-v chunk (map rain idx-seq)]))))

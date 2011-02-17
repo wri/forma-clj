@@ -12,8 +12,7 @@
 (ns forma.rain
   (:use (cascalog [api :exclude (union)])
         (clojure [set :only (union)])
-        (forma sinu
-               [hadoop :only (get-bytes)]))
+        (forma [hadoop :only (get-bytes)]))
   (:require (clojure.contrib [io :as io]
                              [math :as m]))
   (:import [java.io File InputStream]
@@ -24,10 +23,6 @@
 
 (def map-dimensions [360 180])
 (def forma-res 0.5)
-
-(defn sqr
-  "Returns the square of x."
-  [x] (* x x))
 
 (defn dimensions-at-res
   "returns the pixel dimensions at the specified pixel width (in degrees)."
@@ -110,13 +105,12 @@
   "Generates a lazy seq of byte-arrays from a binary NOAA PREC/L
   file. Elements alternate between precipitation rate in mm / day and
   total # of gauges."
-  ([stream] (lazy-months stream forma-res))
-  ([^InputStream stream res]
+  ([res ^InputStream stream]
      (let [arr-size (floats-for-res res)
            buf (byte-array arr-size)]
        (if (pos? (force-fill stream buf))
          (lazy-seq
-          (cons buf (lazy-months stream)))
+          (cons buf (lazy-months res stream)))
          (.close stream)))))
 
 (defn make-tuple
@@ -131,7 +125,7 @@
   data. Note that we take every other element in the lazy-months seq,
   skipping data concerning # of gauges."
   [stream]
-  (map-indexed make-tuple (take-nth 2 (lazy-months stream))))
+  (map-indexed make-tuple (take-nth 2 (lazy-months forma-res stream))))
 
 ;; ## Cascalog Queries
 
@@ -143,92 +137,3 @@ objects."}
   unpack-rain [stream]
   (let [bytes (get-bytes stream)]
     (rain-tuples (input-stream bytes))))
-
-;; ## Resampling of Rain Data
-;; I'm going to stop in the middle of this, as I know I'm not doing a
-;; good job -- but we're almost done, here. The general idea is to
-;; take in a rain data month, and generate a list comprehension with
-;; every possible chunk at the current resolution. This will stream
-;; out a lazy seq of 4 tuples, containing rain data for a given MODIS
-;; chunk, only for valid MODIS tiles. If any functions don't make
-;; sense, look at sinu.clj. This matches up with stuff over there.
-
-;; (Note that none of the various matrix transformations required by
-;; FORMA have been done to the data, yet. We need to account for the
-;; horizontal swap and vertical flip, when we do our index lookup.)
-
-(defn valid-modis?
-  "Checks a MODIS tile coordinate against the set of all MODIS tiles
-  with some form of valid data within them. See
-  http://remotesensing.unh.edu/modis/modis.shtml for a clear picture
-  of which tiles are considered valid."
-  [h v]
-  (contains? good-tiles [h v]))
-
-(defn tile-position
-  "For a given MODIS chunk and index within that chunk, returns
-  [sample, line] within the MODIS tile."
-  [chunk index chunk-size]
-  (let [line (* chunk chunk-size)
-        sample (+ line index)]
-    [sample line]))
-
-;; TODO -- rename this, docstring.
-(defn index [res x]
-  (int (m/floor (* x (/ res)))))
-
-;; TODO -- rename this. rename in rain-ndex above.
-;; Also, get these 720s, and the forma-res, out of there!
-(defn indy [lat lon]
-  (let [forma-idx (partial index forma-res)
-        lon-idx (forma-idx (m/abs lon))
-        lat-idx (forma-idx (+ lat 90))]
-    (vector lat-idx
-            (if (neg? lon)
-              (- (dec 720) lon-idx)
-              lon-idx))))
-
-;; TODO -- comment, get rid of the 720.
-(defn rain-index
-  [mod-h mod-v sample line res]
-  (let [[lat lon] (geo-coords mod-h mod-v sample line res)
-        [row col] (indy lat lon)]
-    (+ (* row 720) col)))
-
-;; TODO -- rename this from resample.
-;; TODO -- can we just return index, here?  Then, we could have, for
-;; an input of chunk size, data, resolution -- we'd actually just need
-;; chunk-size and resolution as inputs.  mod-h, mod-v, chunk,
-;; chunk-seq. But the chunk-seq would actually be the proper indices
-;; within the data!  So the results of this would be a huge business
-;; of those four parameters. Every months would need them all.
-;;
-;;It would take ALL of those and a given month -- and return all of
-;; the samples. But we'd be able to split these between everything.
-
-(defn resample
-  "Takes in a month's worth of PREC/L rain data, and returns a lazy
-  seq of data samples for supplied MODIS chunk coordinates."
-  [data res mod-h mod-v chunk chunk-size]
-  (let [rain (vec data)]
-    (for [pixel (range chunk-size)]
-      (let [[sample line] (tile-position chunk pixel chunk-size)]
-        (rain-index mod-h mod-v sample line res)))))
-
-;; TODO -- this query currents generates all chunks for a specific
-;; rain month. We want to convert this so that it generates the MAPS
-;; of all chunks! Then, we'll feed this whole business in with each
-;; month, and (map month-data idx-seq).
-;; TODO -- change name, and docstring.
-(defmapcatop [rain-chunks [chunk-size]]
-  ^{:doc "Takes in data for a single month of rain data, and resamples
-  it to the MODIS sinusoidal grid at the supplied resolution. Returns
-  4-tuples, looking like (mod-h, mod-v, chunk, chunkdata-seq)."}
-  [data res]
-  (let [edge-length (pixels-at-res res)]
-    (for [mod-h (range h-tiles)
-          mod-v (range v-tiles)
-          chunk (range (/ (sqr edge-length) chunk-size))
-          :when (valid-modis? mod-h mod-v)]
-      (let [idx-seq (resample data res mod-h mod-v chunk chunk-size)]
-        [mod-h mod-v chunk idx-seq]))))
