@@ -228,6 +228,8 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
 ;;It would take ALL of those and a given month -- and return all of
 ;; the samples. But we'd be able to split these between everything.
 ;; TODO -- update docstring.
+;; @TODO -- combine this with the defmapcatop below. No reason for them
+;; to be separate@
 (defn resample
   "Takes in a month's worth of PREC/L rain data, and returns a lazy
   seq of data samples for supplied MODIS chunk coordinates."

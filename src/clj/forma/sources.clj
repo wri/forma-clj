@@ -1,5 +1,5 @@
 ;; ## TODO -- information about the sources for data, here, and how
-;; ## we're supplementing the cascalog sources.2
+;; ## we're supplementing the cascalog sources.
 
 (ns forma.sources
   (:use cascalog.api)
