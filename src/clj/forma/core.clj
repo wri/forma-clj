@@ -1,6 +1,6 @@
 (ns forma.core
   (:use cascalog.api
-        (forma [sources :only (all-files)]))
+        (forma [hadoop :only (all-files)]))
   (:require (cascalog [vars :as v]
                       [ops :as c])
             (forma [hdf :as h]

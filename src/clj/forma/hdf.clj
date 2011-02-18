@@ -10,8 +10,7 @@
   (:import [java.util Hashtable]
            [java.io File]
            [org.gdal.gdal gdal Dataset Band]
-           [org.gdal.gdalconst gdalconstConstants]
-           [org.apache.hadoop.io BytesWritable]))
+           [org.gdal.gdalconst gdalconstConstants]))
 
 (set! *warn-on-reflection* true)
 ;; TODO document:

@@ -1,4 +1,5 @@
 (defproject forma "1.0.0-SNAPSHOT"
+  :description "[FORMA](http://www.cgdev.org/section/initiatives/_active/forestmonitoringforactionforma) gone Functional."
   :source-path "src/clj"
   :java-source-path "src/jvm"
   :javac-options {:debug "true" :fork "true"}
