@@ -7,7 +7,10 @@
 ;; If a dataset we need for our algorithm happens to be in a
 ;; projection different than the MODIS products, we need to reproject
 ;; that data pixel coordinates on the MODIS grid. NOAA's PREC/L
-;; dataset, for example, was projected into WGS84; each pixel is 0.5
+;; dataset, for example, is arranged in a lat, long grid, at a
+;;resolution of 0.5 degrees per pixel.
+;;;
+;;each pixel is 0.5
 ;; degrees on a side. Back in python, we used a pregenerated set of
 ;; indices for every MODIS tile. When we run `(map dataset
 ;; new-coords)`, we obtain a vector of ordered rain data for every

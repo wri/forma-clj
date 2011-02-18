@@ -11,7 +11,7 @@
            [org.apache.hadoop.io BytesWritable])
   (:require (cascalog [workflow :as w])))
 
-;; ## Custom Taps
+;; ## Custom File Input
 ;;
 ;; Hadoop is optimized for massive files -- enormous website logs,
 ;; huge bodies of text, lists of friend relations on twitter, that
@@ -47,13 +47,15 @@
 ;; [BytesWritable](http://goo.gl/GVP3e) object. (It should be noted
 ;; that for small files, this method will be very inefficient, as
 ;; we're overriding Hadoop's ability to leap across files and stick to
-;; its optimal 64MB input split size. MODIS files range from 24 to 48
-;; MB, so all is well, but a more efficient general solution can be
-;; obtained by deriving WholeFileInputFormat from
-;; [CombineFileInputFormat](http://goo.gl/awr4T). In this scenario,
-;;An input split would still break along file boundaries, but might
-;;include multiple files. The record reader would have to be adjusted
-;;to produce multiple <k,v> pairs for every input split.
+;; its optimal 64MB input split size.)
+;;
+;;MODIS files range from 24 to 48 MB, so all is well, but a more
+;; efficient general solution can be obtained by deriving
+;; WholeFileInputFormat from
+;; [CombineFileInputFormat](http://goo.gl/awr4T). In this scenario, An
+;; input split would still break along file boundaries, but might
+;; include multiple files. The record reader would have to be adjusted
+;; to produce multiple <k,v> pairs for every input split.
 ;;
 ;; As [Cascalog](http://goo.gl/SRmDh) allows us to write cascading
 ;; jobs (rather than straight MapReduce), we had to define a custom

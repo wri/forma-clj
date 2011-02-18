@@ -1,9 +1,6 @@
-;; TODO -- what's the point of this file? We allow someone to convert
-;; a date into either 16 day, 8 day, or monthly periods, as defined by
-;; MODIS.
-;; TODO -- should we change this so we can pass the function name
-;; directly? The point of this is that we need some way to deal with
-;; 1000m, 16 day data. Make a note in tracker to deal with this.
+;; This namespace allows for conversion of dates into integer time
+;; periods, as measured from some reference date. This allows for
+;; proper temporal comparison of two unrelated datasets.
 
 (ns forma.conversion
   (:use (clj-time [core :only (date-time year month in-minutes interval)])
@@ -11,24 +8,44 @@
 
 ;; In developing the time period conversion functions, we noticed that
 ;; as long as the time period remained consistent from dataset to
-;; dataset, the actual reference point, the zero-month, became
-;; irrelevant. We chose the year 2000 because the MODIS system
-;; recorded its earliest data in February of that year. MODIS indexing
-;; will begin at 1, while NOAA PREC/L rainfall data, for example, will
-;; begin at 0. For the purposes of our algorithm, we'll drop any
-;; indices that hang off the ends, when the datasets are joined. (The
-;; rain data's first month will be hacked off, as will later NDVI
-;; months, if they don't match up with some index of rain data.)
-;;
-;; We keep this reference point throughout calculations of 16 day time
-;; periods as well, as NASA's 16 day collection can be found at 16 day
-;; offsets through the year. The final 16 day set is never full,
-;; though its day count is either 13 or 14, depending on leap year status.
+;; dataset, the ability to 0-index became irrelevant.  Our choice of
+;; January 1st, 2000 ensures that, regardless of the date on which the
+;; specific MODIS product became active, datasets at the same temporal
+;; resolution will match up. With that in mind, we chose January 1st
+;; 2000.
 
 (def ref-date (date-time 2000))
 
+;; For NASA's composite products, MODIS data is composited into either
+;; monthly, 16-day, or 8-day intervals. Each of these scales begins
+;; counting on January 1st. Monthly datasets begin counting on the
+;; first of each month, while the others mark off blocks of 16 or 8
+;; julian days from the beginning of the year.
+;;
+;;(It's important to note that time periods are NOT measured from the
+;; activation date of a specific product. The first available NDVI
+;; 16-day composite, for example, has a beginning date of February
+;; 18th 2001, or Julian day 49, the 1st day of the 4th period as
+;; measured from January 1st. With our reference of January 1st, This
+;; dataset will receive an index of 3, and will match up with any
+;; other data that falls within that 16-day period. This provides
+;; further validation for our choice of January 1st, 2000 as a
+;; consistent reference point.
+;;
+;; Additionally it should be noted that the final dataset is never
+;; full; the 23rd 16-day dataset of the year holds data for either 13
+;; or 14 days, depending on leap year.)
+;;
+;; TODO COMPLETE FOM HERE ON OUT
+;; TODO -- what's the point of this file? We allow someone to convert
+;; a date into either 16 day, 8 day, or monthly periods, as defined by
+;; MODIS.
+;; TODO -- should we change this so we can pass the function name
+;; directly? The point of this is that we need some way to deal with
+;; 1000m, 16 day data. Make a note in tracker to deal with this.
+
 (defn in-days
-  "Returns the number of days spanned by the given interval."
+  "Returns the number of days spanned by the given time interval."
   [interval]
   (let [mins (in-minutes interval)
         hours (/ mins 60)
