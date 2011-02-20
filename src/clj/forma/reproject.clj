@@ -248,8 +248,6 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
   [mod-h mod-v]
   (let [edge (pixels-at-res m-res)
         numpix (#(* % %) edge)]
-    (for [chunk (range (/ numpix chunk-size))
-          pixel (range chunk-size)
-          :let [[sample line] (tile-position m-res chunk pixel chunk-size)]
+    (for [chunk (range (/ numpix chunk-size))]
       [chunk
-       (vec (resample m-res ll-res mod-h mod-v chunk chunk-size))]))))
+       (vec (resample m-res ll-res mod-h mod-v chunk chunk-size))])))
