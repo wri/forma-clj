@@ -27,11 +27,9 @@
 ;; 1. Load every rain array onto each cluster, and map across
 ;;pregenerated indices;
 ;; 1. load all (TODO -- note that this file is all about resampling
-;;and reprojection. We're able to generate our chunk samples, here.
-;; 1. load all
+;;and reprojection. We're able to generate our chunk samples, here.)
 ;;
 ;; of the rain data onto each node in the cluster, 
-
 ;; Now, as referenced here:
 ;; http://www.dfanning.com/map_tips/modis_overlay.html this os what
 ;; NASA stopped using integerized sinusoidal projection in collection
@@ -45,7 +43,7 @@
 ;;functionality found at the MODLAND Tile Calculator:
 ;;http://landweb.nascom.nasa.gov/developers/tilemap/note.html.
 
-(ns forma.sinu
+(ns forma.reproject
   (:use cascalog.api
         (clojure.contrib.generic [math-functions :only
                                   (cos floor abs)])))
@@ -175,7 +173,7 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
 ;; every possible chunk at the current resolution. This will stream
 ;; out a lazy seq of 4 tuples, containing rain data for a given MODIS
 ;; chunk, only for valid MODIS tiles. If any functions don't make
-;; sense, look at sinu.clj. This matches up with stuff over there.
+;; sense, look at reproject.clj. This matches up with stuff over there.
 
 (defn idx->colrow
   "Takes an index within a row vector, and returns the appropriate row
@@ -250,6 +248,8 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
   [mod-h mod-v]
   (let [edge (pixels-at-res m-res)
         numpix (#(* % %) edge)]
-    (for [chunk (range (/ numpix chunk-size))]
+    (for [chunk (range (/ numpix chunk-size))
+          pixel (range chunk-size)
+          :let [[sample line] (tile-position m-res chunk pixel chunk-size)]
       [chunk
-       (vec (resample m-res ll-res mod-h mod-v chunk chunk-size))])))
+       (vec (resample m-res ll-res mod-h mod-v chunk chunk-size))]))))

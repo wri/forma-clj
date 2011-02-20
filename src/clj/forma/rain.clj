@@ -17,7 +17,7 @@
 (ns forma.rain
   (:use cascalog.api
         (forma [hadoop :only (get-bytes)]
-               [sinu :only (chunk-samples)]
+               [reproject :only (chunk-samples)]
                [conversion :only (datetime->period)]))
   (:require (clojure.contrib [io :as io]))
   (:import [java.io File InputStream]
