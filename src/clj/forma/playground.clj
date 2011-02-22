@@ -84,5 +84,15 @@
        (small-tiles ?h-tile ?v-tile)
        (checker ?h-tile :> ?checked)
        (fives ?v-tile :> ?fives)
-       (mapper ?checked ?fives :> ?mapped)
+       (fancyvec ?checked ?fives :> ?mapped)
        (identity 1 :> ?_)))
+
+
+;; Okay, we know that this will give us an array to test stuff on.
+(def tester
+  (byte-array
+   (flatten
+    (take 10
+          (repeatedly
+           #(map byte [0 -64 121 -60]))))))
+

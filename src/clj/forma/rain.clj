@@ -14,8 +14,7 @@
                [conversion :only (datetime->period)]))
   (:require (clojure.contrib [io :as io]))
   (:import [java.io File InputStream]
-           [java.util.zip GZIPInputStream]
-           [forma LittleEndianDataInputStream]))
+           [java.util.zip GZIPInputStream]))
 
 ;; ## Dataset Information
 ;;
@@ -100,22 +99,31 @@
 
 ;; Once we have the byte arrays returned by `lazy-months`, we need to
 ;; process each one into meaningful data. Java reads primitive arrays
-;; using [big endian](http://goo.gl/os4SJ) format, be default. The
+;; using [big endian](http://goo.gl/os4SJ) format, by default. The
 ;; PRECL dataset was stored using [little endian](http://goo.gl/KUpiy)
-;; floats. We wrap `(input-stream bytes)` to force all reads to take
-;; place using little endian format.
+;; floats, 4 bytes each. We define a function below that coerces
+;; groups of 4 bytes into a float.
 
-(defn lazy-floats
-  "Generates a lazy seq of floats from the supplied byte array. Floats
-  are read in little-endian format."
+(defn little-float
+  "Converts four input bits to a float, in little endian
+  format. Special case of a more general `littleize` function, on the
+  horizon."
+  [b0 b1 b2 b3]
+  (Float/intBitsToFloat
+   (bit-or
+   (bit-shift-left b3 24)
+   (bit-or
+    (bit-shift-left (bit-and b2 0xff) 16)
+    (bit-or
+     (bit-shift-left (bit-and b1 0xff) 8)
+     (bit-and b0 0xff))))))
+
+(defn little-floats
+  "Converts the supplied byte array into a seq of
+  little-endian-ordered floats."
   [bytes]
-  (let [buf (LittleEndianDataInputStream.
-             (input-stream bytes))]
-    (lazy-seq
-     (try
-       (cons (.readFloat buf) (lazy-floats buf))
-       (catch java.io.IOException e
-         (.close buf))))))
+  (vec (map (partial apply little-float)
+            (partition float-bytes bytes))))
 
 ;; As our goal is to process each file into the tuple-set described
 ;; above, we need to tag each month with metadata, to distinguish it
@@ -129,7 +137,7 @@
   in this case, to make the number correspond to a month of the year,
   rather than an index in a seq."
   [index month]
-  (vector "precl" (inc index) (lazy-floats month)))
+  (vector "precl" (inc index) (little-floats month)))
 
 (defn rain-tuples
   "Returns a lazy seq of 3-tuples representing NOAA PREC/L rain
