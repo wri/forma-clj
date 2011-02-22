@@ -91,7 +91,11 @@
        (quot units span))))
 
 ;; The following partial functions take care of the issue with delta
-;; above, by calculating the span in periods across years.
+;; above, by calculating the span in periods across years. (Note that
+;; these functions only work for MODIS products using regular
+;; production. All terra products meet this restriction -- the aqua
+;; products use phased production with 16- and 8-day temporal
+;; resolution, so time periods begin on January 9th.)
 
 (def months (partial delta-periods month 1))
 (def sixteens (partial delta-periods julian 16))

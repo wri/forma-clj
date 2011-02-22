@@ -1,5 +1,15 @@
-;; Documentation, again. What's the point of these guys? This lets us
-;; unpack a MODIS hdf file into the proper format.
+;; This namespace provides functions for unpacking HDF files storing
+;; NASA MODIS data. The functions here attempt to apply generally to
+;; all MODIS datasets, though further work must be done to verify this
+;; fact.
+;;
+;; The overall goal here is to process a MODIS HDF4 archive into
+;; tuples of the form
+;;
+;;     [?dataset ?res ?tileid ?tperiod ?chunkid ?chunk-pix]
+;;
+;; If every dataset can be coerced into this form, it becomes trivial
+;; to match tuples up and combine them in various ways.
 
 (ns forma.hdf
   (:use (forma hadoop [conversion :only (datetime->period)])
@@ -12,12 +22,25 @@
            [org.gdal.gdal gdal Dataset Band]
            [org.gdal.gdalconst gdalconstConstants]))
 
-;; TODO document:
-;; http://tbrs.arizona.edu/project/MODIS/MOD13.C5-UsersGuide-HTML-v1.00/sect0005.html
-;; The terra products use regular production, while the aqua products
-;; use phased production.
-
-;; ## Constants
+;; ## MODIS Introduction
+;;
+;; See the [MODIS wiki page](http://goo.gl/byMfF) for detailed
+;; information on the program. For specific information on the MOD13
+;; products used by REDD as of 02/2011, see the excellent [MOD13
+;; User's Guide](http://goo.gl/sMEJG), produced by the University of
+;; Arizona.
+;;
+;; ### Constants
+;;
+;; Every MODIS file, packaged using the HDF4 compression format,
+;; packages a number of different datasets; 9, in the case of the
+;; MOD13A3 product. FORMA, in its first iteration, uses one of these
+;; layers, the [Normalized Difference Vegetation
+;; Index](http://goo.gl/kjojh), or NDVI. NASA doesn't provide a short
+;; identifier for each data layer within its products, as it does with
+;; the products themselves; as a solution, we parse the long-form
+;; subdataset file paths for substrings that remain constant for each
+;; data layer across spatial and temporal resolutions.
 
 (def
   ^{:doc "Map between MODIS dataset identifiers (arbitrarily chosen by
@@ -37,7 +60,12 @@
    :ndvi "NDVI"
    :sunz "sun zenith"})
 
-;; ## MODIS Unpacking
+;; ### HDF4 Decompression
+;;
+;; Each HDF4 archive contains a good deal of metadata about the
+;; packaged MODIS product. The metadata is fairly disorganized, but
+;; provides us with everything we need for proper classification of
+;; the data we need.
 
 (defn metadata
   "Returns the metadata hashtable for the supplied MODIS Dataset."
@@ -46,22 +74,24 @@
   ([modis]
      (metadata modis "")))
 
-
-;; Every MODIS file (archived in HDF4) packages a number of different
-;; datasets; 9, in the case of the MOD13A3 product. The paths to these
-;; are contained within the "SUBDATASETS" metadata dictionary of the
-;; wrapping archive. This dictionary contains 18 groups of K-V pairs,
-;; or 2 per dataset:
+;; The "SUBDATASETS" metadata dictionary contains 
 ;;
-;; Key: SUBDATASET_2_NAME
-;; Val: HDF4_EOS:EOS_GRID:"/path/to/modis.hdf":MOD_Grid_monthly_1km_VI:1 km
-;; monthly EVI
-;; Key: SUBDATASET_4_DESC
-;; Val: [1200x1200] 1 km monthly EVI MOD_Grid_monthly_1km_VI (16-bit
-;; integer)
+;; The paths to these are contained within the "SUBDATASETS" metadata
+;; dictionary of the wrapping archive. This dictionary contains 18
+;; groups of K-V pairs, or 2 per dataset:
 ;;
-;; We're only interested in the names, as these alone allow us to
-;; uniquely identify each dataset.
+;;      Key: SUBDATASET_2_NAME
+;;      Val: <hdf stuff>:"/path/to/modis.hdf":
+;;           MOD_Grid_monthly_1km_VI:
+;;           1 km monthly EVI
+;;      Key: SUBDATASET_4_DESC
+;;      Val: [1200x1200] 1 km monthly EVI
+;;           MOD_Grid_monthly_1km_VI
+;;           (16-bit integer)
+;;
+;; the `DESC` key is redundant, so we filter for `_NAMES` only. The
+;; string at the end of the `_NAMES` value allows us to identify the
+;; specific subdataset, and filter it against `modis-subsets`.
 
 (defn subdataset-names
   "Returns the NAME entries of the SUBDATASETS metadata Hashtable for
@@ -99,7 +129,9 @@
   [path]
   (vector (subdataset-key path) (gdal/Open path)))
 
-;; ##Cascalog Custom Functions
+;; This is the first real "director" function; cascalog calls feeds
+;; `BytesWritable` objects into `unpack-modis` and receives individual
+;; datasets back.
 
 (defmapcatop [unpack-modis [to-keep]] {:stateful true}
   ^{:doc "Stateful approach to unpacking HDF files. Registers all
@@ -122,13 +154,18 @@ as a 1-tuple."}
   ([tdir]
      (io/delete-file-recursively tdir)))
 
-;; ## Chunking Functions
+;; ### Raster Chunking
+;;
+;; At this point in the process, we're operating on a single dataset,
+;; and breaking it into chunks of pixels. We do this to allow our
+;;functions to scale directly with pixel count, rather than with
+;;number of datasets processed.
 
-(defmapcatop [raster-chunks [chunk-size]]
+(defmapcatop [raster-chunks [chunk-size]]  
   ^{:doc "Unpacks the data inside of a MODIS band and partitions it
   into chunks sized according to the supplied value. Specifically,
-  returns a lazy sequence of 2-tuples a lazy sequence of 2-tuples of
-  the form (chunk-index, int-array)."}
+  returns a lazy sequence of 2-tuples of the form (chunk-index,
+  int-array)."}
   [^Dataset data]
   (let [^Band band (.GetRasterBand data 1)
         width (.GetXSize band)
@@ -137,33 +174,41 @@ as a 1-tuple."}
     (.ReadRaster band 0 0 width height ret)
     (indexed (partition chunk-size ret))))
 
-;; ## Metadata Parsing
+;; ### Metadata Parsing
+;;
+;; After unpacking the dataset from the HDF archive, we still need to
+;; harvest various metadata values to convert into fields in our ideal
+;; tuple, described above. The following functions provide
+;; MODIS-specific facilities for making this happen.
 
 (defmapop [meta-values [meta-keys]]
-  ^{:doc "Returns metadata values for a given unpacked MODIS Dataset
-and a seq of keys."}
+  ^{:doc "Returns metadata values for a given unpacked MODIS Dataset,
+  corresponding to the supplied seq of keys."}
   [modis]
   (let [^Hashtable metadict (metadata modis)]
     (map #(.get metadict %) meta-keys)))
-
-;; TODO -- add some good documentation here about what the next
-;; section is accomplishing. I want to check marginalia to see the
-;; best way to do this stuff. We might actually want to break this out
-;; into its own file.
-
-;; It's described here:
-;; http://modis-250m.nascom.nasa.gov/developers/tileid.html
-
-;; The first digit is used to identify the projection, while the
-;; second digit is used to specify the tile size. 1 is 1km data (full
-;; tile size) , 2 is quarter size (500m data), and 4 is 16th tile
-;; size, or 250m data.
 
 (defn parse-ints
   "Converts all strings in the supplied collection to their integer
   representations."
   [coll]
   (map #(Integer/parseInt %) coll))
+
+;; From [NASA's MODIS information](http://goo.gl/C28fG), "The MODLAND
+;; Tile ID is an 8 digit integer, such as 51018009, that is used to
+;; specify a gridded product's projection, tile size and horizontal
+;; and vertical tile number."
+;;
+;; The first digit is used to identify the projection, while the
+;; second digit is used to specify the tile size. 1 is 1km data (full
+;; tile size) , 2 is quarter size (500m data), and 4 is 16th tile
+;; size, or 250m data. REDD deals with MODIS products from collection
+;; 5, which uses a sinusoial projection.
+;;
+;; (We place a pre-condition on split-id to catch any errors resulting
+;; from a dataset that uses a different projection. This may be
+;; updated in future versions, if we decide to incorporate older MODIS
+;; products.)
 
 (def
   ^{:doc "Map between the second digit in a MODIS TileID metadata
@@ -191,32 +236,36 @@ referenced by the supplied MODIS TileID."
 (defn split-id
   "Returns a sequence containing the resolution, X and Y
   coordinates (on the MODIS grid) referenced by the supplied MODIS
-  TileID."
+  TileID. The precondition makes sure that the processed product uses
+  a sinusoial projection."
   [tileid]
+  {:pre [(= (first tileid) \5)]}
   (flatten
    ((juxt tileid->res
           tileid->xy) tileid)))
 
-;; ## Period Parser
-
-;; TODO -- better docs.
 (defmapop to-period [res date]
+  ^{:doc "Converts a datestring, such as '2005-12-31', into an integer
+  time period."}
   (apply datetime->period
          res
          (parse-ints (re-seq #"\d+" date))))
 
-;; ## The Chunker!
+;; ### The Chunker!
+;;
+;; The chunker can't be refactored, as `org.gdal.gdal.Dataset` doesn't
+;; implement `java.io.Serializable`. This forces us to completely
+;; tease apart the HDF files supplied by the source before we can
+;; return tuples from the subquery. Each MODIS file, even down to 250m
+;; data, is smaller than 64MB, so sending each file to a different
+;; mapper won't present any problems.
 
 (defn modis-chunks
-  "Takes a source, either (hfs-wholefile dir) or (hfs-seqfile dir),
-  and returns a number of 7-tuples that fully describe chunks of MODIS
-  data for the supplied datasets. This function currently can't be
-  refactored, as the gdal.Dataset object doesn't implement
-  Serializable. This forces us to completely tease apart the HDF files
-  at the source before we can return tuples from the subquery. Chunks
-  are represented as seqs of floats. Be sure to convert to vector
-  before running any sort of data analysis, as (seqs require linear
-  time for lookups)."
+  "Takes a cascading source, and returns a number of tuples that fully
+  describe chunks of MODIS data for the supplied datasets. Chunks are
+  represented as seqs of floats. Be sure to convert chunks to vector
+  before running any sort of data analysis, as seqs require linear
+  time for lookups."
   [source datasets chunk-size]
   (let [keys ["TileID" "RANGEBEGINNINGDATE"]]
     (<- [?dataset ?res ?tile-h ?tile-v ?period ?chunkid ?chunk]
