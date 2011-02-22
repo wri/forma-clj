@@ -1,3 +1,8 @@
+;; This namespace is a hub for all others, and not really complete in
+;; its own right. We define various forma constants, and hold some of
+;; the test queries in here for now. Some of these bad boys need to
+;; get moved over to tests.
+
 (ns forma.core
   (:use cascalog.api
         (forma [hadoop :only (all-files)]))
@@ -6,30 +11,26 @@
             (forma [hdf :as h]
                    [rain :as r])))
 
-;; ## FORMA Constants
+;; ### FORMA Constants
+;;
 ;; Aside from our EC2 information, this is the only data we need to
 ;; supply for the first phase of operations. Everything else should be
 ;; able to remain local to individual modules.
 
-(def
-  ^{:doc "MODIS datasets required for FORMA processing."}  
-  forma-subsets
-  #{:ndvi :evi :qual :reli})
+(def forma-subsets #{:ndvi :evi :qual :reli})
 
-(def forma-res "1000")
+;; Arbitrary number of pixels slurped at a time off of a MODIS raster
+;; band. For 1km data, each MODIS tile is 1200x1200 pixels; dealing
+;; with each pixel individually would incur unacceptable IO costs
+;; within hadoop. We currently fix the chunk size at 24,000, resulting
+;; in 60 chunks per 1km data. Sharper resolution -> more chunks!
 
-(def
-  ^{:doc "Arbitrary number of pixels slurped at a time off of a
-MODIS raster band. For 1km data, each MODIS tile is 1200x1200 pixels;
-dealing with each pixel individually would incur unacceptable IO costs
-within hadoop. We currently fix the chunk size at 24,000, resulting in
-60 chunks per 1km data. Sharper resolution -> more chunks!"}
-  chunk-size 24000)
+(def chunk-size 24000)
 
-;; ## Demonstration Queries
-;; MODIS data first, then rain data.
+;; ### Demonstration Queries
+
 (defn chunk-test
-  "Simple query that takes a directory containing MODIS HDF files, or
+  "Cascalog query that takes a directory containing MODIS HDF files, or
   a link directly to such a file, totals up the # of chunks per file,
   and displays the count alongside some other nice metadata. This
   method is a proof of concept for the hadoop chunking system; The
@@ -44,7 +45,7 @@ within hadoop. We currently fix the chunk size at 24,000, resulting in
          (c/count ?count))))
 
 (defn rain-test
-  "Like chunk-test, but checks the same thing for the rain data."
+  "Like chunk-test, but works for NOAA PRECL data files."
   [m-res ll-res c-size tile-seq dir]
   (let [source (all-files dir)
         chunks (r/rain-chunks m-res ll-res c-size tile-seq dir)]
