@@ -1,18 +1,11 @@
-;; TODO -- what's the point of this file? As it is now, we're
-;; unpacking the rain data, and that's it! We take a binary, little
-;; endian PRECL dataset and we unpack it into chunks for use in our
-;; algorithms. Why does it take so much effort?
-
-;; The idea here is to figure out a way to unpack the rain data, and
-;; efficiently get it into a sequence file for later analysis. I
-;; should note that the 2.5 degree data is available as an OpenCDF
-;; file, with lots of Java support. Might be worthwhile to code that
-;; up as a separate input, just in case. (Support for OpenCDF files
-;; would sure be nice.)  The other issue we have in this body of code
-;; is a lack of with-open. As I'm doing IO with lazy seqs, I simply
-;; have to trust that those lazy seqs are going to bottom out, as the
-;; end of the lazy seq calls close. As long as they're realized, we're
-;; good to go.
+;; this namespace provides functions for unpacking binary files of
+;; NOAA PRECL data at 0.5 degree resolution, and processing them into
+;; tuples suitable for machine learning against MODIS data.
+;;
+;; As with modis.clj, the overall goal here is to process an NOAA
+;; PREC/L dataset into tuples of the form
+;;
+;;     [?dataset ?res ?tileid ?tperiod ?chunkid ?chunk-pix]
 
 (ns forma.rain
   (:use cascalog.api
@@ -24,7 +17,26 @@
            [java.util.zip GZIPInputStream]
            [forma LittleEndianDataInputStream]))
 
-(set! *warn-on-reflection* true)
+;; ## Dataset Information
+;;
+;; We chose to go with PRECL for our rain analysis, though any of the
+;; global datasets listed in the [IRI/LDEO Climate Data
+;; Library's](http://goo.gl/RmTKe) [atmospheric data
+;; page](http://goo.gl/V5tUI) would be great.
+;;
+;; More information on the dataset can be found at the [NOAA PRECL
+;; info site] (http://goo.gl/V3gqv). The data are fully documented in
+;; [Global Land Precipitation: A 50-yr Monthly Analysis Based on Gauge
+;; Observations] (http://goo.gl/PVOr6).
+;;
+;; ### Data Processing
+;;
+;; The NOAA PRECL data comes in files of binary arrays, with one file
+;; for each year. Each file holds 24 datasets, alternating between
+;; precip. rate in mm/day and total # of gauges, gridded in WGS84 at
+;; 0.5 degree resolution. No metadata exists to mark byte offsets. We
+;;process these datasets using input streams, so we need to know in
+;;advance how many bytes to read off per dataset.
 
 (def float-bytes (/ ^Integer (Float/SIZE)
                     ^Integer (Byte/SIZE)))
@@ -35,9 +47,6 @@
   [res]
   (apply * float-bytes (dimensions-at-res res)))
 
-;; ## Buffer Slurping
-
-;; TODO -- get the fixed numbers out of here! 0.5, 25
 (defn input-stream
   "Attempts to coerce the given argument to an InputStream, with added
   support for gzipped files. If the input argument does point to a
@@ -55,29 +64,12 @@
         (.reset stream)
         stream))))
 
-;; Java reads its byte arrays in using big endian format -- this rain
-;; data was written in little endian format. The way to get these
-;; numbers in is to swap them around. Here, we provide a method for a
-;; little-endian binary file to be accessed using its own custom DataInputStream.
-
-(defn little-stream
-  "Returns a little endian DataInputStream opened up on the supplied
-  argument. See clojure.contrib.io/input-stream for acceptable
-  argument types."
-  [x]
-  (LittleEndianDataInputStream. (input-stream x)))
-
-;; ## Data Extraction
-
-(defn lazy-floats
-  "Generates a lazy seq of floats from the supplied
-  DataInputStream. Floats are read in little-endian format."
-  [^LittleEndianDataInputStream buf]
-  (lazy-seq
-   (try
-     (cons (.readFloat buf) (lazy-floats buf))
-     (catch java.io.IOException e
-       (.close buf)))))
+;; ### Data Extraction
+;;
+;; When using an input-stream to feed lazy-seqs, it becomes difficult
+;; to use `with-open`, as we don't know when the application will be
+;; finished with the stream. We deal with this by calling close on the
+;; stream when our lazy-seq bottoms out.
 
 (defn force-fill
   "Forces the given stream to fill the supplied buffer. In certain
@@ -106,21 +98,50 @@
           (cons buf (lazy-months ll-res stream)))
          (.close stream)))))
 
+;; Once we have the byte arrays returned by `lazy-months`, we need to
+;; process each one into meaningful data. Java reads primitive arrays
+;; using [big endian](http://goo.gl/os4SJ) format, be default. The
+;; PRECL dataset was stored using [little endian](http://goo.gl/KUpiy)
+;; floats. We wrap `(input-stream bytes)` to force all reads to take
+;; place using little endian format.
+
+(defn lazy-floats
+  "Generates a lazy seq of floats from the supplied byte array. Floats
+  are read in little-endian format."
+  [bytes]
+  (let [buf (LittleEndianDataInputStream.
+             (input-stream bytes))]
+    (lazy-seq
+     (try
+       (cons (.readFloat buf) (lazy-floats buf))
+       (catch java.io.IOException e
+         (.close buf))))))
+
+;; As our goal is to process each file into the tuple-set described
+;; above, we need to tag each month with metadata, to distinguish it
+;; from other datasets, and standardize the field information for
+;; later queries against all data. We hardcode the name "precl" for
+;; the data here, and store the month as an index, for later
+;; conversion to time period.
+
 (defn make-tuple
   "Generates a 3-tuple for NOAA PREC/L months. We increment the index,
   in this case, to make the number correspond to a month of the year,
   rather than an index in a seq."
   [index month]
-  (vector "precl" (inc index) (little-stream month)))
+  (vector "precl" (inc index) (lazy-floats month)))
 
 (defn rain-tuples
   "Returns a lazy seq of 3-tuples representing NOAA PREC/L rain
   data. Note that we take every other element in the lazy-months seq,
   skipping data concerning # of gauges."
   [ll-res stream]
-  (map-indexed make-tuple (take-nth 2 (lazy-months ll-res stream))))
+  (map-indexed make-tuple
+               (take-nth 2 (lazy-months ll-res stream))))
 
-;; ## Cascalog Queries
+;; This is our first cascalog query -- we use `defmapcatop`, as we
+;; need to split each file out into twelve separate tuples, one for
+;; each month.
 
 (defmapcatop [unpack-rain [ll-res]]
   ^{:doc "Unpacks a PREC/L binary file for a given year, and returns a
@@ -135,6 +156,10 @@ objects."}
 ;; on the datetime->period function, which currently depends on
 ;; resolution. We should probably change this to work on the time
 ;; period, like sixteens, days, etc.
+
+;; Each PRECL filename contains the year from which the data is
+;; sourced.
+
 (defmapop [extract-period [m-res]]
   ^{:doc "Extracts the year from a NOAA PREC/L filename, assuming that
   the year is the only group of 4 digits. pairs it with the supplied
