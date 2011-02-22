@@ -57,11 +57,15 @@
    (interval (date-time (year a))
              a)))
 
-;; the julian function complements the other "date-piece"
-;; functions supplied by the clj-time library; day, month, year, and
-;; the others each allow for extraction of that particular element of
-;; a date. We define the delta function to allow us to take the
-;; difference
+;; the julian function complements the other "date-piece" functions
+;; supplied by the clj-time library; day, month, year, and the others
+;; each allow for extraction of that particular element of a date. We
+;; define the delta function to allow us to take the difference of a
+;; specific date-piece between two dates.
+
+(defn delta [f a b] (- (f b) (f a)))
+
+;; For example,
 ;;
 ;;     (delta julian a b)
 ;;
@@ -70,8 +74,6 @@
 ;; year value of each of the dates. That function returns the same
 ;; value for a = Jan 1st, 2000, b = Feb 25th, 2000 and b = Feb 25th,
 ;; 2002.
-
-(defn delta [f a b] (- (f b) (f a)))
 
 (defn per-year
   "Calculates how many periods of the given span of supplied units can
