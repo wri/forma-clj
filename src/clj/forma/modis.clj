@@ -1,7 +1,7 @@
 (ns forma.modis)
 
 ;; From the [user's guide](http://goo.gl/uoi8p) to MODIS product MCD45
-;; (burned area):"The MODIS data are re-projected using an equiareal
+;; (burned area): "The MODIS data are re-projected using an equiareal
 ;; sinusoidal projection, defined on a sphere of radius 6371007.181 m,
 ;; and with the Greenwich meridian as the central meridian of the
 ;; projection." The full MODIS grid has 18 vertical and 36 horizontal
