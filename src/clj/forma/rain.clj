@@ -2,7 +2,7 @@
 ;; NOAA PRECL data at 0.5 degree resolution, and processing them into
 ;; tuples suitable for machine learning against MODIS data.
 ;;
-;; As with modis.clj, the overall goal here is to process an NOAA
+;; As in `forma.hdf`, the overall goal here is to process an NOAA
 ;; PREC/L dataset into tuples of the form
 ;;
 ;;     [?dataset ?res ?tileid ?tperiod ?chunkid ?chunk-pix]
@@ -152,26 +152,38 @@ objects."}
   (let [bytes (get-bytes stream)]
     (rain-tuples ll-res (input-stream bytes))))
 
-;; TODO -- update this. We need m-res because we need to act properly
-;; on the datetime->period function, which currently depends on
-;; resolution. We should probably change this to work on the time
-;; period, like sixteens, days, etc.
-
 ;; Each PRECL filename contains the year from which the data is
-;; sourced.
+;; sourced. We currently decide time period based on spatial
+;; resolution -- this will cause problems later, when we start
+;; interacting with datasets at the same spatial resolution and
+;; different temporal resolution. A rework of `datetime->period` will
+;; fix this.
 
 (defmapop [extract-period [m-res]]
-  ^{:doc "Extracts the year from a NOAA PREC/L filename, assuming that
-  the year is the only group of 4 digits. pairs it with the supplied
-  month, and converts both into a time period, with units in months
-  from the reference start date as defined in conversion.clj."}
+  ^{:doc "Extracts the year from a NOAA PREC/L filename (assuming that
+  the year is the only group of 4 digits), pairs it with the supplied
+  month, and returns an integerized time period based on the supplied
+  spatial resolution value."}
   [filename month]
   (let [year (Integer/parseInt (first (re-find #"(\d{4})" filename)))]
     [m-res (datetime->period m-res year month)]))
 
+;; The following functions bring everything together, making heavy use
+;; of the functionality supplied by `forma.reproject`. Rather than
+;; sampling PRECL data at the positions of every possible MODIS tile,
+;; we allow the user to supply a seq of TileIDs for processing. (No
+;; MODIS product covers every possible tile. The terra products only
+;; cover land, for example.)
+;;
+;; These functions are designed to be able to map between WGS84 and
+;; MODIS datasets at arbitrary resolution. This explains the
+;; resolution parameters seen in the functions below.
+
 (defn index-seqs
-  "Takes a tile sequence and a couple of resolution parameters --
-  returns translation indices for chunks within a tile, given the chunk size."
+  "Cascalog subquery to generate translation indices for chunks within
+  each tile referenced in the supplied sequence of MODIS
+  TileIDs. Requires MODIS and WGS84 spatial resolutions, and a chunk
+  size."
   [m-res ll-res c-size tile-seq]
   (let [source (memory-source-tap tile-seq)]
     (<- [?mod-h ?mod-v ?chunkid ?idx-seq]
@@ -179,24 +191,33 @@ objects."}
         (chunk-samples [m-res ll-res c-size]
                        ?mod-h ?mod-v :> ?chunkid ?idx-seq))))
 
-;; TODO -- explain in docstring why ll-res, etc is important!
 (defn rain-months
-  "Returns all months from a directory of PREC/L datasets at the
-  supplied resolution, paired with their time periods."
+  "Cascalog subquery to extract all months from a directory of PREC/L
+  datasets at the supplied WGS84 spatial resolution, paired with time
+  periods appropriate for the supplied MODIS spatial
+  resolution. Source can be any tap that supplies files like
+  precl_mon_v1.0.lnx.2010.gri0.5m(.gz, optionally)."
   [m-res ll-res source]
   (<- [?dataset ?m-res ?period ?raindata]
-        (source ?filename ?file)
-        (unpack-rain [ll-res] ?file :> ?dataset ?month ?raindata)
-        (extract-period [m-res] ?filename ?month :> ?m-res ?period)))
+      (source ?filename ?file)
+      (unpack-rain [ll-res] ?file :> ?dataset ?month ?raindata)
+      (extract-period [m-res] ?filename ?month :> ?m-res ?period)))
 
-;; TODO -- update documentation
-(defmapop fancyindex [f coll]
-  [(apply vector (map (vec f) coll))])
+(defmapop fancyindex [coll indices]
+  ^{:doc "Samples the supplied collection, returning the values at the
+  supplied indices within coll. Analogous to NumPy's [fancy
+  indexing](http://goo.gl/rZ4ri)."}
+  [(apply vector (map (vec coll) indices))])
 
-;; TODO -- update documentation
+;; And, finally, the chunker. This subquery is analogous to the
+;; chunker found in `forma.hdf`. This is the only function that needs
+;; to be called, when processing new PRECL data.
+
 (defn rain-chunks
-  "Generates rain chunks for the given tiles, at the supplied
-  resolutions on each end of the chain."
+  "Cascalog subquery to fully process a WGS84 float array at the
+  supplied resolution (`ll-res`) into tuples suitable for comparison
+  to any MODIS dataset at the supplied modis resolution (`m-res`),
+  partitioned by the supplied chunk size."
   [m-res ll-res c-size tile-seq source]
   (let [indices (index-seqs m-res ll-res c-size tile-seq)
         precl (rain-months m-res ll-res source)]
