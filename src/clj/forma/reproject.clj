@@ -232,7 +232,7 @@ supplied, assumes a square matrix."
               (- (dec max-width) lon-idx)
               lon-idx))))
 
-(defn rain-index
+(defn wgs84-index
   "takes a modis coordinate at the supplied resolution, and returns
   the index within a row vector of WGS84 data at the supplied
   resolution."
@@ -250,7 +250,7 @@ supplied, assumes a square matrix."
   [mod-h mod-v]
   (let [edge (pixels-at-res m-res)
         numpix (sqr edge)
-        indexer (partial rain-index m-res ll-res mod-h mod-v)]
+        indexer (partial wgs84-index m-res ll-res mod-h mod-v)]
     (for [chunk (range (/ numpix chunk-size))]
       [chunk
        (map #(apply indexer (tile-position m-res chunk-size chunk %))

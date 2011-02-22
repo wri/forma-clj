@@ -33,8 +33,10 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
            [h-tile v-tile]))))
 
 (defn valid-modis?
+  "Checks that the supplied values correspond to a valid MODIS tile,
+  at the specified resolution."
   [res mod-h mod-v sample line]
   (let [edge (pixels-at-res res)]
     (and (contains? valid-tiles [mod-h mod-v])
-       (< sample edge)
-       (< line edge))))
+         (< sample edge)
+         (< line edge))))
