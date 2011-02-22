@@ -17,7 +17,7 @@
 (ns forma.rain
   (:use cascalog.api
         (forma [hadoop :only (get-bytes)]
-               [reproject :only (chunk-samples)]
+               [reproject :only (chunk-samples dimensions-at-res)]
                [conversion :only (datetime->period)]))
   (:require (clojure.contrib [io :as io]))
   (:import [java.io File InputStream]
@@ -26,18 +26,6 @@
 
 (set! *warn-on-reflection* true)
 
-(def map-dimensions [360 180])
-
-(defn dimensions-at-res
-  "returns the pixel dimensions at the specified pixel width (in degrees)."
-  [ll-res]
-  (map #(quot % ll-res) map-dimensions))
-
-(defn area-at-res
-  "Area of pixel grid at supplied resolution."
-  [ll-res]
-  (apply * (dimensions-at-res ll-res)))
-
 (def float-bytes (/ ^Integer (Float/SIZE)
                     ^Integer (Byte/SIZE)))
 
@@ -45,7 +33,7 @@
   "Length of the row of floats (in # of bytes) representing the earth
   at the specified resolution."
   [res]
-  (* (area-at-res res) float-bytes))
+  (apply * float-bytes (dimensions-at-res res)))
 
 ;; ## Buffer Slurping
 

@@ -63,7 +63,7 @@
 ;; a date. We define the delta function to allow us to take the
 ;; difference
 ;;
-;;    (delta julian a b)
+;;     (delta julian a b)
 ;;
 ;; returns the difference between the julian day values of the two
 ;; supplied dates. (Note that `(partial delta julian)` ignores the

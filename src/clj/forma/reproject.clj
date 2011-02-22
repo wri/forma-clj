@@ -6,7 +6,7 @@
   (:use cascalog.api
         forma.modis
         (clojure.contrib.generic [math-functions :only
-                                  (cos floor abs)])))
+                                  (cos floor abs sqr)])))
 
 ;; ## MODIS Reprojection
 ;;
@@ -20,9 +20,11 @@
 ;;
 ;; To resample in parallel, we decided to pre-generate a set of array
 ;; indices, to map from a specific (lat, lon) resolution into some
-;; MODIS resolution. When this map in hand, running `(map dataset
-;; new--coords)` will sample the old dataset into MODIS at the
-;; resolution we want.
+;; MODIS resolution. When this map in hand, running
+;;
+;;     (map dataset new-coords)
+;;
+;; will sample the old dataset into MODIS at the resolution we want.
 ;;
 ;; To parellelize this process effectively, we'll generate maps for
 ;; chunks of pixels at fixed size, rather than for each tile. If we
@@ -33,6 +35,12 @@
 
 (defn to-rad [angle] (Math/toRadians angle))
 (defn to-deg [angle] (Math/toDegrees angle))
+
+(defn dimensions-at-res
+  "returns the <horz, vert> dimensions of a WGS84 grid at the supplied
+  spatial resolution."
+  [res]
+  (map #(quot % res) [360 180]))
 
 (defn scale
   "Scales each element in a collection of numbers by the supplied
@@ -146,7 +154,7 @@
 (defn modis->latlon
   "Returns the latitude and longitude for the supplied MODIS tile
   coordinate at the specified resolution."
-  [mod-h mod-v sample line res]
+  [res mod-h mod-v sample line]
   (apply sinu-latlon
          (map-coords mod-h mod-v sample line (str res))))
 
@@ -156,89 +164,94 @@
 ;; single MODIS pixel, we're able to consider the problem of
 ;; generating sampling indices for chunks of MODIS pixels. If we have
 ;; a dataset in WGS84 gridded at some spatial resolution, to reproject
-;; into MODIS we'll need to generate lists of indices that tell us
-;; which WGS84 index
-
-;; I'm going to stop in the middle of this, as I know I'm not doing a
-;; good job -- but we're almost done, here. The general idea is to
-;; take in a rain data month, and generate a list comprehension with
-;; every possible chunk at the current resolution. This will stream
-;; out a lazy seq of 4 tuples, containing rain data for a given MODIS
-;; chunk, only for valid MODIS tiles. If any functions don't make
-;; sense, look at reproject.clj. This matches up with stuff over there.
+;; into MODIS we'll need to generate lists that tell us which WGS84
+;; indices to sample for the data at each MODIS pixel. (The following
+;; assume that WGS84 data is held in a row vector.)
+;;
+;; In their current version, these functions make the assumption that
+;; the WGS84 grid begins at (-90, 0), with columns moving east and
+;; rows moving north. This goes against the MODIS convention of
+;; beginning at (-180, 90), and moving east and south. Future versions
+;; will accomodate arbitrary zero-points.
 
 (defn idx->colrow
-  "Takes an index within a row vector, and returns the appropriate row
-  and column within a square matrix with the supplied edge length."
-  [edge idx]
-  ((juxt #(mod % edge) #(quot % edge)) idx))
+  "Takes an index within a row vector, and returns the appropriate
+  column and row within a matrix with the supplied dimensions. If only
+  one dimension is supplied, assumes a square matrix."
+  ([edge idx]
+     (idx->colrow edge edge idx))
+  ([width height idx]
+     {:pre [(< idx (* width height)), (not (neg? idx))]
+      :post [(and (< (first %) width)
+                  (< (second %) height))]}
+     ((juxt #(mod % width) #(quot % width)) idx)))
+
+(defn colrow->idx
+  "For the supplied column and row in a rectangular matrix of
+dimensions (height, width), returns the corresponding index within a
+row vector of size (* width height). If only one dimension is
+supplied, assumes a square matrix."
+  ([edge col row]
+     (colrow->idx edge edge col row))
+  ([width height col row]
+     {:post [(< % (* width height))]}
+     (+ col (* width row))))
 
 (defn tile-position
   "For a given MODIS chunk and index within that chunk, returns
   [sample, line] within the MODIS tile."
-  [m-res chunk index chunk-size]
+  [m-res chunk-size chunk index]
   (idx->colrow (pixels-at-res m-res)
                (+ index (* chunk chunk-size))))
 
-;; TODO -- rename this, docstring.
-(defn index
-  "General index -- we use this in lon-index and lat-index below."
-  [res x]
-  (int (floor (* x (/ res)))))
+(defn bucket
+  "Takes a floating-point value and step size, and returns the
+  step-sized bucket into which the value falls. For example:
 
-;; TODO -- rename this. rename in rain-ndex above.
-;; Also, get that 720 out of there, using ll-res!
-(defn indy
-  "Returns the PREC/L dataset coordinates, assuming a 720 x 360
-  grid. We get row and column out of this puppy."
-  [ll-res lat lon]
-  (let [lon-idx (index ll-res (abs lon))
-        lat-idx (index ll-res (+ lat 90))]
+      (index 0.4 1.3)
+      ;=> 3
+
+      (index 0.9 1.3)
+      ;=> 1"
+  [step val]
+  (int (floor (* val (/ step)))))
+
+(defn fit-to-grid
+  "Takes a coordinate pair and returns its [row, col] position on a
+  WGS84 grid with the supplied spatial resolution and width in
+  columns.
+
+ (`fit-to-grid` assumes that the WGS84 grid begins at -90 latitude and
+  0 longitude. Columns move east, wrapping around the globe, and rows
+  move north.)"
+  [ll-res max-width lat lon]
+  (let [lon-idx (bucket ll-res (abs lon))
+        lat-idx (bucket ll-res (+ lat 90))]
     (vector lat-idx
             (if (neg? lon)
-              (- (dec 720) lon-idx)
+              (- (dec max-width) lon-idx)
               lon-idx))))
 
-;; TODO -- comment, get rid of the 720.
-;; TODO -- make sure we can take the MODIS resolution and rain
-;; resolution as parameters here.
 (defn rain-index
-  "takes a modis coordinate, and returns the index within a row vector
-  containing a month of PREC/L data at 0.5 resolution."
+  "takes a modis coordinate at the supplied resolution, and returns
+  the index within a row vector of WGS84 data at the supplied
+  resolution."
   [m-res ll-res mod-h mod-v sample line]
-  (let [[lat lon] (modis->latlon mod-h mod-v sample line m-res)
-        [row col] (indy ll-res lat lon)]
-    (+ (* row 720) col)))
+  {:pre [(valid-modis? m-res mod-h mod-v sample line)]}
+  (let [[max-width] (dimensions-at-res ll-res)
+        [lat lon] (modis->latlon m-res mod-h mod-v sample line)
+        [row col] (fit-to-grid ll-res max-width lat lon)]
+    (colrow->idx max-width col row)))
 
-;; TODO -- rename this from resample.
-;; TODO -- can we just return index, here?  Then, we could have, for
-;; an input of chunk size, data, resolution -- we'd actually just need
-;; chunk-size and resolution as inputs.  mod-h, mod-v, chunk,
-;; chunk-seq. But the chunk-seq would actually be the proper indices
-;; within the data!  So the results of this would be a huge business
-;; of those four parameters. Every months would need them all.
-;;
-;;It would take ALL of those and a given month -- and return all of
-;; the samples. But we'd be able to split these between everything.
-;; TODO -- update docstring.
-;; @TODO -- combine this with the defmapcatop below. No reason for them
-;; to be separate
-(defn resample
-  "Takes in a month's worth of PREC/L rain data, and returns a lazy
-  seq of data samples for supplied MODIS chunk coordinates."
-  [m-res ll-res mod-h mod-v chunk-size chunk]
-  (for [pixel (range chunk-size)
-        :let [[sample line] (tile-position m-res chunk pixel chunk-size)]]
-    (rain-index m-res ll-res mod-h mod-v sample line)))
-
-;; This guy samples each chunk. I think we can actually just call this
-;; particular function with a huge chunk size, if we want to do each tile.
 (defmapcatop [chunk-samples [m-res ll-res chunk-size]]
-  ^{:doc "Returns chunks of the indices within a lat lon array at the
-  specified resolution required to match up with modis chunks of the
-  supplied size, within the tile at the supplied MODIS coordinates."}
+  ^{:doc "Returns chunks of the indices within a WGS84 array at the
+  specified resolution corresponding to MODIS chunks of the supplied
+  size, within the tile at the supplied MODIS coordinates."}
   [mod-h mod-v]
   (let [edge (pixels-at-res m-res)
-        numpix (#(* % %) edge)]
+        numpix (sqr edge)
+        indexer (partial rain-index m-res ll-res mod-h mod-v)]
     (for [chunk (range (/ numpix chunk-size))]
-      [chunk (resample m-res ll-res mod-h mod-v chunk-size chunk)])))
+      [chunk
+       (map #(apply indexer (tile-position m-res chunk-size chunk %))
+            (range chunk-size))])))
