@@ -1,90 +1,38 @@
-;; TODO -- talk about how this section essentially takes arc out of
-;; the picture, since we can now generate maps between any ordered
-;; lat, long data and the MODIS grid, at the supplied resolutions.
-
-;; ## MODIS Reprojection
-;;
-;; If a dataset we need for our algorithm happens to be in a
-;; projection different than the MODIS products, we need to reproject
-;; that data pixel coordinates on the MODIS grid. NOAA's PREC/L
-;; dataset, for example, is arranged in a lat, long grid, at a
-;;resolution of 0.5 degrees per pixel.
-;;;
-;;each pixel is 0.5
-;; degrees on a side. Back in python, we used a pregenerated set of
-;; indices for every MODIS tile. When we run `(map dataset
-;; new-coords)`, we obtain a vector of ordered rain data for every
-;; pixel within that particular MODIS tile.
-;;
-;; This worked well on one machine; in the original python version of
-;; the code, we load every bit of rain data into one massive array,
-;; and then cycle through the indices, one tile at a time.
-;;
-;; Parallelizing this process presented some issues. How would we
-;; split up the data? Because we can't know in advance which portion
-;; the rain data array we're going to need, we either need to:
-;;
-;; 1. Load every rain array onto each cluster, and map across
-;;pregenerated indices;
-;; 1. load all (TODO -- note that this file is all about resampling
-;;and reprojection. We're able to generate our chunk samples, here.)
-;;
-;; of the rain data onto each node in the cluster, 
-;; Now, as referenced here:
-;; http://www.dfanning.com/map_tips/modis_overlay.html this os what
-;; NASA stopped using integerized sinusoidal projection in collection
-;; 3, and moved on to strictly sinusoidal in collection 4. I believe
-;; that NDVI uses a straight up sinusoidal, so that's all we need to
-;; worry about.
-
-;;TODO -- document, inside of these functions, what a sinusoidal
-;;projection actually is, with some links to understanding the general
-;;idea behind all of this stuff. The code here recreates the
-;;functionality found at the MODLAND Tile Calculator:
-;;http://landweb.nascom.nasa.gov/developers/tilemap/note.html.
+;; The functions in this namespace allow reprojection of a gridded
+;; (lat, lon) dataset at arbitrary resolution into the MODIS
+;; sinusoidal grid at arbitrary resolution.
 
 (ns forma.reproject
   (:use cascalog.api
+        forma.modis
         (clojure.contrib.generic [math-functions :only
                                   (cos floor abs)])))
 
-;; ## Inverse Sinusoidal Projection
-
-;; ## Constants
-
-(def rho 6371007.181)
-(def h-tiles 36)
-(def v-tiles 18)
-
-(def
-  #^{:doc "Set of coordinate pairs for all MODIS tiles that contain
-actual data. This set is calculated by taking a vector of offsets,
-representing the first horizontal tile containing data for each row of
-tiles. (For example, the data for row 1 begins with tile 14,
-horizontal.)  For a visual representation of the MODIS grid and its
-available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
-  good-tiles
-  (let [offsets [14 11 9 6 4 2 1 0 0 0 0 1 2 4 6 9 11 14]]
-    (vec (for [v-tile (range v-tiles)
-               h-tile (let [shift (offsets v-tile)]
-                        (range shift (- h-tiles shift)))]
-           [h-tile v-tile]))))
-
-(def pixels-at-res
-  {"250" 4800
-   "500" 2400
-   "1000" 1200})
-
-;; ## Helper Functions
+;; ## MODIS Reprojection
+;;
+;; ### Spherical Sinusoidal Projection
+;;
+;; If a dataset we need for our algorithm happens to be in a
+;; projection different from the MODIS products, we need to reproject
+;; onto the MODIS grid. NOAA's PREC/L dataset, for example, is
+;; arranged in a lat, long grid, at a resolution of 0.5 degrees per
+;; pixel.
+;;
+;; To resample in parallel, we decided to pre-generate a set of array
+;; indices, to map from a specific (lat, lon) resolution into some
+;; MODIS resolution. When this map in hand, running `(map dataset
+;; new--coords)` will sample the old dataset into MODIS at the
+;; resolution we want.
+;;
+;; To parellelize this process effectively, we'll generate maps for
+;; chunks of pixels at fixed size, rather than for each tile. If we
+;; use the tile level, we have to use one mapper for each tile -- at
+;; high resolutions, this becomes inefficient. With "chunks", mappers
+;; scale with total number of pixels, which scales directly with
+;; spatial resolution.
 
 (defn to-rad [angle] (Math/toRadians angle))
 (defn to-deg [angle] (Math/toDegrees angle))
-
-(defn distance
-  "Calculates distance of magnitude from the starting point in a given
-  direction."
-  [dir start magnitude]
-  (dir start magnitude))
 
 (defn scale
   "Scales each element in a collection of numbers by the supplied
@@ -92,81 +40,125 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
   [fact sequence]
   (for [x sequence] (* x fact)))
 
-(defn x-coord
-  "Returns the x coordinate for a given (lat, long) point."
-  [point]
-  (first point))
-
-(defn y-coord
-  "Returns the y coordinate for a given (lat, long) point."  
-  [point]
-  (second point))
+;; From [Wikipedia](http://goo.gl/qG7Hi), "the sinusoidal projection
+;; is a pseudocylindrical equal-area map projection, sometimes called
+;; the Sanson-Flamsteed or the Mercator equal-area projection. It is
+;; defined by:
+;;
+;; $$x = (\lambda - \lambda_{0}) \cos \phi$$
+;; $$y = \phi$$
+;;
+;; where \\(\phi\\) is the latitude, \\(\lambda\\) is the longitude,
+;; and \\(\lambda_{0}\\) is the central meridian." (All angles are
+;; defined in radians.) The central meridian of the MODIS sinusoidal
+;; projection is 0 (as shown in the MODIS [WKT
+;; file](http://goo.gl/mXIaY)), so the equation for \\(x\\) can be
+;; simplified to
+;;
+;; $$x = \lambda \cos \phi$$
+;;
+;; MODIS models the earth as a sphere with radius \\(\rho =
+;; 6371007.181\\), requiring us to scale all calculations by
+;; \\(\rho\\).
+;;
+;; This application deals primarily with the inverse problem, of
+;; converting (x, y) back into latitude and longitude. Still, we have
+;; to define the forward equations, for the purpose of computing the
+;; minimum and maximum possible x and y values. The MODIS grid
+;; partitions the sinusoidal grid into an arbitrary number of pixels;
+;; we need these values to appropriately map between meters and pixels
+;; on the subdivided grid.
 
 (defn sinu-xy
-  "Computes the sinusoidal x and y coordinates for the supplied
+  "Returns the sinusoidal x and y coordinates for the supplied
   latitude and longitude (in radians)."
   [lat lon]
   (scale rho [(* (cos lat) lon) lat]))
 
 (defn sinu-deg-xy
-  "Computes the sinusoidal x and y coordinates for the supplied
+  "Returns the sinusoidal x and y coordinates for the supplied
   latitude and longitude (in degrees)."
   [lat lon]
   (apply sinu-xy (map to-rad [lat lon])))
 
 ;; These are the meter values of the minimum possible x and y values
-;; on a sinusoidal projection. Things get weird at the corners, so I
-;; compute the minimum x and y values separately, along the
-;; projection's axes.
+;; on a sinusoidal projection. The sinusoidal projection is quite
+;; deformed at the corners, , so we compute the minimum x and y values
+;; separately, at the ends of the projection's axes.
+
+(defn x-coord [point] (first point))
+(defn y-coord [point] (second point))
 
 (def min-x (x-coord (sinu-deg-xy 0 -180)))
 (def min-y (y-coord (sinu-deg-xy -90 0)))
 (def max-y (y-coord (sinu-deg-xy 90 0)))
 
-;; ## Conversion Functions
+;; ### Inverse Sinusoidal Projection
+;;
+;; Now, back to the inverse problem. We'll stay in degrees, here. To
+;; convert from MODIS to (lat, lon), we need some way to convert
+;; distance from the MODIS origin (tile [0 0], pixel [0 0]) in pixels
+;; into distance from the sinusoidal origin ([0 0] in meters,
+;; corresponding to (lat, lon) = [-90 -180]).
 
-(defn lat-long
-  "Computes the latitude and longitude for a given set of sinusoidal
-  map coordinates (in meters)."
+(defn sinu-latlon
+  "Returns the latitude and longitude (in degrees) for a given set of
+  sinusoidal map coordinates (in meters)."
   [x y]
   (let [lat (/ y rho)
         lon (/ x (* rho (cos lat)))]
     (map to-deg [lat lon])))
 
+(defn sinu-position
+  "Returns the coordinate position on a sinusoidal grid reached after
+  traveling the supplied magnitudes in the x and y directions. The
+  origin of the sinusoidal grid is fixed in the top left corner."
+  [mag-x mag-y]
+  (letfn [(travel [dir start magnitude]
+                  (dir start magnitude))]
+    (map travel [+ -] [min-x max-y] [mag-x mag-y])))
+
 (defn pixel-length
-  "The length, in meters, of the edge of a pixel at a given
+  "The length, in meters, of the edge of a MODIS pixel at the supplied
   resolution."
   [res]
   (let [pixel-span (/ (- max-y min-y) v-tiles)
         total-pixels (pixels-at-res res)]
     (/ pixel-span total-pixels)))
 
-;; ## Main Conversion Functions
-
 (defn pixel-coords
-  "returns the row and dimension of the pixel on the global MODIS grid."
+  "Returns the (sample, line) of a pixel on the global MODIS grid,
+  measured in pixels from (0,0) at the top left."
   [mod-h mod-v sample line res]
   (let [edge-pixels (pixels-at-res res)]
     (map + [sample line] (scale edge-pixels [mod-h mod-v]))))
 
 (defn map-coords
-  "Returns the map position in meters for a given MODIS tile
+  "Returns the map position in meters of the supplied MODIS tile
   coordinate at the specified resolution."
   [mod-h mod-v sample line res]
   (let [edge-length (pixel-length res)
         half-edge (/ edge-length 2)
         pix-pos (pixel-coords mod-h mod-v sample line res)
         magnitudes (map #(+ half-edge %) (scale edge-length pix-pos))]
-    (map distance [+ -] [min-x max-y] magnitudes)))
+    (apply sinu-position magnitudes)))
 
-(defn geo-coords
-  "Returns the latitude and longitude for a given group of MODIS tile
-  coordinates at the specified resolution."
+(defn modis->latlon
+  "Returns the latitude and longitude for the supplied MODIS tile
+  coordinate at the specified resolution."
   [mod-h mod-v sample line res]
-  (apply lat-long
+  (apply sinu-latlon
          (map-coords mod-h mod-v sample line (str res))))
 
-;; ## Resampling of Rain Data
+;; ### WGS84 -> MODIS Index Mapping
+;;
+;; Now that we have a method of calculating the wgs84 coordinates of a
+;; single MODIS pixel, we're able to consider the problem of
+;; generating sampling indices for chunks of MODIS pixels. If we have
+;; a dataset in WGS84 gridded at some spatial resolution, to reproject
+;; into MODIS we'll need to generate lists of indices that tell us
+;; which WGS84 index
+
 ;; I'm going to stop in the middle of this, as I know I'm not doing a
 ;; good job -- but we're almost done, here. The general idea is to
 ;; take in a rain data month, and generate a list comprehension with
@@ -214,7 +206,7 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
   "takes a modis coordinate, and returns the index within a row vector
   containing a month of PREC/L data at 0.5 resolution."
   [m-res ll-res mod-h mod-v sample line]
-  (let [[lat lon] (geo-coords mod-h mod-v sample line m-res)
+  (let [[lat lon] (modis->latlon mod-h mod-v sample line m-res)
         [row col] (indy ll-res lat lon)]
     (+ (* row 720) col)))
 
@@ -230,11 +222,11 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
 ;; the samples. But we'd be able to split these between everything.
 ;; TODO -- update docstring.
 ;; @TODO -- combine this with the defmapcatop below. No reason for them
-;; to be separate@
+;; to be separate
 (defn resample
   "Takes in a month's worth of PREC/L rain data, and returns a lazy
   seq of data samples for supplied MODIS chunk coordinates."
-  [m-res ll-res mod-h mod-v chunk chunk-size]
+  [m-res ll-res mod-h mod-v chunk-size chunk]
   (for [pixel (range chunk-size)
         :let [[sample line] (tile-position m-res chunk pixel chunk-size)]]
     (rain-index m-res ll-res mod-h mod-v sample line)))
@@ -249,5 +241,4 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
   (let [edge (pixels-at-res m-res)
         numpix (#(* % %) edge)]
     (for [chunk (range (/ numpix chunk-size))]
-      [chunk
-       (vec (resample m-res ll-res mod-h mod-v chunk chunk-size))])))
+      [chunk (resample m-res ll-res mod-h mod-v chunk-size chunk)])))
