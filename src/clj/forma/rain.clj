@@ -207,7 +207,7 @@ objects."}
   ^{:doc "Samples the supplied collection, returning the values at the
   supplied indices within coll. Analogous to NumPy's [fancy
   indexing](http://goo.gl/rZ4ri)."}
-  [(apply vector (map (vec coll) indices))])
+  [(map (vec coll) indices)])
 
 ;; And, finally, the chunker. This subquery is analogous to the
 ;; chunker found in `forma.hdf`. This is the only function that needs

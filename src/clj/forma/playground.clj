@@ -9,8 +9,8 @@
 (ns forma.playground
   (:use cascalog.api
         forma.hadoop
-        forma.reproject
-        forma.sources)
+        forma.modis
+        forma.reproject)
   (:require (cascalog [ops :as c])))
 
 (def age (memory-source-tap [
@@ -65,15 +65,18 @@
          (stuff ?filename ?floats)
          (last ?floats :> ?num))))
 
-(def tiles (memory-source-tap good-tiles))
+(def tiles (memory-source-tap (vec valid-tiles)))
 
 (defmapop checker [h-tile] (list (vec (range 50 60))))
 
 (defmapop fives [arg]
   (vector [8 7]))
 
-(defmapop mapper [f coll]
-  [(apply vector (map f coll))])
+(defmapop fancyvec [coll indices]
+  [(vec (map (vec coll) indices))])
+
+(defmapop fancy [coll indices]
+  [(map (vec coll) indices)])
 
 (defn rain-tester []
   (?<- (stdout) [?name ?period ?h-tile ?v-tile ?checked ?mapped]
