@@ -48,7 +48,7 @@
   "Like chunk-test, but works for NOAA PRECL data files."
   [m-res ll-res c-size tile-seq dir]
   (let [source (all-files dir)
-        chunks (r/rain-chunks m-res ll-res c-size tile-seq dir)]
+        chunks (r/rain-chunks m-res ll-res c-size tile-seq source)]
     (?<- (stdout) [?dataset ?res ?period]
          (chunks ?dataset ?res ?mod-h ?mod-v ?period ?chunkid ?chunk)
          (c/count ?count))))
