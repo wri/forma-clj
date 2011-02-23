@@ -197,11 +197,6 @@ objects."}
   (let [source (memory-source-tap tile-seq)]
     (<- [?mod-h ?mod-v ?chunkid ?idx-seq]
         (source ?mod-h ?mod-v)
-
-        ;; TODO ERASE
-        (< ?chunkid 2)
-
-        
         (chunk-samples [m-res ll-res c-size]
                        ?mod-h ?mod-v :> ?chunkid ?idx-seq))))
 
@@ -214,11 +209,6 @@ objects."}
   [m-res ll-res source]
   (<- [?dataset ?m-res ?period ?raindata]
       (source ?filename ?file)
-
-
-      ;; TODO ERASE
-      (< ?month 2)  
-      
       (unpack-rain [ll-res] ?file :> ?dataset ?month ?raindata)
       (extract-period [m-res] ?filename ?month :> ?m-res ?period)))
 
