@@ -9,19 +9,19 @@ Installation
 Cake and Clojure
 ---------------------
 
-The first thing you'll need to run forma-hadoop is [cake](https://github.com/ninjudd/cake), a self-styled "tasty build tool for Clojure". Follow the instructions at the github page to get it installed!
+The first thing you'll need to run forma-hadoop is [cake](https://github.com/ninjudd/cake), a self-styled "tasty build tool for Clojure". Follow the instructions at the github page to get started.
 
 GDAL Java bindings
 ------------------
 
-The attached bindings were built for GDAL 1.8.0; specifically, the Macports hdf4 variant. To install GDAL properly, download the [MacPorts](http://www.macports.org/install.php) DMG for Snow Leopard, and install away.
+The attached bindings were built for GDAL 1.8.0; specifically, the Macports hdf4 universal variant. To install GDAL properly, download the [MacPorts](http://www.macports.org/install.php) DMG for Snow Leopard, and install away.
 
 once this is done, run the following commands at the terminal::
 
 	$ sudo port -v selfupdate
-	$ sudo port install gdal +hdf4
+	$ sudo port install gdal +hdf4 +universal.
 	
-This will install GDAL 1.8.0 into /opt/local. It won't disturb any other version; we just need it to be in this particular directory because the native java bindings will be looking there.
+This will install GDAL 1.8.0 into /opt/local. It won't disturb any other version of gdal; we just need it to be in this particular directory because the native java bindings will be looking there.
 
 TextMate Support for Clojure
 ----------------------------
