@@ -243,29 +243,25 @@ supplied, assumes a square matrix."
         [row col] (fit-to-grid ll-res max-width lat lon)]
     (colrow->idx max-width col row)))
 
-;; Finally, we come to the chunk sample generator. We decided to take
-;; `chunk-size` as an input, rather than working one one tile at once,
-;; as this choice allows the process to scale with number of pixels,
-;; rather than number of tiles. The danger of this approach is that if
-;; chunk-size is too small, each mapper won't have much to chew on,
-;; while quite a few copies of the data to be sampled will be flying
-;; around the cluster.
-;;
-;; One way to guarantee efficiency here would be to pick a chunk-size
-;; that will produce a single chunk for 1km tiles. 250 meter data,
-;; with 16x the pixels, will run at the same speed with 16x the
-;; machines.
+;; Finally, we come to the chunk sample generator.
+;; TODO -- DOC THIS
 
-(defmapcatop [chunk-samples [m-res ll-res chunk-size]]
+(defmapcatop [chunk-samples [m-res ll-res chunk-size t-seq]]
   ^{:doc "Returns chunks of the indices within a WGS84 array at the
   specified resolution corresponding to MODIS chunks of the supplied
   size, within the tile at the supplied MODIS coordinates."}
-  [mod-h mod-v]
+  [rain-month]
   (let [edge (pixels-at-res m-res)
         numpix (sqr edge)
-        indexer (partial wgs84-index m-res ll-res mod-h mod-v)]
-    (for [chunk (range (/ numpix chunk-size))]
-      (vector chunk
-              (for [pixel (range chunk-size)]
-                (apply indexer
-                       (tile-position m-res chunk-size chunk pixel)))))))
+        rdata (vec rain-month)]
+    (for [[mod-h mod-v] t-seq
+          chunk (range (/ numpix chunk-size))
+          :let [indexer (partial wgs84-index m-res ll-res mod-h mod-v)]]
+      (vector mod-h
+              mod-v
+              chunk
+              (vec
+               (map rdata
+                    (for [pixel (range chunk-size)]
+                      (apply indexer
+                             (tile-position m-res chunk-size chunk pixel)))))))))

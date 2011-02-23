@@ -188,18 +188,6 @@ objects."}
 ;; MODIS datasets at arbitrary resolution. This explains the
 ;; resolution parameters seen in the functions below.
 
-(defn index-seqs
-  "Cascalog subquery to generate translation indices for chunks within
-  each tile referenced in the supplied sequence of MODIS
-  TileIDs. Requires MODIS and WGS84 spatial resolutions, and a chunk
-  size."
-  [m-res ll-res c-size tile-seq]
-  (let [source (memory-source-tap tile-seq)]
-    (<- [?mod-h ?mod-v ?chunkid ?idx-seq]
-        (source ?mod-h ?mod-v)
-        (chunk-samples [m-res ll-res c-size]
-                       ?mod-h ?mod-v :> ?chunkid ?idx-seq))))
-
 (defn rain-months
   "Cascalog subquery to extract all months from a directory of PREC/L
   datasets at the supplied WGS84 spatial resolution, paired with time
@@ -212,63 +200,6 @@ objects."}
       (unpack-rain [ll-res] ?file :> ?dataset ?month ?raindata)
       (extract-period [m-res] ?filename ?month :> ?m-res ?period)))
 
-(defmapop fancyindex [coll indices]
-  ^{:doc "Samples the supplied collection, returning the values at the
-  supplied indices within coll. Analogous to NumPy's [fancy
-  indexing](http://goo.gl/rZ4ri)."}
-  [(map (vec coll) indices)])
-
-;; Something interesting occurs in the next few functions. Rather than
-;; combine these all into one query, we've decided to break them out
-;; into multiple subqueries, joined together by one larger function
-;; that processes everything through an intermediate
-;; sequencefile. What's going on here?
-;;
-;; We have a method of producing sampling sequences for tiles and
-;; chunks, and a method of unpacking rain-data for the entire globe,
-;; for each month. As we don't know in advance which portion of the
-;; rain data is needed for the sampling, every one of our sampling
-;; indices needs to be combined with every rain month. As described in
-;; [this thread](http://goo.gl/TviNn) on
-;; [cascalog-user](http://goo.gl/Tqihs), this is called a cross-join;
-;; we're taking the [cartesian product](http://goo.gl/r5Qsw) of the
-;; two sets. We accomplish this by feeding every tuple into an
-;; identity step, producing the common field `?_`, which we ignore.
-
-(defn cross-join
-  "Unpacks all NOAA PRECL files (at the supplied resolution) located
-  at `source`, and pairs every month produced with the sequence of
-  indices needed to fancyindex the data into the MODIS
-  projection. Pairing occurs for all tiles within `tile-seq`."
-  [m-res ll-res c-size tile-seq source]
-  (let [indices (index-seqs m-res ll-res c-size tile-seq)
-        precl (rain-months m-res ll-res source)]
-    (<- [?dataset ?res ?mod-h ?mod-v ?period ?chunkid ?idx-seq ?raindata]
-        (indices ?mod-h ?mod-v ?chunkid ?idx-seq)
-        (precl ?dataset ?res ?period ?raindata)
-        (identity 1 :> ?_))))
-
-;; The problem with this method is that every tuple is funnelled into
-;; a single reducer, for the cross-join. We still have to map the
-;; index sequences onto the rain data, to produce our chunks, but we
-;; don't want the single reducer to do this for every tuple. As Nathan
-;; Marz suggests [in this post](http://goo.gl/2EqHh), we can solve
-;; this problem by storing all tuples into an intermediate
-;; sequencefile, forcing cascading to create a new MapReduce task for
-;; the fancy-indexing. On one machine, this doesn't affect
-;; performance. On multiple, it should give us a big bump.
-
-(defn fancy-index
-  "Reduction step to process all tuples produced by
-  `forma.rain/cross-join`. We break this out into a separate query
-  because the cross-join forces all tuples to be processed by a single
-  reducer. This step allows the flow to branch out again from that
-  bottleneck, when run on a cluster."
-  [source]
-  (<- [?dataset ?res ?mod-h ?mod-v ?period ?chunkid ?chunk]
-      (source ?dataset ?res ?mod-h ?mod-v ?period ?chunkid ?idx-seq ?raindata)
-      (fancyindex ?raindata ?idx-seq :> ?chunk)))
-
 ;; Finally, the chunker. This subquery is analogous to
 ;; `forma.hdf/modis-chunks`. This is the only subquery that needs to
 ;; be called, when processing new PRECL data.
@@ -279,6 +210,8 @@ objects."}
   to any MODIS dataset at the supplied modis resolution (`m-res`),
   partitioned by the supplied chunk size."
   [m-res ll-res c-size tile-seq source]
-  (let [tmp (hfs-seqfile "/tmp/intermediate")]
-    (?- tmp (cross-join m-res ll-res c-size tile-seq source))
-    (fancy-index tmp)))
+  (let [precl (rain-months m-res ll-res source)]
+    (<- [?dataset ?res ?mod-h ?mod-v ?period ?chunkid ?chunk]
+        (precl ?dataset ?res ?period ?raindata)
+        (chunk-samples [m-res ll-res c-size tile-seq]
+                       ?raindata :> ?mod-h ?mod-v ?chunkid ?chunk))))
