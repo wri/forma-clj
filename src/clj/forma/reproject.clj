@@ -265,6 +265,7 @@ supplied, assumes a square matrix."
         numpix (sqr edge)
         indexer (partial wgs84-index m-res ll-res mod-h mod-v)]
     (for [chunk (range (/ numpix chunk-size))]
-      [chunk
-       (map #(apply indexer (tile-position m-res chunk-size chunk %))
-            (range chunk-size))])))
+      (vector chunk
+              (for [pixel (range chunk-size)]
+                (apply indexer
+                       (tile-position m-res chunk-size chunk pixel)))))))
