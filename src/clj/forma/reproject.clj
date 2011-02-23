@@ -243,6 +243,19 @@ supplied, assumes a square matrix."
         [row col] (fit-to-grid ll-res max-width lat lon)]
     (colrow->idx max-width col row)))
 
+;; Finally, we come to the chunk sample generator. We decided to take
+;; `chunk-size` as an input, rather than working one one tile at once,
+;; as this choice allows the process to scale with number of pixels,
+;; rather than number of tiles. The danger of this approach is that if
+;; chunk-size is too small, each mapper won't have much to chew on,
+;; while quite a few copies of the data to be sampled will be flying
+;; around the cluster.
+;;
+;; One way to guarantee efficiency here would be to pick a chunk-size
+;; that will produce a single chunk for 1km tiles. 250 meter data,
+;; with 16x the pixels, will run at the same speed with 16x the
+;; machines.
+
 (defmapcatop [chunk-samples [m-res ll-res chunk-size]]
   ^{:doc "Returns chunks of the indices within a WGS84 array at the
   specified resolution corresponding to MODIS chunks of the supplied
