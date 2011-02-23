@@ -49,6 +49,6 @@
   [m-res ll-res c-size tile-seq dir]
   (let [source (all-files dir)
         chunks (r/rain-chunks m-res ll-res c-size tile-seq source)]
-    (?<- (stdout) [?dataset ?res ?mod-h ?mod-v ?period ?count]
+    (?<- (stdout) [?dataset ?res ?mod-h ?mod-v ?period ?chunkid ?counter]
          (chunks ?dataset ?res ?mod-h ?mod-v ?period ?chunkid ?chunk)
-         (c/count ?count))))
+         (count ?chunk :> ?counter))))
