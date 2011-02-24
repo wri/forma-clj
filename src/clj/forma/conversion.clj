@@ -73,7 +73,7 @@
 ;; supplied dates. (Note that `(partial delta julian)` ignores the
 ;; year value of each of the dates. That function returns the same
 ;; value for a = Jan 1st, 2000, b = Feb 25th, 2000 and b = Feb 25th,
-;; 2002.
+;; 2002.)
 
 (defn per-year
   "Calculates how many periods of the given span of supplied units can

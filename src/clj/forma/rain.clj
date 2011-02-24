@@ -10,7 +10,7 @@
 (ns forma.rain
   (:use cascalog.api
         (forma [hadoop :only (get-bytes)]
-               [reproject :only (chunk-samples dimensions-at-res)]
+               [reproject :only (rain-sampler dimensions-at-res)]
                [conversion :only (datetime->period)]))
   (:require (cascalog [ops :as c])
             (clojure.contrib [io :as io]))
@@ -197,8 +197,65 @@ objects."}
   [m-res ll-res source]
   (<- [?dataset ?m-res ?period ?raindata]
       (source ?filename ?file)
+
+      ;;DELETE
+      (= 1 ?month)
+      
       (unpack-rain [ll-res] ?file :> ?dataset ?month ?raindata)
       (extract-period [m-res] ?filename ?month :> ?m-res ?period)))
+
+;; Something interesting occurs in the next few functions. Rather than
+;; combine `cross-join` and `fancy-index` into one query, we've
+;; decided to break them out into subqueries, joined together by one
+;; larger function that routes them through an intermediate
+;; sequencefile. What's going on here?
+;;
+;; We have a method of producing sampling our the tiles we want from a
+;; clojure data structure, and a method of unpacking rain-data for the
+;; entire globe, for each month. To maintain the ability to
+;; parallelize the sampling process, we need to pair up every tile
+;; with every rain-month.
+
+;; As described in [this thread](http://goo.gl/TviNn) on
+;; [cascalog-user](http://goo.gl/Tqihs), this is called a cross-join;
+;; we're taking the [cartesian product](http://goo.gl/r5Qsw) of the
+;; two sets. We accomplish this by feeding every tuple into an
+;; identity step, producing the common field `?_`, which we ignore.
+
+(defn cross-join
+  "Unpacks all NOAA PRECL files (at the supplied resolution) located
+  at `source`, and cross-joins each month produced with each unique
+  MODIS tile referenced within `tile-seq`."
+  [m-res ll-res tile-seq source]
+  (let [tiles (memory-source-tap tile-seq)
+        precl (rain-months m-res ll-res source)]
+    (<- [?dataset ?res ?mod-h ?mod-v ?period ?raindata]
+        (tiles ?mod-h ?mod-v)
+        (precl ?dataset ?res ?period ?raindata)
+        (identity 1 :> ?_))))
+
+;; The problem with a cross-join is that every tuple is funnelled into
+;; a single reducer, for the cross-join. We still have to map the
+;; index sequences onto the rain data, to produce our chunks, but we
+;; don't want the single reducer to do this for every tuple. As Nathan
+;; Marz suggests [in this post](http://goo.gl/2EqHh), we can solve
+;; this problem by storing all tuples into an intermediate
+;; sequencefile, forcing cascading to create a new MapReduce task for
+;; the fancy-indexing. On one machine, this slows performance
+;; slightly. On a cluster, it should give us a big bump.
+
+(defn fancy-index
+  "Reduction step to process all tuples produced by
+  `forma.rain/cross-join`. We break this out into a separate query
+  because the cross-join forces all tuples to be processed by a single
+  reducer. This step allows the flow to branch out again from that
+  bottleneck, when run on a cluster."
+  [m-res ll-res c-size source]
+  (<- [?dataset ?res ?mod-h ?mod-v ?period ?chunkid ?chunk]
+      (source ?dataset ?res ?mod-h ?mod-v ?period ?raindata)
+      (rain-sampler [m-res ll-res c-size]
+                     ?raindata ?mod-h ?mod-v :> ?chunkid ?chunk)))
+
 
 ;; Finally, the chunker. This subquery is analogous to
 ;; `forma.hdf/modis-chunks`. This is the only subquery that needs to
@@ -210,8 +267,21 @@ objects."}
   to any MODIS dataset at the supplied modis resolution (`m-res`),
   partitioned by the supplied chunk size."
   [m-res ll-res c-size tile-seq source]
-  (let [precl (rain-months m-res ll-res source)]
-    (<- [?dataset ?res ?mod-h ?mod-v ?period ?chunkid ?chunk]
-        (precl ?dataset ?res ?period ?raindata)
-        (chunk-samples [m-res ll-res c-size tile-seq]
-                       ?raindata :> ?mod-h ?mod-v ?chunkid ?chunk))))
+  (let [rnd (int (* 100000 (rand)))
+        tmp (hfs-seqfile (str "/tmp/" rnd))]
+    (?- tmp (cross-join m-res ll-res tile-seq source))
+    (fancy-index m-res ll-res c-size tmp)))
+
+
+;; An alternate formulation of `rain-chunks` that skipped the
+;; intermediate sequencefile would be:
+;;
+;;     (defn rain-chunks [m-res ll-res c-size tile-seq source]
+;;       (let [precl (cross-join m-res ll-res tile-seq source)]
+;;         (fancy-index m-res ll-res c-size precl)))
+;;
+;; This is worth testing on the cluster, though I suspect it simply
+;; won't branch out to multiple reduce jobs, leaving one poor machine
+;; to do all of the work. If successful, fancy-index should be
+;; merged into this function, which should replace the intermediate
+;; sequencefile solution.

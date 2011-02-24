@@ -243,25 +243,44 @@ supplied, assumes a square matrix."
         [row col] (fit-to-grid ll-res max-width lat lon)]
     (colrow->idx max-width col row)))
 
-;; Finally, we come to the chunk sample generator.
-;; TODO -- DOC THIS
+;; Finally, we come to the sampler. We made the decision to take a
+;; single MODIS tile id and a month of rain data as dynamic variables,
+;; against my earlier idea of pregenerating indices for each chunk,
+;; and pairing the rain months up against these. The idea of
+;; pregenerating indices was spurred by the thought that the sampling
+;; process, applied at the tile level, wouldn't scale well as
+;; resolution increased. This is still true; for high resolutions,
+;; this function takes on a rather heavy burden. Additionally, with
+;; this current method, we generate the sampling indices for every
+;; tile & rain-data combination.
+;;
+;; Still, we decided to stay at the tile level, as the tuple blowup
+;; caused by pairing each rain-month with chunks of 24,000 was
+;; enormous. Each of these methods requires a cross join between
+;; rain-months and some dataset, either tiles or the chunk indices,
+;; and a cross join has to funnel through a single reducer. The
+;; intermediate data for a chunk-size of 24,000 at 250m resolution
+;; would have produced 2TB of intermediate data.
+;;
+;; If it becomes clear how to send a `(* 1200 1200)` vector out of
+;; this function, one way to guarantee efficiency here would be to
+;; pregenerate indices, but choose a chunk-size of `(* 1200 1200)`,to
+;; produce a single chunk for 1km tiles. 250 meter data, with 16x the
+;; pixels, would run at the same speed with 16x the machines.
 
-(defmapcatop [chunk-samples [m-res ll-res chunk-size t-seq]]
+(defmapcatop [rain-sampler [m-res ll-res chunk-size]]
   ^{:doc "Returns chunks of the indices within a WGS84 array at the
   specified resolution corresponding to MODIS chunks of the supplied
   size, within the tile at the supplied MODIS coordinates."}
-  [rain-month]
+  [rain-month mod-h mod-v]
   (let [edge (pixels-at-res m-res)
         numpix (sqr edge)
         rdata (vec rain-month)]
-    (for [[mod-h mod-v] t-seq
-          chunk (range (/ numpix chunk-size))
-          :let [indexer (partial wgs84-index m-res ll-res mod-h mod-v)]]
-      (vector mod-h
-              mod-v
-              chunk
+    (for [chunk (range (/ numpix chunk-size))
+          :let [indexer (partial wgs84-index m-res ll-res mod-h mod-v)
+                tpos (partial tile-position m-res chunk-size chunk)]]
+      (vector chunk
               (vec
                (map rdata
                     (for [pixel (range chunk-size)]
-                      (apply indexer
-                             (tile-position m-res chunk-size chunk pixel)))))))))
+                      (apply indexer (tpos pixel)))))))))
