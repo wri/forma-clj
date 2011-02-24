@@ -208,11 +208,11 @@ supplied, assumes a square matrix."
   "Takes a floating-point value and step size, and returns the
   step-sized bucket into which the value falls. For example:
 
-      (index 0.4 1.3)
-      ;=> 3
+     (index 0.4 1.3)
+     ;=> 3
 
-      (index 0.9 1.3)
-      ;=> 1"
+     (index 0.9 1.3)
+     ;=> 1"
   [step val]
   (int (floor (* val (/ step)))))
 
