@@ -1,5 +1,5 @@
 (defproject forma "1.0.0-SNAPSHOT"
-  :description "[FORMA](http://www.cgdev.org/section/initiatives/_active/forestmonitoringforactionforma) gone Functional."
+  :description "[FORMA](http://goo.gl/4YTBw) gone Functional."
   :source-path "src/clj"
   :java-source-path "src/jvm"
   :marginalia {:javascript ["mathjax/MathJax.js"]}
