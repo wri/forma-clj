@@ -13,6 +13,15 @@
         forma.reproject)
   (:require (cascalog [ops :as c])))
 
+(def small-tiles (memory-source-tap [
+  [1 28]
+  [4 33]
+  [4 40]
+  [2 25]
+  [1 25]
+  ]))
+
+
 (def age (memory-source-tap [
   ["alice" 28]
   ["bob" 33]
@@ -23,14 +32,6 @@
   ["gary" 28]
   ["kumar" 27]
   ["luanne" 36]
-  ]))
-
-(def small-tiles (memory-source-tap [
-  [1 28]
-  [4 33]
-  [4 40]
-  [2 25]
-  [1 25]
   ]))
 
 (defn file-count

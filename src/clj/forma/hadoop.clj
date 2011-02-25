@@ -8,6 +8,7 @@
         (clojure.contrib [math :only (abs)]))
   (:import [forma WholeFile]
            [cascading.tuple Fields]
+           [cascading.tap TemplateTap]
            [org.apache.hadoop.io BytesWritable])
   (:require (cascalog [workflow :as w])))
 
@@ -95,6 +96,18 @@
     (<- [?filename ?file]
         (source ?filename ?file))))
 
+;; ## Intermediate Taps
+
+(defn template-seqfile
+  "Creates a template on HDFS using sequence file format. Different
+   filesystems can be selected by using different prefixes for {path}.
+   
+   See http://www.cascading.org/javadoc/cascading/tap/Hfs.html and
+   http://www.cascading.org/javadoc/cascading/scheme/SequenceFile.html"
+  [hfs path pathstr]
+  (TemplateTap. (w/hfs-tap (w/sequence-file Fields/ALL) path)
+                pathstr))
+
 ;; ## BytesWritable Interaction
 ;;
 ;; For schemes that specifically deal with Hadoop BytesWritable
@@ -113,8 +126,8 @@
 
 (defn get-bytes
   "Extracts a byte array from a Hadoop BytesWritable object. As
-  mentioned in the Hadoop documentation, only the first N bytes are
-  good, where N is number returned by a call to getLength."
+  mentioned in the [BytesWritable javadoc](http://goo.gl/cjjlD), only
+  the first N bytes are valid, where N = (.getLength byteswritable)."
   [^BytesWritable bytes]
   (byte-array (.getLength bytes)
               (.getBytes bytes)))
