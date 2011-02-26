@@ -5,7 +5,7 @@
 
 (ns forma.core
   (:use cascalog.api
-        (forma [hadoop :only (all-files)]))
+        (forma [hadoop :only (all-files template-seqfile)]))
   (:require (cascalog [vars :as v]
                       [ops :as c])
             (forma [hdf :as h]
@@ -36,10 +36,10 @@
   method is a proof of concept for the hadoop chunking system; The
   fact that it works shows that chunking is occurring, and the
   individual chunks are being serialized over multiple hadoop jobs."
-  [dir]
+  [dir outputdir]
   (let [source (all-files dir)
         chunks (h/modis-chunks source forma-subsets chunk-size)]
-    (?<- (stdout)
+    (?<- (template-seqfile outputdir "%s/%s-%s/%s" )
          [?dataset ?s-res ?t-res ?tilestring ?date ?chunkid ?counter]
          (chunks ?dataset ?s-res ?t-res ?tilestring ?date ?chunkid ?chunk)
          (count ?chunk :> ?counter))))

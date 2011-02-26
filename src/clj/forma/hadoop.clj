@@ -104,7 +104,7 @@
    
    See http://www.cascading.org/javadoc/cascading/tap/Hfs.html and
    http://www.cascading.org/javadoc/cascading/scheme/SequenceFile.html"
-  [hfs path pathstr]
+  [path pathstr]
   (TemplateTap. (w/hfs-tap (w/sequence-file Fields/ALL) path)
                 pathstr))
 
