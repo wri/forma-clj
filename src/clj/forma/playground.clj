@@ -96,3 +96,9 @@
           (repeatedly
            #(map byte [0 -64 121 -60]))))))
 
+(defmacro mapped-case
+  [elt]
+  (cons 'case
+        (cons elt
+              (for [[test val] {1 1000 2 500 4 250}]
+                test val))))

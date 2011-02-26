@@ -210,20 +210,16 @@ as a 1-tuple."}
 ;; updated in future versions, if we decide to incorporate older MODIS
 ;; products.)
 
-(def
-  ^{:doc "Map between the second digit in a MODIS TileID metadata
-value and the corresponding resolution of the tile data."}
-  res-map
-  {:1 "1000"
-   :2 "500"
-   :4 "250"})
-
 (defn tileid->res
   "Returns a string representation of the resolution (in meters) of
 the tile data referenced by the supplied TileID.The second character
 of a MODIS TileID acts as a key to retrieve this data."
   [tileid]
-  (res-map (keyword (subs tileid 1 2))))
+  (let [s (subs tileid 1 2)]
+    (case s
+          "1" "1000"
+          "2" "500"
+          "4" "250")))
 
 (defn tileid->xy
   "Extracts integer representations of the MODIS X and Y coordinates

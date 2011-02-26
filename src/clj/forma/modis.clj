@@ -18,6 +18,13 @@
    "500" 2400
    "1000" 1200})
 
+(def temporal-res
+  {"MCD45A1" "32"
+   "MOD13Q1" "16"
+   "MOD13A1" "16"
+   "MOD13A2" "16"
+   "MOD13A3" "32"})
+
 (def
   #^{:doc "Set of coordinate pairs for all MODIS tiles that contain
 actual data. This set is calculated by taking a vector of offsets,
