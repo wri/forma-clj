@@ -47,3 +47,11 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
     (and (contains? valid-tiles [mod-h mod-v])
          (< sample edge)
          (< line edge))))
+
+(defn tilestring->xy
+  "Extracts integer representations of the MODIS X and Y coordinates
+referenced by the supplied MODIS tilestring, of format 'XXXYYY'."
+  [tilestr]
+  (map (comp #(Integer. %)
+             (partial apply str))
+       (partition 3 tilestr)))

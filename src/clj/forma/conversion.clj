@@ -103,21 +103,24 @@
 (def sixteens (partial delta-periods julian 16))
 (def eights (partial delta-periods julian 8))
 
-;; We currently choose the period-func based on the resolution of the
-;; data. This will have to be amended, as some datasets at different
-;; temporal resolutions do indeed have the same spatial resolution.
-
-(def period-func
-  {"1000" months
-   "500" sixteens
-   "250" sixteens})
+(defn periodize
+  "Converts a datestring, formatted as `yyyy-mm-dd`, into a reference
+time interval at the supplied temporal resolution. Input can be any
+number of pieces of a date, from greatest to least significance. See
+clj-time's date-time function for more information."
+  [temporal-res & int-pieces]
+  (let [date (apply date-time int-pieces)
+        period-func (case temporal-res
+                          "32" months
+                          "16" sixteens
+                          "8" eights)]
+    (period-func ref-date date)))
 
 (defn datetime->period
-  "Converts a given set of date pieces into a reference time interval
-at the same temporal resolution as a MODIS product at the supplied
-resolution. Input can be any number of pieces of a date, from greatest
-to least significance. See clj-time's date-time function for more
-information."
-  [res & int-pieces]
-  (let [date (apply date-time int-pieces)]
-    ((period-func res) ref-date date)))
+  "Converts a datestring, such as '2005-12-31', into an integer time
+  period in the supplied temporal resolution."
+  [res date]
+  (apply periodize
+         res
+         (map #(Integer. %)
+              (re-seq #"\d+" date))))

@@ -6,14 +6,17 @@
 ;; The overall goal here is to process a MODIS HDF4 archive into
 ;; tuples of the form
 ;;
-;;     [?dataset ?res ?tileid ?tperiod ?chunkid ?chunk-pix]
+;;     [?dataset ?spatial-res ?temporal-res
+;;      ?tilestring ?date ?chunkid ?chunk-pix]
 ;;
 ;; If every dataset can be coerced into this form, it becomes trivial
 ;; to match tuples up and combine them in various ways.
 
 (ns forma.hdf
-  (:use (forma hadoop [conversion :only (datetime->period)])
-        (cascalog api [io :only (temp-dir)])
+  (:use (forma hadoop
+               [modis :only (temporal-res)])
+        (cascalog api
+                  [io :only (temp-dir)])
         (clojure.contrib [seq-utils :only (find-first indexed)]))
   (:require (clojure.contrib [string :as s]
                              [io :as io]))
@@ -188,12 +191,6 @@ as a 1-tuple."}
   (let [^Hashtable metadict (metadata modis)]
     (map #(.get metadict %) meta-keys)))
 
-(defn parse-ints
-  "Converts all strings in the supplied collection to their integer
-  representations."
-  [coll]
-  (map #(Integer/parseInt %) coll))
-
 ;; From [NASA's MODIS information](http://goo.gl/C28fG), "The MODLAND
 ;; Tile ID is an 8 digit integer, such as 51018009, that is used to
 ;; specify a gridded product's projection, tile size and horizontal
@@ -221,31 +218,22 @@ of a MODIS TileID acts as a key to retrieve this data."
           "2" "500"
           "4" "250")))
 
-(defn tileid->xy
-  "Extracts integer representations of the MODIS X and Y coordinates
-referenced by the supplied MODIS TileID."
-  [tileid]
-  (parse-ints
-   (map (partial apply str)
-        (partition 3 (subs tileid 2)))))
-
 (defn split-id
-  "Returns a sequence containing the resolution, X and Y
-  coordinates (on the MODIS grid) referenced by the supplied MODIS
-  TileID. The precondition makes sure that the processed product uses
-  a sinusoial projection."
+  "Returns a sequence containing the resolution and a tilestring,
+  formatted as 'hhhvvv', where h and v refer to the MODIS tile
+  referenced by the supplied TileID. The precondition makes sure that
+  the processed product uses a sinusoial projection."
   [tileid]
   {:pre [(= (first tileid) \5)]}
-  (flatten
-   ((juxt tileid->res
-          tileid->xy) tileid)))
+  ((juxt tileid->res
+         #(subs % 2)) tileid))
 
-(defmapop to-period [res date]
-  ^{:doc "Converts a datestring, such as '2005-12-31', into an integer
-  time period."}
-  (apply datetime->period
-         res
-         (parse-ints (re-seq #"\d+" date))))
+(defn t-res
+  "Returns the temporal resolution of the supplied MODIS short product
+  name. (wrapper exists for cascalog. Better to use the `temporal-res`
+  map as a function, but this unsupported."
+  [prodname]
+  (temporal-res prodname))
 
 ;; ### The Chunker!
 ;;
@@ -263,12 +251,12 @@ referenced by the supplied MODIS TileID."
   before running any sort of data analysis, as seqs require linear
   time for lookups."
   [source datasets chunk-size]
-  (let [keys ["TileID" "RANGEBEGINNINGDATE"]]
-    (<- [?dataset ?res ?tile-h ?tile-v ?period ?chunkid ?chunk]
+  (let [keys ["SHORTNAME" "TileID" "RANGEBEGINNINGDATE"]]
+    (<- [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk]
         (source ?filename ?hdf)
         (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
         (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk)
-        (meta-values [keys] ?freetile :> ?tileid ?datestring)
-        (split-id ?tileid :> ?res ?tile-h ?tile-v)
-        (to-period ?res ?datestring :> ?period)
+        (meta-values [keys] ?freetile :> ?productname ?tileid ?date)
+        (t-res ?productname :> ?temporal-res)
+        (split-id ?tileid :> ?spatial-res ?tilestring)
         (:distinct false))))

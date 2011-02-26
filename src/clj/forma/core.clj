@@ -40,15 +40,15 @@
   (let [source (all-files dir)
         chunks (h/modis-chunks source forma-subsets chunk-size)]
     (?<- (stdout)
-         [?dataset ?res ?mod-h ?mod-v ?period ?count]
-         (chunks ?dataset ?res ?mod-h ?mod-v ?period ?chunkid ?chunk)
-         (c/count ?count))))
+         [?dataset ?s-res ?t-res ?tilestring ?date ?chunkid ?counter]
+         (chunks ?dataset ?s-res ?t-res ?tilestring ?date ?chunkid ?chunk)
+         (count ?chunk :> ?counter))))
 
 (defn rain-test
   "Like chunk-test, but works for NOAA PRECL data files."
   [m-res ll-res c-size tile-seq dir]
   (let [source (all-files dir)
         chunks (r/rain-chunks m-res ll-res c-size tile-seq source)]
-    (?<- (stdout) [?dataset ?res ?mod-h ?mod-v ?period ?chunkid ?counter]
-         (chunks ?dataset ?res ?mod-h ?mod-v ?period ?chunkid ?chunk)
+    (?<- (stdout) [?dataset ?s-res ?t-res ?tilestring ?date ?chunkid ?counter]
+         (chunks ?dataset ?s-res ?t-res ?tilestring ?date ?chunkid ?chunk)
          (count ?chunk :> ?counter))))

@@ -5,13 +5,14 @@
 ;; As in `forma.hdf`, the overall goal here is to process an NOAA
 ;; PREC/L dataset into tuples of the form
 ;;
-;;     [?dataset ?res ?tileid ?tperiod ?chunkid ?chunk-pix]
+;;     [?dataset ?spatial-res ?temporal-res
+;;      ?tilestring ?date ?chunkid ?chunk-pix]
+;;
 
 (ns forma.rain
   (:use cascalog.api
         (forma [hadoop :only (get-bytes)]
-               [reproject :only (rain-sampler dimensions-at-res)]
-               [conversion :only (datetime->period)]))
+               [reproject :only (rain-sampler dimensions-at-res)]))
   (:require (cascalog [ops :as c])
             (clojure.contrib [io :as io]))
   (:import  [java.io File InputStream]
@@ -134,14 +135,14 @@
 ;; conversion to time period.
 
 (defn make-tuple
-  "Generates a 3-tuple for NOAA PREC/L months. We increment the index,
+  "Generates a 2-tuple for NOAA PREC/L months. We increment the index,
   in this case, to make the number correspond to a month of the year,
   rather than an index in a seq."
   [index month]
-  (vector "precl" (inc index) (little-floats month)))
+  (vector (inc index) (little-floats month)))
 
 (defn rain-tuples
-  "Returns a lazy seq of 3-tuples representing NOAA PREC/L rain
+  "Returns a lazy seq of 2-tuples representing NOAA PREC/L rain
   data. Note that we take every other element in the lazy-months seq,
   skipping data concerning # of gauges."
   [ll-res stream]
@@ -154,55 +155,53 @@
 
 (defmapcatop [unpack-rain [ll-res]]
   ^{:doc "Unpacks a PREC/L binary file for a given year, and returns a
-lazy sequence of 3-tuples, in the form of (dataset, month,
-data). Assumes that binary files are packaged as hadoop BytesWritable
-objects."}
+lazy sequence of 2-tuples, in the form of (month, data). Assumes that
+binary files are packaged as hadoop BytesWritable objects."}
   [stream]
   (let [bytes (get-bytes stream)]
     (rain-tuples ll-res (input-stream bytes))))
 
-;; Each PRECL filename contains the year from which the data is
-;; sourced. We currently decide time period based on spatial
-;; resolution -- this will cause problems later, when we start
-;; interacting with datasets at the same spatial resolution and
-;; different temporal resolution. A rework of `datetime->period` will
-;; fix this.
-
-(defmapop [extract-period [m-res]]
-  ^{:doc "Extracts the year from a NOAA PREC/L filename (assuming that
-  the year is the only group of 4 digits), pairs it with the supplied
-  month, and returns an integerized time period based on the supplied
-  spatial resolution value."}
-  [filename month]
-  (let [year (Integer/parseInt (first (re-find #"(\d{4})" filename)))]
-    [m-res (datetime->period m-res year month)]))
+(defn to-datestring
+  "Processes an NOAA PRECL filename and integer month index, and
+  returns a datestring of the format `yyyy-mm-dd`. Filename is assumed
+  to by formatted as `precl_mon_v1.0.lnx.YYYY.gri0.5m`, with a single
+  group of four digits representing the year."
+  [filename month-int]
+  (let [year (first (re-find #"(\d{4})" filename))
+        month (format "%02d" month-int)]
+    (apply str (interpose "-" [year month "01"]))))
 
 ;; The following functions bring everything together, making heavy use
 ;; of the functionality supplied by `forma.reproject`. Rather than
 ;; sampling PRECL data at the positions of every possible MODIS tile,
 ;; we allow the user to supply a seq of TileIDs for processing. (No
-;; MODIS product covers every possible tile. The terra products only
-;; cover land, for example.)
+;; MODIS product covers every possible tile; any product containing
+;; the [NDVI](http://goo.gl/kjojh) only covers land, for example.)
 ;;
 ;; These functions are designed to be able to map between WGS84 and
 ;; MODIS datasets at arbitrary resolution. This explains the
 ;; resolution parameters seen in the functions below.
+;;
+;; (Note our use of `clojure.core/identity` in the following query;
+;; since `identity` returns its argument, and every tuple is processed
+;; through each operation, `identity` acts as a `defmapop` that adds a
+;; new field onto a tuple. In this case, we know that our rain data
+;; comes in monthly temporal resolution, and we need it to have some
+;; dataset identifier, so we hardcode these fields onto every tuple.)
 
 (defn rain-months
   "Cascalog subquery to extract all months from a directory of PREC/L
-  datasets at the supplied WGS84 spatial resolution, paired with time
-  periods appropriate for the supplied MODIS spatial
-  resolution. Source can be any tap that supplies files like
-  precl_mon_v1.0.lnx.2010.gri0.5m(.gz, optionally)."
-  [m-res ll-res source]
-  (<- [?dataset ?m-res ?period ?raindata]
+  datasets at the supplied WGS84 spatial resolution, paired with a
+  datestring of the format `yyyy-mm-dd`. Source can be any tap that
+  supplies PRECL files named precl_mon_v1.0.lnx.YYYY.gri0.5m(.gz,
+  optionally)."
+  [ll-res source]
+  (<- [?dataset ?temporal-res ?date ?raindata]
       (source ?filename ?file)
-
-      ;;DELETE
-      (= 1 ?month)
-      
-      (unpack-rain [ll-res] ?file :> ?dataset ?month ?raindata)
-      (extract-period [m-res] ?filename ?month :> ?m-res ?period)))
+      (unpack-rain [ll-res] ?file :> ?month ?raindata)
+      (to-datestring ?filename ?month :> ?date)
+      (identity "32" :> ?temporal-res)
+      (identity "precl" :> ?dataset)))
 
 ;; Something interesting occurs in the next few functions. Rather than
 ;; combine `cross-join` and `fancy-index` into one query, we've
@@ -220,7 +219,10 @@ objects."}
 ;; [cascalog-user](http://goo.gl/Tqihs), this is called a cross-join;
 ;; we're taking the [cartesian product](http://goo.gl/r5Qsw) of the
 ;; two sets. We accomplish this by feeding every tuple into an
-;; identity step, producing the common field `?_`, which we ignore.
+;; identity step with argument `m-res`, the supplied MODIS resolution
+;; into which we're translating the PRECL sets. `identity` produces
+;; the common dynamic variable `?spatial-res`, needed by
+;; `fancy-index`.
 
 (defn cross-join
   "Unpacks all NOAA PRECL files (at the supplied resolution) located
@@ -228,21 +230,31 @@ objects."}
   MODIS tile referenced within `tile-seq`."
   [m-res ll-res tile-seq source]
   (let [tiles (memory-source-tap tile-seq)
-        precl (rain-months m-res ll-res source)]
-    (<- [?dataset ?res ?mod-h ?mod-v ?period ?raindata]
+        precl (rain-months ll-res source)]
+    (<- [?dataset ?spatial-res ?temporal-res ?mod-h ?mod-v ?date ?raindata]
         (tiles ?mod-h ?mod-v)
-        (precl ?dataset ?res ?period ?raindata)
-        (identity 1 :> ?_))))
+        (precl ?dataset ?temporal-res ?date ?raindata)
+        (identity m-res :> ?spatial-res))))
 
-;; The problem with a cross-join is that every tuple is funnelled into
-;; a single reducer, for the cross-join. We still have to map the
-;; index sequences onto the rain data, to produce our chunks, but we
-;; don't want the single reducer to do this for every tuple. As Nathan
-;; Marz suggests [in this post](http://goo.gl/2EqHh), we can solve
-;; this problem by storing all tuples into an intermediate
-;; sequencefile, forcing cascading to create a new MapReduce task for
-;; the fancy-indexing. On one machine, this slows performance
-;; slightly. On a cluster, it should give us a big bump.
+;; The problem with cross-joining is that every tuple being joined is
+;; joined by a single reducer. We need to map the index sequences onto
+;; the rain data to produce our chunks, but we don't want the single
+;; reducer to take on the entire job. As Nathan Marz suggests [in this
+;; post](http://goo.gl/2EqHh), we can solve this problem by storing
+;; all tuples into an intermediate sequencefile, forcing cascading to
+;; create a new MapReduce task for the fancy-indexing. On one machine,
+;; this slows performance slightly. On a cluster, it should give us a
+;; big bump.
+
+(defn tilestring
+  "Returns a 0-padded tilestring of format `HHHVVV`, for the supplied
+  MODIS h and v coordinates. For example:
+
+     (tilestring 8 6)
+     ;=> \"008006\""
+  [mod-h mod-v]
+  (apply str (map (partial format "%03d")
+                  [mod-h mod-v])))
 
 (defn fancy-index
   "Reduction step to process all tuples produced by
@@ -251,10 +263,11 @@ objects."}
   reducer. This step allows the flow to branch out again from that
   bottleneck, when run on a cluster."
   [m-res ll-res c-size source]
-  (<- [?dataset ?res ?mod-h ?mod-v ?period ?chunkid ?chunk]
-      (source ?dataset ?res ?mod-h ?mod-v ?period ?raindata)
+  (<- [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk]
+      (source ?dataset ?spatial-res ?temporal-res ?mod-h ?mod-v ?date ?raindata)
+      (tilestring ?mod-h ?mod-v :> ?tilestring)
       (rain-sampler [m-res ll-res c-size]
-                     ?raindata ?mod-h ?mod-v :> ?chunkid ?chunk)))
+                    ?raindata ?mod-h ?mod-v :> ?chunkid ?chunk)))
 
 
 ;; Finally, the chunker. This subquery is analogous to
