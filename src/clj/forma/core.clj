@@ -30,25 +30,19 @@
 ;; ### Demonstration Queries
 
 (defn chunk-test
-  "Cascalog query that takes a directory containing MODIS HDF files, or
-  a link directly to such a file, totals up the # of chunks per file,
-  and displays the count alongside some other nice metadata. This
-  method is a proof of concept for the hadoop chunking system; The
-  fact that it works shows that chunking is occurring, and the
-  individual chunks are being serialized over multiple hadoop jobs."
-  [dir outputdir]
-  (let [source (all-files dir)
-        chunks (h/modis-chunks source forma-subsets chunk-size)]
-    (?<- (template-seqfile outputdir "%s/%s-%s/%s" )
-         [?dataset ?s-res ?t-res ?tilestring ?date ?chunkid ?counter]
-         (chunks ?dataset ?s-res ?t-res ?tilestring ?date ?chunkid ?chunk)
-         (count ?chunk :> ?counter))))
+  "Cascalog job that takes set of dataset identifiers, a chunk size, a
+  directory containing MODIS HDF files, or a link directly to such a
+  file, and an output dir, harvests tuples out of the HDF files, and
+  sinks them into a custom directory structure inside of
+  `output-dir`."
+  [subsets c-size in-dir out-dir]
+  (let [source (all-files in-dir)]
+    (?- (template-seqfile out-dir "%s/%s-%s/%s" :append)
+        (h/modis-chunks source subsets chunk-size))))
 
 (defn rain-test
-  "Like chunk-test, but works for NOAA PRECL data files."
-  [m-res ll-res c-size tile-seq dir]
-  (let [source (all-files dir)
-        chunks (r/rain-chunks m-res ll-res c-size tile-seq source)]
-    (?<- (stdout) [?dataset ?s-res ?t-res ?tilestring ?date ?chunkid ?counter]
-         (chunks ?dataset ?s-res ?t-res ?tilestring ?date ?chunkid ?chunk)
-         (count ?chunk :> ?counter))))
+  "Like chunk-test, but for NOAA PRECL data files."
+  [m-res ll-res c-size tile-seq in-dir out-dir]
+  (let [source (all-files in-dir)]
+    (?- (template-seqfile out-dir "%s/%s-%s/%s" :append)
+        (r/rain-chunks m-res ll-res c-size tile-seq source))))

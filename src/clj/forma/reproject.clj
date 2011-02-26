@@ -280,7 +280,6 @@ supplied, assumes a square matrix."
           :let [indexer (partial wgs84-index m-res ll-res mod-h mod-v)
                 tpos (partial tile-position m-res chunk-size chunk)]]
       (vector chunk
-              (vec
-               (map rdata
-                    (for [pixel (range chunk-size)]
-                      (apply indexer (tpos pixel)))))))))
+              (map rdata
+                   (for [pixel (range chunk-size)]
+                     (apply indexer (tpos pixel))))))))

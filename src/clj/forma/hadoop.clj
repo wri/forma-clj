@@ -8,7 +8,7 @@
         (clojure.contrib [math :only (abs)]))
   (:import [forma WholeFile]
            [cascading.tuple Fields]
-           [cascading.tap TemplateTap]
+           [cascading.tap TemplateTap SinkMode]
            [org.apache.hadoop.io BytesWritable])
   (:require (cascalog [workflow :as w])))
 
@@ -99,14 +99,20 @@
 ;; ## Intermediate Taps
 
 (defn template-seqfile
-  "Creates a template on HDFS using sequence file format. Different
-   filesystems can be selected by using different prefixes for {path}.
-   
-   See http://www.cascading.org/javadoc/cascading/tap/Hfs.html and
-   http://www.cascading.org/javadoc/cascading/scheme/SequenceFile.html"
-  [path pathstr]
-  (TemplateTap. (w/hfs-tap (w/sequence-file Fields/ALL) path)
-                pathstr))
+  "Opens up a Cascading [TemplateTap](http://goo.gl/Vsnm5) that sinks
+tuples into the supplied directory, using the format specified by
+`pathstr`. Supports `:keep`, `:append` and `:replace` options for
+`SinkMode`; defaults to `:append`."
+  ([path pathstr]
+     (template-seqfile path pathstr :append))
+  ([path pathstr mode]
+     (let [sinkmode (case mode
+                          :keep (SinkMode/KEEP)
+                          :append (SinkMode/APPEND)
+                          :replace (SinkMode/REPLACE))]
+     (TemplateTap. (w/hfs-tap (w/sequence-file Fields/ALL) path)
+                   pathstr
+                   sinkmode))))
 
 ;; ## BytesWritable Interaction
 ;;

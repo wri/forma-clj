@@ -252,11 +252,12 @@ of a MODIS TileID acts as a key to retrieve this data."
   time for lookups."
   [source datasets chunk-size]
   (let [keys ["SHORTNAME" "TileID" "RANGEBEGINNINGDATE"]]
-    (<- [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk]
+    (<- [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?int-chunk]
         (source ?filename ?hdf)
         (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
         (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk)
         (meta-values [keys] ?freetile :> ?productname ?tileid ?date)
         (t-res ?productname :> ?temporal-res)
         (split-id ?tileid :> ?spatial-res ?tilestring)
+        (int-array ?chunk :> ?int-chunk)
         (:distinct false))))

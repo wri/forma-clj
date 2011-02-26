@@ -267,7 +267,8 @@ binary files are packaged as hadoop BytesWritable objects."}
       (source ?dataset ?spatial-res ?temporal-res ?mod-h ?mod-v ?date ?raindata)
       (tilestring ?mod-h ?mod-v :> ?tilestring)
       (rain-sampler [m-res ll-res c-size]
-                    ?raindata ?mod-h ?mod-v :> ?chunkid ?chunk)))
+                    ?raindata ?mod-h ?mod-v :> ?chunkid ?chunk)
+      (float-array ?chunk :> ?float-chunk)))
 
 
 ;; Finally, the chunker. This subquery is analogous to
@@ -284,7 +285,6 @@ binary files are packaged as hadoop BytesWritable objects."}
         tmp (hfs-seqfile (str "/tmp/" rnd))]
     (?- tmp (cross-join m-res ll-res tile-seq source))
     (fancy-index m-res ll-res c-size tmp)))
-
 
 ;; An alternate formulation of `rain-chunks` that skipped the
 ;; intermediate sequencefile would be:
