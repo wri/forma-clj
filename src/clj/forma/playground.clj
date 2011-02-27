@@ -11,7 +11,9 @@
         forma.hadoop
         forma.modis
         forma.reproject)
-  (:require (cascalog [ops :as c])))
+  (:require (incanter [core :as i])
+            (cascalog [ops :as c])
+            (clojure [string :as s])))
 
 (def small-tiles
   (memory-source-tap [[1 28]
@@ -91,13 +93,37 @@
        (identity 1 :> ?_)))
 
 
-;; Okay, we know that this will give us an array to test stuff on.
-(def tester
-  (byte-array
-   (flatten
-    (take 10
-          (repeatedly
-           #(map byte [0 -64 121 -60]))))))
+
+(hfs-textline "/Users/danhammer/Desktop/rain-data.txt")
+
+(defn text->num [txtln]
+    "converts a text line of numbers to a float vector."
+    (vector (map #(Float. %) (s/split txtln #" "))))
+
+
+(defn )
+
+(defn test-mult
+  [m pd]
+  (let [row (vector m)
+        col (i/trans row)
+        ones (vector (i/trans (i/matrix 1 1 pd)))
+        ind (apply vector (map inc (range 134)))]
+    (vector (i/mmult row col))))
+
+(def iris-lm [m]
+    (linear-model y x))
+
+(defn wordcount 
+    [path pd]
+    (?<- (stdout) [?sum]
+        ((hfs-textline path) ?line)
+        (text->num ?line :> ?vector)
+        (test-mult ?vector :> ?sum)))
+        
+
+
+
 
 (defn tester-2 []
   (?<- (stdout) [?name ?period ?face]
