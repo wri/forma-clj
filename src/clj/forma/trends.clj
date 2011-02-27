@@ -14,19 +14,18 @@
 ;; the form <pixel-index, min-time, max-time, timeseries>.
 ;;
 ;; We assume that we're receiving chunks for every month within the
-;; range. We measure pixel-index as the position inside the chunk.
+;; range. We measure pixel-index as the position inside the
+;; chunk. For example:
 ;;
-;; Example:
-;; (timeseries [[1 [7 4 2 1]]
-;;              [2 [1 2 3 4]]
-;;              [3 [3 4 3 2]]
-;;              [4 [4 8 7 5]]
-;;              [5 [1 5 3 2]]])
-;;
-;; ;=> ([0 1 5 [7 1 3 4 1]]
-;;      [1 1 5 [4 2 4 8 5]]
-;;      [2 1 5 [2 3 3 7 3]]
-;;      [3 1 5 [1 4 2 5 2]])
+;;     (timeseries [[1 [7 4 2 1]]
+;;                  [2 [1 2 3 4]]
+;;                  [3 [3 4 3 2]]
+;;                  [4 [4 8 7 5]]
+;;                  [5 [1 5 3 2]]])
+;;     ;=> ([0 1 5 [7 1 3 4 1]]
+;;          [1 1 5 [4 2 4 8 5]]
+;;          [2 1 5 [2 3 3 7 3]]
+;;          [3 1 5 [1 4 2 5 2]])
 ;;
 ;; Let's define a function to give us chunks to work with. (This
 ;; should really be in a separate test file... that's the next
@@ -45,14 +44,14 @@
 
 ;; Here's my first try at timeseries:
 ;;
-;;    (defn timeseries [tuples]
-;;      (let [transpose #(apply map vector %)
-;;            [periods chunks] (transpose tuples)]
-;;        (map-indexed #(vector %1
-;;                              (first periods)
-;;                              (last periods)
-;;                              (int-array %2))
-;;                     (transpose chunks))))
+;;     (defn timeseries [tuples]
+;;       (let [transpose #(apply map vector %)
+;;             [periods chunks] (transpose tuples)]
+;;         (map-indexed #(vector %1
+;;                               (first periods)
+;;                               (last periods)
+;;                               (int-array %2))
+;;                      (transpose chunks))))
 ;;
 ;; One issue with this is that we're mapping through the data three
 ;; times, which is inefficient. we do a first transpose to get
@@ -62,18 +61,18 @@
 ;; build our results tuples. I tried the following to see the speed
 ;; difference gained by removing one of these maps:
 ;;
-;;    (defn timeseries [tuples]
-;;      (let [[periods chunks] (apply map vector tuples)
-;;            periodize (partial vector
-;;                               (first periods)
-;;                               (last periods))
-;;            tupleize (comp periodize int-array vector)]
-;;        (map-indexed cons (apply map tupleize chunks))))
+;;     (defn timeseries [tuples]
+;;       (let [[periods chunks] (apply map vector tuples)
+;;             periodize (partial vector
+;;                                (first periods)
+;;                                (last periods))
+;;             tupleize (comp periodize int-array vector)]
+;;         (map-indexed cons (apply map tupleize chunks))))
 ;;
 ;; In this version, we gain about 15% speed. benchmarked with
 ;;
-;;    (def chunks (test-chunks 130 24000))
-;;    (time (dotimes [n 10] (count (timeseries chunks))))
+;;     (def chunks (test-chunks 130 24000))
+;;     (time (dotimes [n 10] (count (timeseries chunks))))
 ;;
 ;; I get a bit under 24 seconds for the first version, a bit over 20
 ;; for the second version. For hadoop, we'll go with the more

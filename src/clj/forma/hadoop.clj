@@ -108,8 +108,7 @@ tuples into the supplied directory, using the format specified by
 (defn globhfs-seqfile
   "Opens up a Cascading [TemplateTap](http://goo.gl/Vsnm5) that sinks
 tuples into the supplied directory, using the format specified by
-`pathstr`. Supports `:keep`, `:append` and `:replace` options for
-`SinkMode`; defaults to `:append`."
+`pathstr`."
   [pattern]
   (GlobHfs. (w/sequence-file Fields/ALL) pattern))
 
@@ -132,7 +131,7 @@ tuples into the supplied directory, using the format specified by
 (defn get-bytes
   "Extracts a byte array from a Hadoop BytesWritable object. As
   mentioned in the [BytesWritable javadoc](http://goo.gl/cjjlD), only
-  the first N bytes are valid, where N = (.getLength byteswritable)."
+  the first N bytes are valid, where N = `(.getLength byteswritable)`."
   [^BytesWritable bytes]
   (byte-array (.getLength bytes)
               (.getBytes bytes)))

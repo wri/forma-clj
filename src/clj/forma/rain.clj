@@ -21,14 +21,14 @@
 ;; ## Dataset Information
 ;;
 ;; We chose to go with PRECL for our rain analysis, though any of the
-;; global datasets listed in the [IRI/LDEO Climate Data
-;; Library's](http://goo.gl/RmTKe) [atmospheric data
-;; page](http://goo.gl/V5tUI) would be great.
+;; global datasets listed in the [IRI/LDEO](http://goo.gl/RmTKe)
+;; Climate Data Library's [atmospheric data page](http://goo.gl/V5tUI)
+;; would be great.
 ;;
-;; More information on the dataset can be found at the [NOAA PRECL
-;; info site] (http://goo.gl/V3gqv). The data are fully documented in
-;; [Global Land Precipitation: A 50-yr Monthly Analysis Based on Gauge
-;; Observations] (http://goo.gl/PVOr6).
+;; More information on the dataset can be found at the NOAA PRECL
+;; [info site] (http://goo.gl/V3gqv). The data are fully documented in
+;; "Global Land Precipitation: A 50-yr Monthly Analysis Based on Gauge
+;; Observations", found [here].(http://goo.gl/PVOr6).
 ;;
 ;; ### Data Processing
 ;;
@@ -36,8 +36,8 @@
 ;; for each year. Each file holds 24 datasets, alternating between
 ;; precip. rate in mm/day and total # of gauges, gridded in WGS84 at
 ;; 0.5 degree resolution. No metadata exists to mark byte offsets. We
-;;process these datasets using input streams, so we need to know in
-;;advance how many bytes to read off per dataset.
+;; process these datasets using input streams, so we need to know in
+;; advance how many bytes to read off per dataset.
 
 (def float-bytes (/ ^Integer (Float/SIZE)
                     ^Integer (Byte/SIZE)))
@@ -52,9 +52,10 @@
   "Attempts to coerce the given argument to an InputStream, with added
   support for gzipped files. If the input argument does point to a
   gzipped file, the default buffer will be sized to fit one NOAA
-  PREC/L binary data file at 0.5 degree resolution, or 24 groups of (*
-  360 720) floats. To make sure that the returned GZIPInputStream will
-  fully read into a supplied byte array, see forma.rain/force-fill."
+  PREC/L binary data file at 0.5 degree resolution, or 24 groups
+  of `(* 360 720)` floats. To make sure that the returned
+  GZIPInputStream will fully read into a supplied byte array, see
+  `forma.rain/force-fill`."
   [arg]
   (let [^InputStream stream (io/input-stream arg)
         rainbuf-size (* 24 (floats-for-res 0.5))]

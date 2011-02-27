@@ -46,8 +46,8 @@
 ;; designed to facilitate easy access to subsets of the data. The
 ;; data bins are formatted as:
 ;;
-;;    s3n://<dataset>/<s-res>-<t-res>/<tileid>/<jobtag>/seqfile
-;;    ex: s3n://ndvi/1000-32/008006/20110226T234402Z/part-00000
+;;     s3n://<dataset>/<s-res>-<t-res>/<tileid>/<jobtag>/seqfile
+;;     ex: s3n://ndvi/1000-32/008006/20110226T234402Z/part-00000
 ;;
 ;; `s-res` is the spatial resolution of the data, limited to `1000`,
 ;; `500`, and `250`. `t-res` is the temporal resolution, keyed to the
