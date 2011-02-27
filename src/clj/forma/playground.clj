@@ -1,3 +1,4 @@
+
 ;; I'll put some stuff on a guide to clojure for the guys in
 ;; here. Know how to switch namespaces -- know what they mean, and
 ;; know that you can look up documentation for any function, the way
@@ -101,18 +102,14 @@
     (vector (map #(Float. %) (s/split txtln #" "))))
 
 
-(defn )
-
 (defn test-mult
   [m pd]
   (let [row (vector m)
         col (i/trans row)
-        ones (vector (i/trans (i/matrix 1 1 pd)))
-        ind (apply vector (map inc (range 134)))]
+        ones (i/trans (i/matrix 1 1 pd))
+        ind (apply vector (map inc (range pd)))]
     (vector (i/mmult row col))))
 
-(def iris-lm [m]
-    (linear-model y x))
 
 (defn wordcount 
     [path pd]
@@ -120,12 +117,3 @@
         ((hfs-textline path) ?line)
         (text->num ?line :> ?vector)
         (test-mult ?vector :> ?sum)))
-        
-
-
-
-
-(defn tester-2 []
-  (?<- (stdout) [?name ?period ?face]
-       (age ?name ?period)
-       (identity "face" :> ?face)))
