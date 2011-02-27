@@ -13,26 +13,28 @@
         forma.reproject)
   (:require (cascalog [ops :as c])))
 
-(def small-tiles (memory-source-tap [
-  [1 28]
-  [4 33]
-  [4 40]
-  [2 25]
-  [1 25]
-  ]))
+(def small-tiles
+  (memory-source-tap [[1 28]
+                      [4 33]
+                      [4 40]
+                      [2 25]
+                      [1 25]]))
 
+(def age
+  (memory-source-tap [["alice" 28 34 34]
+                      ["luanne" 36 5 4]
+                      ["alice" 40 34 34]
+                      ["david" 25 234 12]
+                      ["gary" 28 2 3]
+                      ["alice" 33 34 34]
+                      ["emily" 25 12 1]
+                      ["george" 31 2 2]
+                      ["kumar" 27 4 3]]))
 
-(def age (memory-source-tap [
-  ["alice" 28]
-  ["bob" 33]
-  ["chris" 40]
-  ["david" 25]
-  ["emily" 25]
-  ["george" 31]
-  ["gary" 28]
-  ["kumar" 27]
-  ["luanne" 36]
-  ]))
+(def test-source
+  (memory-source-tap [["a" 1] 
+                      ["b" 2] 
+                      ["a" 3]]))
 
 (defn file-count
   "Prints the total count of files in a given directory to stdout."

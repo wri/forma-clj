@@ -8,7 +8,7 @@
         (clojure.contrib [math :only (abs)]))
   (:import [forma WholeFile]
            [cascading.tuple Fields]
-           [cascading.tap TemplateTap SinkMode]
+           [cascading.tap TemplateTap SinkMode GlobHfs]
            [org.apache.hadoop.io BytesWritable])
   (:require (cascalog [workflow :as w])))
 
@@ -101,18 +101,17 @@
 (defn template-seqfile
   "Opens up a Cascading [TemplateTap](http://goo.gl/Vsnm5) that sinks
 tuples into the supplied directory, using the format specified by
+`pathstr`."
+  [path pathstr]
+  (TemplateTap. (w/hfs-tap (w/sequence-file Fields/ALL) path) pathstr))
+
+(defn globhfs-seqfile
+  "Opens up a Cascading [TemplateTap](http://goo.gl/Vsnm5) that sinks
+tuples into the supplied directory, using the format specified by
 `pathstr`. Supports `:keep`, `:append` and `:replace` options for
 `SinkMode`; defaults to `:append`."
-  ([path pathstr]
-     (template-seqfile path pathstr :append))
-  ([path pathstr mode]
-     (let [sinkmode (case mode
-                          :keep (SinkMode/KEEP)
-                          :append (SinkMode/APPEND)
-                          :replace (SinkMode/REPLACE))]
-     (TemplateTap. (w/hfs-tap (w/sequence-file Fields/ALL) path)
-                   pathstr
-                   sinkmode))))
+  [pattern]
+  (GlobHfs. (w/sequence-file Fields/ALL) pattern))
 
 ;; ## BytesWritable Interaction
 ;;

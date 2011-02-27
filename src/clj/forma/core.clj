@@ -5,9 +5,12 @@
 
 (ns forma.core
   (:use cascalog.api
-        (forma [hadoop :only (all-files template-seqfile)]))
-  (:require (cascalog [vars :as v]
-                      [ops :as c])
+        (clj-time [format :only (unparse formatters)]
+                  [core :only (now)])
+        (forma [hadoop :only (all-files
+                              template-seqfile
+                              globhfs-seqfile)]))
+  (:require (cascalog [ops :as c])
             (forma [hdf :as h]
                    [rain :as r])))
 
@@ -29,6 +32,19 @@
 
 ;; ### Demonstration Queries
 
+;; TODO -- document
+(defn jobtag
+  "Generates a unique tag for a job, based on the current time."
+  [] (unparse (formatters :basic-date-time-no-ms)
+              (now)))
+
+;; TODO -- document
+(defn modis-seqfile
+  "oc"
+  [out-dir]
+  (template-seqfile out-dir
+                    (str "%s/%s-%s/%s/" (jobtag) "/")))
+
 (defn chunk-test
   "Cascalog job that takes set of dataset identifiers, a chunk size, a
   directory containing MODIS HDF files, or a link directly to such a
@@ -37,12 +53,42 @@
   `output-dir`."
   [subsets c-size in-dir out-dir]
   (let [source (all-files in-dir)]
-    (?- (template-seqfile out-dir "%s/%s-%s/%s" :append)
+    (?- (modis-seqfile out-dir)
         (h/modis-chunks source subsets chunk-size))))
 
 (defn rain-test
   "Like chunk-test, but for NOAA PRECL data files."
   [m-res ll-res c-size tile-seq in-dir out-dir]
   (let [source (all-files in-dir)]
-    (?- (template-seqfile out-dir "%s/%s-%s/%s" :append)
+    (?- (modis-seqfile out-dir)
         (r/rain-chunks m-res ll-res c-size tile-seq source))))
+
+;; TODO -- come up with a better syntax! Also, talk about how we make
+;; this puppy work.
+(defn globstring
+  "Takes a path ending in `/` and collections of datasets,
+  resolutions, and tiles, and returns a globstring formatted for
+  cascading's GlobHFS. (`*` may be substituted in for any argument but
+  path.)"
+  ([basepath datasets resolutions tiles]
+     (globstring basepath datasets resolutions tiles *))
+  ([basepath datasets resolutions tiles batches]
+     (letfn [(wrap [coll]
+                   (format "{%s}/"
+                           (apply str (interpose "," coll))))
+             (bracketize [arg]
+                         (if (= * arg) "*/" (wrap arg)))]
+       (apply str
+              basepath
+              (map bracketize
+                   [datasets resolutions tiles batches])))))
+
+(defn read-test
+  "Takes in a path and a set of pieces, and performs a test operation
+  on all tuples matching the glob."
+  [path & pieces]
+  (let [source (globhfs-seqfile (apply globstring path pieces))]
+    (?<- (stdout)
+         [?dataset ?tilestring ?date ?count]
+         (source ?dataset ?s-res ?t-res ?tilestring ?date ?chunkid ?chunk)
+         (c/count ?count))))

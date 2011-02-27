@@ -4,6 +4,7 @@
 
 (ns forma.conversion
   (:use (clj-time [core :only (date-time year month in-minutes interval)])
+        (clojure [string :only (split)])
         (clojure.contrib [math :only (ceil)])))
 
 ;; In developing the time period conversion functions, we noticed that
@@ -104,10 +105,10 @@
 (def eights (partial delta-periods julian 8))
 
 (defn periodize
-  "Converts a datestring, formatted as `yyyy-mm-dd`, into a reference
-time interval at the supplied temporal resolution. Input can be any
-number of pieces of a date, from greatest to least significance. See
-clj-time's date-time function for more information."
+  "Converts the supplied integers into a reference time interval at
+the supplied temporal resolution. Input can be any number of pieces of
+a date, from greatest to least significance. See clj-time's date-time
+function for more information."
   [temporal-res & int-pieces]
   (let [date (apply date-time int-pieces)
         period-func (case temporal-res
@@ -117,10 +118,9 @@ clj-time's date-time function for more information."
     (period-func ref-date date)))
 
 (defn datetime->period
-  "Converts a datestring, such as '2005-12-31', into an integer time
-  period in the supplied temporal resolution."
+  "Converts a datestring, formatted as `YYYY-MM-DD`, into an integer
+  time period at the supplied temporal resolution."
   [res date]
   (apply periodize
          res
-         (map #(Integer. %)
-              (re-seq #"\d+" date))))
+         (map #(Integer. %) (split date #"-"))))
