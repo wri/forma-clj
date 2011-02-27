@@ -45,7 +45,7 @@
   (template-seqfile out-dir
                     (str "%s/%s-%s/%s/" (jobtag) "/")))
 
-(defn chunk-test
+(defn modis-chunker
   "Cascalog job that takes set of dataset identifiers, a chunk size, a
   directory containing MODIS HDF files, or a link directly to such a
   file, and an output dir, harvests tuples out of the HDF files, and
@@ -56,8 +56,8 @@
     (?- (modis-seqfile out-dir)
         (h/modis-chunks source subsets chunk-size))))
 
-(defn rain-test
-  "Like chunk-test, but for NOAA PRECL data files."
+(defn rain-chunker
+  "Like `modis-chunker`, but for NOAA PRECL data files."
   [m-res ll-res c-size tile-seq in-dir out-dir]
   (let [source (all-files in-dir)]
     (?- (modis-seqfile out-dir)
@@ -83,9 +83,10 @@
               (map bracketize
                    [datasets resolutions tiles batches])))))
 
+;; TODO -- docs
 (defn read-test
-  "Takes in a path and a set of pieces, and performs a test operation
-  on all tuples matching the glob."
+  "Takes in a path and a number of pieces, and performs a test
+  operation on all tuples matching the glob."
   [path & pieces]
   (let [source (globhfs-seqfile (apply globstring path pieces))]
     (?<- (stdout)
