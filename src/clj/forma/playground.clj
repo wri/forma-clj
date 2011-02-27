@@ -107,8 +107,12 @@
   (let [row (vector m)
         col (i/trans row)
         ones (i/trans (i/matrix 1 1 pd))
-        ind (apply vector (map inc (range pd)))]
-    (vector (i/mmult row col))))
+        ind (i/trans [(map inc (range pd))])
+        X (i/bind-columns ones ind)
+        Xt (i/trans X)
+        ssX (i/solve (i/mmult Xt X))
+        beta (i/mmult ssX (i/trans X) col)]
+    (vector (i/sel beta 1 0))))
 
 
 (defn wordcount 
@@ -116,4 +120,4 @@
     (?<- (stdout) [?sum]
         ((hfs-textline path) ?line)
         (text->num ?line :> ?vector)
-        (test-mult ?vector :> ?sum)))
+        (test-mult ?vector pd :> ?sum)))
