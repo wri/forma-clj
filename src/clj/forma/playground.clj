@@ -97,9 +97,10 @@
 
 (hfs-textline "/Users/danhammer/Desktop/rain-data.txt")
 
-(defn text->num [txtln]
-    "converts a text line of numbers to a float vector."
-    (vector (map #(Float. %) (s/split txtln #" "))))
+(defn text->num [txtln skip]
+    "converts a text line of numbers to a float vectors; 
+    skips the variable #skip of elements"
+    (vector (drop skip (map #(Float. %) (s/split txtln #" ")))))
 
 (defn time-cofactors [pd]
     "creates a pd x 2 matrix of ones and incremental timeseries"
@@ -120,5 +121,5 @@
     [path pd]
     (?<- (stdout) [?sum]
         ((hfs-textline path) ?line)
-        (text->num ?line :> ?vector)
+        (text->num ?line 1 :> ?vector)
         (ols ?vector pd :> ?sum)))
