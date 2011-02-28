@@ -101,18 +101,19 @@
     "converts a text line of numbers to a float vector."
     (vector (map #(Float. %) (s/split txtln #" "))))
 
+(defn time-cofactors [pd]
+    "creates a pd x 2 matrix of ones and incremental timeseries"
+    (let [ones (i/trans (i/matrix 1 1 pd))
+          ind (i/trans [(map inc (range pd))])]
+        (i/bind-columns ones ind)))
 
-(defn test-mult
-  [m pd]
-  (let [row (vector m)
-        col (i/trans row)
-        ones (i/trans (i/matrix 1 1 pd))
-        ind (i/trans [(map inc (range pd))])
-        X (i/bind-columns ones ind)
-        Xt (i/trans X)
-        ssX (i/solve (i/mmult Xt X))
-        beta (i/mmult ssX (i/trans X) col)]
-    (vector (i/sel beta 1 0))))
+(defn ols
+    "OLS timeseries regression on a sequence m, with intercept"
+    [m pd]
+    (let [y-col (i/trans (vector m))
+        X (time-cofactors pd)
+        ssX (i/solve (i/mmult (i/trans X) X))]
+    (vector (i/sel (i/mmult ssX (i/trans X) y-col) 1 0))))
 
 
 (defn wordcount 
@@ -120,4 +121,4 @@
     (?<- (stdout) [?sum]
         ((hfs-textline path) ?line)
         (text->num ?line :> ?vector)
-        (test-mult ?vector pd :> ?sum)))
+        (ols ?vector pd :> ?sum)))
