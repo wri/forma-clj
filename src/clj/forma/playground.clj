@@ -97,18 +97,20 @@
 
 (hfs-textline "/Users/danhammer/Desktop/rain-data.txt")
 
-(defn text->num [txtln skip]
+(defn text->num
     "converts a text line of numbers to a float vectors; 
     skips the variable #skip of elements"
-    (vector (drop skip (map #(Float. %) (s/split txtln #" ")))))
+    [txtln]
+    (vector (drop 1 (map #(Float. %) (s/split txtln #" ")))))
 
-(defn time-cofactors [pd]
+(defn time-cofactors
     "creates a pd x 2 matrix of ones and incremental timeseries"
-    (let [ones (i/trans (i/matrix 1 1 pd))
-          ind (i/trans [(map inc (range pd))])]
+    [pd]
+    (let [ones (i/trans [(repeat pd 1)])
+          ind (i/trans [(range 1 (+ pd 1))])]
         (i/bind-columns ones ind)))
 
-(defn ols
+(defn ols-coefficient
     "OLS timeseries regression on a sequence m, with intercept"
     [m pd]
     (let [y-col (i/trans (vector m))
@@ -121,5 +123,5 @@
     [path pd]
     (?<- (stdout) [?sum]
         ((hfs-textline path) ?line)
-        (text->num ?line 1 :> ?vector)
-        (ols ?vector pd :> ?sum)))
+        (text->num ?line :> ?vector)
+        (ols-coefficient ?vector pd :> ?sum)))
