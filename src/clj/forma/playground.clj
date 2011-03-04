@@ -93,31 +93,27 @@
        (fancyvec ?checked ?fives :> ?mapped)
        (identity 1 :> ?_)))
 
-
-
-(hfs-textline "/Users/danhammer/Desktop/rain-data.txt")
-
 (defn text->num
-    "converts a text line of numbers to a float vectors; 
+  "converts a text line of numbers to a float vectors; 
     skips the variable #skip of elements"
-    [txtln]
-    (vector (drop 1 (map #(Float. %) (s/split txtln #" ")))))
+  [txtln]
+  [(map #(Float. %)
+        (drop 1 (s/split txtln #" ")))])
 
 (defn time-cofactors
-    "creates a pd x 2 matrix of ones and incremental timeseries"
-    [pd]
-    (let [ones (i/trans [(repeat pd 1)])
-          ind (i/trans [(range 1 (+ pd 1))])]
-        (i/bind-columns ones ind)))
+  "creates a pd x 2 matrix of ones and incremental timeseries"
+  [pd]
+  (let [ones (i/trans (repeat pd 1))
+        ind (i/trans (range 1 (inc pd)))]
+    (i/bind-columns ones ind)))
 
 (defn ols-coefficient
-    "OLS timeseries regression on a sequence m, with intercept"
-    [m pd]
-    (let [y-col (i/trans (vector m))
+  "OLS timeseries regression on a sequence m, with intercept"
+  [m pd]
+  (let [y-col (i/trans [m])
         X (time-cofactors pd)
         ssX (i/solve (i/mmult (i/trans X) X))]
-    (vector (i/sel (i/mmult ssX (i/trans X) y-col) 1 0))))
-
+    [(i/sel (i/mmult ssX (i/trans X) y-col) 1 0)]))
 
 (defn wordcount 
     [path pd]
