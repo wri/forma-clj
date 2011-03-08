@@ -6,4 +6,3 @@
   (compute/compute-service "ec2"
                            :identity "AKIAJ2R6HW5XJPY2GM3Q"
                            :credential "CaEB6a7T/7yqEysrvK/V86LDOT6BLRkgXrdkjsev"))
-

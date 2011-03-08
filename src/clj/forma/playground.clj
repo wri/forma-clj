@@ -12,9 +12,9 @@
         forma.hadoop
         forma.modis
         forma.reproject)
-  (:require (incanter [core :as i])
-            (cascalog [ops :as c])
-            (clojure [string :as s])))
+  (:require [incanter.core :as i]
+            [cascalog.ops :as c]
+            [clojure.string :as s]))
 
 (def small-tiles
   (memory-source-tap [[1 28]

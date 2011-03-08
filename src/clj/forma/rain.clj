@@ -11,10 +11,10 @@
 
 (ns forma.rain
   (:use cascalog.api
-        (forma [hadoop :only (get-bytes)]
-               [reproject :only (rain-sampler dimensions-at-res)]))
-  (:require (cascalog [ops :as c])
-            (clojure.contrib [io :as io]))
+        [forma.hadoop :only (get-bytes)]
+        [forma.reproject :only (rain-sampler dimensions-at-res)])
+  (:require [cascalog.ops :as c]
+            [clojure.contrib.io :as io])
   (:import  [java.io File InputStream]
             [java.util.zip GZIPInputStream]))
 

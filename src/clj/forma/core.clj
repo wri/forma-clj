@@ -5,14 +5,14 @@
 
 (ns forma.core
   (:use cascalog.api
-        (clj-time [format :only (unparse formatters)]
-                  [core :only (now)])
-        (forma [hadoop :only (all-files
-                              template-seqfile
-                              globhfs-seqfile)]))
-  (:require (cascalog [ops :as c])
-            (forma [hdf :as h]
-                   [rain :as r])))
+        [clj-time.format :only (unparse formatters)]
+        [clj-time.core :only (now)]
+        [forma.hadoop :only (all-files
+                             template-seqfile
+                             globhfs-seqfile)])
+  (:require [cascalog.ops :as c]
+            [forma.hdf :as h]
+            [forma.rain :as r]))
 
 ;; ### FORMA Constants
 ;;

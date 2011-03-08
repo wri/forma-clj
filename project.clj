@@ -20,5 +20,5 @@
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
                      [swank-clojure "1.2.1"]
                      [cake-pallet "0.4.0"]
-                     [marginalia "0.3.2"]
+                     [marginalia "0.5.0"]
                      [midje "1.0.1"]])

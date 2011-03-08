@@ -5,12 +5,12 @@
 
 (ns forma.hadoop
   (:use cascalog.api
-        (clojure.contrib [math :only (abs)]))
+        [clojure.contrib.math :only (abs)])
   (:import [forma WholeFile]
            [cascading.tuple Fields]
            [cascading.tap TemplateTap SinkMode GlobHfs]
            [org.apache.hadoop.io BytesWritable])
-  (:require (cascalog [workflow :as w])))
+  (:require [cascalog.workflow :as w]))
 
 ;; ## Custom File Input
 ;;
