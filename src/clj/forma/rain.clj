@@ -105,27 +105,25 @@
 ;; using [big endian](http://goo.gl/os4SJ) format, by default. The
 ;; PRECL dataset was stored using [little endian](http://goo.gl/KUpiy)
 ;; floats, 4 bytes each. We define a function below that coerces
-;; groups of 4 bytes into a float.
+;; groups of little-endian bytes into a float.
 
 (defn little-float
-  "Converts four input bits to a float, in little endian
-  format. Special case of a more general `littleize` function, on the
-  horizon."
-  [b0 b1 b2 b3]
-  (Float/intBitsToFloat
-   (bit-or
-   (bit-shift-left b3 24)
-   (bit-or
-    (bit-shift-left (bit-and b2 0xff) 16)
-    (bit-or
-     (bit-shift-left (bit-and b1 0xff) 8)
-     (bit-and b0 0xff))))))
+  "Converts the supplied byte sequence into a float, in little endian
+  format."
+  [bitseq]
+  (->> bitseq
+       (map-indexed (fn [idx bit]
+                      (bit-shift-left
+                       (bit-and bit 0xff)
+                       (* 8 idx))))
+       (reduce +)
+       (Float/intBitsToFloat)))
 
 (defn little-floats
   "Converts the supplied byte array into a seq of
   little-endian-ordered floats."
   [bytes]
-  (vec (map (partial apply little-float)
+  (vec (map little-float
             (partition float-bytes bytes))))
 
 ;; As our goal is to process each file into the tuple-set described
