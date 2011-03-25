@@ -159,4 +159,3 @@
          [?dataset ?tilestring ?date ?count]
          (source ?dataset ?s-res ?t-res ?tilestring ?date ?chunkid ?chunk)
          (c/count ?count))))
-

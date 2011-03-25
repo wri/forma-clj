@@ -1,4 +1,3 @@
-
 ;; I'll put some stuff on a guide to clojure for the guys in
 ;; here. Know how to switch namespaces -- know what they mean, and
 ;; know that you can look up documentation for any function, the way
