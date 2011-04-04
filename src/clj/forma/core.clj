@@ -114,7 +114,8 @@
 ;; To get tuples back out of our directory structure on S3, we employ
 ;; Cascading's [GlobHFS] (http://goo.gl/1Vwdo) tap, along with an
 ;; interface tailored for datasets stored in the MODIS sinusoidal
-;; projection.
+;; projection. For details on the globbing syntax, see
+;; [here](http://goo.gl/uIEzu).
 
 (defn globstring
   "Takes a path ending in `/` and collections of datasets,
@@ -159,3 +160,5 @@
          [?dataset ?tilestring ?date ?count]
          (source ?dataset ?s-res ?t-res ?tilestring ?date ?chunkid ?chunk)
          (c/count ?count))))
+
+;; TODO -- flesh out example of READ TEST!

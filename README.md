@@ -46,3 +46,14 @@ REPL and Visor
 --------------
 
 [Visor](http://visor.binaryage.com/) is totally awesome. Download it!
+
+More Notes
+----------
+
+Okay, guys, really cool stuff here. I've been looking at some of the backtype stuff, and they're doing some really interesting work with their data serialization.
+
+1- look at ElephantBird -- piece of code that twitter sent out, that will help us generate taps based on different thrift schema
+2- We're going to need to use Thrift to serialize our data, to make sure that it's useful, between all sorts of different languages, etc, and to get to take advantage of some of this more wild stuff that we've seen in the [Nathan Marz presentation at linkedin](http://sna-projects.com/blog/2010/11/clojure-at-backtype/).
+
+* We'll need to define thrift struct -- then, it'd be great to figure out what's going on, with this tap generator. TODO -- also, look at my tap code, and see if I can abstract it out at all.
+* Once we create the whole thrift bullshit, I think we need to wrap the new struct inside of a BytesWritable.

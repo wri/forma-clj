@@ -105,10 +105,8 @@ tuples into the supplied directory, using the format specified by
   [path pathstr]
   (TemplateTap. (w/hfs-tap (w/sequence-file Fields/ALL) path) pathstr))
 
+;; TODO -- update documentation, here@
 (defn globhfs-seqfile
-  "Opens up a Cascading [TemplateTap](http://goo.gl/Vsnm5) that sinks
-tuples into the supplied directory, using the format specified by
-`pathstr`."
   [pattern]
   (GlobHfs. (w/sequence-file Fields/ALL) pattern))
 

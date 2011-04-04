@@ -104,12 +104,13 @@
 ;; process each one into meaningful data. Java reads primitive arrays
 ;; using [big endian](http://goo.gl/os4SJ) format, by default. The
 ;; PRECL dataset was stored using [little endian](http://goo.gl/KUpiy)
-;; floats, 4 bytes each. We define a function below that coerces
-;; groups of little-endian bytes into a float.
+;; floats, 4 bytes each. We define a function below that flips the
+;; endian order of a sequence of bytes -- we use this to coerce groups
+;; of little-endian bytes into big-endian floats.
 
-(defn little-float
-  "Converts the supplied byte sequence into a float, in little endian
-  format."
+(defn flipped-endian-float
+  "Flips the endian order of the supplied byte sequence, and converts
+  the sequence into a float."
   [bitseq]
   (->> bitseq
        (map-indexed (fn [idx bit]
@@ -119,12 +120,12 @@
        (reduce +)
        (Float/intBitsToFloat)))
 
-(defn little-floats
-  "Converts the supplied byte array into a seq of
-  little-endian-ordered floats."
-  [bytes]
-  (vec (map little-float
-            (partition float-bytes bytes))))
+(defn big-floats
+  "Converts the supplied little-endian byte array into a seq of
+  big-endian-ordered floats."
+  [little-bytes]
+  (vec (map flipped-endian-float
+            (partition float-bytes little-bytes))))
 
 ;; As our goal is to process each file into the tuple-set described
 ;; above, we need to tag each month with metadata, to distinguish it
@@ -138,7 +139,7 @@
   in this case, to make the number correspond to a month of the year,
   rather than an index in a seq."
   [index month]
-  (vector (inc index) (little-floats month)))
+  (vector (inc index) (big-floats month)))
 
 (defn rain-tuples
   "Returns a lazy seq of 2-tuples representing NOAA PREC/L rain
