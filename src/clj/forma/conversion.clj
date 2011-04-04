@@ -3,9 +3,9 @@
 ;; proper temporal comparison of two unrelated datasets.
 
 (ns forma.conversion
-  (:use (clj-time [core :only (date-time year month in-minutes interval)])
-        (clojure [string :only (split)])
-        (clojure.contrib [math :only (ceil)])))
+  (:use [clj-time.core :only (date-time year month in-minutes interval)]
+        [clojure.string :only (split)]
+        [clojure.contrib.math :only (ceil)]))
 
 ;; In developing the time period conversion functions, we noticed that
 ;; as long as the time period remained consistent from dataset to

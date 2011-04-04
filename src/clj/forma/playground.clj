@@ -1,4 +1,3 @@
-
 ;; I'll put some stuff on a guide to clojure for the guys in
 ;; here. Know how to switch namespaces -- know what they mean, and
 ;; know that you can look up documentation for any function, the way
@@ -12,9 +11,9 @@
         forma.hadoop
         forma.modis
         forma.reproject)
-  (:require (incanter [core :as i])
-            (cascalog [ops :as c])
-            (clojure [string :as s])))
+  (:require [incanter.core :as i]
+            [cascalog.ops :as c]
+            [clojure.string :as s]))
 
 (def small-tiles
   (memory-source-tap [[1 28]
@@ -93,33 +92,31 @@
        (fancyvec ?checked ?fives :> ?mapped)
        (identity 1 :> ?_)))
 
-
-
-(hfs-textline "/Users/danhammer/Desktop/rain-data.txt")
-
-(defn text->num [txtln skip]
-    "converts a text line of numbers to a float vectors; 
+(defn text->num
+  "converts a text line of numbers to a float vectors; 
     skips the variable #skip of elements"
-    (vector (drop skip (map #(Float. %) (s/split txtln #" ")))))
+  [txtln]
+  [(map #(Float. %)
+        (drop 1 (s/split txtln #" ")))])
 
-(defn time-cofactors [pd]
-    "creates a pd x 2 matrix of ones and incremental timeseries"
-    (let [ones (i/trans (i/matrix 1 1 pd))
-          ind (i/trans [(map inc (range pd))])]
-        (i/bind-columns ones ind)))
+(defn time-cofactors
+  "creates a pd x 2 matrix of ones and incremental timeseries"
+  [pd]
+  (let [ones (i/trans (repeat pd 1))
+        ind (i/trans (range 1 (inc pd)))]
+    (i/bind-columns ones ind)))
 
-(defn ols
-    "OLS timeseries regression on a sequence m, with intercept"
-    [m pd]
-    (let [y-col (i/trans (vector m))
+(defn ols-coefficient
+  "OLS timeseries regression on a sequence m, with intercept"
+  [m pd]
+  (let [y-col (i/trans [m])
         X (time-cofactors pd)
         ssX (i/solve (i/mmult (i/trans X) X))]
-    (vector (i/sel (i/mmult ssX (i/trans X) y-col) 1 0))))
-
+    [(i/sel (i/mmult ssX (i/trans X) y-col) 1 0)]))
 
 (defn wordcount 
     [path pd]
     (?<- (stdout) [?sum]
         ((hfs-textline path) ?line)
-        (text->num ?line 1 :> ?vector)
-        (ols ?vector pd :> ?sum)))
+        (text->num ?line :> ?vector)
+        (ols-coefficient ?vector pd :> ?sum)))

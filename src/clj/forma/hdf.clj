@@ -13,13 +13,13 @@
 ;; to match tuples up and combine them in various ways.
 
 (ns forma.hdf
-  (:use (forma hadoop
-               [modis :only (temporal-res)])
-        (cascalog api
-                  [io :only (temp-dir)])
-        (clojure.contrib [seq-utils :only (find-first indexed)]))
-  (:require (clojure.contrib [string :as s]
-                             [io :as io]))
+  (:use cascalog.api
+        forma.hadoop
+        [forma.modis :only (temporal-res)]
+        [cascalog.io :only (temp-dir)]
+        [clojure.contrib.seq-utils :only (find-first indexed)])
+  (:require [clojure.contrib.string :as s]
+            [clojure.contrib.io :as io])
   (:import [java.util Hashtable]
            [java.io File]
            [org.gdal.gdal gdal Dataset Band]
