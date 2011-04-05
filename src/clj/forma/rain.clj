@@ -5,9 +5,7 @@
 ;; As in `forma.hdf`, the overall goal here is to process an NOAA
 ;; PREC/L dataset into tuples of the form
 ;;
-;;     [?dataset ?spatial-res ?temporal-res
-;;      ?tilestring ?date ?chunkid ?chunk-pix]
-;;
+;;     [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk-pix]
 
 (ns forma.rain
   (:use cascalog.api
