@@ -4,4 +4,3 @@
 
 (fact float-bytes => 4)
 
-(facts "" (floats-for-res ))

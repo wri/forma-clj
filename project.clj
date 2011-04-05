@@ -38,5 +38,5 @@
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
                      [swank-clojure "1.2.1"]
                      [marginalia "0.5.0"]
-                     [midje "1.0.1"]
+                     [midje "1.1"]
                      [vmfest/vmfest "0.2.2"]])
