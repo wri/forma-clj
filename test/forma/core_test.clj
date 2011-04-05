@@ -1,6 +1,6 @@
-(ns forma.test-sinu
-  (:use [forma.sinu] :reload)
-  (:use midje.sweet
+(ns forma.core-test
+  (:use [forma.core] :reload
+        midje.sweet
         clojure.test))
 
 (deftest replace-me
