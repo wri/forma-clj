@@ -13,7 +13,7 @@
                  [cascalog "1.7.0-SNAPSHOT"]
                  [clj-time "0.3.0-SNAPSHOT"]
                  [org.clojars.sritchie09/gdal-java-native "1.8.0"]
-                 [org.cloudhoist/pallet "0.4.12"
+                 [org.cloudhoist/pallet "0.4.13"
                   :exclusions [org.jclouds/jclouds-compute
                                org.jclouds/jclouds-blobstore
                                org.jclouds/jclouds-scriptbuilder
