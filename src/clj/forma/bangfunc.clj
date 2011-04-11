@@ -1,9 +1,13 @@
 (ns forma.bangfunc
   (:require [incanter.core :as i]))
-  
+
+
 ; test data to simulate a randome time-series (will be read in later)
 (def random-ints (repeatedly #(rand-int 100)))
 (def test-ts (take 131 random-ints))
+
+
+; WHOOPBANG
 
 (defn ols-coeff
   "extract OLS coefficient from a time-series
@@ -17,3 +21,5 @@
 
 (def whoopbang (reduce min (map ols-coeff (partition 15 1 test-ts))))
 (def whizbang (ols-coeff test-ts))
+
+; juxt function ((juxt a b) x) -> ((a x) (b x))
