@@ -1,5 +1,7 @@
 (ns forma.bangfunc
-  (:require [incanter.core :as i]))
+  (:require [incanter.core :as i]
+            [incanter.charts :as c])
+  (:use clojure.contrib.def))
 
 ; test data to simulate a randome time-series (will be read in later)
 (def random-ints (repeatedly #(rand-int 100)))
@@ -7,47 +9,53 @@
 
 (def test-ts [5 3 7 6 7 8 9 8 7 4 3 1 1 2 2 5 6 7 5 4 3 4 5 8 10 10 18 19 6 5 4 9 3 2 0 1 1 2 4 9 10 15 19 22 18 9 2 1 1 0])
 
-(defn average [lst] (float (/ (reduce + lst) (count lst))))
 
+; Useful general functions
 
-; De-seasonalize time-series
-; 
-; mu = np.average(Y1)
-; fix = np.linalg.inv(Xdt * Xd) * Xdt * Y1                                #Regress original timeseries on 11 monthly dummies and ones-vector (for constant)
-; Y1 = ((Y1 - Xd[:,1:12] * fix[1:12]) - fix[0]) + mu                      #Adjust the NDVI values by monthly averages
-
+(defn average
+  "average of a list" 
+  [lst] 
+  (float (/ (reduce + lst) (count lst))))
 
 (defn variance-matrix
   "construct a variance-covariance matrix from a given matrix X"
   [X]
   (i/solve (i/mmult (i/trans X) X)))
+  
+(defn ones-column
+  "create a column of ones with length [x]"
+  [x]
+  (i/matrix (repeat x 1)))
 
-(defn make-matrix
-  [width height]
-  "Create a matrix (list of lists)"
-  (repeat width (repeat height 0)))
+; De-seasonalize time-series
 
-(defn matrix-map
-  [m func]
-  "Apply a function to every element in a matrix"
-  (map (fn [x] (map func x)) m))
-
-(def seasonal-vector (vec (conj (repeat 11 0) 1)))
+(defn seasonal-rows [n]
+  "lazy sequence of monthly dummy vectors"
+  (vec
+    (take n (partition 11 1 (cycle (cons 1 (repeat 11 0)))))))
 
 (defn seasonal-matrix
   "create a matrix of [num-months]x11 of monthly dummies, where
   [num-months] indicates the number of months in the time-series"
   [num-months]
-  )
-
-(def monthly-dummies 
-  (i/bind-rows (repeat 11 0) (i/identity-matrix 11)))
+  (i/bind-columns (ones-column num-months)
+                  (seasonal-rows num-months)))
 
 (defn deseasonalize
-  "deseasonalize a time-series [ts] using monthly dummies."
+  "deseasonalize a time-series [ts] using monthly dummies. returns
+  a vector the same length of the original time-series, with desea-
+  sonalized values."
   [ts]
-  (let [avg (average ts)]
-  avg))
+  (let [avg-seq (repeat (count ts) (average ts))
+        X    (seasonal-matrix (count ts))
+        fix  (i/mmult (variance-matrix X) (i/trans X) ts)
+        adj  (i/mmult (i/sel X :except-cols 0) (i/sel fix :except-rows 0))
+        ats  (i/plus avg-seq (i/minus ts adj))]
+  ats))
+
+; 
+(def plot1 (c/line-chart (range (count test-ts)) (deseasonalize test-ts)))
+; (c/add-lines plot1 (range 50) (range 50))
 
 ; WHOOPBANG
 
@@ -84,3 +92,14 @@
 
 ; (def whizbang (ols-coeff test-ts))
 ; juxt function ((juxt a b) x) -> ((a x) (b x))
+
+
+; (defn make-matrix
+;   [width height]
+;   "Create a matrix (list of lists)"
+;   (repeat width (repeat height 0)))
+; 
+; (defn matrix-map
+;   [m func]
+;   "Apply a function to every element in a matrix"
+;   (map (fn [x] (map func x)) m))
