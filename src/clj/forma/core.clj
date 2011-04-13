@@ -75,7 +75,8 @@
 
 (defn jobtag
   "Generates a unique tag for a job, based on the current time."
-  [] (unparse (formatters :basic-date-time-no-ms)
+  []
+  (unparse (formatters :basic-date-time-no-ms)
               (now)))
 
 (defn modis-seqfile

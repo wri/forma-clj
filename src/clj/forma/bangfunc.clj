@@ -21,7 +21,7 @@
   "construct a variance-covariance matrix from a given matrix X"
   [X]
   (i/solve (i/mmult (i/trans X) X)))
-  
+
 (defn ones-column
   "create a column of ones with length [x]"
   [x]
@@ -52,7 +52,6 @@
         fix  (i/mmult (variance-matrix X) (i/trans X) ts)
         adj  (i/mmult (i/sel X :except-cols 0) (i/sel fix :except-rows 0))]
      (i/plus avg-seq (i/minus ts adj))))
-
 
 (def plot1 (c/scatter-plot (i/matrix (range (count test-ts))) (deseasonalize test-ts)))
 (add-lines plot1 (i/matrix (range (count test-ts))) test-ts)
@@ -85,13 +84,36 @@
   sub-timeseries of length [long-block].  The drops are smoothed by a moving 
   average window of length [mov-avg]."
   [ts long-block window]
-  (->> ts
+  (->> (deseasonalize ts)
        (windowed-apply whoop-ols long-block)
        (windowed-apply average window)
        (reduce min)))
 
-; (def whizbang (ols-coeff test-ts))
-; juxt function ((juxt a b) x) -> ((a x) (b x))
+;; WHIZBANG
+;; need to get an associated time-series for rain. the function will
+;; therefore change.
+
+(defn with-rain-cofactor
+  "construct a time-series with a ")
+
+(defn std-error
+  "get the standard error from a variance matrix")
+
+(defn ols-coeff
+  "get the trend coefficient from a time-series, given a variance matrix"
+  (let [ycol (i/trans [ts])
+        X (with-rain-cofactor (count ts))
+        V (variance-matrix X)]))
+
+(defn whiz-ols
+  "extract both the OLS trend coefficient and the t-stat associated
+   with the trend characteristic"
+  [ts V]
+  ((juxt ols-coeff whiz-ols)) ts V)
+
+
+
+; (def whizbang ((juxt ols-coeff ols-std-error) test-ts))
 
 
 ; (defn make-matrix
