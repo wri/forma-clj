@@ -64,3 +64,8 @@ Steps for building the gdal tar file --
 * tar cf gdal-1.8.0-native-linux-x86_64.tar ./LinuxNative
 * gzip -9 gdal-1.8.0-native-linux-x86_64.tar 
 * upload to the `reddconfig` bucket on s3
+
+### Other notes
+
+Okay, we built all the gdal stuff... we're going to have to store it
+somewhere nice, maybe on S3 or on Dropbox. 
