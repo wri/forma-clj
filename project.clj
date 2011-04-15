@@ -12,6 +12,8 @@
                  [incanter "1.2.3"]
                  [cascalog "1.7.0-SNAPSHOT"]
                  [clj-time "0.3.0-SNAPSHOT"]
+                 [org.clojars.gilesc/rincanter "1.0.2"]
+                 [jriengine "0.8.4"]
                  [org.clojars.sritchie09/gdal-java-native "1.8.0"]
                  [org.cloudhoist/pallet "0.4.12"
                   :exclusions [org.jclouds/jclouds-compute
