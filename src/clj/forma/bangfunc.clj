@@ -3,7 +3,8 @@
             [incanter.charts :as c])
   (:use clojure.contrib.def
         clojure.repl
-        [clojure.contrib.seq :only (positions)]))
+        [clojure.contrib.seq :only (positions)]
+        [clojure.contrib.math :only (round)]))
 
 ; test data to simulate a randome time-series (will be read in later)
 (def random-ints (repeatedly #(rand-int 100)))
@@ -13,7 +14,35 @@
 
 (def pos-test (positions #{#(< % 7000)} ndvi))
 
-(def reli [1])
+
+(defn replace-val
+  "replaces values in a vector [vec] that are (<, >, >=, <=, =) to [in-val]
+  with the value supplied in [out-val]"
+  [vec rel in-val out-val]
+  (map #(if (rel % in-val) out-val %) vec))
+
+(def reli (replace-val (replace-val ndvi < 7000 2) > 2 1))
+(def kill-vals (replace-val ndvi > 7000 nil))
+
+(defn replace-in
+  "replace the value in coll at index idx with value val"
+  [coll idx val]
+  (concat (take (dec idx) coll) (list val) (drop idx coll)))
+
+(defn smooth-around
+  "get a window around idx of length smooth-window and replace the value in coll
+  at idx with the average of the values around it (within the window)."
+  [smooth-window idx coll]
+  )
+
+(defn replace-bad-values
+  [coll pred]
+  (let [index-set (positions pred coll)]
+    (for [x (list index-set)] (replace-in x (smooth-around x coll)))))
+
+
+(defn in-range? [smap val] (cond (and (>= val (first smap)) (<= val (last smap))) val))
+
 
 ;; (def rain (vec (take 131 [0.758979 1.881083 0.450439 0.5629475 1.298105 0.601949 0.633402 2.061727 3.162298 3.909696 0.6729975 0.9873315 3.728811 0.489842 0.1487355 1.223761 1.150318 4.147013 3.660728 1.95627 2.43364 0.561836 2.744055 3.166032 2.693228 0.9457325 4.58443 5.568013 4.3806 4.733245 3.24725 2.76412 5.094728 0.185646 0.1068985 6.126962 1.375724 9.698978 7.819601 7.713306 6.066076 6.647004 3.59003 1.462621 4.674891 2.532174 4.450727 3.375694 4.187068 2.864468 1.170215 10.64091 7.673899 3.436686 1.771399 .158105 0.5111155 2.208683 2.049198 4.496127 2.553866 7.489977 5.930338 7.039693 8.524044 3.924975 3.303462 3.574769 0.8958245 0.7703965 0.8305405 1.45761 8.588436 4.512204 2.759497 3.36393 2.956733 1.623559 5.497841 5.202463 0.1838125 0.543101 1.729535 2.883465 2.697463 3.44902 9.980256 3.166203 6.295969 3.006878 4.505447 5.265707 0.8314495 0.2807955 1.29249 2.427061 3.392292 6.246957 0.978364 4.386679 5.648489 1.885097 1.558292 6.935847 1.818115 1.517784 3.115736 2.603963 1.950513 6.205854 2.149288 6.715803 6.61316 5.234132 1.221053 1.271832 1.452744 0.146411 1.748276 2.902104 4.295961 10.23304 4.134783 10.14036 13.7435 11.61449 4.125048 4.1153 6.135418 1.551036 0.706522 0.850265 2.239265]) ))
 
@@ -183,11 +212,13 @@
        (range (count ndvi))))
 
 
-(def plot1 (c/time-series-plot dates (hp-filter ndvi 20)
+(def plot1 (c/time-series-plot dates (hp-filter ndvi 2)
                                :title "NDVI and The H-P Filter"
                                :x-label "Year"
                                :y-label "NDVI values"))
 (c/add-lines plot1 dates ndvi)
+(c/add-points plot1 dates kill-vals)
+
 ;; (let [x dates] (c/slider #(i/set-data plot1 [x (hp-filter ndvi %)]) (range 0 11 0.1) "lambda"))
 
 
