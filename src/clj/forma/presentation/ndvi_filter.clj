@@ -65,7 +65,6 @@
                             :legend true
                             :series-label "NDVI")))
 
-;; (c/set-stroke-color java.awt.Color/red)
 ;; Add the points indicating bad (read: unreliable) values on the
 ;; original NDVI time-series.
 
@@ -74,16 +73,21 @@
 ;; Create a new plot with the HP-filter to be updated by the slider,
 ;; based on the interpolated NDVI values.
 
-(def plot2
-  (doto (c/time-series-plot forma-range
-                            ;; (fix-time-series #{1} reli ndvi)
-                            (hp-filter (fix-time-series #{1} reli ndvi) 2)
-                            :title "NDVI and the H-P Filter"
-                            :x-label ""
-                            :y-label ""
-                            :legend true
-                            :series-label "Filtered NDVI")
-    (c/set-stroke-color java.awt.Color/blue)))
+(def plot2 (c/time-series-plot forma-range
+                               (hp-filter (fix-time-series #{1} reli ndvi) 2)
+                               :title "NDVI and H-P Filter"
+                               :x-label ""
+                               :y-label ""
+                               :legend true
+                               :series-label "H-P Filter"))
+
+;; Add a plot of the interpolated NDVI values to serve as the
+;; background to the updating slider.
+
+(c/add-lines plot2 forma-range (fix-time-series #{1} reli ndvi) :series-label "Conditioned NDVI")
+
+;; Add the slider to the original time-series plot, defined in the
+;; first definition of plot2
 
 (let [x forma-range]
   (c/slider #(i/set-data plot2
@@ -91,13 +95,10 @@
             (map (partial round-places 2) (range 0 20 0.1))
             "lambda"))
 
-;; Add a plot of the interpolated NDVI values to serve as the
-;; background to the updating slider.
+;; Add the original kill plots, just in case we want to show the
+;; original scale. Note that we can just turn this feature on and off.
 
-;; TODO Swap colors and the layering, so that the filter is on top.
-
-(c/add-lines plot2 forma-range (fix-time-series #{1} reli ndvi) :series-label "Conditioned NDVI")
-
+(c/add-points plot2 forma-range kill-vals :shape 1 :series-label "Unreliable Values in Original NDVI Series")
 
 
 
