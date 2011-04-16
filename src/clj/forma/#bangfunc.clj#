@@ -73,7 +73,8 @@
 (defn knocked-off
   "shorten time-series on both ends to ensure that first and last
   values are good, according to the pred, quality-coll"
-  [pred value-coll quality-coll])
+  [pred value-coll quality-coll]
+  )
 
 (defn interpolate
   [x y length]
