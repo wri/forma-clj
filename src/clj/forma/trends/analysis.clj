@@ -1,4 +1,7 @@
-(ns forma.trends.analysis)
+(ns forma.trends.analysis
+  (:use [forma.matrix.utils :only (variance-matrix average)]
+        [forma.trends.filter :only (deseasonalize)])
+  (:require [incanter.core :as i]))
 
 ; WHOOPBANG
  
