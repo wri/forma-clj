@@ -8,11 +8,14 @@
         [clj-time.format :only (unparse formatters)]
         [clj-time.core :only (now)]
         [forma.hadoop :only (all-files
+                             globbed-files
                              template-seqfile
-                             globhfs-seqfile)])
+                             globhfs-seqfile)]
+        [forma.modis :only (valid-tiles)])
   (:require [cascalog.ops :as c]
             [forma.hdf :as h]
-            [forma.rain :as r]))
+            [forma.rain :as r])
+  (:gen-class))
 
 ;; ### FORMA Constants
 ;;
@@ -99,7 +102,7 @@
   sinks them into a custom directory structure inside of
   `output-dir`."
   [subsets c-size in-dir out-dir]
-  (let [source (all-files in-dir)]
+  (let [source (globbed-files in-dir)]
     (?- (modis-seqfile out-dir)
         (h/modis-chunks source subsets chunk-size))))
 
@@ -134,10 +137,10 @@
      (globstring basepath datasets resolutions tiles *))
   ([basepath datasets resolutions tiles batches]
      (letfn [(wrap [coll]
-                   (format "{%s}/"
-                           (apply str (interpose "," coll))))
+               (format "{%s}/"
+                       (apply str (interpose "," coll))))
              (bracketize [arg]
-                         (if (= * arg) "*/" (wrap arg)))]
+               (if (= * arg) "*/" (wrap arg)))]
        (apply str
               basepath
               (map bracketize
@@ -163,3 +166,16 @@
          (c/count ?count))))
 
 ;; TODO -- flesh out example of READ TEST!
+
+;; TEMPORARY stuff for the big run :-*
+(defn tiles->globstring
+  [& tiles]
+  {:pre [(not (some false? (map #(contains? valid-tiles %) tiles)))]}
+  (let [hv-seq (interpose "," (for [[th tv] tiles] (format "h%02dv%02d" th tv)))]
+    (format "*{%s}*" (apply str hv-seq))))
+
+(defn s3-path [path]
+  (str "s3n://AKIAJ56QWQ45GBJELGQA:6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV@" path))
+
+(defn -main [input-path output-path]
+  (modis-chunker forma-subsets 24000 (s3-path input-path) (s3-path output-path)))

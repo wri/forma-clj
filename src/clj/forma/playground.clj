@@ -13,7 +13,8 @@
         forma.reproject)
   (:require [incanter.core :as i]
             [cascalog.ops :as c]
-            [clojure.string :as s]))
+            [clojure.string :as s])
+  (:gen-class))
 
 (def small-tiles
   (memory-source-tap [[1 28]
@@ -120,3 +121,20 @@
         ((hfs-textline path) ?line)
         (text->num ?line :> ?vector)
         (ols-coefficient ?vector pd :> ?sum)))
+
+;; MORE PLAYING WITH GLOB EXPRESSIONS
+
+(defn tiles->globstring
+  [& tiles]
+  {:pre [(not (some false? (map #(contains? valid-tiles %) tiles)))]}
+  (let [hv-seq (interpose "," (for [[th tv] tiles] (format "h%02dv%02d" th tv)))]
+    (format "*{%s}*" (apply str hv-seq))))
+
+(defn globfile-test
+  [pattern]
+  (let [source (globhfs-wholefile pattern)]
+    (?<- (stdout) [?filename]
+         (source ?filename ?file))))
+
+(defn -main []
+  (+ 4 5))

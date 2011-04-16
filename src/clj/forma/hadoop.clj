@@ -86,6 +86,10 @@
   [path]
   (w/hfs-tap (whole-file Fields/ALL) path))
 
+(defn globhfs-wholefile
+  [pattern]
+  (GlobHfs. (whole-file Fields/ALL) pattern))
+
 (defn all-files
   "Subquery to return all files in the supplied directory. Files will
   be returned as 2-tuples, formatted as (filename, file) The filename
@@ -93,6 +97,13 @@
   BytesWritable."
   [dir]
   (let [source (hfs-wholefile dir)]
+    (<- [?filename ?file]
+        (source ?filename ?file))))
+
+(defn globbed-files
+  "Same as all-files, but takes a pattern."
+  [pattern]
+  (let [source (globhfs-wholefile pattern)]
     (<- [?filename ?file]
         (source ?filename ?file))))
 
