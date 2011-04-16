@@ -1,8 +1,11 @@
 (ns forma.staging
-  (:use [clojure.contrib.seq :only (positions)]
-        [clojure.contrib.math :only (round)])
+  (:use [forma.matrix.utils :only (replace-val variance-matrix)]
+        [forma.trends.filter :only (hp-filter)]
+   [clojure.contrib.seq :only (positions)]
+   [clojure.contrib.math :only (round)])
   (:require [incanter.core :as i]
-            [incanter.charts :as c]))
+            [incanter.charts :as c]
+            [clj-time.core :as time]))
 
 (defn devel-namespaces []
   (use '(incanter core charts)))
@@ -52,6 +55,10 @@
    with the trend characteristic"
   [ts V]
   ((juxt ols-coeff whiz-ols)) ts V)
+
+
+;; range between two dates in months
+
 
 
 (defn num-years-to-milliseconds [x] (* 365 24 60 60 1000 x))

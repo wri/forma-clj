@@ -1,4 +1,9 @@
-(ns forma.trends.filter)
+(ns forma.trends.filter
+  (:use [forma.matrix.utils :only (ones-column
+                                   average
+                                   variance-matrix)]
+        [clojure.contrib.seq :only (positions)])
+  (:require [incanter.core :as i]))
 
 ;; De-seasonalize time-series
 
@@ -66,6 +71,25 @@
         trend-cond (i/solve (i/plus coeff-matrix (i/identity-matrix T)))]
     (i/mmult trend-cond ts)))
 
+(defn interpolate
+  [x y length]
+  (let [delta (/ (- y x) (dec length))]
+    (vec (for [n (range length)] (float (+ x (* n delta)))))))
 
+(defn stretch-testing
+  [ts [left right]]
+  (if (= right (inc left))
+    (nth ts left)
+    (interpolate (nth ts left)
+                 (nth ts right)
+                 (- right left))))
+
+;; TODO ensure that this works for even AND odd values
+(defn fix-time-series
+  [pred quality-coll value-coll]
+  (flatten
+   (vector (map (partial stretch-testing value-coll)
+                (partition 2 1 (positions pred quality-coll)))
+           (nth value-coll (last quality-coll)))))
 
 
