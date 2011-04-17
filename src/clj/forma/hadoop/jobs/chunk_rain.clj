@@ -3,7 +3,7 @@
         cascalog.api
         [forma.hadoop.io :only (modis-seqfile all-files)])
   (:require [cascalog.ops :as c]
-            [forma.rain :as r])
+            [forma.source.rain :as r])
   (:gen-class))
 
 (defn rain-chunker

@@ -11,10 +11,10 @@
 ;; If every dataset can be coerced into this form, it becomes trivial
 ;; to match tuples up and combine them in various ways.
 
-(ns forma.hdf
+(ns forma.source.hdf
   (:use cascalog.api
         forma.hadoop.io
-        [forma.modis :only (temporal-res)]
+        [forma.source.modis :only (temporal-res)]
         [cascalog.io :only (temp-dir)]
         [clojure.contrib.seq-utils :only (find-first indexed)])
   (:require [clojure.contrib.string :as s]

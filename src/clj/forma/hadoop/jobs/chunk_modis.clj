@@ -4,8 +4,8 @@
         [forma.hadoop.io :only (modis-seqfile
                                 all-files
                                 globbed-files)]
-        [forma.modis :only (valid-tiles)])
-  (:require [forma.hdf :as h])
+        [forma.source.modis :only (valid-tiles)])
+  (:require [forma.source.hdf :as h])
   (:gen-class))
 
 ;; And, here we are, at the chunkers. These simply execute the
