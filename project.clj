@@ -10,7 +10,7 @@
   :dependencies [[org.clojure/clojure "1.2.0"]
                  [org.clojure/clojure-contrib "1.2.0"]
                  [incanter "1.2.3"]
-                 [cascalog "1.7.0-SNAPSHOT"]
+                 [cascalog "1.7.0"]
                  [clj-time "0.3.0"]
                  [org.clojars.sritchie09/gdal-java-native "1.8.0"]]
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]

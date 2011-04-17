@@ -57,3 +57,10 @@ Okay, guys, really cool stuff here. I've been looking at some of the backtype st
 
 * We'll need to define thrift struct -- then, it'd be great to figure out what's going on, with this tap generator. TODO -- also, look at my tap code, and see if I can abstract it out at all.
 * Once we create the whole thrift bullshit, I think we need to wrap the new struct inside of a BytesWritable.
+
+### Headers ###
+
+Steps for building the gdal tar file -- 
+* tar cf gdal-1.8.0-native-linux-x86_64.tar ./LinuxNative
+* gzip -9 gdal-1.8.0-native-linux-x86_64.tar 
+* upload to the `reddconfig` bucket on s3
