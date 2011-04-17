@@ -62,6 +62,7 @@
 
 
 ;; TODO -- check docs for comment on jobtag
+
 (defn modis-seqfile
   "Cascading tap to sink MODIS tuples into a directory structure based
   on dataset, temporal and spatial resolution, tileid, and a custom
@@ -85,13 +86,6 @@
   (let [source (globbed-files in-dir)]
     (?- (modis-seqfile out-dir)
         (h/modis-chunks source subsets chunk-size))))
-
-(defn rain-chunker
-  "Like `modis-chunker`, for NOAA PRECL data files."
-  [m-res ll-res c-size tile-seq in-dir out-dir]
-  (let [source (all-files in-dir)]
-    (?- (modis-seqfile out-dir)
-        (r/rain-chunks m-res ll-res c-size tile-seq source))))
 
 ;; ### Bucket to Cluster
 ;;
@@ -145,8 +139,6 @@
          (source ?dataset ?s-res ?t-res ?tilestring ?date ?chunkid ?chunk)
          (c/count ?count))))
 
-;; TODO -- flesh out example of READ TEST!
-
 ;; TEMPORARY stuff for the big run :-*
 (defn tiles->globstring
   [& tiles]
@@ -157,5 +149,13 @@
 (defn s3-path [path]
   (str "s3n://AKIAJ56QWQ45GBJELGQA:6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV@" path))
 
-(defn -main [input-path output-path]
-  (modis-chunker forma-subsets 24000 (s3-path input-path) (s3-path output-path)))
+(defn -main
+  "Example usage:
+
+   hadoop jar forma-standalone.jar modisdata/MOD13A3 reddoutput/ [8 6] [10 12]"
+  [input-path output-path & tiles]
+  (let [tileseq (map read-string tiles)
+        tilestring (str input-path (apply tiles->globstring tileseq))]
+    (modis-chunker forma-subsets 24000
+                   (s3-path input-path)
+                   (s3-path output-path))))
