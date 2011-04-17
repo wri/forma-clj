@@ -3,12 +3,11 @@
 ;; proper temporal comparison of two unrelated datasets.
 
 (ns forma.date-time
-  (:use [clj-time.core :only (now epoch date-time year month
-                                  plus in-msecs in-minutes
-                                  interval)]
+  (:use [clj-time.core :only (date-time month year)]
         [clj-time.format :only (unparse formatters)]
         [clojure.string :only (split)]
-        [clojure.contrib.math :only (ceil)]))
+        [clojure.contrib.math :only (ceil)])
+  (:require [clj-time.core :as time]))
 
 ;; ### Reference Time
 ;;
@@ -51,16 +50,13 @@
 (defn in-days
   "Returns the number of days spanned by the given time interval."
   [interval]
-  (let [mins (in-minutes interval)
-        hours (/ mins 60)
-        days (/ hours 24)]
-    (int days)))
+  (-> interval time/in-minutes (/ 60) (/ 24) int))
 
 (defn julian
   "Returns the julian day index of a given date."
   [a]
   (in-days
-   (interval (date-time (year a))
+   (time/interval (date-time (year a))
              a)))
 
 ;; the julian function complements the other "date-piece" functions
@@ -94,7 +90,7 @@
   in span-sized groups of unit (months or julians). [unit span] could be
   [julian 16], for example."
   [unit span start end]
-  (let [[years units] (map #(delta % start end) [year unit])]
+  (let [[years units] (map #(delta % start end) [time/year unit])]
     (+ (* years (per-year unit span))
        (quot units span))))
 
@@ -120,7 +116,7 @@ function for more information."
                           "32" months
                           "16" sixteens
                           "8" eights)]
-    (period-func (epoch) date)))
+    (period-func (time/epoch) date)))
 
 (defn datetime->period
   "Converts a datestring, formatted as `YYYY-MM-DD`, into an integer
@@ -138,18 +134,20 @@ function for more information."
   "Generates a unique tag for a job, based on the current time."
   []
   (unparse (formatters :basic-date-time-no-ms)
-           (now)))
+           (time/now)))
 
 ;; TODO: Add docstrings
 
 (defn msecs-from-epoch
   "Docstring."
   [date]
-  (in-msecs (interval (epoch) date)))
+  (time/in-msecs
+   (time/interval (time/epoch) date)))
 
 (defn msec-range
   "Docstring."
   [start end]
   (let [total-months (inc (delta-periods month 1 start end))]
     (for [month-offset (range total-months)]
-      (msecs-from-epoch (plus start (months month-offset))))))
+      (msecs-from-epoch (time/plus start
+                                   (time/months month-offset))))))
