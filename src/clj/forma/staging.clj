@@ -12,13 +12,9 @@
 (defn devel-namespaces []
   (use '(incanter core charts)))
 
-
-
 ; test data to simulate a randome time-series (will be read in later)
 (def random-ints (repeatedly #(rand-int 100)))
 (def test-ts (take 131 random-ints))
-
-
 
 ;; (knocked-off #(< % 0) tvec rvec)
 ;; don't need this right now for the filter
@@ -56,20 +52,3 @@
    with the trend characteristic"
   [ts V]
   ((juxt ols-coeff whiz-ols)) ts V)
-
-
-;; range between two dates in months
-
-
-
-
-(defn num-years-to-milliseconds [x] (* 365 24 60 60 1000 x))
-(def offset (num-years-to-milliseconds (- 2000 1970)))
-(def dates
-  (map (comp #(+ offset %)
-             num-years-to-milliseconds
-             #(/ % 12))
-       (range (count ndvi))))
-
-
-
