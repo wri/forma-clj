@@ -18,4 +18,5 @@
                      [marginalia "0.5.0"]
                      [midje "1.1"]]
   :namespaces [forma.hadoop.jobs.chunk-rain
-               forma.hadoop.jobs.chunk-modis])
+               forma.hadoop.jobs.chunk-modis
+               forma.hadoop.jobs.load-tseries])

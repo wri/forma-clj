@@ -5,6 +5,7 @@
 
 (ns forma.hadoop.io
   (:use cascalog.api
+        [forma.conversion :only (jobtag)]
         [clojure.contrib.math :only (abs)])
   (:import [forma WholeFile]
            [cascading.tuple Fields]
@@ -144,3 +145,62 @@ tuples into the supplied directory, using the format specified by
   [^BytesWritable bytes]
   (byte-array (.getLength bytes)
               (.getBytes bytes)))
+
+
+;; TODO update docs
+
+
+;; ## Backend Data Processing Queries
+;;
+;; The following cascalog queries provide us with a way to process raw
+;; input files into bins based on various datafields, and read them
+;; back out again into a hadoop cluster for later analysis.
+;;
+;; ### Data to Bucket
+;;
+;; The idea of this portion of the project is to process all input
+;; data into chunks in of data MODIS sinusoidal projection, tagged
+;; with metadata to identify the chunk's position and spatial and
+;; temporal resolutions. We sink these tuples into Hadoop
+;; SequenceFiles binned into a custom directory structure on S3,
+;; designed to facilitate easy access to subsets of the data. The
+;; data bins are formatted as:
+;;
+;;     s3n://<dataset>/<s-res>-<t-res>/<tileid>/<jobtag>/seqfile
+;;     ex: s3n://ndvi/1000-32/008006/20110226T234402Z/part-00000
+;;
+;; `s-res` is the spatial resolution of the data, limited to `1000`,
+;; `500`, and `250`. `t-res` is the temporal resolution, keyed to the
+;; MODIS system of monthly, 16-day, or 8-day periods (`t-res` = `32`,
+;; `16` or `8`). `tileid` is the MODIS horizontal and vertical tile
+;; location, formatted as `HHHVVV`.
+;;
+;; As discussed in [this thread](http://goo.gl/jV4ut) on
+;; cascading-user, Hadoop can't append to existing
+;; SequenceFiles. Rather than read in every file, append, and write
+;; back out, we decided to bucket our processed chunks by
+;; `jobid`. This is the date and time, down to seconds, at which the
+;; run was completed. The first run we complete will be quite large,
+;; containing over 100 time periods. Subsequent runs will be monthly,
+;; and will be quite small. On a yearly basis, we plan to read in all
+;; tuples from every `jobid` directory, and bin them into a new
+;;`jobid`. This is to limit the number of small files in the sytem.
+;;
+;; Note that the other way to combat the no-append issue would have
+;; been to sink tuples into a deeper directory structure, based on
+;; date. The downside here is that every sequencefile would be 5MB, at
+;; 1km resolution. Hadoop becomes efficient when mappers are allowed
+;;to deal with splits of 64MB. By keeping our sequencefiles large, we
+;;take advantage of this property.
+
+
+;; TODO -- check docs for comment on jobtag
+
+(defn modis-seqfile
+  "Cascading tap to sink MODIS tuples into a directory structure based
+  on dataset, temporal and spatial resolution, tileid, and a custom
+  `jobtag`. Makes use of Cascading's
+  [TemplateTap](http://goo.gl/txP2a)."
+  [out-dir]
+  (template-seqfile out-dir
+                    (str "%s/%s-%s/%s/" (jobtag) "/")))
