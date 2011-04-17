@@ -131,7 +131,7 @@ function for more information."
 
 ;; ### Jobtag
 ;;
-;; TODO -- more information on what's going on here.
+;; TODO: -- more information on what's going on here.
 
 (defn jobtag
   "Generates a unique tag for a job, based on the current time."

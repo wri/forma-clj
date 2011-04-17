@@ -57,6 +57,6 @@
          (c/count ?count))))
 
 (defn -main
-  "TODO -- options, here!"
+  "TODO: -- options, here!"
   [arg1]
   arg1)

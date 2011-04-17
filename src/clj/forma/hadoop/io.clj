@@ -117,7 +117,7 @@ tuples into the supplied directory, using the format specified by
   [path pathstr]
   (TemplateTap. (w/hfs-tap (w/sequence-file Fields/ALL) path) pathstr))
 
-;; TODO -- update documentation, here@
+;; TODO: -- update documentation, here@
 (defn globhfs-seqfile
   [pattern]
   (GlobHfs. (w/sequence-file Fields/ALL) pattern))
@@ -147,8 +147,7 @@ tuples into the supplied directory, using the format specified by
               (.getBytes bytes)))
 
 
-;; TODO update docs
-
+;; TODO: update docs
 
 ;; ## Backend Data Processing Queries
 ;;
@@ -194,7 +193,9 @@ tuples into the supplied directory, using the format specified by
 ;;take advantage of this property.
 
 
-;; TODO -- check docs for comment on jobtag
+;; TODO: -- check docs for comment on jobtag, and update this
+;; section. We need to change this into a chunk-tap. Check the
+;; tracker project for how to do this!
 
 (defn modis-seqfile
   "Cascading tap to sink MODIS tuples into a directory structure based

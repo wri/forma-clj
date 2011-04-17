@@ -16,9 +16,9 @@
 (defn s3-path [path]
   (str "s3n://AKIAJ56QWQ45GBJELGQA:6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV@" path))
 
-;; TODO -- add precondition to check for valid-tiles
+;; TODO: -- add precondition to check for valid-tiles
 (defn -main
-  "Example USAGE -- TODO"
+  "TODO: Example usage."
   [input-path output-path & tiles]
   (rain-chunker "1000" 0.5 24000 (map read-string tiles)
                 (s3-path input-path)
