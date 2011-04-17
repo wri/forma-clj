@@ -9,16 +9,18 @@
         [clojure.string :only (split)]
         [clojure.contrib.math :only (ceil)]))
 
+;; ### Reference Time
+;;
 ;; In developing the time period conversion functions, we noticed that
 ;; as long as the time period remained consistent from dataset to
 ;; dataset, the ability to 0-index each dataset became irrelevant.
-;; Our choice of January 1st, 2000 as a common reference date ensures
-;; that, regardless of the date on which the specific MODIS product
-;; became active, datasets at the same temporal resolution will match
-;; up.
+;; Our choice of the [Unix epoch](http://goo.gl/KyuLr) as a common
+;; reference date ensures that, regardless of the date on which the
+;; specific MODIS product became active, datasets at the same temporal
+;; resolution will match up.
 
-(def ref-date (date-time 2000))
-
+;; ## Date -> Time Period Conversion
+;;
 ;; For NASA's composite products, MODIS data is composited into either
 ;; monthly, 16-day, or 8-day intervals. Each of these scales begins
 ;; counting on January 1st. Monthly datasets begin counting on the
@@ -127,7 +129,9 @@ function for more information."
          res
          (map #(Integer. %) (split date #"-"))))
 
-;; TODO -- find a place in the docs!
+;; ### Jobtag
+;;
+;; TODO -- more information on what's going on here.
 
 (defn jobtag
   "Generates a unique tag for a job, based on the current time."
