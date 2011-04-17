@@ -1,4 +1,4 @@
-(ns forma.cluster
+(ns forma.hadoop.cluster
   (:import [forma FloatsSerialization IntsSerialization]
            [cascading.tuple.hadoop BytesSerialization TupleSerialization]
            [org.apache.hadoop.io.serializer WritableSerialization JavaSerialization]))

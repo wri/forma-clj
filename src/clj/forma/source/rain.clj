@@ -268,7 +268,6 @@ binary files are packaged as hadoop BytesWritable objects."}
                     ?raindata ?mod-h ?mod-v :> ?chunkid ?chunk)
       (float-array ?chunk :> ?float-chunk)))
 
-
 ;; Finally, the chunker. This subquery is analogous to
 ;; `forma.source.hdf/modis-chunks`. This is the only subquery that
 ;; needs to be called, when processing new PRECL data.
