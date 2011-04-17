@@ -1,8 +1,10 @@
 (ns forma.trends.analysis
   (:use [forma.matrix.utils :only (variance-matrix average)]
         [forma.trends.filter :only (deseasonalize)]
-        [forma.presentation.ndvi-filter :only (ndvi reli rain)])
-  (:require [incanter.core :as i]))
+        [forma.presentation.ndvi-filter :only (ndvi reli rain)]
+        [clojure.contrib.math :only (sqrt)])
+  (:require [incanter.core :as i]
+            [incanter.stats :as s]))
 
 ;; NOTE Currently, the NDVI and reliability sample time-series comes from the NDVI
 ;; trends presentation.  We will have to start a test data file at
@@ -19,7 +21,6 @@
   [num-months]x2 incanter matrix."
   [num-months]
   (i/trans (i/bind-rows (repeat num-months 1) (range 1 (inc num-months)))))
-
 (defn ols-coefficient
   "extract OLS coefficient from a time-series."
   [ts]
@@ -80,13 +81,26 @@
   "get the time-trend coefficient's standard error from a variance matrix
   and the vegetation time-series"
   [veg-ts cofactor-matrix var-matrix]
-  veg-ts)
+  (let [ycol (i/matrix veg-ts)
+        var  (s/variance ycol)]))
+
+
+
+;; sum-sq-errors (i/mmult ycol (i/minus (i/identity-matrix (count ycol)) hat-matrix) (i/trans ycol))
 
 (defn ols-coeff
   "get the trend coefficient from a time-series, given a variance matrix"
   [veg-ts cofactor-matrix var-matrix]
-  (let [ycol (i/matrix veg-ts)]
-    (i/sel (i/mmult var-matrix (i/trans cofactor-matrix) ycol) 1 0)))
+  (let [ycol (i/matrix veg-ts)
+        betas (i/mmult var-matrix (i/trans cofactor-matrix) ycol)
+        error (i/minus ycol (i/mmult cofactor-matrix betas))
+        degrees-of-freedom (- (count ycol) (inc (i/ncol betas)))
+        select-beta (i/sel betas 0 1)
+        ;; std-error (sqrt (/ (* (i/sel var-matrix 0 1) (i/mult (i/trans error) error)) degrees-of-freedom))
+        ;; t-stat (/ select-beta std-error)]
+    (select-beta))))
+
+;; if [> 0 (i/det var-matrix)]
 
 (defn whizbang
   "extract both the OLS trend coefficient and the t-stat associated
