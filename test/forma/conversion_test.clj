@@ -28,13 +28,13 @@
  (per-year julian 8) => 46
  (per-year month 1) => 12)
 
-(fact (periodize "32" 2005 12 04) => 71)
+(fact (periodize "32" 2005 12 04) => 431)
 
 (facts
  "Date conversion in various temporal resolutions."
- (datetime->period "32" "2005-12-04") => 71
- (datetime->period "32" "2006-01-01") => 72
- (datetime->period "16" "2005-12-04") => 136
- (datetime->period "16" "2003-04-22") => 75
- (datetime->period "16" "2003-04-23") => 76
- (datetime->period "8" "2003-04-12") => 150)
+ (datetime->period "32" "2005-12-04") => 431
+ (datetime->period "32" "2006-01-01") => 432
+ (datetime->period "16" "2005-12-04") => 826
+ (datetime->period "16" "2003-04-22") => 765
+ (datetime->period "16" "2003-04-23") => 766
+ (datetime->period "8" "2003-04-12") => 1530)

@@ -3,7 +3,9 @@
 ;; proper temporal comparison of two unrelated datasets.
 
 (ns forma.conversion
-  (:use [clj-time.core :only (date-time year month in-minutes interval)]
+  (:use [clj-time.core :only (now epoch date-time year month
+                                  in-minutes interval)]
+        [clj-time.format :only (unparse formatters)]
         [clojure.string :only (split)]
         [clojure.contrib.math :only (ceil)]))
 
@@ -115,7 +117,7 @@ function for more information."
                           "32" months
                           "16" sixteens
                           "8" eights)]
-    (period-func ref-date date)))
+    (period-func (epoch) date)))
 
 (defn datetime->period
   "Converts a datestring, formatted as `YYYY-MM-DD`, into an integer
@@ -124,3 +126,11 @@ function for more information."
   (apply periodize
          res
          (map #(Integer. %) (split date #"-"))))
+
+;; TODO -- find a place in the docs!
+
+(defn jobtag
+  "Generates a unique tag for a job, based on the current time."
+  []
+  (unparse (formatters :basic-date-time-no-ms)
+              (now)))

@@ -8,7 +8,7 @@
 
 (ns forma.playground
   (:use cascalog.api
-        forma.hadoop
+        forma.hadoop.io
         forma.modis
         forma.reproject)
   (:require [incanter.core :as i]

@@ -3,7 +3,7 @@
 ;; low-level additions to our hadoop interaction capabilities should
 ;; go here, allowing our other components to work at a high level of abstraction.
 
-(ns forma.hadoop
+(ns forma.hadoop.io
   (:use cascalog.api
         [clojure.contrib.math :only (abs)])
   (:import [forma WholeFile]

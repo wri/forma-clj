@@ -3,10 +3,10 @@
 ;; the test queries in here for now. Some of these bad boys need to
 ;; get moved over to tests.
 
-(ns forma.core
-  (:use cascalog.api
-        [clj-time.format :only (unparse formatters)]
-        [clj-time.core :only (now)]
+(ns forma.hadoop.jobs.chunk-modis
+  (:use forma.static
+        cascalog.api
+        [forma.conversion :only (jobtag)]
         [forma.hadoop.io :only (all-files
                                 globbed-files
                                 template-seqfile
@@ -16,22 +16,6 @@
             [forma.hdf :as h]
             [forma.rain :as r])
   (:gen-class))
-
-;; ### FORMA Constants
-;;
-;; Aside from our EC2 information, this is the only data we need to
-;; supply for the first phase of operations. Everything else should be
-;; able to remain local to individual modules.
-
-(def forma-subsets #{:ndvi :evi :qual :reli})
-
-;; Arbitrary number of pixels slurped at a time off of a MODIS raster
-;; band. For 1km data, each MODIS tile is 1200x1200 pixels; dealing
-;; with each pixel individually would incur unacceptable IO costs
-;; within hadoop. We currently fix the chunk size at 24,000, resulting
-;; in 60 chunks per 1km data. Sharper resolution -> more chunks!
-
-(def chunk-size 24000)
 
 ;; ## Backend Data Processing Queries
 ;;
@@ -76,12 +60,8 @@
 ;;to deal with splits of 64MB. By keeping our sequencefiles large, we
 ;;take advantage of this property.
 
-(defn jobtag
-  "Generates a unique tag for a job, based on the current time."
-  []
-  (unparse (formatters :basic-date-time-no-ms)
-              (now)))
 
+;; TODO -- check docs for comment on jobtag
 (defn modis-seqfile
   "Cascading tap to sink MODIS tuples into a directory structure based
   on dataset, temporal and spatial resolution, tileid, and a custom

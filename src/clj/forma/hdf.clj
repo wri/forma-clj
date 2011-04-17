@@ -13,7 +13,7 @@
 
 (ns forma.hdf
   (:use cascalog.api
-        forma.hadoop
+        forma.hadoop.io
         [forma.modis :only (temporal-res)]
         [cascalog.io :only (temp-dir)]
         [clojure.contrib.seq-utils :only (find-first indexed)])
