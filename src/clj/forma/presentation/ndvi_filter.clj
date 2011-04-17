@@ -1,11 +1,10 @@
 (ns forma.presentation.ndvi-filter
   (:use [forma.matrix.utils :only (replace-val)]
-        [forma.conversion :only (delta-periods)]
+        [forma.date-time :only (msec-range)]
         [forma.trends.filter :only (hp-filter fix-time-series)]
         [clj-time.core :only (date-time)]
         [clojure.contrib.math :only (round expt)])
-  (:require [clj-time.core :as time]
-            [incanter.charts :as c]
+  (:require [incanter.charts :as c]
             [incanter.core :as i]))
 
 ;; This is a presentation to show how the filtering techniques work on
@@ -18,18 +17,12 @@
 ;; real bitch about them, so we'll probably be moving these bad boys
 ;; over to conversion.
 
-(defn round-places [decimals number]
+(defn round-places
+  "Rounds the supplied number to the supplied number of decimal
+  points, and returns a float representation."
+  [decimals number]
   (let [factor (expt 10 decimals)]
     (float (/ (round (* factor number)) factor))))
-
-(defn msecs-from-epoch
-  [date]
-  (time/in-msecs (time/interval (time/epoch) date)))
-
-(defn msec-range [start end]
-  (let [total-months (inc (delta-periods time/month 1 start end))]
-    (for [month (range total-months)]
-      (msecs-from-epoch (time/plus start (time/months month))))))
 
 ;; Create sample NDVI data for a single pixel, so that we can graph
 ;; the filtering techniques on sample data.

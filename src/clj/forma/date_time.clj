@@ -4,7 +4,8 @@
 
 (ns forma.date-time
   (:use [clj-time.core :only (now epoch date-time year month
-                                  in-minutes interval)]
+                                  plus in-msecs in-minutes
+                                  interval)]
         [clj-time.format :only (unparse formatters)]
         [clojure.string :only (split)]
         [clojure.contrib.math :only (ceil)]))
@@ -137,4 +138,18 @@ function for more information."
   "Generates a unique tag for a job, based on the current time."
   []
   (unparse (formatters :basic-date-time-no-ms)
-              (now)))
+           (now)))
+
+;; TODO: Add docstrings
+
+(defn msecs-from-epoch
+  "Docstring."
+  [date]
+  (in-msecs (interval (epoch) date)))
+
+(defn msec-range
+  "Docstring."
+  [start end]
+  (let [total-months (inc (delta-periods month 1 start end))]
+    (for [month-offset (range total-months)]
+      (msecs-from-epoch (plus start (months month-offset))))))
