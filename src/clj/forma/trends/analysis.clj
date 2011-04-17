@@ -88,17 +88,41 @@
 
 ;; sum-sq-errors (i/mmult ycol (i/minus (i/identity-matrix (count ycol)) hat-matrix) (i/trans ycol))
 
+;; (defn ols-coeff
+;;   "get the trend coefficient from a time-series, given a variance matrix"
+;;   [veg-ts cofactor-matrix var-matrix]
+;;   (let [ycol (i/matrix veg-ts)
+;;         betas (i/mmult var-matrix (i/trans cofactor-matrix) ycol)
+;;         error (i/minus ycol (i/mmult cofactor-matrix betas))
+;;         degrees-of-freedom (- (count ycol) (inc (i/ncol betas)))
+;;         select-beta (i/sel betas 0 1)
+;;         ;; std-error (sqrt (/ (* (i/sel var-matrix 0 1) (i/mult (i/trans error) error)) degrees-of-freedom))
+;;         ;; t-stat (/ select-beta std-error)]
+;;     (select-beta))))
+
+;; We would rather deal with linear algebra errors than calculate the
+;; determinant for all cofactor matrices to check to see whether they
+;; are singular.  That is, we should try to deal with exceptions
+;; rather than using an "if-let" statement up front.
+
+(def beta-names (interleave [:intercept :time-trend :rain] [0 1 2]))
+
 (defn ols-coeff
-  "get the trend coefficient from a time-series, given a variance matrix"
-  [veg-ts cofactor-matrix var-matrix]
-  (let [ycol (i/matrix veg-ts)
-        betas (i/mmult var-matrix (i/trans cofactor-matrix) ycol)
-        error (i/minus ycol (i/mmult cofactor-matrix betas))
-        degrees-of-freedom (- (count ycol) (inc (i/ncol betas)))
-        select-beta (i/sel betas 0 1)
-        ;; std-error (sqrt (/ (* (i/sel var-matrix 0 1) (i/mult (i/trans error) error)) degrees-of-freedom))
-        ;; t-stat (/ select-beta std-error)]
-    (select-beta))))
+  [ycol cofactor-matrix]
+  (i/mmult (variance-matrix cofactor-matrix) (i/trans cofactor-matrix) ycol))
+
+(defn ols-error
+  [ycol cofactor-matrix betas]
+  (i/minus ycol (i/mmult cofactor-matrix betas)))
+
+(defn extract-ols-results
+  [ts beta cofactor-matrix beta-names]
+  (let [ycol  (i/matrix ts)
+        beta-vector (ols-coeff ycol cofactor-matrix)
+        dff (- (count ycol) (count beta-vector))
+        model-error (ols-error ycol cofactor-matrix beta-vector)]
+    beta-vector))
+
 
 ;; if [> 0 (i/det var-matrix)]
 
