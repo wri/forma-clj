@@ -5,7 +5,7 @@
 
 (ns forma.hadoop.io
   (:use cascalog.api
-        [forma.conversion :only (jobtag)]
+        [forma.date-time :only (jobtag)]
         [clojure.contrib.math :only (abs)])
   (:import [forma WholeFile]
            [cascading.tuple Fields]

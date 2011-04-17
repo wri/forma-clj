@@ -2,7 +2,7 @@
 ;; periods, as measured from some reference date. This allows for
 ;; proper temporal comparison of two unrelated datasets.
 
-(ns forma.conversion
+(ns forma.date-time
   (:use [clj-time.core :only (now epoch date-time year month
                                   in-minutes interval)]
         [clj-time.format :only (unparse formatters)]
