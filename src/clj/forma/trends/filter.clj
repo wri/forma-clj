@@ -2,6 +2,7 @@
   (:use [forma.matrix.utils :only (ones-column
                                    average
                                    variance-matrix)]
+
         [clojure.contrib.seq :only (positions)])
   (:require [incanter.core :as i]))
 

@@ -1,6 +1,6 @@
 (ns forma.trends.analysis
   (:use [forma.matrix.utils :only (variance-matrix average)]
-        [forma.trends.filter :only (deseasonalize)]
+        [forma.trends.filter :only (deseasonalize fix-time-series)]
         [forma.presentation.ndvi-filter :only (ndvi reli rain)]
         [clojure.contrib.math :only (sqrt)])
   (:require [incanter.core :as i]
@@ -20,14 +20,21 @@
   second column is a range from 1 to [num-months].  The result is a
   [num-months]x2 incanter matrix."
   [num-months]
-  (i/trans (i/bind-rows (repeat num-months 1) (range 1 (inc num-months)))))
+  (i/trans (i/bind-rows (repeat num-months 1)
+                        (range 1 (inc num-months)))))
+
+
+(defn singular?
+  "TODO: Docstring"
+  [X]
+  (<= (i/det X) 0))
+
 (defn ols-coefficient
   "extract OLS coefficient from a time-series."
   [ts]
   (let [ycol (i/trans [ts])
-        X (time-trend-cofactor (count ts))
-        V (variance-matrix X)]
-    (i/sel (i/mmult V (i/trans X) ycol) 1 0)))
+        X (time-trend-cofactor (count ts))]
+    (i/sel (i/mmult (variance-matrix X) (i/trans X) ycol) 1 0)))
 
 (defn windowed-apply 
   "apply a function [f] to a window along a sequence [xs] of length [window]"
@@ -49,8 +56,8 @@
   "whoopbang will find the greatest OLS drop over a timeseries [ts] given 
   sub-timeseries of length [long-block].  The drops are smoothed by a moving 
   average window of length [window]."
-  [ts long-block window]
-  (->> (deseasonalize ts)
+  [ts reli-ts long-block window]
+  (->> (fix-time-series ts reli-ts)
        (windowed-apply ols-coefficient long-block)
        (windowed-apply average window)
        (reduce min)))
@@ -69,67 +76,40 @@
 ;; that we only are every concerned with the coefficient on the time
 ;; trend (which is reasonable, given the purpose for this routine).  
 
-(defn with-rain-cofactor
-  "construct the cofactors for the Whizbang regression.  This is a
-  special case of a more general regression with many more columns.
-  This assumes that the time-series are already of the same length."
-  [veg-ts rain-ts]
-  {:pre (= (count rain-ts) (count veg-ts))}
-  (i/bind-columns (time-trend-cofactor (count veg-ts)) (i/matrix rain-ts)))
+;; TODO loop through columns to bind for more general stuff.
+;; TODO handle singular matrix errors.
 
-(defn std-error
-  "get the time-trend coefficient's standard error from a variance matrix
-  and the vegetation time-series"
-  [veg-ts cofactor-matrix var-matrix]
-  (let [ycol (i/matrix veg-ts)
-        var  (s/variance ycol)]))
+(defn t-range
+  "Provide a range from 1 through the length of a reference vector [v].
+  This function was first used to create a time-trend variable to extract
+  the linear trend from a time-series (ndvi)."
+  [v]
+  (range 1 (inc (count v))))
 
+(defn whizbang-general
+  "A general version of the original whizbang function, which extracted the time
+  trend and the t-statistic on the time trend from a given time-series.  The more
+  general function allows for more attributes to be extracted (e.g., total model
+  error).  It also allows for a variable number of cofactors (read: conditioning
+  variables) like rainfall.  The time-series is first preconditioned or filtered
+  (or both) and then fed into the y-column vector of a linear model;
+  the cofactors comprise the cofactor matrix X, which is automatically
+  bound to a column of ones for the intercept.  Only the second
+  element from each of the attribute vectors is collected; the second
+  element is that associated with the time-trend. The try statement is
+  meant to check whether the cofactor matrix is singular."
+  [attributes t-series & cofactors]
+  #_{:pre [(not (empty? cofactors))]}
+  (let [y (deseasonalize t-series)
+        X (if (empty? cofactors)
+            (i/matrix (t-range y))
+            (apply i/bind-columns
+                   (t-range y)
+                   cofactors))]
+    (try
+      (map second (map (linear-model y X)
+                       attributes))
+      (catch IllegalArgumentException e
+        (repeat (count attributes) 0)))))
 
-
-;; sum-sq-errors (i/mmult ycol (i/minus (i/identity-matrix (count ycol)) hat-matrix) (i/trans ycol))
-
-;; (defn ols-coeff
-;;   "get the trend coefficient from a time-series, given a variance matrix"
-;;   [veg-ts cofactor-matrix var-matrix]
-;;   (let [ycol (i/matrix veg-ts)
-;;         betas (i/mmult var-matrix (i/trans cofactor-matrix) ycol)
-;;         error (i/minus ycol (i/mmult cofactor-matrix betas))
-;;         degrees-of-freedom (- (count ycol) (inc (i/ncol betas)))
-;;         select-beta (i/sel betas 0 1)
-;;         ;; std-error (sqrt (/ (* (i/sel var-matrix 0 1) (i/mult (i/trans error) error)) degrees-of-freedom))
-;;         ;; t-stat (/ select-beta std-error)]
-;;     (select-beta))))
-
-;; We would rather deal with linear algebra errors than calculate the
-;; determinant for all cofactor matrices to check to see whether they
-;; are singular.  That is, we should try to deal with exceptions
-;; rather than using an "if-let" statement up front.
-
-(def beta-names (interleave [:intercept :time-trend :rain] [0 1 2]))
-
-(defn ols-coeff
-  [ycol cofactor-matrix]
-  (i/mmult (variance-matrix cofactor-matrix) (i/trans cofactor-matrix) ycol))
-
-(defn ols-error
-  [ycol cofactor-matrix betas]
-  (i/minus ycol (i/mmult cofactor-matrix betas)))
-
-(defn extract-ols-results
-  [ts beta cofactor-matrix beta-names]
-  (let [ycol  (i/matrix ts)
-        beta-vector (ols-coeff ycol cofactor-matrix)
-        dff (- (count ycol) (count beta-vector))
-        model-error (ols-error ycol cofactor-matrix beta-vector)]
-    beta-vector))
-
-
-;; if [> 0 (i/det var-matrix)]
-
-(defn whizbang
-  "extract both the OLS trend coefficient and the t-stat associated
-   with the trend characteristic"
-  [veg-ts rain-ts]
-  (let [cofactor-matrix (with-rain-cofactor veg-ts rain-ts) 
-        var-matrix (variance-matrix cofactor-matrix)]
-    ((juxt ols-coeff std-error) veg-ts cofactor-matrix var-matrix)))
+(def whizbang (partial whizbang-general [:coefs :t-tests]))

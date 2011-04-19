@@ -95,13 +95,32 @@
 (let [x forma-range]
   (c/slider #(i/set-data plot2
                          [x (hp-filter (fix-time-series #{1} reli ndvi) %)])
-            (map (partial round-places 2) (range 0 20 0.1))
+            (map (partial round-places 2) (range 0 1000 1))
             "lambda"))
 
 ;; Add the original kill plots, just in case we want to show the
 ;; original scale. Note that we can just turn this feature on and off.
 
-(c/add-points plot2 forma-range kill-vals :shape 1 :series-label "Unreliable Values in Original NDVI Series")
+;; (c/add-points plot2 forma-range kill-vals :shape 1 :series-label "Unreliable Values in Original NDVI Series")
+
+;; Initialize the first plot with the raw NDVI time-series; the
+;; default color for this line is blue.  In order to view this plot,
+;; you only need to type (i/view plot1) in the REPL.
+
+(def plot3
+  (doto (c/time-series-plot forma-range
+                      ndvi
+                      :title ""
+                      :x-label ""
+                      :y-label ""
+                      :legend true
+                      :series-label "NDVI")
+    (c/set-stroke-color java.awt.Color/green)))
 
 
+;; Add the points indicating bad (read: unreliable) values on the
+;; original NDVI time-series.
 
+(c/add-points plot3 forma-range kill-vals :series-label "UNRELIABLE VALUES")
+
+(doto (c/add-lines plot3 forma-range (hp-filter (fix-time-series #{1} reli ndvi)  2) :series-label "FILTER"))
