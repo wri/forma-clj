@@ -6,7 +6,10 @@
 (defn variance-matrix
   "construct a variance-covariance matrix from a given matrix X"
   [X]
-  (i/solve (i/mmult (i/trans X) X)))
+  (let [product (i/mmult (i/trans X) X)]
+    (i/solve (if (seq? product)
+               product
+               (vector product)))))
 
 (defn column-matrix
   "create an incanter column matrix of the supplied value with length

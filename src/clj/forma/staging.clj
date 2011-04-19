@@ -34,42 +34,4 @@
 ;; need to get an associated time-series for rain. the function will
 ;; therefore change.
 
-(defn with-rain-cofactor
-  "construct a time-series with a "
-  [x]
-  x)
-
-(defn std-error
-  "get the standard error from a variance matrix"
-  [x]
-  (+ x 2))
-
-(defn ols-coeff
-  "get the trend coefficient from a time-series, given a variance matrix"
-  [ts]
-  (let [ycol (i/trans [ts])
-        X (with-rain-cofactor (count ts))
-        V (variance-matrix X)]))
-
-(defn whiz-ols
-  "extract both the OLS trend coefficient and the t-stat associated
-   with the trend characteristic"
-  [ts V]
-  ((juxt ols-coeff whiz-ols)) ts V)
-
-
-;; range between two dates in months
-
-
-
-
-(defn num-years-to-milliseconds [x] (* 365 24 60 60 1000 x))
-(def offset (num-years-to-milliseconds (- 2000 1970)))
-(def dates
-  (map (comp #(+ offset %)
-             num-years-to-milliseconds
-             #(/ % 12))
-       (range (count ndvi))))
-
-
 
