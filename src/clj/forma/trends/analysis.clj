@@ -107,7 +107,7 @@
                    (t-range y)
                    cofactors))]
     (try
-      (map second (map (linear-model y X)
+      (map second (map (s/linear-model y X)
                        attributes))
       (catch IllegalArgumentException e
         (repeat (count attributes) 0)))))
