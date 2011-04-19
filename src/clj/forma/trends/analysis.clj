@@ -100,7 +100,7 @@
   meant to check whether the cofactor matrix is singular."
   [attributes t-series & cofactors]
   #_{:pre [(not (empty? cofactors))]}
-  (let [y (deseasonalize t-series)
+  (let [y (deseasonalize (vec t-series))
         X (if (empty? cofactors)
             (i/matrix (t-range y))
             (apply i/bind-columns
