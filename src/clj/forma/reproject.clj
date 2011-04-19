@@ -4,7 +4,7 @@
 
 (ns forma.reproject
   (:use cascalog.api
-        forma.modis
+        forma.source.modis
         [clojure.contrib.generic.math-functions :only (cos floor abs sqr)]))
 
 ;; ## MODIS Reprojection

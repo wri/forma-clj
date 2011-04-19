@@ -1,4 +1,4 @@
-;; TODO -- talk about our assumptions on what data's coming in to
+;; TODO: -- talk about our assumptions on what data's coming in to
 ;; here.  This is where we'll be implementing OLS, using either infer
 ;; or incanter on the resulting matrices. Again, we should make sure
 ;; that we're operating on vectors, not seqs. (Turn a seq into a
@@ -104,7 +104,7 @@
 
 ;; ## Walking the Matrix
 ;;
-;; TODO -- documentation on why we do this. Nearest neighbor analysis links.
+;; TODO: -- documentation on why we do this. Nearest neighbor analysis links.
 
 (defn walk-matrix
   "Walks along the rows and columns of a matrix at the given window

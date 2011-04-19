@@ -2,14 +2,14 @@
 ;; NOAA PRECL data at 0.5 degree resolution, and processing them into
 ;; tuples suitable for machine learning against MODIS data.
 ;;
-;; As in `forma.hdf`, the overall goal here is to process an NOAA
-;; PREC/L dataset into tuples of the form
+;; As in `forma.source.hdf`, the overall goal here is to process an
+;; NOAA PREC/L dataset into tuples of the form
 ;;
 ;;     [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk-pix]
 
-(ns forma.rain
+(ns forma.source.rain
   (:use cascalog.api
-        [forma.hadoop :only (get-bytes)]
+        [forma.hadoop.io :only (get-bytes)]
         [forma.reproject :only (rain-sampler dimensions-at-res)])
   (:require [cascalog.ops :as c]
             [clojure.contrib.io :as io])
@@ -53,7 +53,7 @@
   PREC/L binary data file at 0.5 degree resolution, or 24 groups
   of `(* 360 720)` floats. To make sure that the returned
   GZIPInputStream will fully read into a supplied byte array, see
-  `forma.rain/force-fill`."
+  `forma.source.rain/force-fill`."
   [arg]
   (let [^InputStream stream (io/input-stream arg)
         rainbuf-size (* 24 (floats-for-res 0.5))]
@@ -256,10 +256,10 @@ binary files are packaged as hadoop BytesWritable objects."}
 
 (defn fancy-index
   "Reduction step to process all tuples produced by
-  `forma.rain/cross-join`. We break this out into a separate query
-  because the cross-join forces all tuples to be processed by a single
-  reducer. This step allows the flow to branch out again from that
-  bottleneck, when run on a cluster."
+  `forma.source.rain/cross-join`. We break this out into a separate
+  query because the cross-join forces all tuples to be processed by a
+  single reducer. This step allows the flow to branch out again from
+  that bottleneck, when run on a cluster."
   [m-res ll-res c-size source]
   (<- [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk]
       (source ?dataset ?spatial-res ?temporal-res ?mod-h ?mod-v ?date ?raindata)
@@ -268,10 +268,9 @@ binary files are packaged as hadoop BytesWritable objects."}
                     ?raindata ?mod-h ?mod-v :> ?chunkid ?chunk)
       (float-array ?chunk :> ?float-chunk)))
 
-
 ;; Finally, the chunker. This subquery is analogous to
-;; `forma.hdf/modis-chunks`. This is the only subquery that needs to
-;; be called, when processing new PRECL data.
+;; `forma.source.hdf/modis-chunks`. This is the only subquery that
+;; needs to be called, when processing new PRECL data.
 
 (defn rain-chunks
   "Cascalog subquery to fully process a WGS84 float array at the

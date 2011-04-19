@@ -34,12 +34,6 @@
   (concat (take idx coll) (list val) (drop (inc idx) coll)))
 
 (defn average
-  "average of a list" 
+  "average of a list"
   [lst] 
   (float (/ (reduce + lst) (count lst))))
-
-;; predicate invoked by (above-x? 10)
-
-(defn in-range?
-  [smap val]
-  (cond (and (>= val (first smap)) (<= val (last smap))) val))

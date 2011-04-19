@@ -1,4 +1,4 @@
-(ns forma.modis)
+(ns forma.source.modis)
 
 ;; From the [user's guide](http://goo.gl/uoi8p) to MODIS product MCD45
 ;; (burned area): "The MODIS data are re-projected using an equiareal
