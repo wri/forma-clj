@@ -64,7 +64,9 @@
 ;; Add the points indicating bad (read: unreliable) values on the
 ;; original NDVI time-series.
 
-(c/add-points plot1 forma-range kill-vals :series-label "Unreliable Values")
+(defn add-unreliable
+  []
+  (c/add-points plot1 forma-range kill-vals :series-label "Unreliable Values"))
 
 ;; Create a new plot with the HP-filter to be updated by the slider,
 ;; based on the interpolated NDVI values.
@@ -80,16 +82,18 @@
 ;; Add a plot of the interpolated NDVI values to serve as the
 ;; background to the updating slider.
 
-(c/add-lines plot2 forma-range (fix-time-series #{1} reli ndvi) :series-label "Conditioned NDVI")
+(defn add-conditioned-ndvi []
+  (c/add-lines plot2 forma-range (fix-time-series #{1} reli ndvi) :series-label "Conditioned NDVI"))
 
 ;; Add the slider to the original time-series plot, defined in the
 ;; first definition of plot2
 
-(let [x forma-range]
-  (c/slider #(i/set-data plot2
-                         [x (hp-filter (fix-time-series #{1} reli ndvi) %)])
-            (map (partial round-places 2) (range 0 1000 1))
-            "lambda"))
+(defn add-ndvi-slider []
+  (let [x forma-range]
+    (c/slider #(i/set-data plot2
+                           [x (hp-filter (fix-time-series #{1} reli ndvi) %)])
+              (map (partial round-places 2) (range 0 1000 1))
+              "lambda")))
 
 ;; Add the original kill plots, just in case we want to show the
 ;; original scale. Note that we can just turn this feature on and off.
@@ -114,6 +118,8 @@
 ;; Add the points indicating bad (read: unreliable) values on the
 ;; original NDVI time-series.
 
-(c/add-points plot3 forma-range kill-vals :series-label "UNRELIABLE VALUES")
+(defn add-unreliable-views []
+  (c/add-points plot3 forma-range kill-vals :series-label "UNRELIABLE VALUES"))
 
-(doto (c/add-lines plot3 forma-range (hp-filter (fix-time-series #{1} reli ndvi)  2) :series-label "FILTER"))
+(defn add-filter []
+  (doto (c/add-lines plot3 forma-range (hp-filter (fix-time-series #{1} reli ndvi)  2) :series-label "FILTER")))
