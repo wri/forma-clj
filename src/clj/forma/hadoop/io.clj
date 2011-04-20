@@ -166,12 +166,11 @@ tuples into the supplied directory, using the format specified by
 ;;to deal with splits of 64MB. By keeping our sequencefiles large, we
 ;;take advantage of this property.
 
-
 ;; TODO: -- check docs for comment on jobtag, and update this
 ;; section. We need to change this into a chunk-tap. Check the
 ;; tracker project for how to do this!
 
-(defn modis-seqfile
+(defn chunk-output-tap
   "Cascading tap to sink MODIS tuples into a directory structure based
   on dataset, temporal and spatial resolution, tileid, and a custom
   `jobtag`. Makes use of Cascading's
@@ -181,7 +180,7 @@ tuples into the supplied directory, using the format specified by
                     (str "%s/%s-%s/%s/" (jobtag) "/")))
 
 #_(defn chunk-tap
-    (cascalog-tap modis-seqfile))
+    (cascalog-tap chunk-output-tap))
 
 ;; ## BytesWritable Interaction
 ;;

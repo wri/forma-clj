@@ -1,7 +1,8 @@
 (ns forma.hadoop.jobs.chunk-rain
   (:use forma.static
         cascalog.api
-        [forma.hadoop.io :only (modis-seqfile all-files)])
+        [forma.hadoop.io :only (chunk-output-tap
+                                wholefile-tap)])
   (:require [cascalog.ops :as c]
             [forma.source.rain :as r])
   (:gen-class))
@@ -10,7 +11,7 @@
   "Like `modis-chunker`, for NOAA PRECL data files."
   [m-res ll-res c-size tile-seq in-dir out-dir]
   (let [source (wholefile-tap in-dir)]
-    (?- (modis-seqfile out-dir)
+    (?- (chunk-output-tap out-dir)
         (r/rain-chunks m-res ll-res c-size tile-seq source))))
 
 (defn s3-path [path]
