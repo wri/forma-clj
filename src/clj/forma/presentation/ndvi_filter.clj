@@ -64,8 +64,7 @@
 ;; Add the points indicating bad (read: unreliable) values on the
 ;; original NDVI time-series.
 
-(defn add-unreliable
-  []
+(defn add-unreliable[]
   (c/add-points plot1 forma-range kill-vals :series-label "Unreliable Values"))
 
 ;; Create a new plot with the HP-filter to be updated by the slider,
@@ -73,17 +72,16 @@
 
 (def plot2 (c/time-series-plot forma-range
                                (hp-filter (fix-time-series #{1} reli ndvi) 2)
-                               :title "NDVI and H-P Filter"
+                               :title ""
                                :x-label ""
                                :y-label ""
-                               :legend true
-                               :series-label "H-P Filter"))
+                               :series-label ""))
 
 ;; Add a plot of the interpolated NDVI values to serve as the
 ;; background to the updating slider.
 
 (defn add-conditioned-ndvi []
-  (c/add-lines plot2 forma-range (fix-time-series #{1} reli ndvi) :series-label "Conditioned NDVI"))
+  (c/add-lines plot2 forma-range (fix-time-series #{1} reli ndvi) :series-label ""))
 
 ;; Add the slider to the original time-series plot, defined in the
 ;; first definition of plot2
@@ -98,7 +96,8 @@
 ;; Add the original kill plots, just in case we want to show the
 ;; original scale. Note that we can just turn this feature on and off.
 
-;; (c/add-points plot2 forma-range kill-vals :shape 1 :series-label "Unreliable Values in Original NDVI Series")
+(defn add-kill-points []
+  (c/add-points plot2 forma-range kill-vals :shape 1 :series-label "UNRELIABLE"))
 
 ;; Initialize the first plot with the raw NDVI time-series; the
 ;; default color for this line is blue.  In order to view this plot,

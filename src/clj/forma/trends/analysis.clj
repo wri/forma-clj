@@ -23,9 +23,8 @@
   (i/trans (i/bind-rows (repeat num-months 1)
                         (range 1 (inc num-months)))))
 
-
 (defn singular?
-  "TODO: Docstring"
+  "Check to see if the supplied matrix `X` is singular."
   [X]
   (<= (i/det X) 0))
 
@@ -75,9 +74,6 @@
 ;; function that they serve within the total FORMA process.  We assume
 ;; that we only are every concerned with the coefficient on the time
 ;; trend (which is reasonable, given the purpose for this routine).  
-
-;; TODO loop through columns to bind for more general stuff.
-;; TODO handle singular matrix errors.
 
 (defn t-range
   "Provide a range from 1 through the length of a reference vector [v].
