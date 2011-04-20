@@ -2,8 +2,7 @@
   (:use forma.static
         cascalog.api
         [forma.hadoop.io :only (modis-seqfile
-                                all-files
-                                globbed-files)]
+                                globbed-wholefile-tap)]
         [forma.source.modis :only (valid-tiles)])
   (:require [forma.source.hdf :as h])
   (:gen-class))
@@ -19,7 +18,7 @@
   sinks them into a custom directory structure inside of
   `output-dir`."
   [subsets c-size in-dir out-dir]
-  (let [source (globbed-files in-dir)]
+  (let [source (globbed-wholefile-tap in-dir)]
     (?- (modis-seqfile out-dir)
         (h/modis-chunks source subsets chunk-size))))
 

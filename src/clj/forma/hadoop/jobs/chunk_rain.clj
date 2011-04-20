@@ -9,7 +9,7 @@
 (defn rain-chunker
   "Like `modis-chunker`, for NOAA PRECL data files."
   [m-res ll-res c-size tile-seq in-dir out-dir]
-  (let [source (all-files in-dir)]
+  (let [source (wholefile-tap in-dir)]
     (?- (modis-seqfile out-dir)
         (r/rain-chunks m-res ll-res c-size tile-seq source))))
 
