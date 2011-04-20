@@ -84,16 +84,27 @@
 ;; local fileystem, and Amazon S3 bucket paths; A path prefix of, respectively,
 ;; `hdfs://`, `file://`, and `s3://` forces the proper choice.
 
-(defn hfs-wholefile
-  "Creates a tap on HDFS using the wholefile format. Guaranteed not to
-   chop files up! Required for unsupported compression formats like
-   HDF."
-  [path]
-  (w/hfs-tap (whole-file Fields/ALL) path))
+(defn template-seqfile
+  "Opens up a Cascading [TemplateTap](http://goo.gl/Vsnm5) that sinks
+tuples into the supplied directory, using the format specified by
+`pathstr`."
+  [path pathstr]
+  (TemplateTap. (w/hfs-tap (w/sequence-file Fields/ALL) path) pathstr))
 
 (defn globhfs-wholefile
   [pattern]
   (GlobHfs. (whole-file Fields/ALL) pattern))
+
+(defn globhfs-seqfile
+  [pattern]
+  (GlobHfs. (w/sequence-file Fields/ALL) pattern))
+
+(defn hfs-wholefile
+  "Creates a tap on HDFS using the wholefile format. Guaranteed not to
+   chop files up! Required for compression formats unsupported by
+   hadoop."
+  [path]
+  (w/hfs-tap (whole-file Fields/ALL) path))
 
 (defn wholefile-tap
   "Subquery to return all files in the supplied directory. Files will
@@ -111,31 +122,6 @@
   (let [source (globhfs-wholefile pattern)]
     (<- [?filename ?file]
         (source ?filename ?file))))
-
-(defn modis-chunker
-  "Cascalog job that takes set of dataset identifiers, a chunk size, a
-  directory containing MODIS HDF files, or a link directly to such a
-  file, and an output dir, harvests tuples out of the HDF files, and
-  sinks them into a custom directory structure inside of
-  `output-dir`."
-  [subsets c-size in-dir out-dir]
-  (let [source (globbed-wholefile-tap in-dir)]
-    (?- (modis-seqfile out-dir)
-        (h/modis-chunks source subsets chunk-size))))
-
-;; ## Intermediate Taps
-
-(defn template-seqfile
-  "Opens up a Cascading [TemplateTap](http://goo.gl/Vsnm5) that sinks
-tuples into the supplied directory, using the format specified by
-`pathstr`."
-  [path pathstr]
-  (TemplateTap. (w/hfs-tap (w/sequence-file Fields/ALL) path) pathstr))
-
-;; TODO: -- update documentation, here
-(defn globhfs-seqfile
-  [pattern]
-  (GlobHfs. (w/sequence-file Fields/ALL) pattern))
 
 ;; ## Backend Data Processing Queries
 ;;
