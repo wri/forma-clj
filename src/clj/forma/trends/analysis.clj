@@ -23,7 +23,6 @@
   (i/trans (i/bind-rows (repeat num-months 1)
                         (range 1 (inc num-months)))))
 
-
 (defn singular?
   "TODO: Docstring"
   [X]
