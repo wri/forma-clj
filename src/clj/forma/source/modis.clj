@@ -48,9 +48,9 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
          (< sample edge)
          (< line edge))))
 
-(defn tilestring->xy
-  "Extracts integer representations of the MODIS X and Y coordinates
-referenced by the supplied MODIS tilestring, of format 'XXXYYY'."
+(defn tilestring->hv
+  "Extracts integer representations of the MODIS H and V coordinates
+referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
   [tilestr]
   (map (comp #(Integer. %)
              (partial apply str))

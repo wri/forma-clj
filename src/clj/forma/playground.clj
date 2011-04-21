@@ -17,7 +17,7 @@
 (defn file-count
   "Prints the total count of files in a given directory to stdout."
   [dir]
-  (let [files (all-files dir)]
+  (let [files (wholefile-tap dir)]
     (?<- (stdout) [?count]
          (files ?filename ?file)
          (c/count ?count))))

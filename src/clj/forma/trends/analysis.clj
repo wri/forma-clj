@@ -95,7 +95,7 @@
   element is that associated with the time-trend. The try statement is
   meant to check whether the cofactor matrix is singular."
   [attributes t-series & cofactors]
-  #_{:pre [(not (empty? cofactors))]}
+  {:pre [(not (empty? cofactors))]}
   (let [y (deseasonalize (vec t-series))
         X (if (empty? cofactors)
             (i/matrix (t-range y))

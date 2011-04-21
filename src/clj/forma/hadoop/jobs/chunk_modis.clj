@@ -1,11 +1,10 @@
 (ns forma.hadoop.jobs.chunk-modis
-  (:use forma.static
-        cascalog.api
-        [forma.hadoop.io :only (modis-seqfile
-                                all-files
-                                globbed-files)]
-        [forma.source.modis :only (valid-tiles)])
-  (:require [forma.source.hdf :as h])
+  (:use cascalog.api
+        [forma.hadoop.io :only (chunk-tap
+                                globbed-wholefile-tap)])
+  (:require [forma.source.hdf :as h]
+            [forma.source.modis :as m]
+            [forma.static :as s])
   (:gen-class))
 
 ;; And, here we are, at the chunkers. These simply execute the
@@ -19,14 +18,14 @@
   sinks them into a custom directory structure inside of
   `output-dir`."
   [subsets c-size in-dir out-dir]
-  (let [source (globbed-files in-dir)]
-    (?- (modis-seqfile out-dir)
-        (h/modis-chunks source subsets chunk-size))))
+  (let [source (globbed-wholefile-tap in-dir)]
+    (?- (chunk-tap out-dir)
+        (h/modis-chunks subsets c-size source))))
 
 ;; TEMPORARY stuff for the big run :-*
 (defn tiles->globstring
   [& tiles]
-  {:pre [(not (some false? (map #(contains? valid-tiles %) tiles)))]}
+  {:pre [(not (some false? (map #(contains? m/valid-tiles %) tiles)))]}
   (let [hv-seq (interpose "," (for [[th tv] tiles] (format "h%02dv%02d" th tv)))]
     (format "*{%s}*" (apply str hv-seq))))
 
@@ -40,6 +39,6 @@
   [input-path output-path & tiles]
   (let [tileseq (map read-string tiles)
         tilestring (str input-path (apply tiles->globstring tileseq))]
-    (modis-chunker forma-subsets 24000
+    (modis-chunker s/forma-subsets s/chunk-size
                    (s3-path input-path)
                    (s3-path output-path))))

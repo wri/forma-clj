@@ -27,7 +27,7 @@
 ;; input split. Most word counting examples ignore this key.
 ;;
 ;; The data from each input split goes to a single mapper. From the
-;; wonderful [Yahoo!  tutorial](http://goo.gl/u2hOe); "By default, the
+;; wonderful [Yahoo! tutorial](http://goo.gl/u2hOe); "By default, the
 ;; FileInputFormat and its descendants break a file up into 64 MB
 ;; chunks (the same size as blocks in HDFS)." By splitting a file on
 ;; block size, Hadoop allows processing on huge documents to scale
@@ -64,13 +64,17 @@
 ;; WholeFile [scheme](http://goo.gl/Doggg) to be able to take
 ;; advantage of [cascading's Tap abstraction](http://goo.gl/RNMLT) for
 ;; data sources. Once we had WholeFile.java, the clojure wrapper
-;; became trivial:
+;; became trivial.
+
+;; ## Cascading Schemes
 
 (defn whole-file
   "Custom scheme for dealing with entire files."
   [field-names]
   (WholeFile. (w/fields field-names)))
 
+;; ## Cascading Taps
+;;
 ;; Another helpful feature provided by cascading is the ability to
 ;; pair a scheme with a special [HFS class](http://goo.gl/JHpNT), that
 ;; allows access to a number of different file systems. A tap
@@ -78,20 +82,31 @@
 ;; and the tap inhales everything inside of it, passing it in as food
 ;; for whatever scheme it's associated with. HFS can deal with HDFS,
 ;; local fileystem, and Amazon S3 bucket paths; A path prefix of, respectively,
-;; hdfs://, file://, and s3:// forces the proper choice.
+;; `hdfs://`, `file://`, and `s3://` forces the proper choice.
 
-(defn hfs-wholefile
-  "Creates a tap on HDFS using the wholefile format. Guaranteed not to
-   chop files up! Required for unsupported compression formats like
-   HDF."
-  [path]
-  (w/hfs-tap (whole-file Fields/ALL) path))
+(defn template-seqfile
+  "Opens up a Cascading [TemplateTap](http://goo.gl/Vsnm5) that sinks
+tuples into the supplied directory, using the format specified by
+`pathstr`."
+  [path pathstr]
+  (TemplateTap. (w/hfs-tap (w/sequence-file Fields/ALL) path) pathstr))
 
 (defn globhfs-wholefile
   [pattern]
   (GlobHfs. (whole-file Fields/ALL) pattern))
 
-(defn all-files
+(defn globhfs-seqfile
+  [pattern]
+  (GlobHfs. (w/sequence-file Fields/ALL) pattern))
+
+(defn hfs-wholefile
+  "Creates a tap on HDFS using the wholefile format. Guaranteed not to
+   chop files up! Required for compression formats unsupported by
+   hadoop."
+  [path]
+  (w/hfs-tap (whole-file Fields/ALL) path))
+
+(defn wholefile-tap
   "Subquery to return all files in the supplied directory. Files will
   be returned as 2-tuples, formatted as (filename, file) The filename
   is a text object, while the file is encoded as a Hadoop
@@ -101,53 +116,12 @@
     (<- [?filename ?file]
         (source ?filename ?file))))
 
-(defn globbed-files
-  "Same as all-files, but takes a pattern."
+(defn globbed-wholefile-tap
+  "Same as `wholefile-tap`, but takes a pattern."
   [pattern]
   (let [source (globhfs-wholefile pattern)]
     (<- [?filename ?file]
         (source ?filename ?file))))
-
-;; ## Intermediate Taps
-
-(defn template-seqfile
-  "Opens up a Cascading [TemplateTap](http://goo.gl/Vsnm5) that sinks
-tuples into the supplied directory, using the format specified by
-`pathstr`."
-  [path pathstr]
-  (TemplateTap. (w/hfs-tap (w/sequence-file Fields/ALL) path) pathstr))
-
-;; TODO: -- update documentation, here@
-(defn globhfs-seqfile
-  [pattern]
-  (GlobHfs. (w/sequence-file Fields/ALL) pattern))
-
-;; ## BytesWritable Interaction
-;;
-;; For schemes that specifically deal with Hadoop BytesWritable
-;; objects, we provide the following methods to abstract away the
-;; confusing java details. (For example, while a BytesWritable object
-;; wraps a byte array, not all of the bytes returned by the getBytes
-;; method are valid. As mentioned in the
-;; [documentation](http://goo.gl/3qzyc), "The data is only valid
-;; between 0 and getLength() - 1.")
-
-(defn hash-str
-  "Generates a unique identifier for the supplied BytesWritable
-  object. Useful as a filename, when worried about clashes."
-  [^BytesWritable bytes]
-  (str (abs (.hashCode bytes))))
-
-(defn get-bytes
-  "Extracts a byte array from a Hadoop BytesWritable object. As
-  mentioned in the [BytesWritable javadoc](http://goo.gl/cjjlD), only
-  the first N bytes are valid, where N = `(.getLength byteswritable)`."
-  [^BytesWritable bytes]
-  (byte-array (.getLength bytes)
-              (.getBytes bytes)))
-
-
-;; TODO: update docs
 
 ;; ## Backend Data Processing Queries
 ;;
@@ -192,16 +166,83 @@ tuples into the supplied directory, using the format specified by
 ;;to deal with splits of 64MB. By keeping our sequencefiles large, we
 ;;take advantage of this property.
 
+;; ### Bucket to Cluster
+;;
+;; To get tuples back out of our directory structure on S3, we employ
+;; Cascading's [GlobHFS] (http://goo.gl/1Vwdo) tap, along with an
+;; interface tailored for datasets stored in the MODIS sinusoidal
+;; projection. For details on the globbing syntax, see
+;; [here](http://goo.gl/uIEzu).
 
 ;; TODO: -- check docs for comment on jobtag, and update this
 ;; section. We need to change this into a chunk-tap. Check the
 ;; tracker project for how to do this!
 
-(defn modis-seqfile
-  "Cascading tap to sink MODIS tuples into a directory structure based
-  on dataset, temporal and spatial resolution, tileid, and a custom
-  `jobtag`. Makes use of Cascading's
-  [TemplateTap](http://goo.gl/txP2a)."
-  [out-dir]
-  (template-seqfile out-dir
-                    (str "%s/%s-%s/%s/" (jobtag) "/")))
+(defn globstring
+  "Takes a path ending in `/` and collections of nested
+  subdirectories, and returns a globstring formatted for cascading's
+  GlobHFS. (`*` may be substituted in for any argument but path.)
+
+    Example Usage:
+    (globstring \"s3n://bucket/\" [\"ndvi\" \"evi\"] [\"1000-32\"] *)
+    ;=> \"s3://bucket/{ndvi,evi}/{1000-32}/*/*/\"
+
+    (globstring \"s3n://bucket/\" * * [\"008006\" \"033011\"])
+    ;=> \"s3://bucket/*/*/{008006,033011}/*/\""
+  [basepath & pieces]
+  (let [comma-string (fn [arg] (apply str (interpose "," arg)))
+        rest (map (fn [arg]
+                    (if (= * arg)
+                      "*/"
+                      (format "{%s}/" (comma-string (if (coll? arg)
+                                                      arg [arg])))))
+                  pieces)]
+    (apply str basepath rest)))
+
+(defn chunk-tap
+  "Generalized source and sink for the chunk tuples stored and
+  processed by the FORMA system. The source is a cascading tap that
+  sinks MODIS tuples into a directory structure based on dataset,
+  temporal and spatial resolution, tileid, and a custom `jobtag`. The
+  `chunk-tap`source makes use of Cascading's
+  [TemplateTap](http://goo.gl/txP2a).
+
+  The sink makes use of `globhfs-seqfile` to draw tuples back out of
+  the directory structure using a globstring constructed out of the
+  supplied basepath and collections of datasets, resolutions, tiles
+  and specific data runs, identified by jobtag."
+  ([out-dir]
+     (template-seqfile out-dir
+                       (str "%s/%s-%s/%s/" (jobtag) "/")))
+  ([basepath datasets resolutions]
+     (chunk-tap basepath datasets resolutions * *))
+  ([basepath datasets resolutions tiles]
+     (chunk-tap basepath datasets resolutions tiles *))
+  ([basepath datasets resolutions tiles batches]
+     (globhfs-seqfile (globstring basepath datasets
+                                  resolutions
+                                  tiles batches))))
+
+;; ## BytesWritable Interaction
+;;
+;; For schemes that specifically deal with Hadoop BytesWritable
+;; objects, we provide the following methods to abstract away the
+;; confusing java details. (For example, while a BytesWritable object
+;; wraps a byte array, not all of the bytes returned by the getBytes
+;; method are valid. As mentioned in the
+;; [documentation](http://goo.gl/3qzyc), "The data is only valid
+;; between 0 and getLength() - 1.")
+
+(defn hash-str
+  "Generates a unique identifier for the supplied BytesWritable
+  object. Useful as a filename, when worried about clashes."
+  [^BytesWritable bytes]
+  (str (abs (.hashCode bytes))))
+
+(defn get-bytes
+  "Extracts a byte array from a Hadoop BytesWritable object. As
+  mentioned in the [BytesWritable javadoc](http://goo.gl/cjjlD), only
+  the first N bytes are valid, where N = `(.getLength byteswritable)`."
+  [^BytesWritable bytes]
+  (byte-array (.getLength bytes)
+              (.getBytes bytes)))

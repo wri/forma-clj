@@ -51,7 +51,8 @@
   MOD13A3 HDF file. No simple, descriptive tag exists within the
   metadata, as of 2/05/2011, so this ends up being the best
   solution."}
-  modis-subsets {:evi "monthly EVI"
+  modis-subsets
+  {:evi "monthly EVI"
    :qual "VI Quality"
    :red "red reflectance"
    :nir "NIR reflectance"
@@ -249,7 +250,7 @@ of a MODIS TileID acts as a key to retrieve this data."
   represented as seqs of floats. Be sure to convert chunks to vector
   before running any sort of data analysis, as seqs require linear
   time for lookups."
-  [source datasets chunk-size]
+  [datasets chunk-size source]
   (let [keys ["SHORTNAME" "TileID" "RANGEBEGINNINGDATE"]]
     (<- [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?int-chunk]
         (source ?filename ?hdf)

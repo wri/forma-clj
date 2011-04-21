@@ -52,17 +52,13 @@
   [T]
   {:pre [(>= T 9)]
    :post [(= [T T] (i/dim %))]}
-  (let [first-row  (insert-into-zeros 0 T [1 -2 1])
-        second-row (insert-into-zeros 0 T [-2 5 -4 1])
-        inner (for [x (range (inc (- T 5)))]
-                   (insert-into-zeros x T [1 -4 6 -4 1]))]
-    (i/matrix
-     (concat [first-row]
-             [second-row]
-             inner
-             [(reverse second-row)]
-             [(reverse first-row)]))))
-
+  (let [[first second :as but-2]
+        (for [x (range (- T 2))
+              :let [idx (if (>= x 2) (- x 2) 0)]]
+          (insert-into-zeros idx T (cond (= x 0)  [1 2 -1]
+                                         (= x 1)  [-2 5 4 1]
+                                         :else [1 -4 6 -4 1])))]
+    (i/matrix (concat but-2 (map reverse [second first])))))
 
 (defn hp-filter
   "return a smoothed time-series, given the HP filter parameter."

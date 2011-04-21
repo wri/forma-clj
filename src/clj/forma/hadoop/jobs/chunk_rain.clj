@@ -1,16 +1,16 @@
 (ns forma.hadoop.jobs.chunk-rain
-  (:use forma.static
-        cascalog.api
-        [forma.hadoop.io :only (modis-seqfile all-files)])
-  (:require [cascalog.ops :as c]
-            [forma.source.rain :as r])
+  (:use cascalog.api
+        [forma.hadoop.io :only (chunk-tap
+                                wholefile-tap)])
+  (:require [forma.source.rain :as r]
+            [forma.static :as s])
   (:gen-class))
 
 (defn rain-chunker
   "Like `modis-chunker`, for NOAA PRECL data files."
   [m-res ll-res c-size tile-seq in-dir out-dir]
-  (let [source (all-files in-dir)]
-    (?- (modis-seqfile out-dir)
+  (let [source (wholefile-tap in-dir)]
+    (?- (chunk-tap out-dir)
         (r/rain-chunks m-res ll-res c-size tile-seq source))))
 
 (defn s3-path [path]
@@ -20,6 +20,6 @@
 (defn -main
   "TODO: Example usage."
   [input-path output-path & tiles]
-  (rain-chunker "1000" 0.5 24000 (map read-string tiles)
+  (rain-chunker "1000" 0.5 s/chunk-size (map read-string tiles)
                 (s3-path input-path)
                 (s3-path output-path)))
