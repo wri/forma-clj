@@ -208,10 +208,9 @@ identified by jobtag."
   ([basepath datasets resolutions tiles]
      (chunk-source-tap basepath datasets resolutions tiles *))
   ([basepath datasets resolutions tiles batches]
-     (let [pattern (apply globstring
-                          basepath datasets
-                          resolutions
-                          tiles batches)]
+     (let [pattern (globstring basepath datasets
+                               resolutions
+                               tiles batches)]
        (globhfs-seqfile pattern))))
 
 (defn chunk-sink-tap

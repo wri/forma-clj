@@ -1,6 +1,6 @@
 (ns forma.hadoop.jobs.load-tseries
   (:use cascalog.api
-        [forma.hadoop.io :only (chunk-tap)])
+        [forma.hadoop.io :only (chunk-source-tap)])
   (:require [cascalog.ops :as c])
   (:gen-class))
 
@@ -17,7 +17,7 @@
   "Takes in a path and a number of pieces, and performs a test
   operation on all tuples matching the glob."
   [path & pieces]
-  (let [source (apply chunk-tap path pieces)]
+  (let [source (apply chunk-source-tap path pieces)]
     (?<- (stdout)
          [?dataset ?tilestring ?date ?count]
          (source ?dataset ?s-res ?t-res ?tilestring ?date ?chunkid ?chunk)
