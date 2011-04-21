@@ -166,10 +166,6 @@ tuples into the supplied directory, using the format specified by
 ;;to deal with splits of 64MB. By keeping our sequencefiles large, we
 ;;take advantage of this property.
 
-;; TODO: -- check docs for comment on jobtag, and update this
-;; section. We need to change this into a chunk-tap. Check the
-;; tracker project for how to do this!
-
 ;; ### Bucket to Cluster
 ;;
 ;; To get tuples back out of our directory structure on S3, we employ
@@ -177,6 +173,10 @@ tuples into the supplied directory, using the format specified by
 ;; interface tailored for datasets stored in the MODIS sinusoidal
 ;; projection. For details on the globbing syntax, see
 ;; [here](http://goo.gl/uIEzu).
+
+;; TODO: -- check docs for comment on jobtag, and update this
+;; section. We need to change this into a chunk-tap. Check the
+;; tracker project for how to do this!
 
 (defn globstring
   "Takes a path ending in `/` and collections of nested
@@ -199,32 +199,29 @@ tuples into the supplied directory, using the format specified by
                   pieces)]
     (apply str basepath rest)))
 
-(defn chunk-source-tap
-  "Constructs a globstring out of the supplied basepath and
-collections of datasets, resolutions, tiles and specific data runs,
-identified by jobtag."
+(defn chunk-tap
+  "Generalized source and sink for the chunk tuples stored and
+  processed by the FORMA system. The source is a cascading tap that
+  sinks MODIS tuples into a directory structure based on dataset,
+  temporal and spatial resolution, tileid, and a custom `jobtag`. The
+  `chunk-tap`source makes use of Cascading's
+  [TemplateTap](http://goo.gl/txP2a).
+
+  The sink makes use of `globhfs-seqfile` to draw tuples back out of
+  the directory structure using a globstring constructed out of the
+  supplied basepath and collections of datasets, resolutions, tiles
+  and specific data runs, identified by jobtag."
+  ([out-dir]
+     (template-seqfile out-dir
+                       (str "%s/%s-%s/%s/" (jobtag) "/")))
   ([basepath datasets resolutions]
-     (chunk-source-tap basepath datasets resolutions * *))
+     (chunk-tap basepath datasets resolutions * *))
   ([basepath datasets resolutions tiles]
-     (chunk-source-tap basepath datasets resolutions tiles *))
+     (chunk-tap basepath datasets resolutions tiles *))
   ([basepath datasets resolutions tiles batches]
-     (let [pattern (globstring basepath datasets
-                               resolutions
-                               tiles batches)]
-       (globhfs-seqfile pattern))))
-
-(defn chunk-sink-tap
-  "Cascading tap to sink MODIS tuples into a directory structure based
-  on dataset, temporal and spatial resolution, tileid, and a custom
-  `jobtag`. Makes use of Cascading's
-  [TemplateTap](http://goo.gl/txP2a)."
-  [out-dir]
-  (template-seqfile out-dir
-                    (str "%s/%s-%s/%s/" (jobtag) "/")))
-
-(def chunk-tap
-  (cascalog-tap chunk-source-tap
-                chunk-sink-tap))
+     (globhfs-seqfile (globstring basepath datasets
+                                  resolutions
+                                  tiles batches))))
 
 ;; ## BytesWritable Interaction
 ;;

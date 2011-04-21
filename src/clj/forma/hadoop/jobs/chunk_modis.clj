@@ -2,7 +2,7 @@
   (:use forma.static
         cascalog.api
         [forma.hadoop.io :only (chunk-tap
-                                chunk-sink-tap
+                                chunk-tap
                                 globbed-wholefile-tap)]
         [forma.source.modis :only (valid-tiles)])
   (:require [forma.source.hdf :as h])
@@ -20,7 +20,7 @@
   `output-dir`."
   [subsets c-size in-dir out-dir]
   (let [source (globbed-wholefile-tap in-dir)]
-    (?- (chunk-sink-tap out-dir)
+    (?- (chunk-tap out-dir)
         (h/modis-chunks source subsets chunk-size))))
 
 ;; TEMPORARY stuff for the big run :-*
