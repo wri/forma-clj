@@ -111,12 +111,16 @@
 (def long-trend (partial long-trend-general [:coefs :t-tests]))
 
 (defn lengthening-ts
-  [base-ts start-index end-index]
-  (reverse
-   (into ()
-         (for [x (range start-index end-index)]
-           (take x base-ts)))))
+  [start-index end-index base-vec]
+  (for [x (range start-index (inc end-index))]
+    (subvec base-vec 0 x)))
 
 (defn whizbang
   [t-series start-period end-period & cofactors]
-  (apply long-trend (lengthening-ts start-period end-period)))
+  [t-series (apply vector cofactors)])
+
+
+
+;; (map long-trend
+;;        ((partial lengthening-ts start-period end-period)
+;;           [t-series cofactors]))
