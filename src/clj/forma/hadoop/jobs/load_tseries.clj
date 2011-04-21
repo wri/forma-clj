@@ -13,7 +13,7 @@
 ;; that our system doesn't filter duplicates, so we'll have to do this
 ;; in code, and cull that stuff out every year, on our yearly run.
 
-(defn read-test
+(defn read-chunks
   "Takes in a path and a number of pieces, and performs a test
   operation on all tuples matching the glob."
   [path & pieces]

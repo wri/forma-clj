@@ -249,7 +249,7 @@ of a MODIS TileID acts as a key to retrieve this data."
   represented as seqs of floats. Be sure to convert chunks to vector
   before running any sort of data analysis, as seqs require linear
   time for lookups."
-  [source datasets chunk-size]
+  [datasets chunk-size source]
   (let [keys ["SHORTNAME" "TileID" "RANGEBEGINNINGDATE"]]
     (<- [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?int-chunk]
         (source ?filename ?hdf)
