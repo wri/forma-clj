@@ -51,7 +51,8 @@
   MOD13A3 HDF file. No simple, descriptive tag exists within the
   metadata, as of 2/05/2011, so this ends up being the best
   solution."}
-  modis-subsets {:evi "monthly EVI"
+  modis-subsets
+  {:evi "monthly EVI"
    :qual "VI Quality"
    :red "red reflectance"
    :nir "NIR reflectance"

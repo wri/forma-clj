@@ -1,10 +1,9 @@
 (ns forma.hadoop.jobs.chunk-rain
-  (:use forma.static
-        cascalog.api
+  (:use cascalog.api
         [forma.hadoop.io :only (chunk-tap
                                 wholefile-tap)])
-  (:require [cascalog.ops :as c]
-            [forma.source.rain :as r])
+  (:require [forma.source.rain :as r]
+            [forma.static :as s])
   (:gen-class))
 
 (defn rain-chunker
@@ -21,6 +20,6 @@
 (defn -main
   "TODO: Example usage."
   [input-path output-path & tiles]
-  (rain-chunker "1000" 0.5 24000 (map read-string tiles)
+  (rain-chunker "1000" 0.5 s/chunk-size (map read-string tiles)
                 (s3-path input-path)
                 (s3-path output-path)))
