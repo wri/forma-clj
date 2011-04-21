@@ -170,7 +170,51 @@ tuples into the supplied directory, using the format specified by
 ;; section. We need to change this into a chunk-tap. Check the
 ;; tracker project for how to do this!
 
-(defn chunk-output-tap
+;; ### Bucket to Cluster
+;;
+;; To get tuples back out of our directory structure on S3, we employ
+;; Cascading's [GlobHFS] (http://goo.gl/1Vwdo) tap, along with an
+;; interface tailored for datasets stored in the MODIS sinusoidal
+;; projection. For details on the globbing syntax, see
+;; [here](http://goo.gl/uIEzu).
+
+(defn globstring
+  "Takes a path ending in `/` and collections of nested
+  subdirectories, and returns a globstring formatted for cascading's
+  GlobHFS. (`*` may be substituted in for any argument but path.)
+
+    Example Usage:
+    (globstring \"s3n://bucket/\" [\"ndvi\" \"evi\"] [\"1000-32\"] *)
+    ;=> \"s3://bucket/{ndvi,evi}/{1000-32}/*/*/\"
+
+    (globstring \"s3n://bucket/\" * * [\"008006\" \"033011\"])
+    ;=> \"s3://bucket/*/*/{008006,033011}/*/\""
+  [basepath & pieces]
+  (let [comma-string (fn [arg] (apply str (interpose "," arg)))
+        rest (map (fn [arg]
+                    (if (= * arg)
+                      "*/"
+                      (format "{%s}/" (comma-string (if (coll? arg)
+                                                      arg [arg])))))
+                  pieces)]
+    (apply str basepath rest)))
+
+(defn chunk-source-tap
+  "Constructs a globstring out of the supplied basepath and
+collections of datasets, resolutions, tiles and specific data runs,
+identified by jobtag."
+  ([basepath datasets resolutions]
+     (chunk-source-tap basepath datasets resolutions * *))
+  ([basepath datasets resolutions tiles]
+     (chunk-source-tap basepath datasets resolutions tiles *))
+  ([basepath datasets resolutions tiles batches]
+     (let [pattern (apply globstring
+                          basepath datasets
+                          resolutions
+                          tiles batches)]
+       (globhfs-seqfile pattern))))
+
+(defn chunk-sink-tap
   "Cascading tap to sink MODIS tuples into a directory structure based
   on dataset, temporal and spatial resolution, tileid, and a custom
   `jobtag`. Makes use of Cascading's
@@ -179,8 +223,9 @@ tuples into the supplied directory, using the format specified by
   (template-seqfile out-dir
                     (str "%s/%s-%s/%s/" (jobtag) "/")))
 
-#_(defn chunk-tap
-    (cascalog-tap chunk-output-tap))
+(def chunk-tap
+  (cascalog-tap chunk-source-tap
+                chunk-sink-tap))
 
 ;; ## BytesWritable Interaction
 ;;
