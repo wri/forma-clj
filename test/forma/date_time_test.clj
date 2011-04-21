@@ -4,7 +4,7 @@
         [clj-time.core :only (date-time month interval)]))
 
 (facts
- "Day conversion conversions."
+ "Day conversions."
  (let [t1 (date-time 2005 01 01)
        mk-interval (fn [t2] (interval t1 t2))]
    (in-days (mk-interval (date-time 2005 1 28))) => 27
