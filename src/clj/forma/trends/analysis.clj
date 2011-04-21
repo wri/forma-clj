@@ -82,7 +82,7 @@
   [v]
   (range 1 (inc (count v))))
 
-(defn whizbang-general
+(defn long-trend-general
   "A general version of the original whizbang function, which extracted the time
   trend and the t-statistic on the time trend from a given time-series.  The more
   general function allows for more attributes to be extracted (e.g., total model
@@ -108,4 +108,15 @@
       (catch IllegalArgumentException e
         (repeat (count attributes) 0)))))
 
-(def whizbang (partial whizbang-general [:coefs :t-tests]))
+(def long-trend (partial long-trend-general [:coefs :t-tests]))
+
+(defn lengthening-ts
+  [base-ts start-index end-index]
+  (reverse
+   (into ()
+         (for [x (range start-index end-index)]
+           (take x base-ts)))))
+
+(defn whizbang
+  [t-series start-period end-period & cofactors]
+  (apply long-trend (lengthening-ts start-period end-period)))
