@@ -1,29 +1,33 @@
 (ns forma.hadoop.jobs.load-tseries
   (:use cascalog.api
-        [forma.hadoop.io :only (chunk-tap)])
+        [forma.date-time :only (datetime->period)]
+        [forma.source.modis :only (tilestring->hv)]
+        [forma.hadoop.io :only (chunk-tap)]
+        [forma.reproject :only (tile-position)]
+        [forma.static :only (chunk-size)]
+        [forma.trends :only (timeseries)])
   (:require [cascalog.ops :as c])
   (:gen-class))
 
-;; This is a test, to make sure that GlobHFS works. I'm happy to say
-;; that it does! (Really soon, we'll need to move this and other tests
-;; into test files.) This query takes a base path and various
-;; arguments, as described by `(doc globstring)`, gathers all tuples
-;; sunk into the corresponding subdirectories, and counts up the
-;; number of chunks for each tile and dataset. The test makes it clear
-;; that our system doesn't filter duplicates, so we'll have to do this
-;; in code, and cull that stuff out every year, on our yearly run.
-
-(defn read-test
-  "Takes in a path and a number of pieces, and performs a test
-  operation on all tuples matching the glob."
-  [path & pieces]
-  (let [source (apply chunk-tap path pieces)]
-    (?<- (stdout)
-         [?dataset ?tilestring ?date ?count]
-         (source ?dataset ?s-res ?t-res ?tilestring ?date ?chunkid ?chunk)
-         (c/count ?count))))
+(defn process-tseries
+  [chunk-source]
+  (<- [?dataset ?spatial-res ?temporal-res ?tile-h ?tile-v ?sample ?line ?pix-idx ?t-start ?t-end ?tseries]
+      (chunk-source ?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?int-chunk)
+      (datetime->period ?temporal-res ?date :> ?tperiod)
+      (tilestring->hv ?tilestring :> ?tile-h ?tile-v)
+      (:sort ?tperiod)
+      (timeseries ?tperiod ?int-chunk :> ?pix-idx ?t-start ?t-end ?tseries)
+      (tile-position ?spatial-res chunk-size ?chunkid ?pix-idx :> ?sample ?line)))
 
 (defn -main
-  "TODO: -- options, here!"
-  [arg1]
-  arg1)
+  "TODO: Docs.
+
+  Sample usage:
+
+      (-main \"s3n://redddata/\" \"/timeseries/\" \"ndvi\"
+             \"1000-32\" [\"008006\" \"008009\"])"
+  [base-input-path output-path & pieces]
+  (let [pieces (map read-string pieces)
+        chunk-source (apply chunk-tap base-input-path pieces)]
+    (?- (hfs-seqfile output-path)
+        (process-tseries chunk-source))))
