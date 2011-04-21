@@ -1,7 +1,8 @@
 ;; This file isolates all direct interaction with Hadoop, and provides
 ;; access to any custom schemes used by FORMA. Any new schemes, or
 ;; low-level additions to our hadoop interaction capabilities should
-;; go here, allowing our other components to work at a high level of abstraction.
+;; go here, allowing our other components to work at a high level of
+;; abstraction.
 
 (ns forma.hadoop.io
   (:use cascalog.api
