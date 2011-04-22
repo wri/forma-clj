@@ -47,8 +47,8 @@
   (loop [idx 0
          tup-seq tuples
          v (transient [])]
-    (let [[pos val] (first tup-seq)]
+    (let [[[pos val] & rest] tup-seq]
       (cond (or (> idx size)
                 (empty? tup-seq)) (persistent! v)
-                (= idx pos) (recur (inc idx) (rest tup-seq) (conj! v val))
+                (= idx pos) (recur (inc idx) rest (conj! v val))
                 :else       (recur (inc idx) tup-seq (conj! v placeholder))))))

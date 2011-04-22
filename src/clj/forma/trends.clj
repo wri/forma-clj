@@ -131,11 +131,11 @@
   [tuples]
   [[(sparse-vector size tuples placeholder)]])
 
+;; TODO: Work out solution where group-length can unevenly divide.
+;;
 ;; TODO: document the line-length, num-groups business. Right now, if
 ;; I'm not mistaken, we need num-groups to divide evenly into
 ;; line-length.
-;;
-;; TODO: Work out solution where group-length can unevenly divide.
 
 (defn group-lines
   "Function to generate an aggregating predicate macro that stitches
