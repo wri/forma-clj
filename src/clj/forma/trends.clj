@@ -6,7 +6,9 @@
 
 (ns forma.trends
   (:use cascalog.api
-        [clojure.contrib.math :only (ceil)]))
+        [forma.matrix.utils :only (sparse-vector)]
+        [clojure.contrib.math :only (ceil)]
+        [clojure.contrib.seq :only (positions)]))
 
 ;; ### Time Series Generation
 ;;
@@ -121,16 +123,13 @@
   (memory-source-tap
    (for [h (range 3)
          s (range num-samples)
-         l (range num-lines) :let [val {:key s}]]
+         l (range num-lines) :let [val s]]
      [h 1 s l val])))
 
-;; TODO: Check on cascalog group -- is this the best way? Hammering a
-;; vector in place?
-(defbufferop [rebuild-lines [width]]
+;; Buffer to generate a sparse-vector from idx, val tuple pairs.
+(defbufferop [rebuild-lines [size placeholder]]
   [tuples]
-  [(vector ((apply comp (for [tup tuples]
-                          (fn [v] (apply assoc (vec v) tup))))
-            (repeat width 0)))])
+  [[(sparse-vector size tuples placeholder)]])
 
 ;; TODO: document the line-length, num-groups business. Right now, if
 ;; I'm not mistaken, we need num-groups to divide evenly into
@@ -150,18 +149,17 @@
         (:sort ?line ?sample)
         (mod ?sample group-length :> ?subidx)
         (quot ?sample group-length :> ?line-group)
-        (rebuild-lines [group-length] ?subidx ?val :> ?full-line))))
+        (rebuild-lines [group-length 0] ?subidx ?val :> ?full-line))))
 
-(defn run-line-aggretator
+(defn run-line-aggregator
   "Takes a samples and line generator, and stitches lines back
   together. "
   []
-  (let [agg-lines (group-lines 20 1)]
+  (let [agg-lines (group-lines 20 2)]
     (?<- (stdout)
          [?tile-h ?tile-v ?line ?line-group ?full-line]
          (points ?tile-h ?tile-v ?sample ?line ?val)
          (agg-lines ?line ?sample ?val :> ?line-group ?full-line))))
-
 
 ;; TODO: -- documentation on why we do this. Nearest neighbor analysis links.
 (defn walk-matrix
@@ -172,3 +170,15 @@
            (partial apply map vector)
            (partial map (partial partition window 1)))
           (partition window 1 m)))
+
+
+;; I think that I might be able to tag pixels as "edges", based on a
+;; combination of pixel value and length of groups. If I can get all
+;; of the edge pixels aggregated together... that would be a big win!
+;;
+;; Can we extend this to deal with the whole world, by calculating the
+;; global pixel sample and line? One issue would be that edges
+;; sometimes wouldn't be met be anything on the other side.
+;;
+;; ACTUALLY -- this is a problem now, and if we solve it, we solve the
+;; whole mess. 
