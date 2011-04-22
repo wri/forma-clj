@@ -5,7 +5,8 @@
 ;; vector be calling vec on it.)
 
 (ns forma.trends
-  (:use cascalog.api))
+  (:use cascalog.api
+        [clojure.contrib.math :only (ceil)]))
 
 ;; ### Time Series Generation
 ;;
@@ -103,9 +104,66 @@
 ;; will be either float or int arrays.
 
 ;; ## Walking the Matrix
-;;
-;; TODO: -- documentation on why we do this. Nearest neighbor analysis links.
 
+;; Great for testing what buffers will do; this returns a string
+;; representation of the input.
+
+(defbufferop tuples->string
+  [tuples]
+  [(apply str (map str tuples))])
+
+;; ## Let's figure out how to get the chunks reconstituted.
+
+(def num-lines 20)
+(def num-samples 20)
+
+(def points
+  (memory-source-tap
+   (for [h (range 3)
+         s (range num-samples)
+         l (range num-lines) :let [val {:key s}]]
+     [h 1 s l val])))
+
+;; TODO: Check on cascalog group -- is this the best way? Hammering a
+;; vector in place?
+(defbufferop [rebuild-lines [width]]
+  [tuples]
+  [(vector ((apply comp (for [tup tuples]
+                          (fn [v] (apply assoc (vec v) tup))))
+            (repeat width 0)))])
+
+;; TODO: document the line-length, num-groups business. Right now, if
+;; I'm not mistaken, we need num-groups to divide evenly into
+;; line-length.
+;;
+;; TODO: Work out solution where group-length can unevenly divide.
+
+(defn group-lines
+  "Function to generate an aggregating predicate macro that stitches
+  lines back together. Lines are grouped into `num-groups` total
+  blocks. Currently, we require that `num-groups` divide evenly into
+  `line-length`."
+  [line-length num-groups]
+  {:pre [(= 0 (mod line-length num-groups))]}
+  (let [group-length (ceil (/ line-length num-groups))]
+    (<- [?line ?sample ?val :> ?line-group ?full-line]
+        (:sort ?line ?sample)
+        (mod ?sample group-length :> ?subidx)
+        (quot ?sample group-length :> ?line-group)
+        (rebuild-lines [group-length] ?subidx ?val :> ?full-line))))
+
+(defn run-line-aggretator
+  "Takes a samples and line generator, and stitches lines back
+  together. "
+  []
+  (let [agg-lines (group-lines 20 1)]
+    (?<- (stdout)
+         [?tile-h ?tile-v ?line ?line-group ?full-line]
+         (points ?tile-h ?tile-v ?sample ?line ?val)
+         (agg-lines ?line ?sample ?val :> ?line-group ?full-line))))
+
+
+;; TODO: -- documentation on why we do this. Nearest neighbor analysis links.
 (defn walk-matrix
   "Walks along the rows and columns of a matrix at the given window
   size, returning all (window x window) snapshots."
