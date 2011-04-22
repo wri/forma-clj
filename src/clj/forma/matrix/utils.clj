@@ -6,17 +6,26 @@
 ;; or filters.  The latter functions should be matrix operations that
 ;; deal with arbitrarily large, multi-dimensional matrices.
 
-(defn replace-val
-  "replaces values in a vector `vec` that are (<, >, >=, <=, =) relative
-  to `in-val` with the value supplied in `out-val`"
-  [vec rel in-val out-val]
-  (map #(if (rel % in-val) out-val %) vec))
+(defn pred-replace
+  "Selectively replaces values in `v` based on the return value of the
+ supplied predicate. `pred` will receive each value in turn; a truthy
+ return will trigger a replacement of the seq item with `new-val`."
+  [v pred new-val]
+  (map #(if (pred %) new-val %) v))
 
-(defn replace-in
- "replace the value in `coll` at index `idx` with value `val`"
-  [coll idx val]
-  {:post [(= (count coll) (count %))]}
-  (concat (take idx coll) (list val) (drop (inc idx) coll)))
+(defn boolean-replace
+  "Special version of `pred-replace` tailored for boolean
+operators. `pred` should be one of (<, >, >=, <=, =). if a value in
+the supplied vector returns true when compared to `compare-val` by
+pred, `new-val` will be subbed into the sequence.
+
+    Example usage:
+
+    (boolean-replace [1 2 5 6] > 3 2)
+    ;=> (1 2 2 2)"
+
+  [v pred compare-val new-val]
+  (pred-replace v #(pred % compare-val) new-val))
 
 (defn above-x? [x] (partial < x))
 
