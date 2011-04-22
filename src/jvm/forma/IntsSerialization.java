@@ -108,7 +108,7 @@ import org.apache.hadoop.io.serializer.Serializer;
         }
 
     @Override
-        public Comparator<byte[]> getComparator( Class<byte[]> type )
+        public Comparator<int[]> getComparator( Class<int[]> type )
         {
             return new BytesComparator();
         }

@@ -5,7 +5,6 @@
   :warn-on-reflection true
   :marginalia {:javascript ["mathjax/MathJax.js"]}
   :javac-options {:debug "true" :fork "true"}
-  :jvm-opts ["-Xmx1g" "-server"]
   :repositories {"conjars" "http://conjars.org/repo/"
                  "sonatype" "http://oss.sonatype.org/content/repositories/releases"}
   :dependencies [[org.clojure/clojure "1.2.0"]
