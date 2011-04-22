@@ -38,7 +38,7 @@
 (defn windowed-apply 
   "apply a function [f] to a window along a sequence [xs] of length [window]"
   [f window xs]
-  (map f (partition window 1 xs)))
+  (pmap f (partition window 1 xs)))
 
 ;; WHOOPBANG
 
@@ -56,7 +56,7 @@
   sub-timeseries of length [long-block].  The drops are smoothed by a moving 
   average window of length [window]."
   [ts reli-ts long-block window]
-  (->> (fix-time-series ts reli-ts)
+  (->> (deseasonalize ts)
        (windowed-apply ols-coefficient long-block)
        (windowed-apply average window)
        (reduce min)))
@@ -95,7 +95,7 @@
   element is that associated with the time-trend. The try statement is
   meant to check whether the cofactor matrix is singular."
   [attributes t-series & cofactors]
-  {:pre [(not (empty? cofactors))]}
+  #_{:pre [(not (empty? cofactors))]}
   (let [y (deseasonalize (vec t-series))
         X (if (empty? cofactors)
             (i/matrix (t-range y))
@@ -117,10 +117,11 @@
 
 (defn whizbang
   [t-series start-period end-period & cofactors]
-  [t-series (apply vector cofactors)])
+  (map (partial lengthening-ts start-period end-period) (apply vector t-series cofactors))
+  #_(map long-trend
+       (map (partial lengthening-ts start-period end-period)
+            (apply vector t-series cofactors))))
 
 
 
-;; (map long-trend
-;;        ((partial lengthening-ts start-period end-period)
-;;           [t-series cofactors]))
+
