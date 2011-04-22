@@ -5,7 +5,10 @@
 ;; vector be calling vec on it.)
 
 (ns forma.trends
-  (:use cascalog.api))
+  (:use cascalog.api
+        [forma.matrix.utils :only (sparse-vector)]
+        [clojure.contrib.math :only (ceil)]
+        [clojure.contrib.seq :only (positions)]))
 
 ;; ### Time Series Generation
 ;;
@@ -103,9 +106,62 @@
 ;; will be either float or int arrays.
 
 ;; ## Walking the Matrix
-;;
-;; TODO: -- documentation on why we do this. Nearest neighbor analysis links.
 
+;; Great for testing what buffers will do; this returns a string
+;; representation of the input.
+
+(defbufferop tuples->string
+  [tuples]
+  [(apply str (map str tuples))])
+
+;; ## Let's figure out how to get the chunks reconstituted.
+
+(def num-lines 20)
+(def num-samples 20)
+
+(def points
+  (memory-source-tap
+   (for [h (range 3)
+         s (range num-samples)
+         l (range num-lines) :let [val s]]
+     [h 1 s l val])))
+
+;; Buffer to generate a sparse-vector from idx, val tuple pairs.
+(defbufferop [rebuild-lines [size placeholder]]
+  [tuples]
+  [[(sparse-vector size tuples placeholder)]])
+
+;; TODO: document the line-length, num-groups business. Right now, if
+;; I'm not mistaken, we need num-groups to divide evenly into
+;; line-length.
+;;
+;; TODO: Work out solution where group-length can unevenly divide.
+
+(defn group-lines
+  "Function to generate an aggregating predicate macro that stitches
+  lines back together. Lines are grouped into `num-groups` total
+  blocks. Currently, we require that `num-groups` divide evenly into
+  `line-length`."
+  [line-length num-groups]
+  {:pre [(= 0 (mod line-length num-groups))]}
+  (let [group-length (ceil (/ line-length num-groups))]
+    (<- [?line ?sample ?val :> ?line-group ?full-line]
+        (:sort ?line ?sample)
+        (mod ?sample group-length :> ?subidx)
+        (quot ?sample group-length :> ?line-group)
+        (rebuild-lines [group-length 0] ?subidx ?val :> ?full-line))))
+
+(defn run-line-aggregator
+  "Takes a samples and line generator, and stitches lines back
+  together. "
+  []
+  (let [agg-lines (group-lines 20 2)]
+    (?<- (stdout)
+         [?tile-h ?tile-v ?line ?line-group ?full-line]
+         (points ?tile-h ?tile-v ?sample ?line ?val)
+         (agg-lines ?line ?sample ?val :> ?line-group ?full-line))))
+
+;; TODO: -- documentation on why we do this. Nearest neighbor analysis links.
 (defn walk-matrix
   "Walks along the rows and columns of a matrix at the given window
   size, returning all (window x window) snapshots."
@@ -114,3 +170,15 @@
            (partial apply map vector)
            (partial map (partial partition window 1)))
           (partition window 1 m)))
+
+
+;; I think that I might be able to tag pixels as "edges", based on a
+;; combination of pixel value and length of groups. If I can get all
+;; of the edge pixels aggregated together... that would be a big win!
+;;
+;; Can we extend this to deal with the whole world, by calculating the
+;; global pixel sample and line? One issue would be that edges
+;; sometimes wouldn't be met be anything on the other side.
+;;
+;; ACTUALLY -- this is a problem now, and if we solve it, we solve the
+;; whole mess. 

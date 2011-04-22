@@ -37,3 +37,18 @@
   "average of a list"
   [lst] 
   (float (/ (reduce + lst) (count lst))))
+
+(defn sparse-vector
+  "Takes in a sequence of 2-tuples of the form `<idx, val>` and
+  generates a sparse vector with each `val` inserted at its
+  corresponding `idx`. Missing values will be set to the supplied
+  placeholder."
+  [size tuples placeholder]
+  (loop [idx 0
+         tup-seq tuples
+         v (transient [])]
+    (let [[pos val] (first tup-seq)]
+      (cond (or (> idx size)
+                (empty? tup-seq)) (persistent! v)
+                (= idx pos) (recur (inc idx) (rest tup-seq) (conj! v val))
+                :else       (recur (inc idx) tup-seq (conj! v placeholder))))))
