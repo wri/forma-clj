@@ -5,7 +5,11 @@
 ;; vector be calling vec on it.)
 
 (ns forma.trends
-  (:use cascalog.api))
+  (:use cascalog.api
+        [forma.matrix.utils :only (sparse-vector)]
+        [clojure.contrib.math :only (ceil)]
+        [clojure.contrib.seq :only (positions)])
+  (:require [cascalog.ops :as c]))
 
 ;; ### Time Series Generation
 ;;
@@ -103,14 +107,64 @@
 ;; will be either float or int arrays.
 
 ;; ## Walking the Matrix
-;;
-;; TODO: -- documentation on why we do this. Nearest neighbor analysis links.
 
-(defn walk-matrix
-  "Walks along the rows and columns of a matrix at the given window
-  size, returning all (window x window) snapshots."
-  [m window]
-  (mapcat (comp
-           (partial apply map vector)
-           (partial map (partial partition window 1)))
-          (partition window 1 m)))
+(defbufferop tuples->string
+  {:doc "Returns a string representation of the tuples input to this
+  buffer. Useful for testing!"}
+  [tuples]
+  [(apply str (map str tuples))])
+
+;; Generates combinations of `mod-h`, `mod-v`, `sample` and `line` for
+;; use in buffers.
+(def points
+  (memory-source-tap
+   (for [mod-h  (range 3)
+         sample (range 20)
+         line   (range 20)
+         :let [val sample, mod-v 1]]
+     [mod-h mod-v sample line val])))
+
+(defbufferop [sparse-vec [length missing-val]]
+  {:doc "Receives 2-tuple pairs of the form `<idx, val>`, and inserts
+  each `val` into a sparse vector of the supplied length at the
+  corresponding `idx`. `missing-val` will be substituted for any
+  missing value."}
+  [tuples]
+  [[(sparse-vector length missing-val tuples)]])
+
+(defn vals->sparsevec
+  "Returns an aggregating predicate macro that stitches values into a
+  sparse vector with all `?val`s at `?idx`, and `empty-val` at all
+  other places. Lines are divided into `splits` based on that input
+  parameter. Currently, we require that `splits` divide evenly into
+  `final-length`."
+  [empty-val final-length splits]
+  {:pre [(zero? (mod final-length splits))]}
+  (let [split-length (ceil (/ final-length splits))]
+    (<- [?idx ?val :> ?split-idx ?split-vec]
+        (:sort ?idx)
+        ((c/juxt #'mod #'quot) ?idx split-length :> ?sub-idx ?split-idx)
+        (sparse-vec [split-length empty-val] ?sub-idx ?val :> ?split-vec))))
+
+;; TODO: Docs
+(defn sample-aggregator
+  "Takes a samples and line generator, and stitches lines back
+  together. "
+  [point-source edge splits]
+  (let [sample-agger (vals->sparsevec 0 edge splits)]
+    (<- [?tile-h ?tile-v ?line ?line-vec-col ?line-vec]
+        (point-source ?tile-h ?tile-v ?sample ?line ?val)
+        (sample-agger ?sample ?val :> ?line-vec-col ?line-vec))))
+
+;; Stitches lines together into a window!
+;; TODO: Docs
+(defn line-aggregator
+  "Stitches lines back together into little windows."
+  [point-source edge splits]
+  (let [line-source (sample-aggregator point-source edge splits)
+        line-agger (vals->sparsevec (-> (/ splits edge) (repeat 0) vec)
+                                    edge
+                                    splits)]
+    (<- [?tile-h ?tile-v ?window-col ?window-row ?window]
+        (line-source ?tile-h ?tile-v ?line ?window-col ?line-vec)
+        (line-agger ?line ?line-vec :> ?window-row ?window))))

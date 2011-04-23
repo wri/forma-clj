@@ -84,9 +84,8 @@
 ;; TODO ensure that this works for even AND odd values
 (defn fix-time-series
   [pred quality-coll value-coll]
-  (flatten
-   (vector (map (partial stretch-testing value-coll)
-                (partition 2 1 (positions pred quality-coll)))
-           (nth value-coll (last quality-coll)))))
-
-
+  (let [goodpos-seq (positions pred quality-coll)]
+    (flatten
+     (vector (map (partial stretch-testing value-coll)
+                  (partition 2 1 goodpos-seq))
+             (nth value-coll (last goodpos-seq))))))

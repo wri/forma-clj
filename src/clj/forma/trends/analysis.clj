@@ -24,7 +24,7 @@
                         (range 1 (inc num-months)))))
 
 (defn singular?
-  "TODO: Docstring"
+  "Check to see if the supplied matrix `X` is singular."
   [X]
   (<= (i/det X) 0))
 
@@ -38,7 +38,7 @@
 (defn windowed-apply 
   "apply a function [f] to a window along a sequence [xs] of length [window]"
   [f window xs]
-  (map f (partition window 1 xs)))
+  (pmap f (partition window 1 xs)))
 
 ;; WHOOPBANG
 
@@ -56,7 +56,7 @@
   sub-timeseries of length [long-block].  The drops are smoothed by a moving 
   average window of length [window]."
   [ts reli-ts long-block window]
-  (->> (fix-time-series ts reli-ts)
+  (->> (deseasonalize ts)
        (windowed-apply ols-coefficient long-block)
        (windowed-apply average window)
        (reduce min)))
@@ -75,9 +75,6 @@
 ;; that we only are every concerned with the coefficient on the time
 ;; trend (which is reasonable, given the purpose for this routine).  
 
-;; TODO loop through columns to bind for more general stuff.
-;; TODO handle singular matrix errors.
-
 (defn t-range
   "Provide a range from 1 through the length of a reference vector [v].
   This function was first used to create a time-trend variable to extract
@@ -85,7 +82,7 @@
   [v]
   (range 1 (inc (count v))))
 
-(defn whizbang-general
+(defn long-trend-general
   "A general version of the original whizbang function, which extracted the time
   trend and the t-statistic on the time trend from a given time-series.  The more
   general function allows for more attributes to be extracted (e.g., total model
@@ -98,7 +95,7 @@
   element is that associated with the time-trend. The try statement is
   meant to check whether the cofactor matrix is singular."
   [attributes t-series & cofactors]
-  {:pre [(not (empty? cofactors))]}
+  #_{:pre [(not (empty? cofactors))]}
   (let [y (deseasonalize (vec t-series))
         X (if (empty? cofactors)
             (i/matrix (t-range y))
@@ -111,4 +108,20 @@
       (catch IllegalArgumentException e
         (repeat (count attributes) 0)))))
 
-(def whizbang (partial whizbang-general [:coefs :t-tests]))
+(def long-trend (partial long-trend-general [:coefs :t-tests]))
+
+(defn lengthening-ts
+  [start-index end-index base-vec]
+  (for [x (range start-index (inc end-index))]
+    (subvec base-vec 0 x)))
+
+(defn whizbang
+  [t-series start-period end-period & cofactors]
+  (map (partial lengthening-ts start-period end-period) (apply vector t-series cofactors))
+  #_(map long-trend
+       (map (partial lengthening-ts start-period end-period)
+            (apply vector t-series cofactors))))
+
+
+
+
