@@ -44,8 +44,7 @@ pred, `new-val` will be subbed into the sequence.
          tup-seq tuples
          v (transient [])]
     (let [[pos val] (first tup-seq)]
-      (cond (or (> idx size)
-                (empty? tup-seq)) (persistent! v)
+      (cond (or (>= idx size)) (persistent! v)
                 (= idx pos) (recur (inc idx) (rest tup-seq) (conj! v val))
                 :else       (recur (inc idx) tup-seq (conj! v placeholder))))))
 
