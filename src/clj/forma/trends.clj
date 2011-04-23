@@ -168,3 +168,45 @@
     (<- [?tile-h ?tile-v ?window-col ?window-row ?window]
         (line-source ?tile-h ?tile-v ?line ?window-col ?line-vec)
         (line-agger ?line ?line-vec :> ?window-row ?window))))
+
+;; ### Walk the Windows
+;;
+;; Now that we have a way to generate windows, we need some functions
+;;to actually walk around.
+
+;; TODO: -- documentation on why we do this. Nearest neighbor analysis links.
+(defn walk-matrix
+  "Walks along the rows and columns of a matrix at the given window
+  size, returning all (window x window) snapshots."
+  [m window]
+  (mapcat (comp
+           (partial apply map vector)
+           (partial map (partial partition window 1)))
+          (partition window 1 m)))
+
+;; TODO: update walk-matrix above to return useful shit.
+(defmapcatop [walk-mat [window]]
+  {:doc "In progress! Not sure yet how walk-mat's return values work out, here."}
+  [m]
+  (walk-matrix m window))
+
+(defn get-windows
+  "IN PROGRESS. Currently, this job fails due to incorrect comparator
+  settings for the tuples."
+  [source edge splits]
+  (let [window-source (line-aggregator source edge splits)]
+    (?<- (stdout)
+         [?tile-h ?tile-v ?window-col ?window-row ?row1 ?row2 ?row3]
+         (window-source ?tile-h ?tile-v ?window-col ?window-row ?window)
+         (walk-mat [3] ?window :> ?row1 ?row2 ?row3))))
+
+;; I think that I might be able to tag pixels as "edges", based on a
+;; combination of pixel value and length of groups. If I can get all
+;; of the edge pixels aggregated together... that would be a big win!
+;;
+;; Can we extend this to deal with the whole world, by calculating the
+;; global pixel sample and line? One issue would be that edges
+;; sometimes wouldn't be met be anything on the other side.
+;;
+;; ACTUALLY -- this is a problem now, and if we solve it, we solve the
+;; whole mess.
