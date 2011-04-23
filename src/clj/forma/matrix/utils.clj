@@ -39,14 +39,14 @@ pred, `new-val` will be subbed into the sequence.
   generates a sparse vector with each `val` inserted at its
   corresponding `idx`. Missing values will be set to the supplied
   placeholder."
-  [size tuples placeholder]
+  [size placeholder tuples]
   (loop [idx 0
          tup-seq tuples
          v (transient [])]
     (let [[pos val] (first tup-seq)]
       (cond (or (>= idx size)) (persistent! v)
-                (= idx pos) (recur (inc idx) (rest tup-seq) (conj! v val))
-                :else       (recur (inc idx) tup-seq (conj! v placeholder))))))
+            (= idx pos) (recur (inc idx) (rest tup-seq) (conj! v val))
+            :else       (recur (inc idx) tup-seq (conj! v placeholder))))))
 
 ;; Multi-dimensional matrix operations
 

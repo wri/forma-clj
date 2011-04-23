@@ -130,7 +130,7 @@
   corresponding `idx`. `missing-val` will be substituted for any
   missing value."}
   [tuples]
-  [[(sparse-vector length tuples missing-val)]])
+  [[(sparse-vector length missing-val tuples)]])
 
 (defn vals->sparsevec
   "Returns an aggregating predicate macro that stitches values into a
