@@ -1,10 +1,59 @@
 (ns forma.matrix.utils
   (:require [incanter.core :as i]))
 
-;; Useful general functions 
+;; Useful general functions for matrix operations or filters. The
+;; first functions should be very simple functions used as composites
+;; or filters.  The latter functions should be matrix operations that
+;; deal with arbitrarily large, multi-dimensional matrices.
+
+(defn pred-replace
+  "Selectively replaces values in `v` based on the return value of the
+ supplied predicate. `pred` will receive each value in turn; a truthy
+ return will trigger a replacement of the seq item with `new-val`."
+  [v pred new-val]
+  (map #(if (pred %) new-val %) v))
+
+(defn boolean-replace
+  "Special version of `pred-replace` tailored for boolean
+operators. `pred` should be one of (<, >, >=, <=, =). if a value in
+the supplied vector returns true when compared to `compare-val` by
+pred, `new-val` will be subbed into the sequence.
+
+    Example usage:
+
+    (boolean-replace [1 2 5 6] > 3 2)
+    ;=> (1 2 2 2)"
+
+  [v pred compare-val new-val]
+  (pred-replace v #(pred % compare-val) new-val))
+
+(defn above-x? [x] (partial < x))
+
+(defn average
+  "average of a list"
+  [lst] 
+  (float (/ (reduce + lst) (count lst))))
+
+(defn sparse-vector
+  "Takes in a sequence of 2-tuples of the form `<idx, val>` and
+  generates a sparse vector with each `val` inserted at its
+  corresponding `idx`. Missing values will be set to the supplied
+  placeholder."
+  [size placeholder tuples]
+  (loop [idx 0
+         tup-seq tuples
+         v (transient [])]
+    (let [[pos val] (first tup-seq)]
+      (cond (or (>= idx size)) (persistent! v)
+            (= idx pos) (recur (inc idx) (rest tup-seq) (conj! v val))
+            :else       (recur (inc idx) tup-seq (conj! v placeholder))))))
+
+;; Multi-dimensional matrix operations
 
 (defn variance-matrix
-  "construct a variance-covariance matrix from a given matrix X"
+  "construct a variance-covariance matrix from a given matrix `X`. If the
+  value of the matrix multiplication yields an integer value, then we
+  vectorize.  This would be equivalent to the var function in incanter.stats."
   [X]
   (let [product (i/mmult (i/trans X) X)]
     (i/solve (if (seq? product)
@@ -19,36 +68,3 @@
 
 (def ones-column (partial column-matrix 1))
 
-(defn above-x? [x] (partial < x))
-
-(defn replace-val
-  "replaces values in a vector [vec] that are (<, >, >=, <=, =) to [in-val]
-  with the value supplied in [out-val]"
-  [vec rel in-val out-val]
-  (map #(if (rel % in-val) out-val %) vec))
-
-(defn replace-in
- "replace the value in coll at index idx with value val"
-  [coll idx val]
-  {:post [(= (count coll) (count %))]}
-  (concat (take idx coll) (list val) (drop (inc idx) coll)))
-
-(defn average
-  "average of a list"
-  [lst] 
-  (float (/ (reduce + lst) (count lst))))
-
-(defn sparse-vector
-  "Takes in a sequence of 2-tuples of the form `<idx, val>` and
-  generates a sparse vector with each `val` inserted at its
-  corresponding `idx`. Missing values will be set to the supplied
-  placeholder."
-  [size tuples placeholder]
-  (loop [idx 0
-         tup-seq tuples
-         v (transient [])]
-    (let [[[pos val] & rest] tup-seq]
-      (cond (or (> idx size)
-                (empty? tup-seq)) (persistent! v)
-                (= idx pos) (recur (inc idx) rest (conj! v val))
-                :else       (recur (inc idx) tup-seq (conj! v placeholder))))))
