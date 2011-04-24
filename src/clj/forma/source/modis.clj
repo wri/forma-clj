@@ -58,6 +58,13 @@ referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
              (partial apply str))
        (partition 3 tilestr)))
 
+(defn tile-position
+  "For a given MODIS chunk and index within that chunk, returns
+  [sample, line] within the MODIS tile."
+  [m-res chunk-size chunk index]
+  (idx->colrow (pixels-at-res m-res)
+               (+ index (* chunk chunk-size))))
+
 ;; ### Spherical Sinusoidal Projection
 
 (defn scale
@@ -170,15 +177,9 @@ referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
     (map #(Math/toDegrees %) [lat lon])))
 
 (defn modis->latlon
-  "Returns the latitude and longitude for the supplied MODIS tile
-  coordinate at the specified resolution."
+  "Returns the latitude and longitude for the centroid of the supplied
+  MODIS tile coordinate at the specified resolution."
   [res mod-h mod-v sample line]
   (apply sinu-xy->latlon
          (map-coords mod-h mod-v sample line (str res))))
 
-(defn tile-position
-  "For a given MODIS chunk and index within that chunk, returns
-  [sample, line] within the MODIS tile."
-  [m-res chunk-size chunk index]
-  (idx->colrow (pixels-at-res m-res)
-               (+ index (* chunk chunk-size))))

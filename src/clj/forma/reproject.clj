@@ -4,10 +4,24 @@
 
 (ns forma.reproject
   (:use cascalog.api      
+        [clojure.contrib.generic.math-functions :only (floor)]
         [forma.matrix.utils :only (idx->colrow
-                                   colrow->idx)]
-        [clojure.contrib.generic.math-functions :only (floor)])
+                                   colrow->idx)])
   (:require [forma.source.modis :as m]))
+
+;; ### WGS84 -> MODIS Index Mapping
+;;
+;; If we have a dataset in WGS84 gridded at some spatial resolution,
+;; to reproject into MODIS we'll need to generate lists that tell us
+;; which WGS84 indices to sample for the data at each MODIS
+;; pixel. (The following assume that WGS84 data is held in a row
+;; vector.)
+;;
+;; In their current version, these functions make the assumption that
+;; the WGS84 grid begins at (-90, 0), with columns moving east and
+;; rows moving north. This goes against the MODIS convention of
+;; beginning at (-180, 90), and moving east and south. Future versions
+;; will accomodate arbitrary zero-points.
 
 (defn bucket
   "Takes a floating-point value and step size, and returns the
@@ -26,22 +40,6 @@
   spatial resolution."
   [res]
   (map #(quot % res) [360 180]))
-
-;; ### WGS84 -> MODIS Index Mapping
-;;
-;; Now that we have a method of calculating the wgs84 coordinates of a
-;; single MODIS pixel, we're able to consider the problem of
-;; generating sampling indices for chunks of MODIS pixels. If we have
-;; a dataset in WGS84 gridded at some spatial resolution, to reproject
-;; into MODIS we'll need to generate lists that tell us which WGS84
-;; indices to sample for the data at each MODIS pixel. (The following
-;; assume that WGS84 data is held in a row vector.)
-;;
-;; In their current version, these functions make the assumption that
-;; the WGS84 grid begins at (-90, 0), with columns moving east and
-;; rows moving north. This goes against the MODIS convention of
-;; beginning at (-180, 90), and moving east and south. Future versions
-;; will accomodate arbitrary zero-points.
 
 (defn fit-to-grid
   "Takes a coordinate pair and returns its [row, col] position on a
@@ -118,10 +116,13 @@
 ;; produce a single chunk for 1km tiles. 250 meter data, with 16x the
 ;; pixels, would run at the same speed with 16x the machines.
 
-(defmapcatop [rain-sampler [m-res ll-res chunk-size]]
-  ^{:doc "Returns chunks of the indices within a WGS84 array at the
-  specified resolution corresponding to MODIS chunks of the supplied
-  size, within the tile at the supplied MODIS coordinates."}
+(defmapcatop [project-to-modis [m-res ll-res chunk-size]]
+  ^{:doc "Accepts a MODIS tile coordinate and a month of PREC/L data
+  at `ll-res` resolution on the WGS84 grid, and samples the rain data
+  into chunks of pixels in the MODIS sinusoidal projection. The
+  function emits a 2-tuple of the form `[chunk-idx chunk-seq]`.
+
+  WARNING: Handles one tile at a time. Not good for 250m data!"}
   [rain-month mod-h mod-v]
   (let [edge (m/pixels-at-res m-res)
         numpix (#(* % %) edge)
@@ -129,7 +130,6 @@
     (for [chunk (range (/ numpix chunk-size))
           :let [indexer (partial wgs84-index m-res ll-res mod-h mod-v)
                 tpos (partial m/tile-position m-res chunk-size chunk)]]
-      (vector chunk
-              (map rdata
-                   (for [pixel (range chunk-size)]
-                     (apply indexer (tpos pixel))))))))
+      [chunk (map rdata
+                  (for [pixel (range chunk-size)]
+                    (apply indexer (tpos pixel))))])))
