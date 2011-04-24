@@ -5,8 +5,7 @@
 (ns forma.reproject
   (:use cascalog.api      
         [clojure.contrib.generic.math-functions :only (floor)]
-        [forma.matrix.utils :only (idx->colrow
-                                   colrow->idx)])
+        [forma.matrix.utils :only (colrow->idx)])
   (:require [forma.source.modis :as m]))
 
 ;; ### WGS84 -> MODIS Index Mapping
