@@ -6,7 +6,7 @@
   (:use cascalog.api      
         [forma.matrix.utils :only (idx->colrow
                                    colrow->idx)]
-        [clojure.contrib.generic.math-functions :only (cos floor abs sqr)])
+        [clojure.contrib.generic.math-functions :only (floor)])
   (:require [forma.source.modis :as m]))
 
 (defn bucket
@@ -52,7 +52,8 @@
   0 longitude. Columns move east, wrapping around the globe, and rows
   move north.)"
   [ll-res max-width lat lon]
-  (let [lon-idx (bucket ll-res (abs lon))
+  (let [abs-lon (if (neg? lon) (- lon) lon)
+        lon-idx (bucket ll-res abs-lon)
         lat-idx (bucket ll-res (+ lat 90))]
     (vector lat-idx
             (if (neg? lon)
@@ -123,7 +124,7 @@
   size, within the tile at the supplied MODIS coordinates."}
   [rain-month mod-h mod-v]
   (let [edge (m/pixels-at-res m-res)
-        numpix (sqr edge)
+        numpix (#(* % %) edge)
         rdata (vec rain-month)]
     (for [chunk (range (/ numpix chunk-size))
           :let [indexer (partial wgs84-index m-res ll-res mod-h mod-v)

@@ -1,6 +1,6 @@
 (ns forma.source.modis
   (:use [forma.matrix.utils :only (idx->colrow)]
-        [clojure.contrib.generic.math-functions :only (cos floor abs sqr)]))
+        [clojure.contrib.generic.math-functions :only (cos)]))
 
 ;; From the [user's guide](http://goo.gl/uoi8p) to MODIS product MCD45
 ;; (burned area): "The MODIS data are re-projected using an equiareal
