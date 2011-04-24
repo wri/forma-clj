@@ -33,7 +33,7 @@
      (index 0.9 1.3)
      ;=> 1"
   [step val]
-  (int (floor (* val (/ step)))))
+  (->> step (/ 1) (* val) floor int))
 
 (defn dimensions-at-res
   "returns the <horz, vert> dimensions of a WGS84 grid at the supplied
@@ -53,10 +53,9 @@
   (let [abs-lon (if (neg? lon) (- lon) lon)
         lon-idx (bucket ll-res abs-lon)
         lat-idx (bucket ll-res (+ lat 90))]
-    (vector lat-idx
-            (if (neg? lon)
-              (- (dec max-width) lon-idx)
-              lon-idx))))
+    [lat-idx (if (neg? lon)
+               (- (dec max-width) lon-idx)
+               lon-idx)]))
 
 (defn wgs84-index
   "takes a modis coordinate at the supplied resolution, and returns
