@@ -24,7 +24,8 @@
                         (range 1 (inc num-months)))))
 
 (defn singular?
-  "Check to see if the supplied matrix `X` is singular."
+  "Check to see if the supplied matrix `X` is singular. note that `X` has to
+  be square, n x n, where n > 1."
   [X]
   (<= (i/det X) 0))
 
@@ -60,6 +61,8 @@
        (windowed-apply ols-coefficient long-block)
        (windowed-apply average window)
        (reduce min)))
+
+
 
 ;; WHIZBANG
 
@@ -116,12 +119,25 @@
     (subvec base-vec 0 x)))
 
 (defn whizbang
-  [t-series start-period end-period & cofactors]
-  (map (partial lengthening-ts start-period end-period) (apply vector t-series cofactors))
-  #_(map long-trend
-       (map (partial lengthening-ts start-period end-period)
-            (apply vector t-series cofactors))))
+  [t-series start-pd end-pd & cofactors]
+  {:pre [(vector? t-series)]}
+  (let [all-ts (apply vector t-series cofactors)]
+    (->> all-ts
+         (map (partial lengthening-ts start-pd end-pd))
+         (apply map long-trend))))
 
+(defn test-vec
+  [ts & cof]
+  (apply vector ts cof))
+
+(defn test-count
+  [v1 v2] (+ (count v1)
+             (count v2)))
+
+(let [coll (test-vec ndvi rain)]
+  (->> coll
+       (map (partial split-at 10))
+       (apply map test-count)))
 
 
 
