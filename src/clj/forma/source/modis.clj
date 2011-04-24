@@ -1,4 +1,6 @@
-(ns forma.source.modis)
+(ns forma.source.modis
+  (:use [forma.matrix.utils :only (idx->colrow)]
+        [clojure.contrib.generic.math-functions :only (cos)]))
 
 ;; From the [user's guide](http://goo.gl/uoi8p) to MODIS product MCD45
 ;; (burned area): "The MODIS data are re-projected using an equiareal
@@ -55,3 +57,167 @@ referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
   (map (comp #(Integer. %)
              (partial apply str))
        (partition 3 tilestr)))
+
+(defn tile-position
+  "For a given MODIS chunk and index within that chunk, returns
+  [sample, line] within the MODIS tile."
+  [m-res chunk-size chunk index]
+  (idx->colrow (pixels-at-res m-res)
+               (+ index (* chunk chunk-size))))
+
+;; ### Spherical Sinusoidal Projection
+
+(defn scale
+  "Scales each element in a collection of numbers by the supplied
+  factor."
+  [fact sequence]
+  (for [x sequence] (* x fact)))
+
+;; From [Wikipedia](http://goo.gl/qG7Hi), "the sinusoidal projection
+;; is a pseudocylindrical equal-area map projection, sometimes called
+;; the Sanson-Flamsteed or the Mercator equal-area projection. It is
+;; defined by:
+;;
+;; $$x = (\lambda - \lambda_{0}) \cos \phi$$
+;; $$y = \phi$$
+;;
+;; where \\(\phi\\) is the latitude, \\(\lambda\\) is the longitude,
+;; and \\(\lambda_{0}\\) is the central meridian." (All angles are
+;; defined in radians.) The central meridian of the MODIS sinusoidal
+;; projection is 0 (as shown in the MODIS [WKT
+;; file](http://goo.gl/mXIaY)), so the equation for \\(x\\) can be
+;; simplified to
+;;
+;; $$x = \lambda \cos \phi$$
+;;
+;; MODIS models the earth as a sphere with radius \\(\rho =
+;; 6371007.181\\), requiring us to scale all calculations by
+;; \\(\rho\\).
+;;
+;; This application deals primarily with the inverse problem, of
+;; converting (x, y) back into latitude and longitude. Still, we have
+;; to define the forward equations, for the purpose of computing the
+;; minimum and maximum possible x and y values. The MODIS grid
+;; partitions the sinusoidal grid into an arbitrary number of pixels;
+;; we need these values to appropriately map between meters and pixels
+;; on the subdivided grid.
+
+(defn latlon-rad->sinu-xy
+  "Returns the sinusoidal x and y coordinates for the supplied
+  latitude and longitude (in radians)."
+  [lat lon]
+  (scale rho [(* (cos lat) lon) lat]))
+
+(defn latlon->sinu-xy
+  "Returns the sinusoidal x and y coordinates for the supplied
+  latitude and longitude (in degrees)."  [lat lon]
+  (apply latlon-rad->sinu-xy
+         (map #(Math/toRadians %) [lat lon])))
+
+;; ### Inverse Sinusoidal Projection
+;;
+;; We'll stay in degrees, here. To convert from MODIS to (lat, lon),
+;; we need some way to convert distance from the MODIS origin (tile
+;; `[0 0]`, pixel `[0 0]`) in pixels into distance from the sinusoidal
+;; origin (`[0 0]` in meters, corresponding to (lat, lon) = `[-90
+;; -180]`).
+
+(defn sinu-xy->latlon
+  "Returns the latitude and longitude (in degrees) for a given set of
+  sinusoidal map coordinates (in meters)."
+  [x y]
+  (let [lat (/ y rho)
+        lon (/ x (* rho (cos lat)))]
+    (map #(Math/toDegrees %) [lat lon])))
+
+;; These are the meter values of the minimum possible x and y values
+;; on a sinusoidal projection. The sinusoidal projection is quite
+;; deformed at the corners, so we compute the minimum x and y values
+;; separately, at the ends of the projection's axes.
+
+(defn x-coord [point] (first point))
+(defn y-coord [point] (second point))
+
+(def min-x (x-coord (latlon->sinu-xy 0 -180)))
+(def min-y (y-coord (latlon->sinu-xy -90 0)))
+(def max-y (y-coord (latlon->sinu-xy 90 0)))
+
+(defn pixel-length
+  "The length, in meters, of the edge of a MODIS pixel at the supplied
+  resolution."
+  [res]
+  (let [pixel-span (/ (- max-y min-y) v-tiles)
+        total-pixels (pixels-at-res res)]
+    (/ pixel-span total-pixels)))
+
+(defn global-mags->sinu-xy
+  "Returns the coordinate position on a sinusoidal grid reached after
+  traveling the supplied magnitudes in the x and y directions. The
+  origin of the sinusoidal grid is fixed in the top left corner."
+  [mag-x mag-y]
+  (map #(%1 %2 %3) [+ -] [min-x max-y] [mag-x mag-y]))
+
+(defn sinu-xy->global-mags
+  "Returns the magnitudes (in meters) required to reach the supplied
+  coordinate position on a the MODIS sinusoidal grid. The origin of
+  the sinusoidal grid is fixed in the top left corner."
+  [x y]
+  (map #(%1 %2 %3) [- -] [x max-y] [min-x y]))
+
+(defn modis->global-mags
+  "Returns the distance traveled in meters from the top left of the
+  sinusoidal MODIS grid that corresponds with the supplied MODIS pixel
+  coordinates at the given resolution"
+  [res mod-h mod-v sample line]
+  (let [edge-length (pixel-length res)
+        edge-pixels (pixels-at-res res)]
+    (->> [mod-h mod-v]
+         (scale edge-pixels)
+         (map + [sample line])
+         (scale edge-length)
+         (map #(+ % (/ edge-length 2))))))
+
+(defn global-mags->modis
+  "Returns the MODIS pixel coordinate reached after traveling the
+  supplied meter distances in the positive X and negative Y directions
+  from the origin of the sinusoidal MODIS grid, located at its top
+  left."
+  [res mag-x mag-y]
+  (let [edge-length (pixel-length res)
+        edge-pixels (pixels-at-res res)
+        [tile-h sample tile-v line]
+        (mapcat (comp
+                 (juxt #(quot % edge-pixels)
+                       #(mod % edge-pixels))
+                 #(-> % (* (/ edge-length)) int))
+                [mag-x mag-y])]
+    [tile-h tile-v sample line]))
+
+;; See [this gist](https://gist.github.com/939337) for an example of a
+;; way to attack this pattern with a macro.
+
+(defn modis->latlon
+  "Converts the supplied MODIS coordinates into `[lat, lon]` based on
+  the supplied resolution.
+
+Example usage:
+
+    (modis->latlon \"1000\" 8 6 12 12)
+    ;=> (29.89583333333333 -115.22901262147285)"
+  [res mod-h mod-v sample line]
+  (->> (modis->global-mags res mod-h mod-v sample line)
+       (apply global-mags->sinu-xy)
+       (apply sinu-xy->latlon)))
+
+(defn latlon->modis
+  "Converts the supplied latitude and longitude into MODIS pixel
+  coordinates at the supplied resolution.
+
+Example usage:
+
+    (latlon->modis \"1000\" 29.89583 -115.2290)
+    ;=> [8 6 12 12]"
+  [modis-res lat lon]
+  (->> (latlon->sinu-xy lat lon)
+       (apply sinu-xy->global-mags)
+       (apply global-mags->modis modis-res)))

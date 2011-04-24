@@ -8,10 +8,10 @@
 
 (defn rain-chunker
   "Like `modis-chunker`, for NOAA PRECL data files."
-  [m-res ll-res c-size tile-seq in-dir out-dir]
+  [m-res ll-res chunk-size tile-seq in-dir out-dir]
   (let [source (wholefile-tap in-dir)]
     (?- (chunk-tap out-dir)
-        (r/rain-chunks m-res ll-res c-size tile-seq source))))
+        (r/rain-chunks m-res ll-res chunk-size tile-seq source))))
 
 (defn s3-path [path]
   (str "s3n://AKIAJ56QWQ45GBJELGQA:6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV@" path))
