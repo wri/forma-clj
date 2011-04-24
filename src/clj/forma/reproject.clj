@@ -35,8 +35,6 @@
   [step val]
   (->> step (/ 1) (* val) floor int))
 
-
-
 (defn dimensions-at-res
   "returns the <horz, vert> dimensions of a WGS84 grid at the supplied
   spatial resolution."

@@ -70,10 +70,8 @@ referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
 (defn scale
   "Scales each element in a collection of numbers by the supplied
   factor."
-  ([fact sequence]
-     (scale fact 0 sequence))
-  ([fact offset sequence]
-     (for [x sequence] (-> x (* fact) (+ offset)))))
+  [fact sequence]
+  (for [x sequence] (* x fact)))
 
 ;; From [Wikipedia](http://goo.gl/qG7Hi), "the sinusoidal projection
 ;; is a pseudocylindrical equal-area map projection, sometimes called
@@ -104,6 +102,34 @@ referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
 ;; we need these values to appropriately map between meters and pixels
 ;; on the subdivided grid.
 
+(defn latlon-rad->sinu-xy
+  "Returns the sinusoidal x and y coordinates for the supplied
+  latitude and longitude (in radians)."
+  [lat lon]
+  (scale rho [(* (cos lat) lon) lat]))
+
+(defn latlon->sinu-xy
+  "Returns the sinusoidal x and y coordinates for the supplied
+  latitude and longitude (in degrees)."  [lat lon]
+  (apply latlon-rad->sinu-xy
+         (map #(Math/toRadians %) [lat lon])))
+
+;; ### Inverse Sinusoidal Projection
+;;
+;; We'll stay in degrees, here. To convert from MODIS to (lat, lon),
+;; we need some way to convert distance from the MODIS origin (tile
+;; `[0 0]`, pixel `[0 0]`) in pixels into distance from the sinusoidal
+;; origin (`[0 0]` in meters, corresponding to (lat, lon) = `[-90
+;; -180]`).
+
+(defn sinu-xy->latlon
+  "Returns the latitude and longitude (in degrees) for a given set of
+  sinusoidal map coordinates (in meters)."
+  [x y]
+  (let [lat (/ y rho)
+        lon (/ x (* rho (cos lat)))]
+    (map #(Math/toDegrees %) [lat lon])))
+
 ;; These are the meter values of the minimum possible x and y values
 ;; on a sinusoidal projection. The sinusoidal projection is quite
 ;; deformed at the corners, so we compute the minimum x and y values
@@ -124,79 +150,74 @@ referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
         total-pixels (pixels-at-res res)]
     (/ pixel-span total-pixels)))
 
-;; RENAME this. We have a few units here -- we have the global-xy, and
-;; then we have this global meters business. THINK! I think that
-;; sinu-xy is the actual meters value...
-;;
-;; NOTES -- conventions on naming. SL is sample, line -- xy is
-;; actually meters.
-;;
-;; TODO: -- add test to new thread-expr library
-;; TODO: -- get the translation from latlon->modis working
+(defn global-mags->sinu-xy
+  "Returns the coordinate position on a sinusoidal grid reached after
+  traveling the supplied magnitudes in the x and y directions. The
+  origin of the sinusoidal grid is fixed in the top left corner."
+  [mag-x mag-y]
+  (map #(%1 %2 %3) [+ -] [min-x max-y] [mag-x mag-y]))
+
+(defn sinu-xy->global-mags
+  "Returns the magnitudes (in meters) required to reach the supplied
+  coordinate position on a the MODIS sinusoidal grid. The origin of
+  the sinusoidal grid is fixed in the top left corner."
+  [x y]
+  (map #(%1 %2 %3) [- -] [x max-y] [min-x y]))
 
 (defn modis->global-mags
-  "Returns the (sample, line) of a pixel on the global MODIS grid,
-  measured in pixels from (0,0) at the top left."
+  "Returns the distance traveled in meters from the top left of the
+  sinusoidal MODIS grid that corresponds with the supplied MODIS pixel
+  coordinates at the given resolution"
   [res mod-h mod-v sample line]
   (let [edge-length (pixel-length res)
         edge-pixels (pixels-at-res res)]
     (->> [mod-h mod-v]
          (scale edge-pixels)
          (map + [sample line])
-         (scale edge-length (/ edge-length 2)))))
+         (scale edge-length)
+         (map #(+ % (/ edge-length 2))))))
 
-(defn global-mags->sinu-xy
-  "Returns the coordinate position on a sinusoidal grid reached after
-  traveling the supplied magnitudes in the x and y directions. The
-  origin of the sinusoidal grid is fixed in the top left corner."
-  [mag-x mag-y]
-  (let [travel (fn [dir start magnitude]
-                 (dir start magnitude))]
-    (map travel [+ -] [min-x max-y] [mag-x mag-y])))
+(defn global-mags->modis
+  "Returns the MODIS pixel coordinate reached after traveling the
+  supplied meter distances in the positive X and negative Y directions
+  from the origin of the sinusoidal MODIS grid, located at its top
+  left."
+  [res mag-x mag-y]
+  (let [edge-length (pixel-length res)
+        edge-pixels (pixels-at-res res)
+        [tile-h sample tile-v line]
+        (mapcat (comp
+                 (juxt #(quot % edge-pixels)
+                       #(mod % edge-pixels))
+                 #(-> % (* (/ edge-length)) int))
+                [mag-x mag-y])]
+    [tile-h tile-v sample line]))
 
-;; ### Inverse Sinusoidal Projection
-;;
-;; We'll stay in degrees, here. To convert from MODIS to (lat, lon),
-;; we need some way to convert distance from the MODIS origin (tile
-;; `[0 0]`, pixel `[0 0]`) in pixels into distance from the sinusoidal
-;; origin (`[0 0]` in meters, corresponding to (lat, lon) = `[-90
-;; -180]`).
+;; See [this gist](https://gist.github.com/939337) for an example of a
+;; way to attack this pattern with a macro.
 
-(defn latlon-rad->sinu-xy
-  "Returns the sinusoidal x and y coordinates for the supplied
-  latitude and longitude (in radians)."
-  [lat lon]
-  (scale rho [(* (cos lat) lon) lat]))
+(defn modis->latlon
+  "Converts the supplied MODIS coordinates into `[lat, lon]` based on
+  the supplied resolution.
 
-(defn latlon->sinu-xy
-  "Returns the sinusoidal x and y coordinates for the supplied
-  latitude and longitude (in degrees)."
-  [lat lon]
-  (apply latlon-rad->sinu-xy
-         (map #(Math/toRadians %) [lat lon])))
+Example usage:
 
-(defn sinu-xy->latlon
-  "Returns the latitude and longitude (in degrees) for a given set of
-  sinusoidal map coordinates (in meters)."
-  [x y]
-  (let [lat (/ y rho)
-        lon (/ x (* rho (cos lat)))]
-    (map #(Math/toDegrees %) [lat lon])))
+    (modis->latlon \"1000\" 8 6 12 12)
+    ;=> (29.89583333333333 -115.22901262147285)"
+  [res mod-h mod-v sample line]
+  (->> (modis->global-mags res mod-h mod-v sample line)
+       (apply global-mags->sinu-xy)
+       (apply sinu-xy->latlon)))
 
-(defmacro conversion-comp
-  [& conversions]
-  `(fn [& args#]
-     (reduce (fn [val-seq# f#]
-               (apply f# val-seq#))
-             args#
-             [~@conversions])))
+(defn latlon->modis
+  "Converts the supplied latitude and longitude into MODIS pixel
+  coordinates at the supplied resolution.
 
-;; Returns the map position in meters of the supplied MODIS tile
-;;  coordinate at the specified resolution
+Example usage:
 
-(def modis->latlon
-  (conversion-comp modis->global-mags
-                   global-mags->sinu-xy
-                    sinu-xy->latlon))
-
-;; TODO -- get the damned global pixel
+    (latlon->modis \"1000\" 29.89583 -115.2290)
+    ;=> [8 6 12 12]"
+  [modis-res lat lon]
+  (->> (latlon->sinu-xy lat lon)
+       (apply sinu-xy->global-mags)
+       (apply global-mags->modis modis-res)))
