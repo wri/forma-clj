@@ -112,7 +112,8 @@ referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
   "Returns the sinusoidal x and y coordinates for the supplied
   latitude and longitude (in degrees)."
   [lat lon]
-  (apply latlon-rad->sinu-xy (map #(Math/toRadians %) [lat lon])))
+  (apply latlon-rad->sinu-xy
+         (map #(Math/toRadians %) [lat lon])))
 
 ;; These are the meter values of the minimum possible x and y values
 ;; on a sinusoidal projection. The sinusoidal projection is quite
@@ -150,10 +151,10 @@ referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
   (let [edge-pixels (pixels-at-res res)]
     (map + [sample line] (scale edge-pixels [mod-h mod-v]))))
 
-(defn map-coords
+(defn modis->sinu-xy
   "Returns the map position in meters of the supplied MODIS tile
   coordinate at the specified resolution."
-  [mod-h mod-v sample line res]
+  [res mod-h mod-v sample line]
   (let [edge-length (pixel-length res)
         half-edge (/ edge-length 2)
         pix-pos (pixel-coords mod-h mod-v sample line res)
@@ -176,10 +177,10 @@ referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
         lon (/ x (* rho (cos lat)))]
     (map #(Math/toDegrees %) [lat lon])))
 
-(defn modis->latlon
-  "Returns the latitude and longitude for the centroid of the supplied
-  MODIS tile coordinate at the specified resolution."
-  [res mod-h mod-v sample line]
-  (apply sinu-xy->latlon
-         (map-coords mod-h mod-v sample line (str res))))
+(def
+  ^{:doc "Returns the latitude and longitude for the centroid of the
+  supplied MODIS tile coordinate at the specified resolution."}
+  modis->latlon
+  (comp (partial apply sinu-xy->latlon)
+        modis->sinu-xy))
 
