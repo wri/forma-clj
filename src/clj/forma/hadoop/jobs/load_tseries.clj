@@ -1,9 +1,9 @@
 (ns forma.hadoop.jobs.load-tseries
   (:use cascalog.api
         [forma.date-time :only (datetime->period)]
-        [forma.source.modis :only (tilestring->hv)]
+        [forma.source.modis :only (tile-position
+                                   tilestring->hv)]
         [forma.hadoop.io :only (chunk-tap)]
-        [forma.reproject :only (tile-position)]
         [forma.static :only (chunk-size)]
         [forma.trends :only (timeseries)])
   (:require [cascalog.ops :as c])
