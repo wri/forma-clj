@@ -41,6 +41,15 @@
   [f window xs]
   (pmap f (partition window 1 xs)))
 
+(defn make-monotonic [fn coll]
+  "Note that fn has to be min or max"
+  (loop [acc (first coll) l (seq coll) res []]
+    (if (empty? l)
+        res
+        (recur (fn acc (first l))
+               (rest l)
+               (conj res (fn acc (first l)))))))
+
 ;; WHOOPBANG
 
 ;; The following is a routine, under the header WHOOPBANG,
@@ -60,9 +69,7 @@
   (->> (deseasonalize ts)
        (windowed-apply ols-coefficient long-block)
        (windowed-apply average window)
-       (reduce min)))
-
-
+       (make-monotonic min)))
 
 ;; WHIZBANG
 
@@ -125,19 +132,5 @@
     (->> all-ts
          (map (partial lengthening-ts start-pd end-pd))
          (apply map long-trend))))
-
-(defn test-vec
-  [ts & cof]
-  (apply vector ts cof))
-
-(defn test-count
-  [v1 v2] (+ (count v1)
-             (count v2)))
-
-(let [coll (test-vec ndvi rain)]
-  (->> coll
-       (map (partial split-at 10))
-       (apply map test-count)))
-
 
 
