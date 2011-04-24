@@ -1,5 +1,5 @@
 (ns forma.presentation.ndvi-filter
-  (:use [forma.matrix.utils :only (boolean-replace)]
+  (:use [forma.matrix.utils :only (logical-replace)]
         [forma.date-time :only (msec-range)]
         [forma.trends.filter :only (hp-filter fix-time-series)]
         [clj-time.core :only (date-time)]
@@ -69,13 +69,13 @@
 
 (def reli
   (-> ndvi
-      (boolean-replace < 7000 2)
-      (boolean-replace > 2 1)))
+      (logical-replace < 7000 2)
+      (logical-replace > 2 1)))
 
 ;; Mark all offending values in order to graph the "kill points" 
 
 (def kill-vals
-  (boolean-replace ndvi > 7000 nil))
+  (logical-replace ndvi > 7000 nil))
 
 ;; Create a time range for the x-axis on the time-series graph; NOTE
 ;; that this will have to change, once the time functions are moved to
