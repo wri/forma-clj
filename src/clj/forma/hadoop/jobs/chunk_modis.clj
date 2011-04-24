@@ -17,10 +17,10 @@
   file, and an output dir, harvests tuples out of the HDF files, and
   sinks them into a custom directory structure inside of
   `output-dir`."
-  [subsets c-size in-dir out-dir]
+  [subsets chunk-size in-dir out-dir]
   (let [source (globbed-wholefile-tap in-dir)]
     (?- (chunk-tap out-dir)
-        (h/modis-chunks subsets c-size source))))
+        (h/modis-chunks subsets chunk-size source))))
 
 ;; TEMPORARY stuff for the big run :-*
 (defn tiles->globstring

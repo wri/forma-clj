@@ -13,15 +13,15 @@
   [v pred new-val]
   (map #(if (pred %) new-val %) v))
 
-(defn boolean-replace
-  "Special version of `pred-replace` tailored for boolean
+(defn logical-replace
+  "Special version of `pred-replace` tailored for logical
 operators. `pred` should be one of (<, >, >=, <=, =). if a value in
 the supplied vector returns true when compared to `compare-val` by
 pred, `new-val` will be subbed into the sequence.
 
     Example usage:
 
-    (boolean-replace [1 2 5 6] > 3 2)
+    (logical-replace [1 2 5 6] > 3 2)
     ;=> (1 2 2 2)"
 
   [v pred compare-val new-val]
@@ -39,17 +39,41 @@ pred, `new-val` will be subbed into the sequence.
   generates a sparse vector with each `val` inserted at its
   corresponding `idx`. Missing values will be set to the supplied
   placeholder."
-  [size tuples placeholder]
+  [size placeholder tuples]
   (loop [idx 0
          tup-seq tuples
          v (transient [])]
     (let [[pos val] (first tup-seq)]
-      (cond (or (> idx size)
-                (empty? tup-seq)) (persistent! v)
-                (= idx pos) (recur (inc idx) (rest tup-seq) (conj! v val))
-                :else       (recur (inc idx) tup-seq (conj! v placeholder))))))
+      (cond (or (>= idx size)) (persistent! v)
+            (= idx pos) (recur (inc idx) (rest tup-seq) (conj! v val))
+            :else       (recur (inc idx) tup-seq (conj! v placeholder))))))
 
-;; Multi-dimensional matrix operations
+(defn idx->colrow
+  "Takes an index within a row vector, and returns the appropriate
+  column and row within a matrix with the supplied dimensions. If only
+  one dimension is supplied, assumes a square matrix."
+  ([edge idx]
+     (idx->colrow edge edge idx))
+  ([width height idx]
+     {:pre [(< idx (* width height)), (not (neg? idx))]
+      :post [(and (< (first %) width)
+                  (< (second %) height))]}
+     ((juxt #(mod % width) #(quot % width)) idx)))
+
+(defn colrow->idx
+  "For the supplied column and row in a rectangular matrix of
+dimensions (height, width), returns the corresponding index within a
+row vector of size (* width height). If only one dimension is
+supplied, assumes a square matrix."
+  ([edge col row]
+     (colrow->idx edge edge col row))
+  ([width height col row]
+     {:post [(< % (* width height))]}
+     (+ col (* width row))))
+
+
+
+;; ## Multi-dimensional matrix operations
 
 (defn variance-matrix
   "construct a variance-covariance matrix from a given matrix `X`. If the
