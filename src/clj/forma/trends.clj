@@ -162,9 +162,8 @@
   "Stitches lines back together into little windows."
   [point-source edge splits]
   (let [line-source (sample-aggregator point-source edge splits)
-        line-agger (vals->sparsevec (-> (/ splits edge) (repeat 0) vec)
-                                    edge
-                                    splits)]
+        empty-vec (-> splits (/ edge) (repeat 0) vec)
+        line-agger (vals->sparsevec empty-vec edge splits)]
     (<- [?tile-h ?tile-v ?window-col ?window-row ?window]
         (line-source ?tile-h ?tile-v ?line ?window-col ?line-vec)
         (line-agger ?line ?line-vec :> ?window-row ?window))))
