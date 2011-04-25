@@ -1,13 +1,14 @@
 (ns forma.source.fire
   (:use cascalog.api
         [forma.date-time :only (periodize)]
-        [forma.matrix.utils :only (idx->colrow)]
+        [forma.matrix.utils :only (idx->colrow sparse-vector)]
         [forma.reproject :only (wgs84-index
                                 dimensions-at-res)]
         [forma.source.modis :only (latlon->modis
                                    pixels-at-res)]
         [clojure.string :only (split)])
-  (:require [cascalog.ops :as c]))
+  (:require [cascalog.ops :as c]
+            [forma.hadoop.predicate :as p]))
 
 (def fire-tap
   (memory-source-tap
@@ -60,98 +61,42 @@
         (c/max ?kelvin :> ?max-t)
         (c/count ?count))))
 
+(defn to-vector [x y]
+  [[x y]])
+
+;; TODO: Docs
+(defn sample-aggregator
+  "Takes a samples and line generator, and stitches lines back
+  together. "
+  [point-source]
+  (let [sample-agger (p/vals->sparsevec [0 0] 1200 1)]
+    (<- [?dataset ?mod-h ?mod-v ?tperiod ?line ?line-vec-col ?line-vec]
+        (point-source ?dataset ?mod-h ?mod-v ?sample ?line ?tperiod ?count ?max-t)
+        (to-vector ?count ?max-t :> ?values)
+        (sample-agger ?sample ?values :> ?line-vec-col ?line-vec))))
+
+;; Stitches lines together into a window!
+;; TODO: Docs
+(defn line-aggregator
+  "Stitches lines back together into little windows."
+  [point-source]
+  (let [line-source (sample-aggregator point-source)
+        line-agger (p/vals->sparsevec (-> (/ 1200 1)
+                                          (repeat [0 0])
+                                          vec)
+                                      1200 1)]
+    (<- [?dataset ?t-period ?tile-h ?tile-v ?chunkid ?chunk]
+        (line-source ?dataset ?tile-h ?tile-v ?t-period ?line ?window-col ?line-vec)
+        (line-agger ?line ?line-vec :> ?chunkid ?chunk))))
+
+(def prepath "/Users/sritchie/Desktop/FORMA/FIRE/")
+
 (defn run-rip
   "Rips apart fires!"
-  [count m-res t-res path]
-  (?- (stdout) (c/first-n (rip-fires m-res t-res path)
-                          count)))
-
-;; FOR LATER...
-;;
-;; ## ASCII Grid Sampling
-
-(defn liberate
-  "Takes a line with an index as the first value and numbers as the
-  rest, and converts it into a 2-tuple formatted as `[idx, row-vals]`,
-  where `row-vals` are sealed inside an `int-array`.
-
-Example usage:
-
-    (liberate \"1 12 13 14 15\")
-    ;=> [1 #<int[] [I@1b66e87>]"
-  [line]
-  (let [[idx & row-vals] (map #(Integer. %)
-                              (split line #" "))]
-    [idx (int-array row-vals)]))
-
-;; This guy splits apart some particular row, and returns a 2-tuple
-;; with the index within the row as the first item.
-(defmapcatop free-cols
-  [row]
-  (map-indexed vector row))
-
-(defn grid-source
-  "Takes some source of textlines -- (hfs-textline \"/some/file.csv\",
-  for example -- and generates tuples with `row`, `col` and `val` at
-  the specified location."
-  [source]
-  (<- [?row-idx ?col-idx ?val]
-      (source ?line)
-      (liberate ?line :> ?row-idx ?row-vec)
-      (free-cols ?row-vec :> ?col-idx ?val)))
-
-(defmapcatop
-  ^{:doc "Returns tuples containing modis coordinates, plus the
-  corresponding row and column of a value within a wgs84 grid at the
-  specified spatial resolution. ll-res is the step size of the ASCII
-  grid."}
-  [sample-modis [m-res ll-res]]
-  [mod-h mod-v]
-  (let [pix (pixels-at-res m-res)
-        [ll-width ll-height] (dimensions-at-res ll-res)]
-    (for [sample (range pix)
-          line   (range pix)
-          :let [idx (wgs84-index m-res ll-res mod-h
-                                 mod-v sample line)
-                [col row] (idx->colrow ll-width ll-height idx)]]
-      [sample line row col])))
-
-(defn sample-ascii
-  "Subquery to sample an ascii grid of information at the supplied
-  MODIS and wgs84 resolutions. `m-res` is \"1000\", \"500\" or
-  \"250\". `ll-res` is the step size on the latitude-longitude grid.
-
-Example usage:
-
-    (?- (stdout)
-        (sample-ascii \"1000\" 0.1 \"/path/to/ascii.csv\" [[8 6] [12 10]]))"
-  [m-res ll-res ascii-path tile-seq]
-  {:pre [()]}
-  (let [tile-source (memory-source-tap tile-seq)
-        ascii-source (grid-source (hfs-textline ascii-path))]
-    (<- [?mod-h ?mod-v ?sample ?line ?val]
-        (tile-source ?mod-h ?mod-v)
-        (sample-modis [m-res ll-res] ?mod-h ?mod-v :> ?sample ?line ?row ?col)
-        (ascii-source ?row ?col ?val))))
-
-(defn run-sample-ascii
-  "Runs the above subquery, as in `sample-ascii` example."
-  [m-res ll-res ascii-path tile-seq]
+  [count]
   (?- (stdout)
-      (sample-ascii m-res ll-res
-                    ascii-path tile-seq)))
-
-
-(def count-agg
-  (<- [?a :> ?count]
-      (c/count ?count)))
-
-(defn count-test []
-  (let [tap (memory-source-tap [[1 2]
-                                [1 3]
-                                [1 4]])]
-    (?<- (stdout)
-         [?a ?count ?max]
-         (tap ?a ?b)
-         (c/max ?b :> ?max)
-         (c/count ?count))))
+      (c/first-n (line-aggregator
+                  (rip-fires "1000"
+                             "32"
+                             (str prepath "MCD14DL.2011074.txt")))
+                 count)))
