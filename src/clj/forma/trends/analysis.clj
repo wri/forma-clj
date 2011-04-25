@@ -41,14 +41,15 @@
   [f window xs]
   (pmap f (partition window 1 xs)))
 
-(defn make-monotonic [fn coll]
-  "Note that fn has to be min or max"
-  (loop [acc (first coll) l (seq coll) res []]
-    (if (empty? l)
-        res
-        (recur (fn acc (first l))
-               (rest l)
-               (conj res (fn acc (first l)))))))
+(defn make-monotonic
+  [comparator coll]
+  (reduce (fn [acc val]
+            (conj acc
+                  (if (empty? acc)
+                    val
+                    (comparator val (last acc)))))
+          []
+          coll))
 
 ;; WHOOPBANG
 
@@ -126,11 +127,9 @@
     (subvec base-vec 0 x)))
 
 (defn whizbang
-  [t-series start-pd end-pd & cofactors]
+  [start-pd end-pd t-series & cofactors]
   {:pre [(vector? t-series)]}
   (let [all-ts (apply vector t-series cofactors)]
     (->> all-ts
          (map (partial lengthening-ts start-pd end-pd))
          (apply map long-trend))))
-
-
