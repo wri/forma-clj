@@ -1,9 +1,11 @@
 (ns forma.source.fire
   (:use cascalog.api
+        [forma.date-time :only (periodize)]
         [forma.matrix.utils :only (idx->colrow)]
         [forma.reproject :only (wgs84-index
                                 dimensions-at-res)]
-        [forma.source.modis :only (latlon->modis pixels-at-res)]
+        [forma.source.modis :only (latlon->modis
+                                   pixels-at-res)]
         [clojure.string :only (split)])
   (:require [cascalog.ops :as c]))
 
@@ -26,27 +28,46 @@
   (map (fn [val]
          (try (Float. val)
               (catch Exception _
-                (read-string val))))
+                val)))
        (split line #",")))
 
 (defn fire-source
   "Takes a source of textlines, and returns 2-tuples with latitude and
   longitude."
   [source]
-  (<- [?lat ?lon]
+  (<- [?dataset ?lat ?lon ?kelvin ?datestring]
       (source ?line)
-      (mangle ?line :> _ _ _ ?lat ?lon _ _ _ _ _)))
+      (identity "fire" :> ?dataset)
+      (mangle ?line :> ?lat ?lon ?kelvin _ _ ?datestring _ _ _ _ _ _)))
+
+(defmapop [to-period [t-res]]
+  [datestring]
+  (let [[month day year] (->> (split datestring #"/")
+                              (map #(Integer. %)))]
+    (periodize t-res year month day)))
+"12/31/2005"
 
 (defn rip-fires
   "Aggregates fire data at the supplied path by modis pixel at the
   supplied resolution."
-  [m-res path]
+  [m-res t-res path]
   (let [fires (fire-source (hfs-textline path))]
-    (<- [?mod-h ?mod-v ?sample ?line ?num-fires]
-        (fires ?lat ?lon)
+    (<- [?dataset ?mod-h ?mod-v ?sample ?line ?tperiod ?count ?max-t]
+        (fires ?dataset ?lat ?lon ?kelvin ?datestring)
+        (to-period [t-res] ?datestring :> ?tperiod)
+        (> ?kelvin 330)
         (latlon->modis m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
-        (c/count ?num-fires))))
+        (c/max ?kelvin :> ?max-t)
+        (c/count ?count))))
 
+(defn run-rip
+  "Rips apart fires!"
+  [count m-res t-res path]
+  (?- (stdout) (c/first-n (rip-fires m-res t-res path)
+                          count)))
+
+;; FOR LATER...
+;;
 ;; ## ASCII Grid Sampling
 
 (defn liberate
@@ -76,8 +97,8 @@ Example usage:
   [source]
   (<- [?row-idx ?col-idx ?val]
       (source ?line)
-      (liberate ?line :> ?row-idx ?row-array)
-      (free-cols ?row-array :> ?col-idx ?val)))
+      (liberate ?line :> ?row-idx ?row-vec)
+      (free-cols ?row-vec :> ?col-idx ?val)))
 
 (defmapcatop
   ^{:doc "Returns tuples containing modis coordinates, plus the
@@ -105,6 +126,7 @@ Example usage:
     (?- (stdout)
         (sample-ascii \"1000\" 0.1 \"/path/to/ascii.csv\" [[8 6] [12 10]]))"
   [m-res ll-res ascii-path tile-seq]
+  {:pre [()]}
   (let [tile-source (memory-source-tap tile-seq)
         ascii-source (grid-source (hfs-textline ascii-path))]
     (<- [?mod-h ?mod-v ?sample ?line ?val]
@@ -118,3 +140,18 @@ Example usage:
   (?- (stdout)
       (sample-ascii m-res ll-res
                     ascii-path tile-seq)))
+
+
+(def count-agg
+  (<- [?a :> ?count]
+      (c/count ?count)))
+
+(defn count-test []
+  (let [tap (memory-source-tap [[1 2]
+                                [1 3]
+                                [1 4]])]
+    (?<- (stdout)
+         [?a ?count ?max]
+         (tap ?a ?b)
+         (c/max ?b :> ?max)
+         (c/count ?count))))
