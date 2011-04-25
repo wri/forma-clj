@@ -44,11 +44,13 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
 (defn valid-modis?
   "Checks that the supplied values correspond to a valid MODIS tile,
   at the specified resolution."
-  [res mod-h mod-v sample line]
-  (let [edge (pixels-at-res res)]
-    (and (contains? valid-tiles [mod-h mod-v])
-         (< sample edge)
-         (< line edge))))
+  ([mod-h mod-v]
+     (contains? valid-tiles [mod-h mod-v]))
+  ([res mod-h mod-v sample line]
+     (let [edge (pixels-at-res res)]
+       (and (valid-modis? mod-h mod-v)
+            (< sample edge)
+            (< line edge)))))
 
 (defn tilestring->hv
   "Extracts integer representations of the MODIS H and V coordinates
