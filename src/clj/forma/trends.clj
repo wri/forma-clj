@@ -133,7 +133,7 @@
 
 ;; Stitches lines together into a window!
 ;; TODO: Docs
-(defn line-aggregator
+(defn window-aggregator
   "Stitches lines back together into little windows."
   [point-source edge splits]
   (let [line-source (sample-aggregator point-source edge splits)
