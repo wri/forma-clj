@@ -71,8 +71,6 @@ supplied, assumes a square matrix."
      {:post [(< % (* width height))]}
      (+ col (* width row))))
 
-
-
 ;; ## Multi-dimensional matrix operations
 
 (defn variance-matrix
@@ -92,4 +90,3 @@ supplied, assumes a square matrix."
   (i/matrix val cols 1))
 
 (def ones-column (partial column-matrix 1))
-

@@ -193,13 +193,11 @@
   "Accepts a cascalog generator, and a vector of keys corresponding to the "
   [gen [col row val :as symbols] edge splits empty-val]
   (let [[src-vars int-vars out-vars] (mk-vars gen symbols)
-        col-aggr (p/vals->sparsevec empty-val edge splits)
+        [col-aggr row-aggr] col-aggr (p/vals->sparsevec empty-val edge splits)
+        row-aggr (p/vals->sparsevec (-> (/ edge splits) (repeat empty-val) vec) edge splits)        
         row-source (construct int-vars
                               [(into [gen] src-vars)
-                               [col-aggr "?col" "?val" :> "?win-col" "?row-vec"]])
-        row-aggr (p/vals->sparsevec (-> (/ edge splits) (repeat 0) vec)
-                                    edge
-                                    splits)]
+                               [col-aggr "?col" "?val" :> "?win-col" "?row-vec"]])]
     (construct out-vars
                [(into [row-source] int-vars)
                 [row-aggr "?row" "?row-vec" :> "?win-row" "?window"]])))
