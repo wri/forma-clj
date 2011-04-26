@@ -28,43 +28,39 @@
   [line]
   (map (fn [val]
          (try (Float. val)
-              (catch Exception _
-                val)))
+              (catch Exception _ val)))
        (split line #",")))
+
+(defmapop [format-datestring [t-res]]
+  [datestring]
+  (let [[month day year] (split datestring #"/")]
+    (format "%s-%s-%s" year month day)))
 
 (defn fire-source
   "Takes a source of textlines, and returns 2-tuples with latitude and
   longitude."
-  [source]
-  (<- [?dataset ?lat ?lon ?kelvin ?datestring]
+  [source t-res]
+  (<- [?dataset ?lat ?lon ?datestring ?kelvin]
       (source ?line)
       (identity "fire" :> ?dataset)
-      (mangle ?line :> ?lat ?lon ?kelvin _ _ ?datestring _ _ _ _ _ _)))
-
-(defmapop [to-period [t-res]]
-  [datestring]
-  (let [[month day year] (->> (split datestring #"/")
-                              (map #(Integer. %)))]
-    (periodize t-res year month day)))
-"12/31/2005"
+      (format-datestring [] ?date :> ?datestring)
+      (mangle ?line :> ?lat ?lon ?kelvin _ _ ?date _ _ _ _ _ _)))
 
 (defn rip-fires
   "Aggregates fire data at the supplied path by modis pixel at the
   supplied resolution."
   [m-res t-res path]
-  (let [fires (fire-source (hfs-textline path))]
-    (<- [?dataset ?mod-h ?mod-v ?sample ?line ?tperiod ?count ?max-t]
-        (fires ?dataset ?lat ?lon ?kelvin ?datestring)
-        (to-period [t-res] ?datestring :> ?tperiod)
+  (let [fires (fire-source (hfs-textline path) t-res)]
+    (<- [?dataset ?mod-h ?mod-v ?sample ?line ?datestring ?fire-count ?max-t]
+        (fires ?dataset ?lat ?lon ?datestring ?kelvin)
         (> ?kelvin 330)
         (latlon->modis m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
         (c/max ?kelvin :> ?max-t)
-        (c/count ?count))))
+        (c/count ?fire-count))))
 
 (defn to-vector [x y]
   [[x y]])
 
-;; TODO: Docs
 (defn sample-aggregator
   "Takes a samples and line generator, and stitches lines back
   together. "
@@ -95,8 +91,7 @@
   "Rips apart fires!"
   [count]
   (?- (stdout)
-      (c/first-n (line-aggregator
-                  (rip-fires "1000"
-                             "32"
-                             (str prepath "MCD14DL.2011074.txt")))
+      (c/first-n (line-aggregator (rip-fires "1000"
+                                             "32"
+                                             (str prepath "MCD14DL.2011074.txt")))
                  count)))
