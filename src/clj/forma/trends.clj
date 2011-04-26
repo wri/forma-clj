@@ -5,7 +5,8 @@
 ;; vector be calling vec on it.)
 
 (ns forma.trends
-  (:use cascalog.api)
+  (:use cascalog.api
+        [forma.matrix.utils :only (matrix-of)])
   (:require [forma.hadoop.predicate :as p]
             [cascalog.ops :as c]
             [cascalog.vars :as v]))
@@ -132,12 +133,6 @@
                mod-v 1]]
      [mod-h mod-v sample line val])))
 
-
-(defn vec-of
-  "Returns a vector of `length` filled with `val`."
-  [length val]
-  (vec (repeat length val)))
-
 ;; This is what we're mimicking.
 
 (defn sample-aggregator
@@ -155,7 +150,7 @@
   (let [line-source (sample-aggregator point-source edge splits)
         line-agger (p/vals->sparsevec edge
                                       splits
-                                      (vec-of (/ edge splits) 0))]
+                                      (vec-of 0 (/ edge splits)))]
     (<- [?mod-h ?mod-v ?window-col ?window-row ?window]
         (line-source ?mod-h ?mod-v ?line ?window-col ?line-vec)
         (line-agger ?line ?line-vec :> ?window-row ?window))))
@@ -169,7 +164,7 @@
      (let [sample-agger (p/vals->sparsevec edge splits 0)
            line-agger  (p/vals->sparsevec edge
                                           splits
-                                          (vec-of (/ edge splits) 0))
+                                          (vec-of 0 (/ edge splits)))
            line-source (<- [?mod-h ?mod-v ?line ?window-col ?line-vec]
                            (point-source ?mod-h ?mod-v ?sample ?line ?val)
                            (sample-agger ?sample ?val :> ?window-col ?line-vec))]
@@ -202,7 +197,7 @@
         col-aggr (p/vals->sparsevec edge splits empty-val)
         row-aggr (p/vals->sparsevec edge
                                     splits
-                                    (vec-of (/ edge splits) 0))        
+                                    (vec-of 0 (/ edge splits)))        
         row-source (construct int-vars
                               [(into [gen] src-vars)
                                [col-aggr c-sym v-sym :> "?win-col" "?row-vec"]])]
@@ -227,12 +222,85 @@
   (let [[int-sym] (v/gen-non-nullable-vars 1)
         out-syms (v/gen-non-nullable-vars 3)
         [src-vars int-vars out-vars] (mk-vars gen in-syms int-sym out-syms)
+
         col-aggr (p/vals->sparsevec edge splits empty-val)
-        row-aggr (p/vals->sparsevec edge splits (vec-of (/ edge splits) empty-val))
         row-source (construct int-vars
                               [(into [gen] src-vars)
                                [col-aggr (in-syms 0) (in-syms 2) :> (out-syms 0) int-sym]])
+
+        row-aggr (p/vals->sparsevec edge splits (vec-of empty-val (/ edge splits)))
         win-source (construct out-vars
                               [(into [row-source] int-vars)
                                [row-aggr (in-syms 1) int-sym :> (out-syms 1) (out-syms 2)]])]
     win-source))
+
+
+;; ALSO WORKING
+(defn build-windows
+  "Accepts a cascalog generator, and a vector of keys corresponding to the "
+  [gen in-syms edge splits empty-val]
+  (let [split-width (/ edge splits)
+        mk-empty #(matrix-of empty-val % split-width)
+        dim-aggr (partial p/vals->sparsevec edge splits)
+        
+        [in-pos [val]] (split-at (dec (count in-syms)) in-syms)
+        pos-syms (v/gen-non-nullable-vars 2)
+        val-syms (v/gen-non-nullable-vars 2) ; equal to dimensions?
+
+        ;; Swap out vars.
+        src-vars (get-out-fields gen)
+        swap #(replace (zipmap in-syms %) src-vars)
+        
+        ;;1st dimensional change
+        row-source (construct (swap [(nth in-pos 1) (pos-syms 0) (val-syms 0)])
+                              [(into [gen] src-vars)
+                               [(dim-aggr (mk-empty 0))
+                                (nth in-pos 0) val :> (pos-syms 0) (val-syms 0)]])
+
+        ;; second dimensional change
+        win-source (construct (swap [(pos-syms 0) (pos-syms 1) (val-syms 1)])
+                              [(into [row-source] (swap [(nth in-pos 1) (pos-syms 0) (val-syms 0)]))
+                               [(dim-aggr (mk-empty 1))
+                                (nth in-pos 1) (val-syms 0) :> (pos-syms 1) (val-syms 1)]])]
+    win-source))
+
+(defn build-windows
+  "Accepts a cascalog generator, and a vector of keys corresponding to the "
+  [gen in-syms edge splits empty-val]
+  (let [dimensions (dec (count in-syms))
+        split-width (/ edge splits)
+        mk-empty #(matrix-of empty-val % split-width)
+        dim-aggr (partial p/vals->sparsevec edge splits)
+        [in-pos [val]] (split-at dimensions in-syms)
+        pos-syms (v/gen-non-nullable-vars dimensions)
+        val-syms (cons val (v/gen-non-nullable-vars dimensions)) ; equal to dimensions?
+
+        ;; Swap out vars.
+        src-vars (get-out-fields gen)
+        swap #(replace (zipmap in-syms %) src-vars)
+        
+        ;;1st dimensional change
+        row-source (construct (swap [(nth in-pos 1) (nth pos-syms 0) (nth val-syms 1)])
+                              [(into [gen] (swap [(nth in-pos 0) (nth in-pos 1) (nth val-syms 0)]))
+                               [(dim-aggr (mk-empty 0))
+                                (nth in-pos 0) (nth val-syms 0) :> (nth pos-syms 0) (nth val-syms 1)]])
+
+        ;; second dimensional change
+        win-source (construct (swap [(nth pos-syms 0) (nth pos-syms 1) (nth val-syms 2)])
+                              [(into [row-source] (swap [(nth in-pos 1) (nth pos-syms 0) (nth val-syms 1)]))
+                               [(dim-aggr (mk-empty 1))
+                                (nth in-pos 1) (nth val-syms 1) :> (nth pos-syms 1) (nth val-syms 2)]])]
+    win-source))
+
+(defn const-dim
+  "NOTE THAT WE AGGREGATE DIMENSIONS FROM LEFT TO RIGHT. First
+  dimension is going to be the width, then height is the second
+  dimension. I think that reversing this, and counting down from dim
+  on the in-pos var at the end would fix this."
+  [dim src]
+  (let [dims 2
+        ()])
+  (construct (swap [(nth pos-syms 0) (nth pos-syms 1) (nth val-syms 2)])
+             [(into [src] (swap [(nth in-pos 1) (nth pos-syms 0) (nth val-syms 1)]))
+              [(dim-aggr (mk-empty dim))
+               (nth in-pos dim) (nth val-syms dim) :> (nth pos-syms dim) (nth val-syms (inc dim))]]))

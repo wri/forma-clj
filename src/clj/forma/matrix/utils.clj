@@ -90,3 +90,11 @@ supplied, assumes a square matrix."
   (i/matrix val cols 1))
 
 (def ones-column (partial column-matrix 1))
+
+(defn matrix-of
+  "Returns an n-dimensional matrix of `val`, with edge length of
+  `edge`."
+  [val dims edge]
+  (reduce #(%2 %1)
+          val
+          (repeat dims (fn [v] (vec (repeat edge v))))))
