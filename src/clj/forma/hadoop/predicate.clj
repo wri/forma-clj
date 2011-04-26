@@ -26,13 +26,11 @@
   other places. Lines are divided into `splits` based on that input
   parameter. Currently, we require that `splits` divide evenly into
   `final-length`."
-  [final-length splits empty-val]
-  {:pre [(zero? (mod final-length splits))]}
-  (let [split-length (ceil (/ final-length splits))]
-    (<- [?idx ?val :> ?split-idx ?split-vec]
-        (:sort ?idx)
-        ((c/juxt #'mod #'quot) ?idx split-length :> ?sub-idx ?split-idx)
-        (sparse-vec [split-length empty-val] ?sub-idx ?val :> ?split-vec))))
+  [split-length empty-val]
+  (<- [?idx ?val :> ?split-idx ?split-vec]
+      (:sort ?idx)
+      ((c/juxt #'mod #'quot) ?idx split-length :> ?sub-idx ?split-idx)
+      (sparse-vec [split-length empty-val] ?sub-idx ?val :> ?split-vec)))
 
 ;; ### Multidimensional Aggregation
 ;;
@@ -51,11 +49,10 @@
 ?mod-v ?sample ?line]`, and aggregates into windows across multiple
 dimensions."
   ([point-source] (window-aggregator point-source 20 4))
-  ([point-source edge splits]
-     (let [sample-agger (vals->sparsevec edge splits 0)
-           line-agger  (vals->sparsevec edge
-                                        splits
-                                        (matrix-of 0 1 (/ edge splits)))
+  ([point-source split-length]
+     (let [sample-agger (vals->sparsevec split-length 0)
+           line-agger  (vals->sparsevec split-length
+                                        (matrix-of 0 1 split-length))
            line-source (<- [?mod-h ?mod-v ?line ?window-col ?line-vec]
                            (point-source ?mod-h ?mod-v ?sample ?line ?val)
                            (sample-agger ?sample ?val :> ?window-col ?line-vec))]
@@ -65,21 +62,6 @@ dimensions."
 
 ;; simplify with
 ;; https://github.com/nathanmarz/cascalog-workshop/blob/master/src/clj/workshop/dynamic.clj#L35
-(defn build-windows
-  [gen in-syms edge splits empty-val]
-  (let [split-width (/ edge splits)
-        [inpos nextpos outpos inval outval] (v/gen-non-nullable-vars 5)
-        sym-swap  #(replace (zipmap in-syms %) (get-out-fields gen))]
-    (reduce #(%2 %1)
-            gen
-            (for [dim (range (dec (count in-syms)))
-                  :let [empty-val (matrix-of empty-val dim split-width)
-                        aggr (vals->sparsevec edge splits empty-val)]]
-              (fn [src]
-                (construct (sym-swap [nextpos outpos outval])
-                           [[src :>> (sym-swap [inpos nextpos inval])]
-                            [aggr inpos inval :> outpos outval]]))))))
-
 (defn swap-syms
   "Returns a vector of dynamic variable outputs from a cascalog
   generator, with `in-syms` swapped for `out-syms`."
@@ -88,21 +70,15 @@ dimensions."
            (get-out-fields gen)))
 
 (defn build-windows
-  [gen in-syms edge splits empty-val]
-  (let [split-width (/ edge splits)
-        swap (partial swap-syms gen in-syms)
+  [gen in-syms split-length empty-val]
+  (let [swap (partial swap-syms gen in-syms)
         [inpos nextpos outpos inval outval] (v/gen-non-nullable-vars 5)]
     (reduce #(%2 %1)
             gen
             (for [dim (range (dec (count in-syms)))
-                  :let [empty-val (matrix-of empty-val dim split-width)
-                        aggr (vals->sparsevec edge splits empty-val)]]
+                  :let [empty-val (matrix-of empty-val dim split-length)
+                        aggr (vals->sparsevec split-length empty-val)]]
               (fn [src]
                 (construct (swap [nextpos outpos outval])
                            [[src :>> (swap [inpos nextpos inval])]
                             [aggr inpos inval :> outpos outval]]))))))
-
-
-;; [pos-syms val-syms] (map #(into (vec %)
-;;                                         (v/gen-non-nullable-vars dimensions))
-;;                                  (split-at dimensions in-syms))
