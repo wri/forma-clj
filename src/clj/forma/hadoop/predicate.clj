@@ -1,5 +1,6 @@
 (ns forma.hadoop.predicate
   (:use cascalog.api
+        [clojure.string :only (split)]
         [clojure.contrib.math :only (ceil)]
         [clojure.contrib.seq :only (positions)]
         [forma.matrix.utils :only (sparse-vector matrix-of)])
@@ -31,6 +32,14 @@
   missing value."}
   [tuples]
   [[(sparse-vector length missing-val tuples)]])
+
+(defn mangle
+  "Mangles textlines connected with commas."
+  [line]
+  (map (fn [val]
+         (try (Float. val)
+              (catch Exception _ val)))
+       (split line #",")))
 
 ;; ### Predicate Macros
 
