@@ -156,7 +156,6 @@
         (line-agger ?line ?line-vec :> ?window-row ?window))))
 
 ;; Or, a bit more condensed...
-;; 
 (defn window-aggregator
   "Stitches lines back together into little windows."
   ([point-source] (window-aggregator point-source 20 4))
@@ -178,65 +177,14 @@
   (<- [?mh ?mv ?s ?l ?v]
       (points-plus ?mh ?mv ?s ?l ?v)))
 
-(defn mk-vars
-  "Generates the three stages of var needed by build-windows."
-  [gen symbols [c-sym r-sym v-sym :as new-syms]]
-  (let [src-vars (replace (zipmap symbols new-syms)
-                          (get-out-fields gen))]
-    [src-vars
-     (replace (zipmap new-syms [r-sym "?win-col" "?row-vec"])
-              src-vars)
-     (replace (zipmap new-syms ["?win-col" "?win-row" "?window"])
-              src-vars)]))
-
 (defn build-windows
-  "Accepts a cascalog generator, and a vector of keys corresponding to the "
-  [gen [col row val :as symbols] edge splits empty-val]
-  (let [[c-sym r-sym v-sym :as new-syms] (v/gen-nullable-vars 3)
-        [src-vars int-vars out-vars] (mk-vars gen symbols new-syms)
-        col-aggr (p/vals->sparsevec edge splits empty-val)
-        row-aggr (p/vals->sparsevec edge
-                                    splits
-                                    (vec-of 0 (/ edge splits)))        
-        row-source (construct int-vars
-                              [(into [gen] src-vars)
-                               [col-aggr c-sym v-sym :> "?win-col" "?row-vec"]])]
-    (construct out-vars
-               [(into [row-source] int-vars)
-                [row-aggr r-sym "?row-vec" :> "?win-row" "?window"]])))
+  "Accepts a cascalog generator, and a vector of keys corresponding to the positions... etc.
 
-;; THIS CURRENTLY WORKS
-(defn mk-vars
-  "Generates the three stages of var needed by build-windows."
-  [gen in-syms int-sym out-syms]
-  (let [src-vars (get-out-fields gen)]
-    [src-vars
-     (replace (zipmap in-syms [(in-syms 1) (out-syms 0) int-sym])
-              src-vars)
-     (replace (zipmap in-syms [(out-syms 0) (out-syms 1) (out-syms 2)])
-              src-vars)]))
+We need to replace in-syms with two vars... a vector for the position
+fields, and the value field.
 
-(defn build-windows
-  "Accepts a cascalog generator, and a vector of keys corresponding to the "
-  [gen in-syms edge splits empty-val]
-  (let [[int-sym] (v/gen-non-nullable-vars 1)
-        out-syms (v/gen-non-nullable-vars 3)
-        [src-vars int-vars out-vars] (mk-vars gen in-syms int-sym out-syms)
-
-        col-aggr (p/vals->sparsevec edge splits empty-val)
-        row-source (construct int-vars
-                              [(into [gen] src-vars)
-                               [col-aggr (in-syms 0) (in-syms 2) :> (out-syms 0) int-sym]])
-
-        row-aggr (p/vals->sparsevec edge splits (vec-of empty-val (/ edge splits)))
-        win-source (construct out-vars
-                              [(into [row-source] int-vars)
-                               [row-aggr (in-syms 1) int-sym :> (out-syms 1) (out-syms 2)]])]
-    win-source))
-
-;; WORKING
-(defn build-windows
-  "Accepts a cascalog generator, and a vector of keys corresponding to the "
+Know that we go from left to right, here!! We should accept a string
+  with the value field, and a vector of position fields."
   [gen in-syms edge splits empty-val]
   (let [dimensions (dec (count in-syms))
         split-width (/ edge splits)
