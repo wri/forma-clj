@@ -5,11 +5,7 @@
 ;; vector be calling vec on it.)
 
 (ns forma.trends
-  (:use cascalog.api
-        [forma.matrix.utils :only (matrix-of)])
-  (:require [forma.hadoop.predicate :as p]
-            [cascalog.ops :as c]
-            [cascalog.vars :as v]))
+  (:use cascalog.api))
 
 ;; ### Time Series Generation
 ;;

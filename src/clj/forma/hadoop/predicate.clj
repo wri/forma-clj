@@ -6,6 +6,18 @@
   (:require [cascalog.ops :as c]
             [cascalog.vars :as v]))
 
+
+;; ### Cascalog Helpers
+
+(defn swap-syms
+  "Returns a vector of dynamic variable outputs from a cascalog
+  generator, with `in-syms` swapped for `out-syms`."
+  [gen in-syms out-syms]
+  (replace (zipmap in-syms out-syms)
+           (get-out-fields gen)))
+
+;; ### Operations
+
 (defbufferop tuples->string
   {:doc "Returns a string representation of the tuples input to this
   buffer. Useful for testing!"}
@@ -20,6 +32,8 @@
   [tuples]
   [[(sparse-vector length missing-val tuples)]])
 
+;; ### Predicate Macros
+
 (defn vals->sparsevec
   "Returns an aggregating predicate macro that stitches values into a
   sparse vector with all `?val`s at `?idx`, and `empty-val` at all
@@ -32,52 +46,37 @@
       ((c/juxt #'mod #'quot) ?idx split-length :> ?sub-idx ?split-idx)
       (sparse-vec [split-length empty-val] ?sub-idx ?val :> ?split-vec)))
 
-;; ### Multidimensional Aggregation
-;;
-;; Okay, the next function down the line is a bit
-;; wacky. `vals->sparsevec` works great at one dimensional
-;; aggregation. It's a big, big bonus that this is a predicate macro,
-;; since it can be composed with other queries.
-;;
-;; We run into a bit of trouble when we attempt 2-dimensional
-;; aggregation, as aggregators can't be chained. For chunk reconstitution, .
-;;
-;; The following query builds more queries like this one:
+;; ### Special Functions
 
-(defn window-aggregator
-  "Accepts a that generate tuples with fields similar to `[?mod-h
-?mod-v ?sample ?line]`, and aggregates into windows across multiple
-dimensions."
-  ([point-source] (window-aggregator point-source 20 4))
-  ([point-source split-length]
-     (let [sample-agger (vals->sparsevec split-length 0)
-           line-agger  (vals->sparsevec split-length
-                                        (matrix-of 0 1 split-length))
-           line-source (<- [?mod-h ?mod-v ?line ?window-col ?line-vec]
-                           (point-source ?mod-h ?mod-v ?sample ?line ?val)
-                           (sample-agger ?sample ?val :> ?window-col ?line-vec))]
-       (<- [?mod-h ?mod-v ?window-col ?window-row ?window]
-           (line-source ?mod-h ?mod-v ?line ?window-col ?line-vec)
-           (line-agger ?line ?line-vec :> ?window-row ?window)))))
+(defn sparse-windower
+  "Aggregates cascalog generator values up into multidimensional
+  windows of nested vectors of `split-length` based on the supplied
+  vector of spatial variables. Any missing values will be filled with
+  `sparse-val`. This is useful for aggregating spatial data into
+  windows or chunks suitable for storage, or to scan across for
+  nearest neighbors.
 
-;; simplify with
-;; https://github.com/nathanmarz/cascalog-workshop/blob/master/src/clj/workshop/dynamic.clj#L35
-(defn swap-syms
-  "Returns a vector of dynamic variable outputs from a cascalog
-  generator, with `in-syms` swapped for `out-syms`."
-  [gen in-syms out-syms]
-  (replace (zipmap in-syms out-syms)
-           (get-out-fields gen)))
+  `in-syms` should be a vector containing the name of each spatial
+  dimension variable, plus the name of the value to be aggregated. For
+  example, with some source `s` that would generate
 
-(defn build-windows
-  [gen in-syms split-length empty-val]
+    (s ?mod-h ?mod-v ?col ?row ?val)
+
+  one could wrap s like so:
+
+    (sparse-windower s [\"?sample\" \"?line\" \"?val\"] 3000 0)
+
+  to produce a new generator that would create
+
+    (s ?mod-h ?mod-v ?window-col ?window-row ?window)"
+  [gen in-syms split-length sparse-val]
   (let [swap (partial swap-syms gen in-syms)
         [inpos nextpos outpos inval outval] (v/gen-non-nullable-vars 5)]
     (reduce #(%2 %1)
             gen
             (for [dim (range (dec (count in-syms)))
-                  :let [empty-val (matrix-of empty-val dim split-length)
-                        aggr (vals->sparsevec split-length empty-val)]]
+                  :let [empty (matrix-of sparse-val dim split-length)
+                        aggr (vals->sparsevec split-length empty)]]
               (fn [src]
                 (construct (swap [nextpos outpos outval])
                            [[src :>> (swap [inpos nextpos inval])]
