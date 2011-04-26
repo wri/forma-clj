@@ -5,6 +5,9 @@
   (:require [forma.hadoop.predicate :as p]
             [cascalog.ops :as c]))
 
+(def prepath "/Users/sritchie/Desktop/FORMA/FIRE/")
+(def testfile (str prepath "MCD14DL.2011074.txt"))
+
 (defmapop [format-datestring [t-res]]
   [datestring]
   (let [[month day year] (split datestring #"/")]
@@ -31,9 +34,6 @@
         (latlon->modis m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
         (c/max ?kelvin :> ?max-t)
         (c/count ?fire-count))))
-
-(def prepath "/Users/sritchie/Desktop/FORMA/FIRE/")
-(def testfile (str prepath "MCD14DL.2011074.txt"))
 
 (defn run-rip
   "Rips apart fires!"
