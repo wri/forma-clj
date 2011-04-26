@@ -58,6 +58,16 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
             (< sample edge)
             (< line edge)))))
 
+(defn hv->tilestring
+  "Returns a 0-padded tilestring of format `HHHVVV`, for the supplied
+  MODIS h and v coordinates. For example:
+
+     (tilestring 8 6)
+     ;=> \"008006\""
+  [mod-h mod-v]
+  (apply str (map (partial format "%03d")
+                  [mod-h mod-v])))
+
 (defn tilestring->hv
   "Extracts integer representations of the MODIS H and V coordinates
 referenced by the supplied MODIS tilestring, of format 'HHHVVV'."

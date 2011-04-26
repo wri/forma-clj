@@ -10,6 +10,7 @@
 (ns forma.source.rain
   (:use cascalog.api
         [forma.hadoop.io :only (get-bytes)]
+        [forma.source.modis :only (hv->tilestring)]
         [forma.reproject :only (project-to-modis
                                 dimensions-at-res)])
   (:require [cascalog.ops :as c]
@@ -245,16 +246,6 @@ binary files are packaged as hadoop BytesWritable objects."}
 ;; this slows performance slightly. On a cluster, it should give us a
 ;; big bump.
 
-(defn tilestring
-  "Returns a 0-padded tilestring of format `HHHVVV`, for the supplied
-  MODIS h and v coordinates. For example:
-
-     (tilestring 8 6)
-     ;=> \"008006\""
-  [mod-h mod-v]
-  (apply str (map (partial format "%03d")
-                  [mod-h mod-v])))
-
 (defn fancy-index
   "Reduction step to process all tuples produced by
   `forma.source.rain/cross-join`. We break this out into a separate
@@ -264,7 +255,7 @@ binary files are packaged as hadoop BytesWritable objects."}
   [m-res ll-res chunk-size source]
   (<- [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk]
       (source ?dataset ?spatial-res ?temporal-res ?mod-h ?mod-v ?date ?raindata)
-      (tilestring ?mod-h ?mod-v :> ?tilestring)
+      (hv->tilestring ?mod-h ?mod-v :> ?tilestring)
       (project-to-modis [m-res ll-res chunk-size]
                         ?raindata ?mod-h ?mod-v :> ?chunkid ?chunk)
       (float-array ?chunk :> ?float-chunk)))
