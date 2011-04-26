@@ -65,7 +65,7 @@
   "Takes a samples and line generator, and stitches lines back
   together. "
   [point-source]
-  (let [sample-agger (p/vals->sparsevec [0 0] 1200 1)]
+  (let [sample-agger (p/vals->sparsevec 1200 1 [0 0])]
     (<- [?dataset ?mod-h ?mod-v ?tperiod ?line ?line-vec-col ?line-vec]
         (point-source ?dataset ?mod-h ?mod-v ?sample ?line ?tperiod ?count ?max-t)
         (to-vector ?count ?max-t :> ?values)
@@ -77,10 +77,9 @@
   "Stitches lines back together into little windows."
   [point-source]
   (let [line-source (sample-aggregator point-source)
-        line-agger (p/vals->sparsevec (-> (/ 1200 1)
-                                          (repeat [0 0])
-                                          vec)
-                                      1200 1)]
+        line-agger (p/vals->sparsevec 1200 1 (-> (/ 1200 1)
+                                                 (repeat [0 0])
+                                                 vec))]
     (<- [?dataset ?t-period ?tile-h ?tile-v ?chunkid ?chunk]
         (line-source ?dataset ?tile-h ?tile-v ?t-period ?line ?window-col ?line-vec)
         (line-agger ?line ?line-vec :> ?chunkid ?chunk))))

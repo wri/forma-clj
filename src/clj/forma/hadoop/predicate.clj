@@ -19,7 +19,7 @@
   other places. Lines are divided into `splits` based on that input
   parameter. Currently, we require that `splits` divide evenly into
   `final-length`."
-  [empty-val final-length splits]
+  [final-length splits empty-val]
   {:pre [(zero? (mod final-length splits))]}
   (let [split-length (ceil (/ final-length splits))]
     (<- [?idx ?val :> ?split-idx ?split-vec]

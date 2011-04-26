@@ -129,63 +129,67 @@
          sample (range 20)
          line   (range 20)
          :let [val sample
-               mod-v 1
-               month (mod line 2)]]
-     [month mod-h mod-v sample line val])))
+               mod-v 1]]
+     [mod-h mod-v sample line val])))
+
+
+(defn vec-of
+  "Returns a vector of `length` filled with `val`."
+  [length val]
+  (vec (repeat length val)))
 
 ;; This is what we're mimicking.
-;;
-;; (defn sample-aggregator
-;;   "Takes a samples and line generator, and stitches lines back
-;;   together. "
-;;   [point-source edge splits]
-;;   (let [sample-agger (p/vals->sparsevec 0 edge splits)]
-;;     (<- [?mod-h ?mod-v ?line ?line-vec-col ?line-vec]
-;;         (point-source ?mod-h ?mod-v ?sample ?line ?val)
-;;         (sample-agger ?sample ?val :> ?line-vec-col ?line-vec))))
 
-;; (defn window-aggregator
-;;   "Stitches lines back together into little windows."
-;;   [point-source edge splits]
-;;   (let [line-source (sample-aggregator point-source edge splits)
-;;         line-agger (p/vals->sparsevec (-> (/ edge splits) (repeat 0) vec)
-;;                                       edge
-;;                                       splits)]
-;;     (<- [?mod-h ?mod-v ?window-col ?window-row ?window]
-;;         (line-source ?mod-h ?mod-v ?line ?window-col ?line-vec)
-;;         (line-agger ?line ?line-vec :> ?window-row ?window))))
-;;
+(defn sample-aggregator
+  "Takes a samples and line generator, and stitches lines back
+  together. "
+  [point-source edge splits]
+  (let [sample-agger (p/vals->sparsevec edge splits 0)]
+    (<- [?mod-h ?mod-v ?line ?line-vec-col ?line-vec]
+        (point-source ?mod-h ?mod-v ?sample ?line ?val)
+        (sample-agger ?sample ?val :> ?line-vec-col ?line-vec))))
+
+(defn window-aggregator
+  "Stitches lines back together into little windows."
+  [point-source edge splits]
+  (let [line-source (sample-aggregator point-source edge splits)
+        line-agger (p/vals->sparsevec edge
+                                      splits
+                                      (vec-of (/ edge splits) 0))]
+    (<- [?mod-h ?mod-v ?window-col ?window-row ?window]
+        (line-source ?mod-h ?mod-v ?line ?window-col ?line-vec)
+        (line-agger ?line ?line-vec :> ?window-row ?window))))
+
 ;; Or, a bit more condensed...
 ;; 
-;; (defn window-aggregator
-;;   "Stitches lines back together into little windows."
-;;   ([point-source] (window-aggregator point-source 20 4))
-;;   ([point-source edge splits]
-;;      (let [sample-agger (p/vals->sparsevec 0 edge splits)
-;;            line-agger  (p/vals->sparsevec (-> (/ edge splits) (repeat 0) vec)
-;;                                           edge
-;;                                           splits)
-;;            line-source (<- [?mod-h ?mod-v ?line ?window-col ?line-vec]
-;;                            (point-source ?mod-h ?mod-v ?sample ?line ?val)
-;;                            (sample-agger ?sample ?val :> ?window-col ?line-vec))]
-;;        (<- [?mod-h ?mod-v ?window-col ?window-row ?window]
-;;            (line-source ?mod-h ?mod-v ?line ?window-col ?line-vec)
-;;            (line-agger ?line ?line-vec :> ?window-row ?window)))))
+(defn window-aggregator
+  "Stitches lines back together into little windows."
+  ([point-source] (window-aggregator point-source 20 4))
+  ([point-source edge splits]
+     (let [sample-agger (p/vals->sparsevec edge splits 0)
+           line-agger  (p/vals->sparsevec edge
+                                          splits
+                                          (vec-of (/ edge splits) 0))
+           line-source (<- [?mod-h ?mod-v ?line ?window-col ?line-vec]
+                           (point-source ?mod-h ?mod-v ?sample ?line ?val)
+                           (sample-agger ?sample ?val :> ?window-col ?line-vec))]
+       (<- [?mod-h ?mod-v ?window-col ?window-row ?window]
+           (line-source ?mod-h ?mod-v ?line ?window-col ?line-vec)
+           (line-agger ?line ?line-vec :> ?window-row ?window)))))
 
 ;;(?- (stdout) (window-aggregator points 20 4))
 
 (def key-tap
-  (<- [?month ?mh ?mv ?s ?l ?v]
-      (points-plus ?month ?mh ?mv ?s ?l ?v)))
+  (<- [?mh ?mv ?s ?l ?v]
+      (points-plus ?mh ?mv ?s ?l ?v)))
 
 (defn mk-vars
   "Generates the three stages of var needed by build-windows."
-  [gen symbols]
-  (let [new-syms ["?col" "?row" "?val"]
-        src-vars (replace (zipmap symbols new-syms)
+  [gen symbols [c-sym r-sym v-sym :as new-syms]]
+  (let [src-vars (replace (zipmap symbols new-syms)
                           (get-out-fields gen))]
     [src-vars
-     (replace (zipmap new-syms ["?row" "?win-col" "?row-vec"])
+     (replace (zipmap new-syms [r-sym "?win-col" "?row-vec"])
               src-vars)
      (replace (zipmap new-syms ["?win-col" "?win-row" "?window"])
               src-vars)]))
@@ -193,12 +197,42 @@
 (defn build-windows
   "Accepts a cascalog generator, and a vector of keys corresponding to the "
   [gen [col row val :as symbols] edge splits empty-val]
-  (let [[src-vars int-vars out-vars] (mk-vars gen symbols)
-        [col-aggr row-aggr] col-aggr (p/vals->sparsevec empty-val edge splits)
-        row-aggr (p/vals->sparsevec (-> (/ edge splits) (repeat empty-val) vec) edge splits)        
+  (let [[c-sym r-sym v-sym :as new-syms] (v/gen-nullable-vars 3)
+        [src-vars int-vars out-vars] (mk-vars gen symbols new-syms)
+        col-aggr (p/vals->sparsevec edge splits empty-val)
+        row-aggr (p/vals->sparsevec edge
+                                    splits
+                                    (vec-of (/ edge splits) 0))        
         row-source (construct int-vars
                               [(into [gen] src-vars)
-                               [col-aggr "?col" "?val" :> "?win-col" "?row-vec"]])]
+                               [col-aggr c-sym v-sym :> "?win-col" "?row-vec"]])]
     (construct out-vars
                [(into [row-source] int-vars)
-                [row-aggr "?row" "?row-vec" :> "?win-row" "?window"]])))
+                [row-aggr r-sym "?row-vec" :> "?win-row" "?window"]])))
+
+;; THIS CURRENTLY WORKS
+(defn mk-vars
+  "Generates the three stages of var needed by build-windows."
+  [gen in-syms int-sym out-syms]
+  (let [src-vars (get-out-fields gen)]
+    [src-vars
+     (replace (zipmap in-syms [(in-syms 1) (out-syms 0) int-sym])
+              src-vars)
+     (replace (zipmap in-syms [(out-syms 0) (out-syms 1) (out-syms 2)])
+              src-vars)]))
+
+(defn build-windows
+  "Accepts a cascalog generator, and a vector of keys corresponding to the "
+  [gen in-syms edge splits empty-val]
+  (let [[int-sym] (v/gen-non-nullable-vars 1)
+        out-syms (v/gen-non-nullable-vars 3)
+        [src-vars int-vars out-vars] (mk-vars gen in-syms int-sym out-syms)
+        col-aggr (p/vals->sparsevec edge splits empty-val)
+        row-aggr (p/vals->sparsevec edge splits (vec-of (/ edge splits) empty-val))
+        row-source (construct int-vars
+                              [(into [gen] src-vars)
+                               [col-aggr (in-syms 0) (in-syms 2) :> (out-syms 0) int-sym]])
+        win-source (construct out-vars
+                              [(into [row-source] int-vars)
+                               [row-aggr (in-syms 1) int-sym :> (out-syms 1) (out-syms 2)]])]
+    win-source))
