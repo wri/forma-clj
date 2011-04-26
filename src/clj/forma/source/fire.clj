@@ -14,29 +14,31 @@
   (let [[month day year] (split datestring #"/")]
     (format "%s-%s-%s" year month day)))
 
+;; ### Fire Predicates
+;;
+;; TODO: Figure out a way to dynamically generate these that doesn't
+;;involve anonymous functions
 (defmacro defpredsummer
-  [name pred]
+  [name vals pred]
   `(defaggregateop ~name
      ([] 0)
-     ([count# val#] (if (~pred val#)
+     ([count# ~@vals] (if (~pred ~@vals)
                       (inc count#)
                       count#))
      ([count#] [count#])))
 
 (defpredsummer fires-above-330
+  [val]
   (fn [v] (> v 330)))
 
 (defpredsummer conf-above-50
+  [val]
   (fn [v] (> v 50)))
 
-(defaggregateop both-preds
-  ([] 0)
-  ([count conf temp]
-     (if (and (> temp 330)
-              (> conf 50))
-       (inc count)
-       count))
-  ([count] [count]))
+(defpredsummer both-preds
+  [conf temp]
+  (fn [c t] (and (> t 330)
+                (> c 50))))
 
 (def fire-characteristics
   (<- [?conf ?kelvin :> ?temp-330 ?conf-50 ?both-preds ?max-t]
