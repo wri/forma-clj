@@ -38,16 +38,23 @@
        count))
   ([count] [count]))
 
+(def fire-characteristics
+  (<- [?conf ?kelvin :> ?temp-330 ?conf-50 ?both-preds ?max-t]
+      ((c/juxt #'fires-above-330 #'c/max) ?kelvin :> ?temp-330 ?max-t)
+      (conf-above-50 ?conf :> ?conf-50)
+      (both-preds ?conf ?kelvin :> ?both-preds)))
+
 (defn fire-source
   "Takes a source of textlines, and returns 2-tuples with latitude and
   longitude."
   [source t-res]
-  (<- [?dataset ?datestring ?t-res ?lat ?lon ?kelvin ?conf]
+  (<- [?dataset ?datestring ?t-res ?lat ?lon ?temp-330 ?conf-50 ?both-preds ?max-t]
       (source ?line)
       (identity "fire" :> ?dataset)
       (identity "01" :> ?t-res)
       (format-datestring ?date :> ?datestring)
-      (p/mangle ?line :> ?lat ?lon ?kelvin _ _ ?date _ _ ?conf _ _ _)))
+      (p/mangle ?line :> ?lat ?lon ?kelvin _ _ ?date _ _ ?conf _ _ _)
+      (fire-characteristics ?conf ?kelvin :> ?temp-330 ?conf-50 ?both-preds ?max-t)))
 
 (defn rip-fires
   "Aggregates fire data at the supplied path by modis pixel at the
@@ -56,19 +63,16 @@
   (let [fires (fire-source (hfs-textline path) t-res)]
     (<- [?dataset ?m-res ?t-res ?tilestring
          ?datestring ?sample ?line ?fire-count ?temp-330 ?conf-50 ?both-preds ?max-t]
-        (fires ?dataset ?datestring ?t-res ?lat ?lon ?kelvin ?conf)
+        (fires ?dataset ?datestring ?t-res ?lat ?lon ?temp-330 ?conf-50 ?both-preds ?max-t)
         (latlon->modis m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
-        (identity m-res :> ?m-res)
         (hv->tilestring ?mod-h ?mod-v :> ?tilestring)
-        (fires-above-330 ?kelvin :> ?temp-330)
-        (conf-above-50 ?conf :> ?conf-50)
-        (both-preds ?conf ?kelvin :> ?both-preds)
-        (c/max ?kelvin :> ?max-t)
+        (identity m-res :> ?m-res)
         (c/count ?fire-count))))
 
 (defn run-rip
   "Rips apart fires!"
   [count]
   (?- (stdout)
-      (c/first-n (rip-fires "1000" "32" testfile)
-                 count)))
+      (c/first-n
+       (rip-fires "1000" "32" testfile)
+       count)))
