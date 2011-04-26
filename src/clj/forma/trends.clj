@@ -7,7 +7,8 @@
 (ns forma.trends
   (:use cascalog.api)
   (:require [forma.hadoop.predicate :as p]
-            [cascalog.ops :as c]))
+            [cascalog.ops :as c]
+            [cascalog.vars :as v]))
 
 ;; ### Time Series Generation
 ;;

@@ -10,7 +10,7 @@
                  "sonatype" "http://oss.sonatype.org/content/repositories/releases"}
   :dependencies [[org.clojure/clojure "1.2.0"]
                  [org.clojure/clojure-contrib "1.2.0"]
-                 [incanter "1.2.3" :exclusions [swank-clojure "1.3.0-SNAPSHOT"]]
+                 [incanter "1.2.3" :exclusions [swank-clojure]]
                  [cascalog "1.7.0"]
                  [clj-time "0.3.0"]
                  [org.clojars.sritchie09/gdal-java-native "1.8.0"]]
