@@ -234,36 +234,7 @@
                                [row-aggr (in-syms 1) int-sym :> (out-syms 1) (out-syms 2)]])]
     win-source))
 
-
-;; ALSO WORKING
-(defn build-windows
-  "Accepts a cascalog generator, and a vector of keys corresponding to the "
-  [gen in-syms edge splits empty-val]
-  (let [split-width (/ edge splits)
-        mk-empty #(matrix-of empty-val % split-width)
-        dim-aggr (partial p/vals->sparsevec edge splits)
-        
-        [in-pos [val]] (split-at (dec (count in-syms)) in-syms)
-        pos-syms (v/gen-non-nullable-vars 2)
-        val-syms (v/gen-non-nullable-vars 2) ; equal to dimensions?
-
-        ;; Swap out vars.
-        src-vars (get-out-fields gen)
-        swap #(replace (zipmap in-syms %) src-vars)
-        
-        ;;1st dimensional change
-        row-source (construct (swap [(nth in-pos 1) (pos-syms 0) (val-syms 0)])
-                              [(into [gen] src-vars)
-                               [(dim-aggr (mk-empty 0))
-                                (nth in-pos 0) val :> (pos-syms 0) (val-syms 0)]])
-
-        ;; second dimensional change
-        win-source (construct (swap [(pos-syms 0) (pos-syms 1) (val-syms 1)])
-                              [(into [row-source] (swap [(nth in-pos 1) (pos-syms 0) (val-syms 0)]))
-                               [(dim-aggr (mk-empty 1))
-                                (nth in-pos 1) (val-syms 0) :> (pos-syms 1) (val-syms 1)]])]
-    win-source))
-
+;; WORKING
 (defn build-windows
   "Accepts a cascalog generator, and a vector of keys corresponding to the "
   [gen in-syms edge splits empty-val]
@@ -271,36 +242,19 @@
         split-width (/ edge splits)
         mk-empty #(matrix-of empty-val % split-width)
         dim-aggr (partial p/vals->sparsevec edge splits)
-        [in-pos [val]] (split-at dimensions in-syms)
-        pos-syms (v/gen-non-nullable-vars dimensions)
-        val-syms (cons val (v/gen-non-nullable-vars dimensions)) ; equal to dimensions?
-
-        ;; Swap out vars.
-        src-vars (get-out-fields gen)
-        swap #(replace (zipmap in-syms %) src-vars)
+        [pos-syms val-syms] (map #(into (vec %)
+                                        (v/gen-non-nullable-vars dimensions))
+                                 (split-at dimensions in-syms))
+        swap #(replace (zipmap in-syms %)
+                       (get-out-fields gen))
         
-        ;;1st dimensional change
-        row-source (construct (swap [(nth in-pos 1) (nth pos-syms 0) (nth val-syms 1)])
-                              [(into [gen] (swap [(nth in-pos 0) (nth in-pos 1) (nth val-syms 0)]))
-                               [(dim-aggr (mk-empty 0))
-                                (nth in-pos 0) (nth val-syms 0) :> (nth pos-syms 0) (nth val-syms 1)]])
-
-        ;; second dimensional change
-        win-source (construct (swap [(nth pos-syms 0) (nth pos-syms 1) (nth val-syms 2)])
-                              [(into [row-source] (swap [(nth in-pos 1) (nth pos-syms 0) (nth val-syms 1)]))
-                               [(dim-aggr (mk-empty 1))
-                                (nth in-pos 1) (nth val-syms 1) :> (nth pos-syms 1) (nth val-syms 2)]])]
-    win-source))
-
-(defn const-dim
-  "NOTE THAT WE AGGREGATE DIMENSIONS FROM LEFT TO RIGHT. First
-  dimension is going to be the width, then height is the second
-  dimension. I think that reversing this, and counting down from dim
-  on the in-pos var at the end would fix this."
-  [dim src]
-  (let [dims 2
-        ()])
-  (construct (swap [(nth pos-syms 0) (nth pos-syms 1) (nth val-syms 2)])
-             [(into [src] (swap [(nth in-pos 1) (nth pos-syms 0) (nth val-syms 1)]))
-              [(dim-aggr (mk-empty dim))
-               (nth in-pos dim) (nth val-syms dim) :> (nth pos-syms dim) (nth val-syms (inc dim))]]))
+        const-dim (fn [dim src]
+                    (let [[inpos nextpos outpos] (map #(nth pos-syms %) [dim (inc dim) (+ dim dimensions)])
+                          [inval outval] (map #(nth val-syms %) [dim (inc dim)])]
+                      (construct (swap [nextpos outpos outval])
+                                 [(into [src] (swap [inpos nextpos inval]))
+                                  [(dim-aggr (mk-empty dim)) inpos inval :> outpos outval]])))]
+    (reduce #(%2 %1)
+            gen
+            (for [d (range dimensions)]
+              (partial const-dim d)))))
