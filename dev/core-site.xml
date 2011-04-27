@@ -2,7 +2,6 @@
 <!-- core-site.xml -->
 <configuration>
 	<property>
-		<name>io.serializations</name>
-                <value>forma.FloatsSerialization,forma.IntsSerialization,cascading.tuple.hadoop.BytesSerialization,cascading.tuple.hadoop.TupleSerialization,org.apache.hadoop.io.serializer.WritableSerialization,org.apache.hadoop.io.serializer.JavaSerialization</value>
+		<name>io.serializations</name>                <value>backtype.hadoop.ThriftSerialization,forma.FloatsSerialization,forma.IntsSerialization,cascading.tuple.hadoop.BytesSerialization,cascading.tuple.hadoop.TupleSerialization,org.apache.hadoop.io.serializer.WritableSerialization,org.apache.hadoop.io.serializer.JavaSerialization</value>
 	</property>
 </configuration>
