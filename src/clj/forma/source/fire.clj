@@ -15,9 +15,7 @@
     (format "%s-%s-%s" year month day)))
 
 ;; ### Fire Predicates
-;;
-;; TODO: Figure out a way to dynamically generate these that doesn't
-;;involve anonymous functions
+
 (defmacro defpredsummer
   [name vals pred]
   `(defaggregateop ~name
@@ -45,6 +43,8 @@
       ((c/juxt #'fires-above-330 #'c/max) ?kelvin :> ?temp-330 ?max-t)
       (conf-above-50 ?conf :> ?conf-50)
       (both-preds ?conf ?kelvin :> ?both-preds)))
+
+;; ## Fire Queries
 
 (defn fire-source
   "Takes a source of textlines, and returns 2-tuples with latitude and
