@@ -56,6 +56,35 @@
                (- (dec max-width) lon-idx)
                lon-idx)]))
 
+;; TODO: compare this to plain-vanilla `bucket` to see if there is a
+;; way to make this more general, noting that `bucket` is used to
+;; sample rain, which has a different origin and ordering than all the
+;; static data samples, which begin at the top-left and are indexed
+;; proceeding to the right and downwards.
+
+(defn map-bucket
+  "Find the grid cell that a particular point (with `lat` and `lon`
+  coordinates) falls within, given a map of grid attributes."
+  [grid-info lat lon]
+  (let [top  (:yulcorner grid-info)
+        left (:xulcorner grid-info)]
+    (map #(bucket (:cellsize grid-info) %)
+         [(- top lat) (- lon left)])))
+
+;; TODO: write an additional function to see if we can incorporate the
+;; rain raster into a sample like this.  Note that modis-sample is
+;; very, very similar to wgs84-index.  Something can be done about this.
+
+(defn modis-sample
+  "Mimics ArcGIS sample function for MODIS points and a raster that is
+  of coarser spatial resolution. (Another function has to be written
+  to deal with base rasters at higher resolution than the MODISpoints.)
+  The function requires a hash-map of ASCII raster characteristics and the
+  latitude and longitude of a single MODIS point in WGS84."
+  [grid-info m-res mod-h mod-v sample line]
+  (let [[lat lon] (m/modis->latlon m-res mod-h mod-v sample line)]
+    (map-bucket grid-info lat lon)))
+
 (defn wgs84-index
   "takes a modis coordinate at the supplied resolution, and returns
   the index within a row vector of WGS84 data at the supplied

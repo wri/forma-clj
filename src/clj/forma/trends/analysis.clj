@@ -24,7 +24,8 @@
                         (range 1 (inc num-months)))))
 
 (defn singular?
-  "Check to see if the supplied matrix `X` is singular."
+  "Check to see if the supplied matrix `X` is singular. note that `X` has to
+  be square, n x n, where n > 1."
   [X]
   (<= (i/det X) 0))
 
@@ -39,6 +40,16 @@
   "apply a function [f] to a window along a sequence [xs] of length [window]"
   [f window xs]
   (pmap f (partition window 1 xs)))
+
+(defn make-monotonic
+  [comparator coll]
+  (reduce (fn [acc val]
+            (conj acc
+                  (if (empty? acc)
+                    val
+                    (comparator val (last acc)))))
+          []
+          coll))
 
 ;; WHOOPBANG
 
@@ -59,7 +70,7 @@
   (->> (deseasonalize ts)
        (windowed-apply ols-coefficient long-block)
        (windowed-apply average window)
-       (reduce min)))
+       (make-monotonic min)))
 
 ;; WHIZBANG
 
@@ -116,12 +127,9 @@
     (subvec base-vec 0 x)))
 
 (defn whizbang
-  [t-series start-period end-period & cofactors]
-  (map (partial lengthening-ts start-period end-period) (apply vector t-series cofactors))
-  #_(map long-trend
-       (map (partial lengthening-ts start-period end-period)
-            (apply vector t-series cofactors))))
-
-
-
-
+  [start-pd end-pd t-series & cofactors]
+  {:pre [(vector? t-series)]}
+  (let [all-ts (apply vector t-series cofactors)]
+    (->> all-ts
+         (map (partial lengthening-ts start-pd end-pd))
+         (apply map long-trend))))
