@@ -1,6 +1,6 @@
 (ns forma.reproject-test
-  (:use forma.reproject
-        midje.sweet))
+  (:use [forma.reproject] :reload)
+  (:use midje.sweet))
 
 (fact
  "This is the only one I have so far... but we need to verify at
