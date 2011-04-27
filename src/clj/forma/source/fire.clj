@@ -4,7 +4,9 @@
         [forma.source.modis :only (latlon->modis
                                    hv->tilestring)])
   (:require [forma.hadoop.predicate :as p]
-            [cascalog.ops :as c]))
+            [cascalog.ops :as c]
+            [cascalog.vars :as v])
+  (:import [forma.type FireTuple]))
 
 (def prepath "/Users/sritchie/Desktop/FORMA/FIRE/")
 (def testfile (str prepath "MCD14DL.2011074.txt"))
@@ -46,30 +48,34 @@
 
 ;; ## Fire Queries
 
+(defn tupleize
+  [max-t t-above-330 c-above-50 both-preds]
+  (FireTuple. max-t t-above-330 c-above-50 both-preds 1))
+
 (defn fire-source
   "Takes a source of textlines, and returns 2-tuples with latitude and
   longitude."
   [source t-res]
-  (<- [?dataset ?datestring ?t-res ?lat ?lon ?temp-330 ?conf-50 ?both-preds ?max-t]
-      (source ?line)
-      (identity "fire" :> ?dataset)
-      (identity "01" :> ?t-res)
-      (format-datestring ?date :> ?datestring)
-      (p/mangle ?line :> ?lat ?lon ?kelvin _ _ ?date _ _ ?conf _ _ _)
-      (fire-characteristics ?conf ?kelvin :> ?temp-330 ?conf-50 ?both-preds ?max-t)))
+  (let [vs (v/gen-non-nullable-vars 4)]
+    (<- [?dataset ?datestring ?t-res ?lat ?lon ?tuple]
+        (source ?line)
+        (identity "fire" :> ?dataset)
+        (identity "01" :> ?t-res)
+        (format-datestring ?date :> ?datestring)
+        (p/mangle ?line :> ?lat ?lon ?kelvin _ _ ?date _ _ ?conf _ _ _)
+        (fire-characteristics ?conf ?kelvin :>> vs)
+        (tupleize :<< vs :> ?tuple))))
 
 (defn rip-fires
   "Aggregates fire data at the supplied path by modis pixel at the
   supplied resolution."
   [m-res t-res path]
   (let [fires (fire-source (hfs-textline path) t-res)]
-    (<- [?dataset ?m-res ?t-res ?tilestring
-         ?datestring ?sample ?line ?fire-count ?temp-330 ?conf-50 ?both-preds ?max-t]
-        (fires ?dataset ?datestring ?t-res ?lat ?lon ?temp-330 ?conf-50 ?both-preds ?max-t)
+    (<- [?dataset ?m-res ?t-res ?tilestring ?datestring ?sample ?line ?tuple]
+        (fires ?dataset ?datestring ?t-res ?lat ?lon ?tuple)
         (latlon->modis m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
         (hv->tilestring ?mod-h ?mod-v :> ?tilestring)
-        (identity m-res :> ?m-res)
-        (c/count ?fire-count))))
+        (identity m-res :> ?m-res))))
 
 (defn run-rip
   "Rips apart fires!"
