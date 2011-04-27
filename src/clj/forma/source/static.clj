@@ -4,15 +4,12 @@
         [forma.reproject :only (wgs84-index
                                 dimensions-at-res
                                 modis-sample)]
-        [forma.source.modis :only (modis->latlon latlon->modis pixels-at-res)]
-        [forma.source.static-test]
-        [clojure.string :only (split)]
-        [clojure.contrib.duck-streams :only (read-lines with-out-writer)])
-  (:require [cascalog.ops :as c]))
-
-;; Used for testing
-(def ascii-path "/Users/danhammer/Desktop/grid.txt")
-(def ascii-info {:ncols 3600 :nrows 1737 :xulcorner -180 :yulcorner 83.7 :cellsize 0.1 :nodata -9999})
+        [forma.source.modis :only (modis->latlon
+                                   latlon->modis
+                                   pixels-at-res)]
+        [clojure.string :only (split)])
+  (:require [cascalog.ops :as c]
+            [clojure.contrib.duck-streams :as duck]))
 
 ;; Worth keeping
 
@@ -26,11 +23,11 @@
   [base-path old-file-name new-file-name num-drop]
   (let [old-file (str base-path old-file-name)
         new-file (str base-path new-file-name)]
-    (with-out-writer new-file
+    (duck/with-out-writer new-file
       (doseq [line (drop num-drop
                          (map-indexed
                           (fn [idx line] (str (- idx num-drop) " " line))
-                          (read-lines old-file)))]
+                          (duck/read-lines old-file)))]
         (println line)))))
 
 (defn liberate
