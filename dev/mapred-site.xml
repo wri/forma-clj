@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<!-- mapred-site.xml -->
+<configuration>
+	<property>
+		<name>mapred.reduce.tasks</name>
+                <value>5</value>
+	</property>
+</configuration>
+
