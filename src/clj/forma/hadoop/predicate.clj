@@ -7,7 +7,6 @@
   (:require [cascalog.ops :as c]
             [cascalog.vars :as v]))
 
-
 ;; ### Cascalog Helpers
 
 (defn swap-syms
@@ -90,3 +89,4 @@
                 (construct (swap [nextpos outpos outval])
                            [[src :>> (swap [inpos nextpos inval])]
                             [aggr inpos inval :> outpos outval]]))))))
+
