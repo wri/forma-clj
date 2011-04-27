@@ -5,9 +5,14 @@
                                 dimensions-at-res
                                 modis-sample)]
         [forma.source.modis :only (modis->latlon latlon->modis pixels-at-res)]
+        [forma.source.static-test]
         [clojure.string :only (split)]
         [clojure.contrib.duck-streams :only (read-lines with-out-writer)])
   (:require [cascalog.ops :as c]))
+
+;; Used for testing
+(def ascii-path "/Users/danhammer/Desktop/grid.txt")
+(def ascii-info {:ncols 3600 :nrows 1737 :xulcorner -180 :yulcorner 83.7 :cellsize 0.1 :nodata -9999})
 
 ;; Worth keeping
 
@@ -28,139 +33,12 @@
                           (read-lines old-file)))]
         (println line)))))
 
-
-
-(def man-str "try1,try2,try3,try4,try5")
-(defn mangle
-  [line]
-  (split line #","))
-
-(defmapop add-mangled
-  [x]
-  (mangle man-str))
-
-(defmapcatop add-mangled-catop
-  [x]
-  (mangle man-str))
-
-(defmapop add-2-fields
-  [x]
-  [1 4])
-
-(def source
-  (memory-source-tap [["a" 1] 
-                      ["b" 2] 
-                      ["a" 3]]))
-
-(defn queer-test [tuple-source]
-  (<- [?c ?x ?lat ?lon ?d ?fire]
-      (tuple-source _ ?c)
-      (add-mangled ?c :> ?x ?lat ?lon ?d ?fire)))
-
-(defn queer-catop [tuple-source]
-  (let [sub-source (queer-test tuple-source)]
-    (<- [?c ?str]
-        (sub-source ?c ?x ?lat ?lon ?d ?fire)
-        (add-mangled-catop ?c :> ?str))))
-
-(comment
-  (?- (stdout)
-      (queer-catop source)))
-
-#_(defn run-job [path]
-  (let [source (hfs-textline path)]
-    (?<- (stdout)
-         [?mod-h ?mod-v ?sample ?line ?fire-count]
-         (source ?line)
-         (mangle ?line :> _ ?lat ?lon ?fire)
-         (< ?fire 500)
-         (latlon->modis ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
-         (c/count ?fire-count))))
-
-
-(defn to-nums
-  [& strings]
-  (map #(Float. %) strings))
-
-(defn mangle
-  [line]
-  (apply to-nums
-         (subvec (split line #",") 0 3)))
-
-(def fire-file "/Users/danhammer/Desktop/workspace/data/fires/MCD14DL.2011075.txt")
-
-(defmapop latlon [lat lon]
-  [(latlon->modis "1000" lat lon)])
-
-(defn mangle [line]
-  (map (fn [val]
-         (try (Float. val)
-              (catch Exception _ val)))
-       (split line #",")))
-
-(defn fire-count [path]
-  (let [source (hfs-textline path)]
-    (?<- (stdout)
-         [?lat ?lon ?mod-h ?mod-v ?sample ?line ?temp]
-         (source ?line)
-         (mangle ?line :> ?lat ?lon ?temp _ _ _ _ _ _ _ _ _)
-         (> ?temp 330)
-         (latlon->modis "1000" ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
-         ;; (c/count ?fire-count)
-         )))
-
-(defn fire-source [source]
-  (<- [?lat ?lon ?temp]
-      (source ?line)
-      (mangle ?line :> ?lat ?lon ?temp _ _ _ _ _ _ _ _ _)))
-
-(defn fire-count [path]
-  (let [f-source (-> path hfs-textline fire-source)]
-    (<- [?mod-h ?mod-v ?sample ?line ?fire-count]
-        ;; [?fire-count]
-        (f-source ?lat ?lon ?temp)
-        (> ?temp 330)
-        (latlon->modis "1000" ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
-        (c/count ?fire-count))))
-
-(defn count-the-count [path-source]
-  (let [sub-source (fire-count path-source)]
-    (<- [?f-count ?c-count]
-        (sub-source _ _ _ _ ?f-count)
-        (c/count ?c-count))))
-
-(comment
-  (?- (stdout)
-      (count-the-count fire-file))
-  (?- (stdout)
-      (fire-count fire-file))
-  )
-
-(defn queer-test [tuple-source]
-  (<- [?c ?x ?lat ?lon ?d ?fire]
-      (tuple-source _ ?c)
-      (add-mangled ?c :> ?x ?lat ?lon ?d ?fire)))
-
-(defn queer-catop [tuple-source]
-  (let [sub-source (queer-test tuple-source)]
-    (<- [?c ?x ?lat ?str]
-        (sub-source ?c ?x ?lat ?lon ?d ?fire)
-        (add-mangled-catop ?c :> ?str))))
-
-;; (def cntry-file "/Users/danhammer/Desktop/grid.txt")
-
-;; (defn cntry-get-id [line]
-;;   (first (map (fn [val]
-;;                 (try (Float. val)
-;;                      (catch Exception _ val)))
-;;               (split line #" "))))
-
 (defn liberate
   "Takes a line with an index as the first value and numbers as the
   rest, and converts it into a 2-tuple formatted as `[idx, row-vals]`,
   where `row-vals` are sealed inside an `int-array`.
 
-Example usage:
+  Example usage:
 
     (liberate \"1 12 13 14 15\")
     ;=> [1 #<int[] [I@1b66e87>]"
@@ -169,76 +47,39 @@ Example usage:
                               (split line #" "))]
     [idx (int-array row-vals)]))
 
-;; (defn get-unique-cntry
-;;   [int-array]
-;;   (first (filter pos? int-array)))
-
-(defmapcatop free-cols
+(defmapcatop
+  ^{:doc "split a row into nested vectors, with the value as the second entry
+  and the column index (from 0) as the first entry.  Note that this is
+  particularly useful if the `row` had already been prepended with the
+  row index -- which is not passed into `free-cols`"}
+  free-cols
   [row]
   (map-indexed vector row))
 
 (defn ascii-source [path]
+  "create a source out of a pre-cleaned ASCII grid, which is associated with a
+  map of characteristic values, such as resolution and extent.  The cleaned
+  grid is located at `path` and has the row index values prepended on the rows,
+  with the ASCII prelude (which is automatically added by Arc) already stripped
+  and cataloged in the map of characteristic values."
   (let [source (hfs-textline path)]
     (<- [?row ?col ?val]
         (source ?line)
         (liberate ?line :> ?row ?row-vec)
         (free-cols ?row-vec :> ?col ?val))))
 
-;; swap this source out for one that contains mod-h, mod-y, line, and
-;; sample, which should be generated dynamically, I think
-
-(def temp-mod-source
-  (memory-source-tap [["1000" 7 28 208 2]
-                      ["1000" 7 28 208 3]
-                      ["1000" 7 28 208 4]
-                      ["1000" 7 28 208 5]
-                      ["1000" 7 28 208 6]]))
-
-;; can you have more than once source in a cascalog query?
-
-;; now, we need to alculate the row and column of an ascii grid that a
-;; particular pixel falls in, given the ascii characteristics and a
-;; source of pixel characteristics (mod-h, mod-v, line, sample, lat,
-;; and lon).
-
-(def ascii-path "/Users/danhammer/Desktop/grid.txt")
-(def ascii-info {:ncols 3600 :nrows 1737 :xulcorner -180 :yulcorner 83.7 :cellsize 0.1 :nodata -9999})
+;; TODO: generalize this function, and its dependency functions, to
+;; accomodate different projections.
 
 (defn sample-modis
+  "sample a series of points with an underlying ASCII grid, so that each point is
+  tagged with the value of the grid pixel that it falls within. Note that, currently,
+  this query requires that both the point array and grid be projected in WGS84."
   [mod-source ascii-path ascii-info]
   (let [grid-source (ascii-source ascii-path)]
     (?<- (stdout)
-         [?line ?sample ?row ?col ?val]
+         [?mod-h ?mod-v ?line ?sample ?row ?col ?val]
          (grid-source ?row ?col ?val)
-         (mod-source ?res ?mod-v ?mod-h ?line ?sample)
+         (mod-source ?res ?mod-h ?mod-v ?line ?sample)
          (modis-sample ascii-info ?res ?mod-h ?mod-v ?sample ?line :> ?row ?col))))
-
-(def source
-  (memory-source-tap [["a" 1] 
-                      ["b" 2] 
-                      ["a" 3]]))
-
-(defn queer-test [tuple-source]
-  (<- [?c ?x ?lat ?lon ?d ?fire]
-      (tuple-source _ ?c)
-      (add-mangled ?c :> ?x ?lat ?lon ?d ?fire)))
-
-(defn queer-catop [tuple-source]
-  (let [sub-source (queer-test tuple-source)]
-    (<- [?c ?str]
-        (sub-source ?c ?x ?lat ?lon ?d ?fire)
-        (add-mangled-catop ?c :> ?str))))
-
-(defn mod-test
-  [source]
-  (?<- (stdout)
-       [?mod-v ?mod-h ?line ?sample]
-       (source ?mod-v ?mod-h ?line ?sample)))
-
-
-(defn run-sample-test
-  [path-to-text-source]
-  (?- (stdout)
-      (ascii-source path-to-text-source)))
-
 
