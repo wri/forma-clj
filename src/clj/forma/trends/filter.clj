@@ -1,7 +1,9 @@
 (ns forma.trends.filter
   (:use [forma.matrix.utils :only (ones-column
                                    average
-                                   variance-matrix)]
+                                   variance-matrix
+                                   insert-at
+                                   insert-into-zeros)]
 
         [clojure.contrib.seq :only (positions)])
   (:require [incanter.core :as i]))
@@ -32,18 +34,6 @@
     (i/minus ts adj)))
 
 ;; Hodrick-Prescott filter
-
-(defn insert-at
-  "insert list [b] into list [a] at index [idx]."
-  [idx a b]
-  (let [opened (split-at idx a)]
-    (concat (first opened) b (second opened))))
-
-(defn insert-into-zeros
-  "insert vector [v] into a vector of zeros of total length [len]
-  at index [idx]."
-  [idx len v]
-  (insert-at idx (repeat (- len (count v)) 0) v))
 
 (defn hp-mat
   "create the matrix of coefficients from the minimization problem

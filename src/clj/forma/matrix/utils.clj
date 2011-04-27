@@ -6,6 +6,18 @@
 ;; or filters.  The latter functions should be matrix operations that
 ;; deal with arbitrarily large, multi-dimensional matrices.
 
+(defn insert-at
+  "insert list [b] into list [a] at index [idx]."
+  [idx a b]
+  (let [opened (split-at idx a)]
+    (concat (first opened) b (second opened))))
+
+(defn insert-into-zeros
+  "insert vector [v] into a vector of zeros of total length [len]
+  at index [idx]."
+  [idx len v]
+  (insert-at idx (repeat (- len (count v)) 0) v))
+
 (defn pred-replace
   "Selectively replaces values in `v` based on the return value of the
  supplied predicate. `pred` will receive each value in turn; a truthy
