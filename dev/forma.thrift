@@ -7,3 +7,7 @@ struct FireTuple {
   4: i32 bothPreds,
   5: i32 count
 }
+
+struct TimeSeries {
+  1: 
+}

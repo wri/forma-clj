@@ -46,19 +46,28 @@ pred, `new-val` will be subbed into the sequence.
   [lst] 
   (float (/ (reduce + lst) (count lst))))
 
-(defn sparse-vector
+(defn sparse-expander
   "Takes in a sequence of 2-tuples of the form `<idx, val>` and
-  generates a sparse vector with each `val` inserted at its
+  generates a sparse expansion with each `val` inserted at its
   corresponding `idx`. Missing values will be set to the supplied
-  placeholder."
-  [size placeholder tuples]
-  (loop [idx 0
-         tup-seq tuples
-         v (transient [])]
-    (let [[pos val] (first tup-seq)]
-      (cond (or (>= idx size)) (persistent! v)
-            (= idx pos) (recur (inc idx) (rest tup-seq) (conj! v val))
-            :else       (recur (inc idx) tup-seq (conj! v placeholder))))))
+  placeholder.
+
+  If no starting index is supplied, `sparse-expander` assumes that
+  counting begins with the first `<idx, val>` pair."
+  ([placeholder tuples & {:keys [start length]}]   
+     (let [length (or length :final)
+           start  (or start (ffirst tuples))
+           halt?  (fn [idx tup-seq]
+                    (if (= length :final)
+                      (empty? tup-seq)
+                      (>= idx (+ start length))))]
+       (loop [idx start
+              tup-seq tuples
+              v (transient [])]
+         (let [[pos val] (first tup-seq)]
+           (cond (halt? idx tup-seq) (persistent! v)
+                 (= idx pos) (recur (inc idx) (rest tup-seq) (conj! v val))
+                 :else       (recur (inc idx) tup-seq (conj! v placeholder))))))))
 
 (defn idx->colrow
   "Takes an index within a row vector, and returns the appropriate
