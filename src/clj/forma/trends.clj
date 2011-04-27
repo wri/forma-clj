@@ -5,7 +5,8 @@
 ;; vector be calling vec on it.)
 
 (ns forma.trends
-  (:use cascalog.api))
+  (:use cascalog.api
+        [forma.hadoop.predicate :only (sparse-windower)]))
 
 ;; ### Time Series Generation
 ;;
@@ -108,6 +109,8 @@
 ;;to actually walk around.
 
 ;; TODO: -- documentation on why we do this. Nearest neighbor analysis links.
+
+
 (defn walk-matrix
   "Walks along the rows and columns of a matrix at the given window
   size, returning all (window x window) snapshots."
@@ -117,21 +120,35 @@
            (partial map (partial partition window 1)))
           (partition window 1 m)))
 
+
 ;; TODO: update walk-matrix above to return useful shit.
 (defmapcatop [walk-mat [window]]
   {:doc "In progress! Not sure yet how walk-mat's return values work out, here."}
   [m]
   (walk-matrix m window))
 
+
+(def pixels
+  (memory-source-tap
+   (for [mod-h  (range 3)
+         sample (range 20)
+         line   (range 20)
+         :let [val sample, mod-v 1]]
+     [mod-h mod-v sample line val])))
+
+(def pixel-tap
+  (<- [?mh ?mv ?s ?l ?v]
+      (pixels ?mh ?mv ?s ?l ?v)))
+
 (defn get-windows
   "IN PROGRESS. Currently, this job fails due to incorrect comparator
   settings for the tuples."
-  [source edge splits]
-  (let [window-source (line-aggregator source edge splits)]
+  []
+  (let [window-source (sparse-windower pixel-tap ["?s" "?l" "?v"] 5 0)]
     (?<- (stdout)
-         [?tile-h ?tile-v ?window-col ?window-row ?row1 ?row2 ?row3]
+         [?tile-h ?tile-v ?window-col ?window-row ?window]
          (window-source ?tile-h ?tile-v ?window-col ?window-row ?window)
-         (walk-mat [3] ?window :> ?row1 ?row2 ?row3))))
+         )))
 
 ;; I think that I might be able to tag pixels as "edges", based on a
 ;; combination of pixel value and length of groups. If I can get all
