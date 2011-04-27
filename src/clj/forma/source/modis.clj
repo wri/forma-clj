@@ -43,12 +43,30 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
 
 (defn valid-modis?
   "Checks that the supplied values correspond to a valid MODIS tile,
-  at the specified resolution."
-  [res mod-h mod-v sample line]
-  (let [edge (pixels-at-res res)]
-    (and (contains? valid-tiles [mod-h mod-v])
-         (< sample edge)
-         (< line edge))))
+  at the specified resolution. The single argument version accepts a
+  sequence if `[mod-h, mod-v`] vectors."
+  ([tileseq]
+     (reduce #(and %1 %2)
+             (map (fn [[h v]]
+                    (valid-modis? h v))
+                  tileseq)))
+  ([mod-h mod-v]
+     (contains? valid-tiles [mod-h mod-v]))
+  ([res mod-h mod-v sample line]
+     (let [edge (pixels-at-res res)]
+       (and (valid-modis? mod-h mod-v)
+            (< sample edge)
+            (< line edge)))))
+
+(defn hv->tilestring
+  "Returns a 0-padded tilestring of format `HHHVVV`, for the supplied
+  MODIS h and v coordinates. For example:
+
+     (tilestring 8 6)
+     ;=> \"008006\""
+  [mod-h mod-v]
+  (apply str (map (partial format "%03d")
+                  [mod-h mod-v])))
 
 (defn tilestring->hv
   "Extracts integer representations of the MODIS H and V coordinates

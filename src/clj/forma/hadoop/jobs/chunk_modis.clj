@@ -25,8 +25,9 @@
 ;; TEMPORARY stuff for the big run :-*
 (defn tiles->globstring
   [& tiles]
-  {:pre [(not (some false? (map #(contains? m/valid-tiles %) tiles)))]}
-  (let [hv-seq (interpose "," (for [[th tv] tiles] (format "h%02dv%02d" th tv)))]
+  {:pre [(m/valid-modis? tiles)]}
+  (let [hv-seq (interpose "," (for [[th tv] tiles]
+                                (format "h%02dv%02d" th tv)))]
     (format "*{%s}*" (apply str hv-seq))))
 
 (defn s3-path [path]

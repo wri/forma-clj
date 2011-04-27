@@ -71,8 +71,6 @@ supplied, assumes a square matrix."
      {:post [(< % (* width height))]}
      (+ col (* width row))))
 
-
-
 ;; ## Multi-dimensional matrix operations
 
 (defn variance-matrix
@@ -93,3 +91,10 @@ supplied, assumes a square matrix."
 
 (def ones-column (partial column-matrix 1))
 
+(defn matrix-of
+  "Returns an n-dimensional matrix of `val`, with edge length of
+  `edge`."
+  [val dims edge]
+  (reduce #(%2 %1)
+          val
+          (repeat dims (fn [v] (vec (repeat edge v))))))
