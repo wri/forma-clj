@@ -10,7 +10,9 @@
 (ns forma.source.rain
   (:use cascalog.api
         [forma.hadoop.io :only (get-bytes)]
-        [forma.reproject :only (rain-sampler dimensions-at-res)])
+        [forma.source.modis :only (hv->tilestring)]
+        [forma.reproject :only (project-to-modis
+                                dimensions-at-res)])
   (:require [cascalog.ops :as c]
             [clojure.contrib.io :as io])
   (:import  [java.io File InputStream]
@@ -244,28 +246,18 @@ binary files are packaged as hadoop BytesWritable objects."}
 ;; this slows performance slightly. On a cluster, it should give us a
 ;; big bump.
 
-(defn tilestring
-  "Returns a 0-padded tilestring of format `HHHVVV`, for the supplied
-  MODIS h and v coordinates. For example:
-
-     (tilestring 8 6)
-     ;=> \"008006\""
-  [mod-h mod-v]
-  (apply str (map (partial format "%03d")
-                  [mod-h mod-v])))
-
 (defn fancy-index
   "Reduction step to process all tuples produced by
   `forma.source.rain/cross-join`. We break this out into a separate
   query because the cross-join forces all tuples to be processed by a
   single reducer. This step allows the flow to branch out again from
   that bottleneck, when run on a cluster."
-  [m-res ll-res c-size source]
+  [m-res ll-res chunk-size source]
   (<- [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk]
       (source ?dataset ?spatial-res ?temporal-res ?mod-h ?mod-v ?date ?raindata)
-      (tilestring ?mod-h ?mod-v :> ?tilestring)
-      (rain-sampler [m-res ll-res c-size]
-                    ?raindata ?mod-h ?mod-v :> ?chunkid ?chunk)
+      (hv->tilestring ?mod-h ?mod-v :> ?tilestring)
+      (project-to-modis [m-res ll-res chunk-size]
+                        ?raindata ?mod-h ?mod-v :> ?chunkid ?chunk)
       (float-array ?chunk :> ?float-chunk)))
 
 ;; Finally, the chunker. This subquery is analogous to
@@ -277,18 +269,18 @@ binary files are packaged as hadoop BytesWritable objects."}
   supplied resolution (`ll-res`) into tuples suitable for comparison
   to any MODIS dataset at the supplied modis resolution (`m-res`),
   partitioned by the supplied chunk size."
-  [m-res ll-res c-size tile-seq source]
+  [m-res ll-res chunk-size tile-seq source]
   (let [rnd (int (* 100000 (rand)))
         tmp (hfs-seqfile (str "/tmp/" rnd))]
     (?- tmp (cross-join m-res ll-res tile-seq source))
-    (fancy-index m-res ll-res c-size tmp)))
+    (fancy-index m-res ll-res chunk-size tmp)))
 
 ;; An alternate formulation of `rain-chunks` that skipped the
 ;; intermediate sequencefile would be:
 ;;
-;;     (defn rain-chunks [m-res ll-res c-size tile-seq source]
+;;     (defn rain-chunks [m-res ll-res chunk-size tile-seq source]
 ;;       (let [precl (cross-join m-res ll-res tile-seq source)]
-;;         (fancy-index m-res ll-res c-size precl)))
+;;         (fancy-index m-res ll-res chunk-size precl)))
 ;;
 ;; This is worth testing on the cluster, though I suspect it simply
 ;; won't branch out to multiple reduce jobs, leaving one poor machine
