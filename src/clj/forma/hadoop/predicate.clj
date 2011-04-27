@@ -3,7 +3,7 @@
         [clojure.string :only (split)]
         [clojure.contrib.math :only (ceil)]
         [clojure.contrib.seq :only (positions)]
-        [forma.matrix.utils :only (sparse-vector matrix-of)])
+        [forma.matrix.utils :only (sparse-expander matrix-of)])
   (:require [cascalog.ops :as c]
             [cascalog.vars :as v]))
 
@@ -24,13 +24,14 @@
   [tuples]
   [(apply str (map str tuples))])
 
-(defbufferop [sparse-vec [length missing-val]]
-  {:doc "Receives 2-tuple pairs of the form `<idx, val>`, and inserts
-  each `val` into a sparse vector of the supplied length at the
-  corresponding `idx`. `missing-val` will be substituted for any
-  missing value."}
+;; TODO: TAKE OFFSET OF SPARSEVECTOR into account.
+(defbufferop [sparse-expansion [length missing-val]]
+  {:doc "Receives 2-tuple pairs of the form `<idx, val>`, inserts each
+  `val` into a sparse vector at the corresponding `idx`. The `idx` of
+  the first tuple will be treated as the zero value. The first tuple
+  will `missing-val` will be substituted for any missing value."}
   [tuples]
-  [[(sparse-vector length missing-val tuples)]])
+  [[(sparse-expander missing-val tuples :length length)]])
 
 (defn mangle
   "Mangles textlines connected with commas."
@@ -42,6 +43,7 @@
 
 ;; ### Predicate Macros
 
+;; TODO: CONVERT OVER TO NEW VERSION WITHOUT SPLIT LENGTH, SAME FOR SPARSE_WINDOWER.
 (defn vals->sparsevec
   "Returns an aggregating predicate macro that stitches values into a
   sparse vector with all `?val`s at `?idx`, and `empty-val` at all
@@ -52,7 +54,7 @@
   (<- [?idx ?val :> ?split-idx ?split-vec]
       (:sort ?idx)
       ((c/juxt #'mod #'quot) ?idx split-length :> ?sub-idx ?split-idx)
-      (sparse-vec [split-length empty-val] ?sub-idx ?val :> ?split-vec)))
+      (sparse-expansion [split-length empty-val] ?sub-idx ?val :> ?split-vec)))
 
 ;; ### Special Functions
 
@@ -89,4 +91,3 @@
                 (construct (swap [nextpos outpos outval])
                            [[src :>> (swap [inpos nextpos inval])]
                             [aggr inpos inval :> outpos outval]]))))))
-

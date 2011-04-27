@@ -20,4 +20,10 @@
                      [clojure-source "1.2.0"]
                      [marginalia "0.5.0"]
                      [midje "1.1"]]
-  :namespaces [forma.source.static])
+  :namespaces [forma.hadoop.jobs.chunk-rain
+               forma.hadoop.jobs.chunk-modis
+               forma.hadoop.jobs.load-tseries])
+
+(deftask code-gen
+  (println "Generating thrift code...")
+  )
