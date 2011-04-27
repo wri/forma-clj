@@ -3,7 +3,7 @@
  *
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  */
-package forma.type;
+package forma.schema;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -29,24 +29,24 @@ import org.apache.thrift.protocol.*;
 public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.Serializable, Cloneable {
   private static final TStruct STRUCT_DESC = new TStruct("FireTuple");
 
-  private static final TField MAX_TEMP_FIELD_DESC = new TField("max_temp", TType.DOUBLE, (short)1);
-  private static final TField TEMP_330_FIELD_DESC = new TField("temp_330", TType.I32, (short)2);
-  private static final TField CONF_50_FIELD_DESC = new TField("conf_50", TType.I32, (short)3);
-  private static final TField BOTH_PREDS_FIELD_DESC = new TField("both_preds", TType.I32, (short)4);
+  private static final TField MAX_TEMP_FIELD_DESC = new TField("maxTemp", TType.DOUBLE, (short)1);
+  private static final TField TEMP330_FIELD_DESC = new TField("temp330", TType.I32, (short)2);
+  private static final TField CONF50_FIELD_DESC = new TField("conf50", TType.I32, (short)3);
+  private static final TField BOTH_PREDS_FIELD_DESC = new TField("bothPreds", TType.I32, (short)4);
   private static final TField COUNT_FIELD_DESC = new TField("count", TType.I32, (short)5);
 
-  public double max_temp;
-  public int temp_330;
-  public int conf_50;
-  public int both_preds;
+  public double maxTemp;
+  public int temp330;
+  public int conf50;
+  public int bothPreds;
   public int count;
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements TFieldIdEnum {
-    MAX_TEMP((short)1, "max_temp"),
-    TEMP_330((short)2, "temp_330"),
-    CONF_50((short)3, "conf_50"),
-    BOTH_PREDS((short)4, "both_preds"),
+    MAX_TEMP((short)1, "maxTemp"),
+    TEMP330((short)2, "temp330"),
+    CONF50((short)3, "conf50"),
+    BOTH_PREDS((short)4, "bothPreds"),
     COUNT((short)5, "count");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
@@ -64,10 +64,10 @@ public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.S
       switch(fieldId) {
         case 1: // MAX_TEMP
           return MAX_TEMP;
-        case 2: // TEMP_330
-          return TEMP_330;
-        case 3: // CONF_50
-          return CONF_50;
+        case 2: // TEMP330
+          return TEMP330;
+        case 3: // CONF50
+          return CONF50;
         case 4: // BOTH_PREDS
           return BOTH_PREDS;
         case 5: // COUNT
@@ -112,23 +112,23 @@ public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.S
   }
 
   // isset id assignments
-  private static final int __MAX_TEMP_ISSET_ID = 0;
-  private static final int __TEMP_330_ISSET_ID = 1;
-  private static final int __CONF_50_ISSET_ID = 2;
-  private static final int __BOTH_PREDS_ISSET_ID = 3;
+  private static final int __MAXTEMP_ISSET_ID = 0;
+  private static final int __TEMP330_ISSET_ID = 1;
+  private static final int __CONF50_ISSET_ID = 2;
+  private static final int __BOTHPREDS_ISSET_ID = 3;
   private static final int __COUNT_ISSET_ID = 4;
   private BitSet __isset_bit_vector = new BitSet(5);
 
   public static final Map<_Fields, FieldMetaData> metaDataMap;
   static {
     Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.MAX_TEMP, new FieldMetaData("max_temp", TFieldRequirementType.DEFAULT, 
+    tmpMap.put(_Fields.MAX_TEMP, new FieldMetaData("maxTemp", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.DOUBLE)));
-    tmpMap.put(_Fields.TEMP_330, new FieldMetaData("temp_330", TFieldRequirementType.DEFAULT, 
+    tmpMap.put(_Fields.TEMP330, new FieldMetaData("temp330", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.I32)));
-    tmpMap.put(_Fields.CONF_50, new FieldMetaData("conf_50", TFieldRequirementType.DEFAULT, 
+    tmpMap.put(_Fields.CONF50, new FieldMetaData("conf50", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.I32)));
-    tmpMap.put(_Fields.BOTH_PREDS, new FieldMetaData("both_preds", TFieldRequirementType.DEFAULT, 
+    tmpMap.put(_Fields.BOTH_PREDS, new FieldMetaData("bothPreds", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.I32)));
     tmpMap.put(_Fields.COUNT, new FieldMetaData("count", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.I32)));
@@ -140,21 +140,21 @@ public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.S
   }
 
   public FireTuple(
-    double max_temp,
-    int temp_330,
-    int conf_50,
-    int both_preds,
+    double maxTemp,
+    int temp330,
+    int conf50,
+    int bothPreds,
     int count)
   {
     this();
-    this.max_temp = max_temp;
-    setMax_tempIsSet(true);
-    this.temp_330 = temp_330;
-    setTemp_330IsSet(true);
-    this.conf_50 = conf_50;
-    setConf_50IsSet(true);
-    this.both_preds = both_preds;
-    setBoth_predsIsSet(true);
+    this.maxTemp = maxTemp;
+    setMaxTempIsSet(true);
+    this.temp330 = temp330;
+    setTemp330IsSet(true);
+    this.conf50 = conf50;
+    setConf50IsSet(true);
+    this.bothPreds = bothPreds;
+    setBothPredsIsSet(true);
     this.count = count;
     setCountIsSet(true);
   }
@@ -165,10 +165,10 @@ public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.S
   public FireTuple(FireTuple other) {
     __isset_bit_vector.clear();
     __isset_bit_vector.or(other.__isset_bit_vector);
-    this.max_temp = other.max_temp;
-    this.temp_330 = other.temp_330;
-    this.conf_50 = other.conf_50;
-    this.both_preds = other.both_preds;
+    this.maxTemp = other.maxTemp;
+    this.temp330 = other.temp330;
+    this.conf50 = other.conf50;
+    this.bothPreds = other.bothPreds;
     this.count = other.count;
   }
 
@@ -178,108 +178,108 @@ public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.S
 
   @Override
   public void clear() {
-    setMax_tempIsSet(false);
-    this.max_temp = 0.0;
-    setTemp_330IsSet(false);
-    this.temp_330 = 0;
-    setConf_50IsSet(false);
-    this.conf_50 = 0;
-    setBoth_predsIsSet(false);
-    this.both_preds = 0;
+    setMaxTempIsSet(false);
+    this.maxTemp = 0.0;
+    setTemp330IsSet(false);
+    this.temp330 = 0;
+    setConf50IsSet(false);
+    this.conf50 = 0;
+    setBothPredsIsSet(false);
+    this.bothPreds = 0;
     setCountIsSet(false);
     this.count = 0;
   }
 
-  public double getMax_temp() {
-    return this.max_temp;
+  public double getMaxTemp() {
+    return this.maxTemp;
   }
 
-  public FireTuple setMax_temp(double max_temp) {
-    this.max_temp = max_temp;
-    setMax_tempIsSet(true);
+  public FireTuple setMaxTemp(double maxTemp) {
+    this.maxTemp = maxTemp;
+    setMaxTempIsSet(true);
     return this;
   }
 
-  public void unsetMax_temp() {
-    __isset_bit_vector.clear(__MAX_TEMP_ISSET_ID);
+  public void unsetMaxTemp() {
+    __isset_bit_vector.clear(__MAXTEMP_ISSET_ID);
   }
 
-  /** Returns true if field max_temp is set (has been asigned a value) and false otherwise */
-  public boolean isSetMax_temp() {
-    return __isset_bit_vector.get(__MAX_TEMP_ISSET_ID);
+  /** Returns true if field maxTemp is set (has been asigned a value) and false otherwise */
+  public boolean isSetMaxTemp() {
+    return __isset_bit_vector.get(__MAXTEMP_ISSET_ID);
   }
 
-  public void setMax_tempIsSet(boolean value) {
-    __isset_bit_vector.set(__MAX_TEMP_ISSET_ID, value);
+  public void setMaxTempIsSet(boolean value) {
+    __isset_bit_vector.set(__MAXTEMP_ISSET_ID, value);
   }
 
-  public int getTemp_330() {
-    return this.temp_330;
+  public int getTemp330() {
+    return this.temp330;
   }
 
-  public FireTuple setTemp_330(int temp_330) {
-    this.temp_330 = temp_330;
-    setTemp_330IsSet(true);
+  public FireTuple setTemp330(int temp330) {
+    this.temp330 = temp330;
+    setTemp330IsSet(true);
     return this;
   }
 
-  public void unsetTemp_330() {
-    __isset_bit_vector.clear(__TEMP_330_ISSET_ID);
+  public void unsetTemp330() {
+    __isset_bit_vector.clear(__TEMP330_ISSET_ID);
   }
 
-  /** Returns true if field temp_330 is set (has been asigned a value) and false otherwise */
-  public boolean isSetTemp_330() {
-    return __isset_bit_vector.get(__TEMP_330_ISSET_ID);
+  /** Returns true if field temp330 is set (has been asigned a value) and false otherwise */
+  public boolean isSetTemp330() {
+    return __isset_bit_vector.get(__TEMP330_ISSET_ID);
   }
 
-  public void setTemp_330IsSet(boolean value) {
-    __isset_bit_vector.set(__TEMP_330_ISSET_ID, value);
+  public void setTemp330IsSet(boolean value) {
+    __isset_bit_vector.set(__TEMP330_ISSET_ID, value);
   }
 
-  public int getConf_50() {
-    return this.conf_50;
+  public int getConf50() {
+    return this.conf50;
   }
 
-  public FireTuple setConf_50(int conf_50) {
-    this.conf_50 = conf_50;
-    setConf_50IsSet(true);
+  public FireTuple setConf50(int conf50) {
+    this.conf50 = conf50;
+    setConf50IsSet(true);
     return this;
   }
 
-  public void unsetConf_50() {
-    __isset_bit_vector.clear(__CONF_50_ISSET_ID);
+  public void unsetConf50() {
+    __isset_bit_vector.clear(__CONF50_ISSET_ID);
   }
 
-  /** Returns true if field conf_50 is set (has been asigned a value) and false otherwise */
-  public boolean isSetConf_50() {
-    return __isset_bit_vector.get(__CONF_50_ISSET_ID);
+  /** Returns true if field conf50 is set (has been asigned a value) and false otherwise */
+  public boolean isSetConf50() {
+    return __isset_bit_vector.get(__CONF50_ISSET_ID);
   }
 
-  public void setConf_50IsSet(boolean value) {
-    __isset_bit_vector.set(__CONF_50_ISSET_ID, value);
+  public void setConf50IsSet(boolean value) {
+    __isset_bit_vector.set(__CONF50_ISSET_ID, value);
   }
 
-  public int getBoth_preds() {
-    return this.both_preds;
+  public int getBothPreds() {
+    return this.bothPreds;
   }
 
-  public FireTuple setBoth_preds(int both_preds) {
-    this.both_preds = both_preds;
-    setBoth_predsIsSet(true);
+  public FireTuple setBothPreds(int bothPreds) {
+    this.bothPreds = bothPreds;
+    setBothPredsIsSet(true);
     return this;
   }
 
-  public void unsetBoth_preds() {
-    __isset_bit_vector.clear(__BOTH_PREDS_ISSET_ID);
+  public void unsetBothPreds() {
+    __isset_bit_vector.clear(__BOTHPREDS_ISSET_ID);
   }
 
-  /** Returns true if field both_preds is set (has been asigned a value) and false otherwise */
-  public boolean isSetBoth_preds() {
-    return __isset_bit_vector.get(__BOTH_PREDS_ISSET_ID);
+  /** Returns true if field bothPreds is set (has been asigned a value) and false otherwise */
+  public boolean isSetBothPreds() {
+    return __isset_bit_vector.get(__BOTHPREDS_ISSET_ID);
   }
 
-  public void setBoth_predsIsSet(boolean value) {
-    __isset_bit_vector.set(__BOTH_PREDS_ISSET_ID, value);
+  public void setBothPredsIsSet(boolean value) {
+    __isset_bit_vector.set(__BOTHPREDS_ISSET_ID, value);
   }
 
   public int getCount() {
@@ -309,33 +309,33 @@ public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.S
     switch (field) {
     case MAX_TEMP:
       if (value == null) {
-        unsetMax_temp();
+        unsetMaxTemp();
       } else {
-        setMax_temp((Double)value);
+        setMaxTemp((Double)value);
       }
       break;
 
-    case TEMP_330:
+    case TEMP330:
       if (value == null) {
-        unsetTemp_330();
+        unsetTemp330();
       } else {
-        setTemp_330((Integer)value);
+        setTemp330((Integer)value);
       }
       break;
 
-    case CONF_50:
+    case CONF50:
       if (value == null) {
-        unsetConf_50();
+        unsetConf50();
       } else {
-        setConf_50((Integer)value);
+        setConf50((Integer)value);
       }
       break;
 
     case BOTH_PREDS:
       if (value == null) {
-        unsetBoth_preds();
+        unsetBothPreds();
       } else {
-        setBoth_preds((Integer)value);
+        setBothPreds((Integer)value);
       }
       break;
 
@@ -353,16 +353,16 @@ public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.S
   public Object getFieldValue(_Fields field) {
     switch (field) {
     case MAX_TEMP:
-      return new Double(getMax_temp());
+      return new Double(getMaxTemp());
 
-    case TEMP_330:
-      return new Integer(getTemp_330());
+    case TEMP330:
+      return new Integer(getTemp330());
 
-    case CONF_50:
-      return new Integer(getConf_50());
+    case CONF50:
+      return new Integer(getConf50());
 
     case BOTH_PREDS:
-      return new Integer(getBoth_preds());
+      return new Integer(getBothPreds());
 
     case COUNT:
       return new Integer(getCount());
@@ -379,13 +379,13 @@ public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.S
 
     switch (field) {
     case MAX_TEMP:
-      return isSetMax_temp();
-    case TEMP_330:
-      return isSetTemp_330();
-    case CONF_50:
-      return isSetConf_50();
+      return isSetMaxTemp();
+    case TEMP330:
+      return isSetTemp330();
+    case CONF50:
+      return isSetConf50();
     case BOTH_PREDS:
-      return isSetBoth_preds();
+      return isSetBothPreds();
     case COUNT:
       return isSetCount();
     }
@@ -405,39 +405,39 @@ public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.S
     if (that == null)
       return false;
 
-    boolean this_present_max_temp = true;
-    boolean that_present_max_temp = true;
-    if (this_present_max_temp || that_present_max_temp) {
-      if (!(this_present_max_temp && that_present_max_temp))
+    boolean this_present_maxTemp = true;
+    boolean that_present_maxTemp = true;
+    if (this_present_maxTemp || that_present_maxTemp) {
+      if (!(this_present_maxTemp && that_present_maxTemp))
         return false;
-      if (this.max_temp != that.max_temp)
-        return false;
-    }
-
-    boolean this_present_temp_330 = true;
-    boolean that_present_temp_330 = true;
-    if (this_present_temp_330 || that_present_temp_330) {
-      if (!(this_present_temp_330 && that_present_temp_330))
-        return false;
-      if (this.temp_330 != that.temp_330)
+      if (this.maxTemp != that.maxTemp)
         return false;
     }
 
-    boolean this_present_conf_50 = true;
-    boolean that_present_conf_50 = true;
-    if (this_present_conf_50 || that_present_conf_50) {
-      if (!(this_present_conf_50 && that_present_conf_50))
+    boolean this_present_temp330 = true;
+    boolean that_present_temp330 = true;
+    if (this_present_temp330 || that_present_temp330) {
+      if (!(this_present_temp330 && that_present_temp330))
         return false;
-      if (this.conf_50 != that.conf_50)
+      if (this.temp330 != that.temp330)
         return false;
     }
 
-    boolean this_present_both_preds = true;
-    boolean that_present_both_preds = true;
-    if (this_present_both_preds || that_present_both_preds) {
-      if (!(this_present_both_preds && that_present_both_preds))
+    boolean this_present_conf50 = true;
+    boolean that_present_conf50 = true;
+    if (this_present_conf50 || that_present_conf50) {
+      if (!(this_present_conf50 && that_present_conf50))
         return false;
-      if (this.both_preds != that.both_preds)
+      if (this.conf50 != that.conf50)
+        return false;
+    }
+
+    boolean this_present_bothPreds = true;
+    boolean that_present_bothPreds = true;
+    if (this_present_bothPreds || that_present_bothPreds) {
+      if (!(this_present_bothPreds && that_present_bothPreds))
+        return false;
+      if (this.bothPreds != that.bothPreds)
         return false;
     }
 
@@ -466,42 +466,42 @@ public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.S
     int lastComparison = 0;
     FireTuple typedOther = (FireTuple)other;
 
-    lastComparison = Boolean.valueOf(isSetMax_temp()).compareTo(typedOther.isSetMax_temp());
+    lastComparison = Boolean.valueOf(isSetMaxTemp()).compareTo(typedOther.isSetMaxTemp());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetMax_temp()) {
-      lastComparison = TBaseHelper.compareTo(this.max_temp, typedOther.max_temp);
+    if (isSetMaxTemp()) {
+      lastComparison = TBaseHelper.compareTo(this.maxTemp, typedOther.maxTemp);
       if (lastComparison != 0) {
         return lastComparison;
       }
     }
-    lastComparison = Boolean.valueOf(isSetTemp_330()).compareTo(typedOther.isSetTemp_330());
+    lastComparison = Boolean.valueOf(isSetTemp330()).compareTo(typedOther.isSetTemp330());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetTemp_330()) {
-      lastComparison = TBaseHelper.compareTo(this.temp_330, typedOther.temp_330);
+    if (isSetTemp330()) {
+      lastComparison = TBaseHelper.compareTo(this.temp330, typedOther.temp330);
       if (lastComparison != 0) {
         return lastComparison;
       }
     }
-    lastComparison = Boolean.valueOf(isSetConf_50()).compareTo(typedOther.isSetConf_50());
+    lastComparison = Boolean.valueOf(isSetConf50()).compareTo(typedOther.isSetConf50());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetConf_50()) {
-      lastComparison = TBaseHelper.compareTo(this.conf_50, typedOther.conf_50);
+    if (isSetConf50()) {
+      lastComparison = TBaseHelper.compareTo(this.conf50, typedOther.conf50);
       if (lastComparison != 0) {
         return lastComparison;
       }
     }
-    lastComparison = Boolean.valueOf(isSetBoth_preds()).compareTo(typedOther.isSetBoth_preds());
+    lastComparison = Boolean.valueOf(isSetBothPreds()).compareTo(typedOther.isSetBothPreds());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetBoth_preds()) {
-      lastComparison = TBaseHelper.compareTo(this.both_preds, typedOther.both_preds);
+    if (isSetBothPreds()) {
+      lastComparison = TBaseHelper.compareTo(this.bothPreds, typedOther.bothPreds);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -535,32 +535,32 @@ public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.S
       switch (field.id) {
         case 1: // MAX_TEMP
           if (field.type == TType.DOUBLE) {
-            this.max_temp = iprot.readDouble();
-            setMax_tempIsSet(true);
+            this.maxTemp = iprot.readDouble();
+            setMaxTempIsSet(true);
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case 2: // TEMP_330
+        case 2: // TEMP330
           if (field.type == TType.I32) {
-            this.temp_330 = iprot.readI32();
-            setTemp_330IsSet(true);
+            this.temp330 = iprot.readI32();
+            setTemp330IsSet(true);
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case 3: // CONF_50
+        case 3: // CONF50
           if (field.type == TType.I32) {
-            this.conf_50 = iprot.readI32();
-            setConf_50IsSet(true);
+            this.conf50 = iprot.readI32();
+            setConf50IsSet(true);
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
         case 4: // BOTH_PREDS
           if (field.type == TType.I32) {
-            this.both_preds = iprot.readI32();
-            setBoth_predsIsSet(true);
+            this.bothPreds = iprot.readI32();
+            setBothPredsIsSet(true);
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
@@ -589,16 +589,16 @@ public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.S
 
     oprot.writeStructBegin(STRUCT_DESC);
     oprot.writeFieldBegin(MAX_TEMP_FIELD_DESC);
-    oprot.writeDouble(this.max_temp);
+    oprot.writeDouble(this.maxTemp);
     oprot.writeFieldEnd();
-    oprot.writeFieldBegin(TEMP_330_FIELD_DESC);
-    oprot.writeI32(this.temp_330);
+    oprot.writeFieldBegin(TEMP330_FIELD_DESC);
+    oprot.writeI32(this.temp330);
     oprot.writeFieldEnd();
-    oprot.writeFieldBegin(CONF_50_FIELD_DESC);
-    oprot.writeI32(this.conf_50);
+    oprot.writeFieldBegin(CONF50_FIELD_DESC);
+    oprot.writeI32(this.conf50);
     oprot.writeFieldEnd();
     oprot.writeFieldBegin(BOTH_PREDS_FIELD_DESC);
-    oprot.writeI32(this.both_preds);
+    oprot.writeI32(this.bothPreds);
     oprot.writeFieldEnd();
     oprot.writeFieldBegin(COUNT_FIELD_DESC);
     oprot.writeI32(this.count);
@@ -612,20 +612,20 @@ public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.S
     StringBuilder sb = new StringBuilder("FireTuple(");
     boolean first = true;
 
-    sb.append("max_temp:");
-    sb.append(this.max_temp);
+    sb.append("maxTemp:");
+    sb.append(this.maxTemp);
     first = false;
     if (!first) sb.append(", ");
-    sb.append("temp_330:");
-    sb.append(this.temp_330);
+    sb.append("temp330:");
+    sb.append(this.temp330);
     first = false;
     if (!first) sb.append(", ");
-    sb.append("conf_50:");
-    sb.append(this.conf_50);
+    sb.append("conf50:");
+    sb.append(this.conf50);
     first = false;
     if (!first) sb.append(", ");
-    sb.append("both_preds:");
-    sb.append(this.both_preds);
+    sb.append("bothPreds:");
+    sb.append(this.bothPreds);
     first = false;
     if (!first) sb.append(", ");
     sb.append("count:");
