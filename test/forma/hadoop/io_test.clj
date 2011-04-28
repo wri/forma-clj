@@ -1,3 +1,3 @@
 (ns forma.hadoop.io-test
-  (:use [forma.hadoop.io-test] :reload)
+  (:use [forma.hadoop.io] :reload)
   (:use midje.sweet))

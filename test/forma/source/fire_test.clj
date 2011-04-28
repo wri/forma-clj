@@ -1,6 +1,6 @@
 (ns forma.source.fire-test
-  (:use forma.source.fire
-        cascalog.api
+  (:use [forma.source.fire] :reload)
+  (:use cascalog.api
         midje.sweet))
 
 (def fire-tap
