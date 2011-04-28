@@ -23,7 +23,3 @@
   :namespaces [forma.hadoop.jobs.chunk-rain
                forma.hadoop.jobs.chunk-modis
                forma.hadoop.jobs.load-tseries])
-
-(deftask code-gen
-  (println "Generating thrift code...")
-  )
