@@ -24,7 +24,6 @@
   [tuples]
   [(apply str (map str tuples))])
 
-;; TODO: TAKE OFFSET OF SPARSEVECTOR into account.
 (defbufferop [sparse-expansion [length missing-val]]
   {:doc "Receives 2-tuple pairs of the form `<idx, val>`, inserts each
   `val` into a sparse vector at the corresponding `idx`. The `idx` of
@@ -43,7 +42,6 @@
 
 ;; ### Predicate Macros
 
-;; TODO: CONVERT OVER TO NEW VERSION WITHOUT SPLIT LENGTH, SAME FOR SPARSE_WINDOWER.
 (defn vals->sparsevec
   "Returns an aggregating predicate macro that stitches values into a
   sparse vector with all `?val`s at `?idx`, and `empty-val` at all
