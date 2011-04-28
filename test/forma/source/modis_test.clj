@@ -1,6 +1,7 @@
 (ns forma.source.modis-test
-  (:use forma.source.modis
-        midje.sweet))
+  (:use [forma.source.modis] :reload)
+  (:use midje.sweet
+        clojure.test))
 
 (facts
  "Lat lon conversions."
