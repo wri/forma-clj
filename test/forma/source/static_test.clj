@@ -1,7 +1,6 @@
 (ns forma.source.static-test
   (:use [forma.source.static] :reload)
-  (:use forma.source.static
-        cascalog.api
+  (:use cascalog.api
         midje.sweet))
 
 ;; Create a sample cascalog source comprised of MODIS resolution,
