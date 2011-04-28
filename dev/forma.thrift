@@ -9,5 +9,5 @@ struct FireTuple {
 }
 
 struct TimeSeries {
-  1: 
+  1: list<FireTuple> values
 }

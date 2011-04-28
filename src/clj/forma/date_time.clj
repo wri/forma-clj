@@ -126,6 +126,17 @@ function for more information."
          res
          (map #(Integer. %) (split date #"-"))))
 
+(defn current-period
+  "Returns the current time period for the supplied resolution. For
+  example:
+
+    (current-period \"32\")
+    => 495 ;; (on April 27, 2011, this function's birthday!)"
+  [res]
+  (let [date (f/unparse (f/formatters :year-month-day)
+                        (time/now))]
+    (datetime->period res date)))
+
 ;; ### Jobtag
 ;;
 ;; TODO: -- more information on what's going on here.
