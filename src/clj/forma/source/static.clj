@@ -11,7 +11,33 @@
   (:require [cascalog.ops :as c]
             [clojure.contrib.duck-streams :as duck]))
 
-;; Worth keeping
+(def gadm-map   (:ncols 36001
+                 :nrows 13962
+                 :xulcorner -180.000001
+                 :yulcorner 83.635972
+                 :cellsize 0.01
+                 :nodata -9999))
+
+(def ecoid-map  (:ncols 36000
+                 :nrows 17352
+                 :xulcorner -179.99996728576
+                 :yulcorner 83.628027
+                 :cellsize 0.01
+                 :nodata -9999))
+
+(def hansen-map (:ncols 86223
+                 :nrows 19240
+                 :xulcorner -179.99998844516
+                 :yulcorner 40.164567
+                 :cellsize 0.0041752289295106
+                 :nodata -9999))
+
+(def vcf-map    (:ncols 86223
+                 :nrows 19240
+                 :xulcorner -179.99998844516
+                 :yulcorner 40.164567
+                 :cellsize 0.0041752289295106
+                 :nodata -9999))
 
 (defn index-textfile
   "Prepend a row index to a text file `old-file-name`, located at `base-path`,
