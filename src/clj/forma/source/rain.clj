@@ -10,6 +10,7 @@
 (ns forma.source.rain
   (:use cascalog.api
         [forma.hadoop.io :only (get-bytes)]
+        [forma.hadoop.predicate :only (window->array)]
         [forma.source.modis :only (hv->tilestring)]
         [forma.reproject :only (project-to-modis
                                 dimensions-at-res)])
@@ -258,7 +259,7 @@ binary files are packaged as hadoop BytesWritable objects."}
       (hv->tilestring ?mod-h ?mod-v :> ?tilestring)
       (project-to-modis [m-res ll-res chunk-size]
                         ?raindata ?mod-h ?mod-v :> ?chunkid ?chunk)
-      (float-array ?chunk :> ?float-chunk)))
+      (window->array [Float/TYPE] ?chunk :> ?float-chunk)))
 
 ;; Finally, the chunker. This subquery is analogous to
 ;; `forma.source.hdf/modis-chunks`. This is the only subquery that

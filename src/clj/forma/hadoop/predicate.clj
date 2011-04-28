@@ -24,7 +24,16 @@
   [tuples]
   [(apply str (map str tuples))])
 
-;; TODO: TAKE OFFSET OF SPARSEVECTOR into account.
+(defmapop [window->array [type]]
+  ^{:doc "Converts nested clojure vectors into an array of the
+  supplied type. For example:
+
+    (window->array [Integer/TYPE] ?chunk :> ?int-chunk)
+
+  flattens the chunk and returns an integer array."}
+  [window]
+  [(into-array type (flatten window))])
+
 (defbufferop [sparse-expansion [length missing-val]]
   {:doc "Receives 2-tuple pairs of the form `<idx, val>`, inserts each
   `val` into a sparse vector at the corresponding `idx`. The `idx` of
@@ -43,7 +52,6 @@
 
 ;; ### Predicate Macros
 
-;; TODO: CONVERT OVER TO NEW VERSION WITHOUT SPLIT LENGTH, SAME FOR SPARSE_WINDOWER.
 (defn vals->sparsevec
   "Returns an aggregating predicate macro that stitches values into a
   sparse vector with all `?val`s at `?idx`, and `empty-val` at all
@@ -58,6 +66,8 @@
 
 ;; ### Special Functions
 
+;; TODO: Test this in the 3d case. I don't think it's actually doing
+;; what I want it to be doing. In fact, it fails in any case but 2d.
 (defn sparse-windower
   "Aggregates cascalog generator values up into multidimensional
   windows of nested vectors of `split-length` based on the supplied
@@ -79,15 +89,19 @@
   to produce a new generator that would create
 
     (s ?mod-h ?mod-v ?window-col ?window-row ?window)"
-  [gen in-syms split-length sparse-val]
-  (let [swap (partial swap-syms gen in-syms)
-        [inpos nextpos outpos inval outval] (v/gen-non-nullable-vars 5)]
-    (reduce #(%2 %1)
-            gen
-            (for [dim (range (dec (count in-syms)))
-                  :let [empty (matrix-of sparse-val dim split-length)
-                        aggr (vals->sparsevec split-length empty)]]
-              (fn [src]
-                (construct (swap [nextpos outpos outval])
-                           [[src :>> (swap [inpos nextpos inval])]
-                            [aggr inpos inval :> outpos outval]]))))))
+  ([gen in-syms val split-length sparse-val]
+     (sparse-windower gen in-syms val split-length split-length sparse-val))
+  ([gen in-syms val split-length split-width sparse-val]
+     (let [dim-vec [split-length split-width]
+           swap (partial swap-syms gen (into in-syms [val]))
+           [inpos nextpos outpos inval outval] (v/gen-non-nullable-vars 5)]
+       (reduce #(%2 %1)
+               gen
+               (for [dim (range (count in-syms))
+                     :let [length (dim-vec dim)
+                           empty (matrix-of sparse-val dim length)
+                           aggr (vals->sparsevec length empty)]]
+                 (fn [src]
+                   (construct (swap [nextpos outpos outval])
+                              [[src :>> (swap [inpos nextpos inval])]
+                               [aggr inpos inval :> outpos outval]])))))))
