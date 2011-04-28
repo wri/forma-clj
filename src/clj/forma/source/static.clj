@@ -140,3 +140,73 @@
                 dataset
                 ascii-path
                 (s3-path output-path)))
+
+
+;; This is testing space for DAN! and it will probably be erased
+;; before we merge this feature branch.  I am trying to figure out a
+;; way to sample datasets at higher resolution than the MODIS base
+;; grid.
+
+
+
+(defn high-res-ascii-source
+  [path aggregator]
+  (let [source (hfs-textline path)]
+    (<- [?mod-h ?mod-v ?line ?sample ?row ?col ?val]
+        (source ?line)
+        (liberate ?line :> ?row ?row-vec)
+        (free-cols ?row-vec :> ?col ?val)
+        #_(colval->modis ascii-info ?row ?col :> ?mod-h ?mod-v ?line ?sample))))
+
+
+(def high-res-source-tap
+  [
+   [8000 11000 01]
+   [8001 11001 23]
+   [8001 11002 45]
+   [8003 11003 67]
+   [8004 11004 89]
+   [8005 11005 1011]
+   [8006 11006 1213]
+   [8007 11007 1415]
+   [8008 11008 1617]
+   [8009 11009 1819]
+   [8010 11010 2021]
+   [8011 11011 2223]
+   ])
+
+(def ascii-info {:ncols 36001
+                 :nrows 13962
+                 :xulcorner -180.000001
+                 :yulcorner 83.635972
+                 :cellsize 0.01
+                 :nodata -9999})
+
+(defn travel [step dir start pos]
+  (-> start (dir (* pos step)) (dir (/ step 2))))
+
+(defn rowcol->latlon
+  [ascii-info row col]
+  (let [csz (:cellsize ascii-info)
+        [yul xul] (map ascii-info [:yulcorner :xulcorner])]
+    (map (partial travel csz)
+     [- +]
+     [yul xul]
+     [row col])))
+
+(defn colval->modis
+  "first convert row col into lat lon, and then convert lat lon
+  into modis characteristics."
+  [ascii-info row col]
+  (rowcol->latlon ascii-info row col))
+
+(defn casc-test-high-res
+  [ascii-info]
+  (?<- (stdout)
+       [?row ?col ?val ?lat ?lon]
+       (high-res-source-tap ?row ?col ?val)
+       (rowcol->latlon ascii-info ?row ?col :> ?lat ?lon)
+       #_(< ?col 11009)
+       #_(c/sum ?val :> ?sum)))
+
+
