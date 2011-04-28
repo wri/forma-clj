@@ -74,6 +74,8 @@
 ;; TODO: write an additional function to see if we can incorporate the
 ;; rain raster into a sample like this.  Note that modis-sample is
 ;; very, very similar to wgs84-index.  Something can be done about this.
+;;
+;; TODO: CLEAN! RENAME!! MERGE WITH WGS84INDEX, SOMEHOW!!
 
 (defn modis-sample
   "Mimics ArcGIS sample function for MODIS points and a raster that is
