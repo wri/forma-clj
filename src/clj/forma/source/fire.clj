@@ -8,7 +8,7 @@
   (:require [forma.hadoop.predicate :as p]
             [cascalog.ops :as c]
             [cascalog.vars :as v])
-  (:import [forma.schema FireTuple]))
+  (:import [forma.schema FireTuple TimeSeries]))
 
 (def prepath "/Users/sritchie/Desktop/FORMA/FIRE/")
 (def testfile (str prepath "MCD14DL.2011074.txt"))
@@ -109,19 +109,21 @@
   (let [one (ffirst tuples)
         two (current-period "32")
         length (inc (- two one))
-        ts (TimeSeries.)]
+        ts (doto (TimeSeries.)
+             (.setStartPeriod one)
+             (.setEndPeriod two))]
     (doseq [tuple (sparse-expander missing-val tuples :length length)]
       (.addToValues ts tuple))
-    [[one two ts]]))
+    [[ts]]))
 
 (defn fire-series
   [src]
-  (<- [?dataset ?m-res ?new-t-res ?tilestring ?sample ?line ?start ?end ?tseries]
+  (<- [?dataset ?m-res ?new-t-res ?tilestring ?sample ?line ?tseries]
       (datetime->period ?new-t-res ?datestring :> ?tperiod)
       (src ?dataset ?m-res ?t-res ?tilestring ?datestring ?sample ?line ?tuple)
       (identity "32" :> ?new-t-res)
       (:sort ?tperiod)
-      (sparse-expansion [(FireTuple. 0 0 0 0 0)] ?tperiod ?tuple :> ?start ?end ?tseries)))
+      (sparse-expansion [(FireTuple. 0 0 0 0 0)] ?tperiod ?tuple :> ?tseries)))
 
 (defn run-rip
   "Rips apart fires!"

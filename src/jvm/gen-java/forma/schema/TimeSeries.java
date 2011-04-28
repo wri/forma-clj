@@ -29,13 +29,19 @@ import org.apache.thrift.protocol.*;
 public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.io.Serializable, Cloneable {
   private static final TStruct STRUCT_DESC = new TStruct("TimeSeries");
 
-  private static final TField VALUES_FIELD_DESC = new TField("values", TType.LIST, (short)1);
+  private static final TField START_PERIOD_FIELD_DESC = new TField("startPeriod", TType.I32, (short)1);
+  private static final TField END_PERIOD_FIELD_DESC = new TField("endPeriod", TType.I32, (short)2);
+  private static final TField VALUES_FIELD_DESC = new TField("values", TType.LIST, (short)3);
 
+  public int startPeriod;
+  public int endPeriod;
   public List<FireTuple> values;
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements TFieldIdEnum {
-    VALUES((short)1, "values");
+    START_PERIOD((short)1, "startPeriod"),
+    END_PERIOD((short)2, "endPeriod"),
+    VALUES((short)3, "values");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -50,7 +56,11 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
      */
     public static _Fields findByThriftId(int fieldId) {
       switch(fieldId) {
-        case 1: // VALUES
+        case 1: // START_PERIOD
+          return START_PERIOD;
+        case 2: // END_PERIOD
+          return END_PERIOD;
+        case 3: // VALUES
           return VALUES;
         default:
           return null;
@@ -92,10 +102,17 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
   }
 
   // isset id assignments
+  private static final int __STARTPERIOD_ISSET_ID = 0;
+  private static final int __ENDPERIOD_ISSET_ID = 1;
+  private BitSet __isset_bit_vector = new BitSet(2);
 
   public static final Map<_Fields, FieldMetaData> metaDataMap;
   static {
     Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
+    tmpMap.put(_Fields.START_PERIOD, new FieldMetaData("startPeriod", TFieldRequirementType.DEFAULT, 
+        new FieldValueMetaData(TType.I32)));
+    tmpMap.put(_Fields.END_PERIOD, new FieldMetaData("endPeriod", TFieldRequirementType.DEFAULT, 
+        new FieldValueMetaData(TType.I32)));
     tmpMap.put(_Fields.VALUES, new FieldMetaData("values", TFieldRequirementType.DEFAULT, 
         new ListMetaData(TType.LIST, 
             new StructMetaData(TType.STRUCT, FireTuple.class))));
@@ -107,9 +124,15 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
   }
 
   public TimeSeries(
+    int startPeriod,
+    int endPeriod,
     List<FireTuple> values)
   {
     this();
+    this.startPeriod = startPeriod;
+    setStartPeriodIsSet(true);
+    this.endPeriod = endPeriod;
+    setEndPeriodIsSet(true);
     this.values = values;
   }
 
@@ -117,6 +140,10 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
    * Performs a deep copy on <i>other</i>.
    */
   public TimeSeries(TimeSeries other) {
+    __isset_bit_vector.clear();
+    __isset_bit_vector.or(other.__isset_bit_vector);
+    this.startPeriod = other.startPeriod;
+    this.endPeriod = other.endPeriod;
     if (other.isSetValues()) {
       List<FireTuple> __this__values = new ArrayList<FireTuple>();
       for (FireTuple other_element : other.values) {
@@ -132,7 +159,57 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
 
   @Override
   public void clear() {
+    setStartPeriodIsSet(false);
+    this.startPeriod = 0;
+    setEndPeriodIsSet(false);
+    this.endPeriod = 0;
     this.values = null;
+  }
+
+  public int getStartPeriod() {
+    return this.startPeriod;
+  }
+
+  public TimeSeries setStartPeriod(int startPeriod) {
+    this.startPeriod = startPeriod;
+    setStartPeriodIsSet(true);
+    return this;
+  }
+
+  public void unsetStartPeriod() {
+    __isset_bit_vector.clear(__STARTPERIOD_ISSET_ID);
+  }
+
+  /** Returns true if field startPeriod is set (has been asigned a value) and false otherwise */
+  public boolean isSetStartPeriod() {
+    return __isset_bit_vector.get(__STARTPERIOD_ISSET_ID);
+  }
+
+  public void setStartPeriodIsSet(boolean value) {
+    __isset_bit_vector.set(__STARTPERIOD_ISSET_ID, value);
+  }
+
+  public int getEndPeriod() {
+    return this.endPeriod;
+  }
+
+  public TimeSeries setEndPeriod(int endPeriod) {
+    this.endPeriod = endPeriod;
+    setEndPeriodIsSet(true);
+    return this;
+  }
+
+  public void unsetEndPeriod() {
+    __isset_bit_vector.clear(__ENDPERIOD_ISSET_ID);
+  }
+
+  /** Returns true if field endPeriod is set (has been asigned a value) and false otherwise */
+  public boolean isSetEndPeriod() {
+    return __isset_bit_vector.get(__ENDPERIOD_ISSET_ID);
+  }
+
+  public void setEndPeriodIsSet(boolean value) {
+    __isset_bit_vector.set(__ENDPERIOD_ISSET_ID, value);
   }
 
   public int getValuesSize() {
@@ -176,11 +253,27 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
 
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
+    case START_PERIOD:
+      if (value == null) {
+        unsetStartPeriod();
+      } else {
+        setStartPeriod((Integer)value);
+      }
+      break;
+
+    case END_PERIOD:
+      if (value == null) {
+        unsetEndPeriod();
+      } else {
+        setEndPeriod((Integer)value);
+      }
+      break;
+
     case VALUES:
       if (value == null) {
         unsetValues();
       } else {
-          setValues((List<FireTuple>)value);
+        setValues((List<FireTuple>)value);
       }
       break;
 
@@ -189,6 +282,12 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
 
   public Object getFieldValue(_Fields field) {
     switch (field) {
+    case START_PERIOD:
+      return new Integer(getStartPeriod());
+
+    case END_PERIOD:
+      return new Integer(getEndPeriod());
+
     case VALUES:
       return getValues();
 
@@ -203,6 +302,10 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
     }
 
     switch (field) {
+    case START_PERIOD:
+      return isSetStartPeriod();
+    case END_PERIOD:
+      return isSetEndPeriod();
     case VALUES:
       return isSetValues();
     }
@@ -221,6 +324,24 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
   public boolean equals(TimeSeries that) {
     if (that == null)
       return false;
+
+    boolean this_present_startPeriod = true;
+    boolean that_present_startPeriod = true;
+    if (this_present_startPeriod || that_present_startPeriod) {
+      if (!(this_present_startPeriod && that_present_startPeriod))
+        return false;
+      if (this.startPeriod != that.startPeriod)
+        return false;
+    }
+
+    boolean this_present_endPeriod = true;
+    boolean that_present_endPeriod = true;
+    if (this_present_endPeriod || that_present_endPeriod) {
+      if (!(this_present_endPeriod && that_present_endPeriod))
+        return false;
+      if (this.endPeriod != that.endPeriod)
+        return false;
+    }
 
     boolean this_present_values = true && this.isSetValues();
     boolean that_present_values = true && that.isSetValues();
@@ -247,6 +368,26 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
     int lastComparison = 0;
     TimeSeries typedOther = (TimeSeries)other;
 
+    lastComparison = Boolean.valueOf(isSetStartPeriod()).compareTo(typedOther.isSetStartPeriod());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetStartPeriod()) {
+      lastComparison = TBaseHelper.compareTo(this.startPeriod, typedOther.startPeriod);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetEndPeriod()).compareTo(typedOther.isSetEndPeriod());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetEndPeriod()) {
+      lastComparison = TBaseHelper.compareTo(this.endPeriod, typedOther.endPeriod);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     lastComparison = Boolean.valueOf(isSetValues()).compareTo(typedOther.isSetValues());
     if (lastComparison != 0) {
       return lastComparison;
@@ -274,7 +415,23 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
         break;
       }
       switch (field.id) {
-        case 1: // VALUES
+        case 1: // START_PERIOD
+          if (field.type == TType.I32) {
+            this.startPeriod = iprot.readI32();
+            setStartPeriodIsSet(true);
+          } else { 
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 2: // END_PERIOD
+          if (field.type == TType.I32) {
+            this.endPeriod = iprot.readI32();
+            setEndPeriodIsSet(true);
+          } else { 
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 3: // VALUES
           if (field.type == TType.LIST) {
             {
               TList _list0 = iprot.readListBegin();
@@ -307,6 +464,12 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
     validate();
 
     oprot.writeStructBegin(STRUCT_DESC);
+    oprot.writeFieldBegin(START_PERIOD_FIELD_DESC);
+    oprot.writeI32(this.startPeriod);
+    oprot.writeFieldEnd();
+    oprot.writeFieldBegin(END_PERIOD_FIELD_DESC);
+    oprot.writeI32(this.endPeriod);
+    oprot.writeFieldEnd();
     if (this.values != null) {
       oprot.writeFieldBegin(VALUES_FIELD_DESC);
       {
@@ -328,6 +491,14 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
     StringBuilder sb = new StringBuilder("TimeSeries(");
     boolean first = true;
 
+    sb.append("startPeriod:");
+    sb.append(this.startPeriod);
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("endPeriod:");
+    sb.append(this.endPeriod);
+    first = false;
+    if (!first) sb.append(", ");
     sb.append("values:");
     if (this.values == null) {
       sb.append("null");
