@@ -7,7 +7,8 @@
         [clj-time.format :only (unparse formatters)]
         [clojure.string :only (split)]
         [clojure.contrib.math :only (ceil)])
-  (:require [clj-time.core :as time]))
+  (:require [clj-time.core :as time]
+            [clj-time.format :as f]))
 
 ;; ### Reference Time
 ;;
