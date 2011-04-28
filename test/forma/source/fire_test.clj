@@ -3,8 +3,6 @@
         cascalog.api
         midje.sweet))
 
-(fact (+ 1 1) => 3)
-
 (def fire-tap
   (memory-source-tap
    [["-4.214,152.190,319.9,1.6,1.2,03/15/2011,0035,T,0,5.0,301.3,27.8"]
