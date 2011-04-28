@@ -258,7 +258,7 @@ binary files are packaged as hadoop BytesWritable objects."}
       (hv->tilestring ?mod-h ?mod-v :> ?tilestring)
       (project-to-modis [m-res ll-res chunk-size]
                         ?raindata ?mod-h ?mod-v :> ?chunkid ?chunk)
-      (float-array ?chunk :> ?float-chunk)))
+      (window->array [Float/TYPE] ?chunk :> ?float-chunk)))
 
 ;; Finally, the chunker. This subquery is analogous to
 ;; `forma.source.hdf/modis-chunks`. This is the only subquery that

@@ -24,6 +24,16 @@
   [tuples]
   [(apply str (map str tuples))])
 
+(defmapop [window->array [type]]
+  ^{:doc "Converts nested clojure vectors into an array of the
+  supplied type. For example:
+
+    (window->array [Integer/TYPE] ?chunk :> ?int-chunk)
+
+  flattens the chunk and returns an integer array."}
+  [window]
+  [(into-array type (flatten window))])
+
 (defbufferop [sparse-expansion [length missing-val]]
   {:doc "Receives 2-tuple pairs of the form `<idx, val>`, inserts each
   `val` into a sparse vector at the corresponding `idx`. The `idx` of
