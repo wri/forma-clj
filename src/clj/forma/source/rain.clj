@@ -10,6 +10,7 @@
 (ns forma.source.rain
   (:use cascalog.api
         [forma.hadoop.io :only (get-bytes)]
+        [forma.hadoop.predicate :only (window->array)]
         [forma.source.modis :only (hv->tilestring)]
         [forma.reproject :only (project-to-modis
                                 dimensions-at-res)])
