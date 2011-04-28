@@ -2,7 +2,7 @@
   (:use cascalog.api
         [forma.date-time :only (datetime->period current-period)]
         [clojure.string :only (split)]
-        [forma.matrix.utils :only (sparse-expander matrix-of)]
+        [forma.matrix.utils :only (sparse-expander)]
         [forma.source.modis :only (latlon->modis
                                    hv->tilestring)])
   (:require [forma.hadoop.predicate :as p]
@@ -79,10 +79,36 @@
 
 ;; ## Fire Queries
 
+
+(defn mk-ts
+  "TODO: DOCS"
+  [start end ts-seq]
+  (doto (TimeSeries.)
+    (.setStartPeriod start)
+    (.setEndPeriod end)
+    (.setValues (ArrayList. ts-seq))))
+
+(defbufferop [sparse-expansion [t-res start-date end-date missing-val]]
+  {:doc "Receives 2-tuple pairs of the form `<idx, val>`, and inserts
+  each `val` into a sparse vector of the supplied length at the
+  corresponding `idx`. `missing-val` will be substituted for any
+  missing value."}
+  [tuples]
+  (let [one (datetime->period t-res start-date)
+        two (datetime->period t-res end-date)
+        length (inc (- two one))
+        ts (mk-ts one
+                  two
+                  (sparse-expander missing-val tuples
+                                   :start one
+                                   :length length))]
+    
+    [[ts]]))
+
 (defn fire-source
   "Takes a source of textlines, and returns 2-tuples with latitude and
   longitude."
-  [source t-res]
+  [source]
   (let [vs (v/gen-non-nullable-vars 5)]
     (<- [?dataset ?datestring ?t-res ?lat ?lon ?tuple]
         (source ?line)
@@ -95,48 +121,26 @@
 (defn rip-fires
   "Aggregates fire data at the supplied path by modis pixel at the
   supplied resolution."
-  [m-res t-res source]
-  (let [fires (fire-source source t-res)]
+  [m-res source]
+  (let [fires (fire-source source)]
     (<- [?dataset ?m-res ?t-res ?tilestring ?datestring ?sample ?line ?tuple]
         (fires ?dataset ?datestring ?t-res ?lat ?lon ?tuple)
         (latlon->modis m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
         (hv->tilestring ?mod-h ?mod-v :> ?tilestring)
         (identity m-res :> ?m-res))))
 
-(defn mk-ts
-  "TODO: DOCS"
-  [start end ts-seq]
-  (doto (TimeSeries.)
-    (.setStartPeriod start)
-    (.setEndPeriod end)
-    (.setValues (ArrayList. ts-seq))))
-
-(defbufferop [sparse-expansion [missing-val]]
-  {:doc "Receives 2-tuple pairs of the form `<idx, val>`, and inserts
-  each `val` into a sparse vector of the supplied length at the
-  corresponding `idx`. `missing-val` will be substituted for any
-  missing value."}
-  [tuples]
-  (let [one (ffirst tuples)
-        two (current-period "32")
-        length (inc (- two one))
-        ts (mk-ts one
-                  two
-                  (sparse-expander missing-val tuples :length length))]
-    
-    [[ts]]))
-
 (defn fire-series
-  [src]
-  (<- [?dataset ?m-res ?new-t-res ?tilestring ?sample ?line ?tseries]
-      (datetime->period ?new-t-res ?datestring :> ?tperiod)
-      (src ?dataset ?m-res ?t-res ?tilestring ?datestring ?sample ?line ?tuple)
-      (identity "32" :> ?new-t-res)
-      (:sort ?tperiod)
-      (sparse-expansion [(FireTuple. 0 0 0 0)] ?tperiod ?tuple :> ?tseries)))
+  [t-res start end src]
+  (let [empty (FireTuple. 0 0 0 0)]
+    (<- [?dataset ?m-res ?new-t-res ?tilestring ?sample ?line ?tseries]
+        (datetime->period ?new-t-res ?datestring :> ?tperiod)
+        (identity t-res :> ?new-t-res)
+        (src ?dataset ?m-res ?t-res ?tilestring ?datestring ?sample ?line ?tuple)
+        (:sort ?tperiod)
+        (sparse-expansion [t-res start end empty] ?tperiod ?tuple :> ?tseries))))
 
 (defn run-rip
   "Rips apart fires!"
-  []
+  [t-res start end]
   (?- (stdout)
-      (fire-series (rip-fires "1000" "32" new-fire-tap))))
+      (fire-series t-res start end (rip-fires "1000" new-fire-tap))))

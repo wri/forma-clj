@@ -66,7 +66,8 @@ pred, `new-val` will be subbed into the sequence.
               v (transient [])]
          (let [[pos val] (first tup-seq)]
            (cond (halt? idx tup-seq) (persistent! v)
-                 (= idx pos) (recur (inc idx) (rest tup-seq) (conj! v val))
+                 (when pos (= idx pos)) (recur (inc idx) (rest tup-seq) (conj! v val))
+                 (when pos (> idx pos)) (recur (inc idx) (rest tup-seq) (conj! v placeholder))
                  :else       (recur (inc idx) tup-seq (conj! v placeholder))))))))
 
 (defn idx->colrow
