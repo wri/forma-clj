@@ -1,43 +1,44 @@
 (ns forma.source.static
   (:use cascalog.api
         [forma.matrix.utils :only (idx->colrow)]
+        [forma.hadoop.io :only (chunk-tap)]
+        [forma.hadoop.predicate :only (sparse-windower)]
         [forma.reproject :only (wgs84-index
                                 dimensions-at-res
                                 modis-sample)]
         [forma.source.modis :only (modis->latlon
                                    latlon->modis
-                                   pixels-at-res)]
+                                   pixels-at-res
+                                   hv->tilestring)]
         [clojure.string :only (split)])
   (:require [cascalog.ops :as c]
-            [clojure.contrib.duck-streams :as duck]))
+            [clojure.contrib.duck-streams :as duck])
+  (:gen-class))
 
-(def gadm-map   (:ncols 36001
-                 :nrows 13962
-                 :xulcorner -180.000001
-                 :yulcorner 83.635972
-                 :cellsize 0.01
-                 :nodata -9999))
-
-(def ecoid-map  (:ncols 36000
-                 :nrows 17352
-                 :xulcorner -179.99996728576
-                 :yulcorner 83.628027
-                 :cellsize 0.01
-                 :nodata -9999))
-
-(def hansen-map (:ncols 86223
-                 :nrows 19240
-                 :xulcorner -179.99998844516
-                 :yulcorner 40.164567
-                 :cellsize 0.0041752289295106
-                 :nodata -9999))
-
-(def vcf-map    (:ncols 86223
-                 :nrows 19240
-                 :xulcorner -179.99998844516
-                 :yulcorner 40.164567
-                 :cellsize 0.0041752289295106
-                 :nodata -9999))
+(def datasets {:gadm {:ncols 36001
+                      :nrows 13962
+                      :xulcorner -180.000001
+                      :yulcorner 83.635972
+                      :cellsize 0.01
+                      :nodata -9999}
+               :ecoid {:ncols 36000
+                       :nrows 17352
+                       :xulcorner -179.99996728576
+                       :yulcorner 83.628027
+                       :cellsize 0.01
+                       :nodata -9999}
+               :hansen {:ncols 86223
+                        :nrows 19240
+                        :xulcorner -179.99998844516
+                        :yulcorner 40.164567
+                        :cellsize 0.0041752289295106
+                        :nodata -9999}
+               :vcf {:ncols 86223
+                     :nrows 19240
+                     :xulcorner -179.99998844516
+                     :yulcorner 40.164567
+                     :cellsize 0.0041752289295106
+                     :nodata -9999}})
 
 (defn index-textfile
   "Prepend a row index to a text file `old-file-name`, located at `base-path`,
@@ -91,6 +92,14 @@
         (liberate ?line :> ?row ?row-vec)
         (free-cols ?row-vec :> ?col ?val))))
 
+(defn mod-pixels
+  [t-seq]
+  (memory-source-tap
+   (for [[mod-h mod-v] t-seq
+         sample 1200
+         line   1200]
+     ["1000" mod-h mod-v sample line])))
+
 ;; TODO: generalize this function, and its dependency functions, to
 ;; accomodate different projections.
 
@@ -98,11 +107,36 @@
   "sample a series of points with an underlying ASCII grid, so that each point is
   tagged with the value of the grid pixel that it falls within. Note that, currently,
   this query requires that both the point array and grid be projected in WGS84."
-  [mod-source ascii-path ascii-info]
-  (let [grid-source (ascii-source ascii-path)]
-    (?<- (stdout)
-         [?mod-h ?mod-v ?line ?sample ?row ?col ?val]
-         (grid-source ?row ?col ?val)
-         (mod-source ?res ?mod-h ?mod-v ?line ?sample)
-         (modis-sample ascii-info ?res ?mod-h ?mod-v ?sample ?line :> ?row ?col))))
+  [tile-seq dataset ascii-path]
+  (let [ascii-info ((keyword dataset) datasets)
+        mod-source (mod-pixels tile-seq)
+        grid-source (ascii-source ascii-path)]
+    (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?val]
+        (grid-source ?row ?col ?val)
+        (identity dataset :> ?dataset)
+        (identity "00" :> ?t-res)
+        (mod-source ?res ?mod-h ?mod-v ?sample ?line)
+        (modis-sample ascii-info ?m-res ?mod-h ?mod-v ?sample ?line :> ?row ?col))))
 
+(defn tilestringer
+  [src]
+  (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?val]
+      (src ?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?val)
+      (hv->tilestring ?mod-h ?mod-v :> ?tilestring)))
+
+(defn static-chunker
+  "Last thing we need is the chunk-tap!"
+  [tile-seq dataset ascii-path output-path]
+  (let [src (sample-modis tile-seq dataset ascii-path)]
+    (?- (chunk-tap output-path)
+        (sparse-windower (tilestringer src) ["?sample" "?line" "?val"] 150 0))))
+
+(defn s3-path [path]
+  (str "s3n://AKIAJ56QWQ45GBJELGQA:6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV@" path))
+
+(defn -main
+  [tile-seq dataset ascii-path output-path]
+  (sample-modis (read-string tile-seq)
+                dataset
+                ascii-path
+                (s3-path output-path)))
