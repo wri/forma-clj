@@ -8,7 +8,8 @@
   (:require [forma.hadoop.predicate :as p]
             [cascalog.ops :as c]
             [cascalog.vars :as v])
-  (:import [forma.schema FireTuple TimeSeries]))
+  (:import [forma.schema FireTuple TimeSeries]
+           [java.util ArrayList]))
 
 (def prepath "/Users/sritchie/Desktop/FORMA/FIRE/")
 (def testfile (str prepath "MCD14DL.2011074.txt"))
@@ -63,18 +64,18 @@
                 (> c 50))))
 
 (defn tupleize
-  [t-above-330 c-above-50 both-preds max-t count]
-  (FireTuple. max-t t-above-330 c-above-50 both-preds count))
+  [t-above-330 c-above-50 both-preds count]
+  (FireTuple. t-above-330 c-above-50 both-preds count))
 
 (def
   ^{:doc "Generates a tuple of fire characteristics from confidence
   and temperature."}
   fire-characteristics
   (<- [?conf ?kelvin :> ?tuple]
-      ((c/juxt #'fires-above-330 #'c/max) ?kelvin :> ?temp-330 ?max-t)
       ((c/juxt #'conf-above-50 #'per-day) ?conf :> ?conf-50 ?count)
+      (fires-above-330 ?kelvin :> ?temp-330)
       (both-preds ?conf ?kelvin :> ?both-preds)
-      (tupleize ?temp-330 ?c-above-50 ?both-preds ?max-t ?count :> ?tuple)))
+      (tupleize ?temp-330 ?conf-50 ?both-preds ?count :> ?tuple)))
 
 ;; ## Fire Queries
 
@@ -102,6 +103,14 @@
         (hv->tilestring ?mod-h ?mod-v :> ?tilestring)
         (identity m-res :> ?m-res))))
 
+(defn mk-ts
+  "TODO: DOCS"
+  [start end ts-seq]
+  (doto (TimeSeries.)
+    (.setStartPeriod start)
+    (.setEndPeriod end)
+    (.setValues (ArrayList. ts-seq))))
+
 (defbufferop [sparse-expansion [missing-val]]
   {:doc "Receives 2-tuple pairs of the form `<idx, val>`, and inserts
   each `val` into a sparse vector of the supplied length at the
@@ -111,11 +120,10 @@
   (let [one (ffirst tuples)
         two (current-period "32")
         length (inc (- two one))
-        ts (doto (TimeSeries.)
-             (.setStartPeriod one)
-             (.setEndPeriod two))]
-    (doseq [tuple (sparse-expander missing-val tuples :length length)]
-      (.addToValues ts tuple))
+        ts (mk-ts one
+                  two
+                  (sparse-expander missing-val tuples :length length))]
+    
     [[ts]]))
 
 (defn fire-series
@@ -125,19 +133,10 @@
       (src ?dataset ?m-res ?t-res ?tilestring ?datestring ?sample ?line ?tuple)
       (identity "32" :> ?new-t-res)
       (:sort ?tperiod)
-      (sparse-expansion [(FireTuple. 0 0 0 0 0)] ?tperiod ?tuple :> ?tseries)))
-
-(defn fire-series
-  [src]
-  (<- [?dataset ?m-res ?new-t-res ?tilestring ?sample ?line ?tseries]
-      (datetime->period ?new-t-res ?datestring :> ?tperiod)
-      (src ?dataset ?m-res ?t-res ?tilestring ?datestring ?sample ?line ?tuple)
-      (identity "32" :> ?new-t-res)
-      (:sort ?tperiod)
-      (sparse-expansion [(FireTuple. 0 0 0 0 0)] ?tperiod ?tuple :> ?tseries)))
+      (sparse-expansion [(FireTuple. 0 0 0 0)] ?tperiod ?tuple :> ?tseries)))
 
 (defn run-rip
   "Rips apart fires!"
-  [count]
+  []
   (?- (stdout)
       (fire-series (rip-fires "1000" "32" new-fire-tap))))
