@@ -79,15 +79,19 @@
   to produce a new generator that would create
 
     (s ?mod-h ?mod-v ?window-col ?window-row ?window)"
-  [gen in-syms split-length sparse-val]
-  (let [swap (partial swap-syms gen in-syms)
-        [inpos nextpos outpos inval outval] (v/gen-non-nullable-vars 5)]
-    (reduce #(%2 %1)
-            gen
-            (for [dim (range (dec (count in-syms)))
-                  :let [empty (matrix-of sparse-val dim split-length)
-                        aggr (vals->sparsevec split-length empty)]]
-              (fn [src]
-                (construct (swap [nextpos outpos outval])
-                           [[src :>> (swap [inpos nextpos inval])]
-                            [aggr inpos inval :> outpos outval]]))))))
+  ([gen in-syms val split-length sparse-val]
+     (sparse-windower gen in-syms val split-length split-length sparse-val))
+  ([gen in-syms val split-length split-width sparse-val]
+     (let [dim-vec [split-length split-width]
+           swap (partial swap-syms gen (into in-syms [val]))
+           [inpos nextpos outpos inval outval] (v/gen-non-nullable-vars 5)]
+       (reduce #(%2 %1)
+               gen
+               (for [dim (range (count in-syms))
+                     :let [length (dim-vec dim)
+                           empty (matrix-of sparse-val dim length)
+                           aggr (vals->sparsevec length empty)]]
+                 (fn [src]
+                   (construct (swap [nextpos outpos outval])
+                              [[src :>> (swap [inpos nextpos inval])]
+                               [aggr inpos inval :> outpos outval]])))))))
