@@ -1,7 +1,6 @@
 namespace java forma.schema
 
 struct FireTuple {
-  1: double maxTemp,
   2: i32 temp330,
   3: i32 conf50,
   4: i32 bothPreds,
