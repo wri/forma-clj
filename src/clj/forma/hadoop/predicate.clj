@@ -23,6 +23,11 @@
 ;; ### Generators
 
 (defn pixel-generator
+  "Returns a cascalog generator that produces every pixel combination
+  for the supplied sequence of tiles, given the supplied
+  resolution. `pixel-generator` works by first writing every tuple to
+  a sequencefile in a temp directory on the distributed filesystem,
+  then returning a tap into its guts."
   [res tileseq]
   (let [tmpdir (.getAbsolutePath (io/temp-dir "tuples"))
         tap (hfs-seqfile tmpdir)]
