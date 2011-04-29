@@ -21,6 +21,7 @@
 
 (defmapcatop [sample [res]]
   [& args] (range (pixels-at-res res)))
+
 (defmapcatop [line [res]]
   [& args] (range (pixels-at-res res)))
 
