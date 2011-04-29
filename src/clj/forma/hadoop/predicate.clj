@@ -3,7 +3,8 @@
         [clojure.string :only (split)]
         [clojure.contrib.math :only (ceil)]
         [clojure.contrib.seq :only (positions)]
-        [forma.matrix.utils :only (sparse-expander matrix-of)])
+        [forma.matrix.utils :only (sparse-expander matrix-of)]
+        [forma.source.modis :only (pixels-at-res)])
   (:require [cascalog.ops :as c]
             [cascalog.vars :as v]))
 
@@ -15,6 +16,26 @@
   [gen in-syms out-syms]
   (replace (zipmap in-syms out-syms)
            (get-out-fields gen)))
+
+;; ### Generators
+
+(defmapcatop [sample [res]]
+  [& args] (range (pixels-at-res res)))
+(defmapcatop [line [res]]
+  [& args] (range (pixels-at-res res)))
+
+(defn pixel-generator
+  "Returns a cascalog generator that produces every pixel combination
+  for the supplied sequence of tiles, given the supplied resolution."
+  [res tileseq]
+  (let [hv (memory-source-tap (for [[h v] tileseq] [h v]))
+        s (fn [tap] (<- [?mod-h ?mod-v ?sample]
+                       (tap ?mod-h ?mod-v)
+                       (sample [res] ?mod-h :> ?sample)))
+        l (fn [tap] (<- [?mod-h ?mod-v ?sample ?line]
+                       (tap ?mod-h ?mod-v ?sample)
+                       (line [res] ?mod-h :> ?line)))]
+    (->> hv s l)))
 
 ;; ### Operations
 
