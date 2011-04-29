@@ -21,37 +21,37 @@
 
        	  (let [midje-passes    (:pass @clojure.test/*report-counters*)
        		midje-fails     (:fail @clojure.test/*report-counters*)
-           midje-failure-message
-       	      (condp = midje-fails
-       		  0 (format "All claimed facts (%d) have been confirmed." midje-passes)
-       		  1 (format "FAILURE: %d fact was not confirmed." midje-fails)
-       		  (format "FAILURE: %d facts were not confirmed." midje-fails))
-       	   potential-consolation
-       	       (condp = midje-passes
-       		   0 ""
-       		   1 "(But 1 was.)"
-       		   (format "(But %d were.)" midje-passes))
-       	   midje-consolation
-       	           (if (> midje-fails 0) potential-consolation "")
+                midje-failure-message
+                (condp = midje-fails
+                    0 (format "All claimed facts (%d) have been confirmed." midje-passes)
+                    1 (format "FAILURE: %d fact was not confirmed." midje-fails)
+                    (format "FAILURE: %d facts were not confirmed." midje-fails))
+                potential-consolation
+                (condp = midje-passes
+                    0 ""
+                    1 "(But 1 was.)"
+                    (format "(But %d were.)" midje-passes))
+                midje-consolation
+                (if (> midje-fails 0) potential-consolation "")
 
-       	   ; Stashed clojure.test output
-       	   clojure-test-output-catcher
-       	           (java.io.StringWriter.)
-       	   clojure-test-result
-       	           (binding [clojure.test/*test-out* clojure-test-output-catcher]
-       		     (apply clojure.test/run-tests namespaces))
-       	   clojure-test-output
-       	           (-> clojure-test-output-catcher .toString clojure.string/split-lines)]
+                                        ; Stashed clojure.test output
+                clojure-test-output-catcher
+                (java.io.StringWriter.)
+                clojure-test-result
+                (binding [clojure.test/*test-out* clojure-test-output-catcher]
+                  (apply clojure.test/run-tests namespaces))
+                clojure-test-output
+                (-> clojure-test-output-catcher .toString clojure.string/split-lines)]
 
 
-       (when (> (+ (:fail clojure-test-result) (:error clojure-test-result))
-       		0)
-       	 (println ">>> Output from clojure.test tests:")
-       	 (dorun (map println (drop-last 2 clojure-test-output))))
+            (when (> (+ (:fail clojure-test-result) (:error clojure-test-result))
+                     0)
+              (println ">>> Output from clojure.test tests:")
+              (dorun (map println (drop-last 2 clojure-test-output))))
 
-       (when (> (:test clojure-test-result) 0)
-       	 (println ">>> clojure.test summary:")
-       	 (dorun (map println (take-last 2 clojure-test-output)))
-       	 (println ">>> Midje summary:"))
+            (when (> (:test clojure-test-result) 0)
+              (println ">>> clojure.test summary:")
+              (dorun (map println (take-last 2 clojure-test-output)))
+              (println ">>> Midje summary:"))
        
-       (println midje-failure-message midje-consolation)))))
+            (println midje-failure-message midje-consolation)))))

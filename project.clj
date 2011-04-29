@@ -2,6 +2,7 @@
   :description "[FORMA](http://goo.gl/4YTBw) gone Functional."
   :source-path "src/clj"
   :java-source-path "src/jvm"
+  :dev-resources-path "dev"
   :warn-on-reflection true
   :marginalia {:javascript ["mathjax/MathJax.js"]}
   :javac-options {:debug "true" :fork "true"}
