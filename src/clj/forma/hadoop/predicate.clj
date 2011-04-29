@@ -89,6 +89,11 @@
 
 ;; TODO: Test this in the 3d case. I don't think it's actually doing
 ;; what I want it to be doing. In fact, it fails in any case but 2d.
+;;
+;; I think we need outpos, outval, and then n + 1 other values to
+;; cycle around. We should take in a map of positions <-> dimension
+;; length.
+
 (defn sparse-windower
   "Aggregates cascalog generator values up into multidimensional
   windows of nested vectors of `split-length` based on the supplied
