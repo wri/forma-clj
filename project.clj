@@ -17,9 +17,9 @@
                  [org.clojars.sritchie09/gdal-java-native "1.8.0"]]
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
                      [swank-clojure "1.4.0-SNAPSHOT"]
-                     [clojure-source "1.2.0"]
-                     [marginalia "0.5.0"]
+                     [clojure-source "1.2.0"] [marginalia "0.5.0"]
                      [midje "1.1"]]
   :namespaces [forma.hadoop.jobs.chunk-rain
                forma.hadoop.jobs.chunk-modis
-               forma.hadoop.jobs.load-tseries])
+               forma.hadoop.jobs.load-tseries
+               forma.source.static])

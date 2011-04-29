@@ -133,13 +133,6 @@
    [8011 11001 2223]
    ])
 
-(def ascii-info {:ncols 36001
-                 :nrows 13962
-                 :xulcorner -180.000001
-                 :yulcorner 83.635972
-                 :cellsize 0.001
-                 :nodata -9999})
-
 (defn travel
   "travel along a grid with cellsize `step` in the direction
   given by `dir` from an initial position `start` to a position
@@ -205,10 +198,9 @@
   indices prepended and the ASCII header lopped off."
   ([m-res dataset tile-seq ascii-path & [agg]]
      (let [ascii-info ((keyword dataset) datasets)
-           mod-source (mod-pixels tile-seq)
            grid-source (ascii-source ascii-path)]
        (if (>= (:cellsize ascii-info) 0.01)
-         (low-res-sample dataset ascii-info mod-source grid-source)
+         (low-res-sample dataset ascii-info (mod-pixels tile-seq) grid-source)
          (high-res-sample dataset m-res grid-source ascii-info agg)))))
 
 ;; THE JOB!
@@ -230,8 +222,9 @@
   (str "s3n://AKIAJ56QWQ45GBJELGQA:6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV@" path))
 
 (defn -main
-  [tile-seq dataset ascii-path output-path]
-  (sample-modis (read-string tile-seq)
-                dataset
-                ascii-path
-                (s3-path output-path)))
+  [dataset ascii-path output-path]
+  (static-chunker [[27 7] [27 8] [27 9] [28 7] [28 8] [28 9] [29 8] [29 9] [30 8] [30 9] [31 8] [31 9]]
+                  dataset
+                  c/sum
+                  ascii-path
+                  (s3-path output-path)))
