@@ -79,4 +79,3 @@
          (grid-source ?row ?col ?val)
          (mod-source ?res ?mod-h ?mod-v ?line ?sample)
          (modis-sample ascii-info ?res ?mod-h ?mod-v ?sample ?line :> ?row ?col))))
-

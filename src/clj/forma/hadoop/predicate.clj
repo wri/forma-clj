@@ -5,8 +5,11 @@
         [clojure.contrib.seq :only (positions)]
         [forma.matrix.utils :only (sparse-expander matrix-of)]
         [forma.source.modis :only (pixels-at-res)])
-  (:require [cascalog.ops :as c]
-            [cascalog.vars :as v]))
+  (:require [cascalog.io :as io]
+            [cascalog.ops :as c]
+            [cascalog.vars :as v])
+  (:import [org.apache.hadoop.mapred JobConf]
+           [cascalog Util]))
 
 ;; ### Cascalog Helpers
 
@@ -19,24 +22,16 @@
 
 ;; ### Generators
 
-(defmapcatop [sample [res]]
-  [& args] (range (pixels-at-res res)))
-
-(defmapcatop [line [res]]
-  [& args] (range (pixels-at-res res)))
-
 (defn pixel-generator
-  "Returns a cascalog generator that produces every pixel combination
-  for the supplied sequence of tiles, given the supplied resolution."
   [res tileseq]
-  (let [hv (memory-source-tap (for [[h v] tileseq] [h v]))
-        s (fn [tap] (<- [?mod-h ?mod-v ?sample]
-                       (tap ?mod-h ?mod-v)
-                       (sample [res] ?mod-h :> ?sample)))
-        l (fn [tap] (<- [?mod-h ?mod-v ?sample ?line]
-                       (tap ?mod-h ?mod-v ?sample)
-                       (line [res] ?mod-h :> ?line)))]
-    (->> hv s l)))
+  (let [tmpdir (.getAbsolutePath (io/temp-dir "tuples"))
+        tap (hfs-seqfile tmpdir)]
+    (with-open [collector (.openForWrite tap (JobConf.))]
+      (doseq [[h v] tileseq
+              s (range (pixels-at-res res))
+              l (range (pixels-at-res res))]
+        (.add collector (Util/coerceToTuple [h v s l]))))
+    (hfs-seqfile tmpdir)))
 
 ;; ### Operations
 
