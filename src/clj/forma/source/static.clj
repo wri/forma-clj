@@ -79,3 +79,9 @@
          (grid-source ?row ?col ?val)
          (mod-source ?res ?mod-h ?mod-v ?line ?sample)
          (modis-sample ascii-info ?res ?mod-h ?mod-v ?sample ?line :> ?row ?col))))
+
+;; (cascalog.io/with-fs-tmp [fs tmp-dir]
+;;   (let [pix-tap (pixel-generator tmp-dir res tileseq)]
+;;     (?<- (stdout)
+;;          [?mod-h ?mod-v ?sample ?line]
+;;          (pix-tap ?mod-h ?mod-v ?sample ?line))))

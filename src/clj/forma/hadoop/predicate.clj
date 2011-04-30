@@ -1,12 +1,12 @@
 (ns forma.hadoop.predicate
   (:use cascalog.api
+        clojure.contrib.java-utils
         [clojure.string :only (split)]
         [clojure.contrib.math :only (ceil)]
         [clojure.contrib.seq :only (positions)]
         [forma.matrix.utils :only (sparse-expander matrix-of)]
         [forma.source.modis :only (pixels-at-res)])
-  (:require [cascalog.io :as io]
-            [cascalog.ops :as c]
+  (:require [cascalog.ops :as c]
             [cascalog.vars :as v])
   (:import [org.apache.hadoop.mapred JobConf]
            [cascalog Util]))
@@ -26,17 +26,26 @@
   "Returns a cascalog generator that produces every pixel combination
   for the supplied sequence of tiles, given the supplied
   resolution. `pixel-generator` works by first writing every tuple to
-  a sequencefile in a temp directory on the distributed filesystem,
-  then returning a tap into its guts."
-  [res tileseq]
-  (let [tmpdir (.getAbsolutePath (io/temp-dir "tuples"))
-        tap (hfs-seqfile tmpdir)]
+  a sequencefile into the supplied directory, then returning a tap
+  into its guts.
+
+I recommend wrapping queries that use this tap with
+`cascalog.io/with-fs-tmp`; for example,
+
+    (with-fs-tmp [fs tmp-dir]
+      (let [pix-tap (pixel-generator res tmp-dir tileseq)]
+      (?<- (stdout)
+           [?mod-h ?mod-v ... etc]
+           (pix-tap ?mod-h ?mod-v ?sample ?line)
+           ...)))"
+  [tmp-path res tileseq]
+  (let [tap (hfs-seqfile tmp-path)]
     (with-open [collector (.openForWrite tap (JobConf.))]
       (doseq [[h v] tileseq
               s (range (pixels-at-res res))
               l (range (pixels-at-res res))]
         (.add collector (Util/coerceToTuple [h v s l]))))
-    (hfs-seqfile tmpdir)))
+    tap))
 
 ;; ### Operations
 
