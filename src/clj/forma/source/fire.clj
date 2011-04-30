@@ -81,8 +81,7 @@
                   two
                   (sparse-expander missing-val tuples
                                    :start one
-                                   :length length))]
-    
+                                   :length length))]    
     [[ts]]))
 
 (defn fire-source
