@@ -1,6 +1,6 @@
 (ns forma.source.fire
   (:use cascalog.api
-        [forma.date-time :only (datetime->period current-period)]
+        [forma.date-time :only (datetime->period)]
         [clojure.string :only (split)]
         [forma.source.modis :only (latlon->modis
                                    hv->tilestring)])
