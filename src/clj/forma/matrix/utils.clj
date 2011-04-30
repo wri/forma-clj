@@ -55,12 +55,11 @@ pred, `new-val` will be subbed into the sequence.
   If no starting index is supplied, `sparse-expander` assumes that
   counting begins with the first `<idx, val>` pair."
   ([placeholder tuples & {:keys [start length]}]   
-     (let [length (or length :final)
-           start  (or start (ffirst tuples))
+     (let [start  (or start (ffirst tuples))
            halt?  (fn [idx tup-seq]
-                    (if (= length :final)
-                      (empty? tup-seq)
-                      (>= idx (+ start length))))]
+                    (if length
+                      (>= idx (+ start length))
+                      (empty? tup-seq)))]
        (loop [idx start
               tup-seq tuples
               v (transient [])]
