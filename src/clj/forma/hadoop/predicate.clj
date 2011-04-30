@@ -65,13 +65,17 @@ I recommend wrapping queries that use this tap with
   [window]
   [(into-array type (flatten window))])
 
-(defbufferop [sparse-expansion [length missing-val]]
+(defbufferop [sparse-expansion [start length missing-val]]
   {:doc "Receives 2-tuple pairs of the form `<idx, val>`, inserts each
   `val` into a sparse vector at the corresponding `idx`. The `idx` of
   the first tuple will be treated as the zero value. The first tuple
   will `missing-val` will be substituted for any missing value."}
   [tuples]
-  [[(sparse-expander missing-val tuples :length length)]])
+  (println tuples)
+  [[(sparse-expander missing-val
+                     tuples
+                     :start start
+                     :length length)]])
 
 (defn mangle
   "Mangles textlines connected with commas."
@@ -89,11 +93,16 @@ I recommend wrapping queries that use this tap with
   other places. Lines are divided into `splits` based on that input
   parameter. Currently, we require that `splits` divide evenly into
   `final-length`."
-  [split-length empty-val]
-  (<- [?idx ?val :> ?split-idx ?split-vec]
-      (:sort ?idx)
-      ((c/juxt #'mod #'quot) ?idx split-length :> ?sub-idx ?split-idx)
-      (sparse-expansion [split-length empty-val] ?sub-idx ?val :> ?split-vec)))
+  ([empty-val]
+     (vals->sparsevec 0 nil empty-val))
+  ([length empty-val]
+     (vals->sparsevec 0 length empty-val))
+  ([start length empty-val]
+     (<- [?idx ?val :> ?split-idx ?split-vec]
+         (:sort ?idx)
+         (- ?idx start :> ?start-idx)
+         ((c/juxt #'mod #'quot) ?start-idx length :> ?sub-idx ?split-idx)
+         (sparse-expansion [0 length empty-val] ?sub-idx ?val :> ?split-vec))))
 
 ;; ### Special Functions
 

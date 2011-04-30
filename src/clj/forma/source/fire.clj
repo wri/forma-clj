@@ -2,7 +2,6 @@
   (:use cascalog.api
         [forma.date-time :only (datetime->period current-period)]
         [clojure.string :only (split)]
-        [forma.matrix.utils :only (sparse-expander)]
         [forma.source.modis :only (latlon->modis
                                    hv->tilestring)])
   (:require [forma.hadoop.predicate :as p]
@@ -68,22 +67,6 @@
     (.setEndPeriod end)
     (.setValues (ArrayList. ts-seq))))
 
-(defbufferop [sparse-expansion [t-res start-date end-date missing-val]]
-  {:doc "Receives 2-tuple pairs of the form `<idx, val>`, and inserts
-  each `val` into a sparse vector of the supplied length at the
-  corresponding `idx`. `missing-val` will be substituted for any
-  missing value."}
-  [tuples]
-  (let [one (datetime->period t-res start-date)
-        two (datetime->period t-res end-date)
-        length (inc (- two one))
-        ts (mk-ts one
-                  two
-                  (sparse-expander missing-val tuples
-                                   :start one
-                                   :length length))]    
-    [[ts]]))
-
 (defn fire-source
   "Takes a source of textlines, and returns 2-tuples with latitude and
   longitude."
@@ -143,29 +126,22 @@
                      [(conj coll last) last]))
                  [acc init] tseries)))
 
-(defn running-fire-sum
+(defmapop [running-fire-sum [start end]]
   "Special case of `running-sum` for `FireTuple` thrift objects."
   [tseries]
   (let [empty (FireTuple. 0 0 0 0)]
-    (->> (.getValues tseries)
+    (->> tseries
          (running-sum [] empty add-fires)
-         (mk-ts (.startPeriod tseries)
-                (.endPeriod tseries)))))
+         (mk-ts start end))))
 
 (defn fire-series
   "Aggregates fires into timeseries."
   [t-res start end src]
-  (let [empty (FireTuple. 0 0 0 0)]
+  (let [start (datetime->period t-res start)
+        end (datetime->period t-res end)
+        length (inc (- end start))
+        mk-fire-tseries (p/vals->sparsevec start length (FireTuple. 0 0 0 0))]
     (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?ct-series]
         (src ?dataset ?m-res ?t-res ?tilestring ?tperiod ?sample ?line ?tuple)
-        (:sort ?tperiod)
-        (sparse-expansion [t-res start end empty] ?tperiod ?tuple :> ?tseries)
-        (running-fire-sum ?tseries :> ?ct-series))))
-
-(defn run-rip
-  "Rips apart fires!"
-  [t-res start end]
-  (?- (stdout)
-      (->> (rip-fires "1000" new-fire-tap)
-           (aggregate-fires t-res)
-           (fire-series t-res start end))))
+        (mk-fire-tseries ?tperiod ?tuple :> _ ?tseries)
+        (running-fire-sum [start end] ?tseries :> ?ct-series))))
