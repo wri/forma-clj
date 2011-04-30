@@ -119,7 +119,7 @@
 
 
 ;; Combines various fire tuples into one.
-(defaggregateop combine
+(defaggregateop comb
   ([] (FireTuple. 0 0 0 0))
   ([state tuple] (add-fires state tuple))
   ([state] [state]))
@@ -131,17 +131,37 @@
   (<- [?dataset ?m-res ?new-t-res ?tilestring ?tperiod ?sample ?line ?newtuple]
       (datetime->period ?new-t-res ?datestring :> ?tperiod)
       (identity t-res :> ?new-t-res)
-      (combine ?tuple :> ?newtuple)
+      (comb ?tuple :> ?newtuple)
       (src ?dataset ?m-res ?t-res ?tilestring ?datestring ?sample ?line ?tuple)))
+
+(defn running-sum
+  "Given an accumulator, an initial value and an addition function,
+  transforms the input sequence into a new sequence of equal length,
+  increasing for each value."
+  [acc init add-func tseries]
+  (first (reduce (fn [[coll last] new]
+                   (let [last (add-func last new)]
+                     [(conj coll last) last]))
+                 [acc init] tseries)))
+
+(defn running-fire-sum
+  "Special case of `running-sum` for `FireTuple` thrift objects."
+  [tseries]
+  (let [empty (FireTuple. 0 0 0 0)]
+    (->> (.getValues tseries)
+         (running-sum [] empty add-fires)
+         (mk-ts (.startPeriod tseries)
+                (.endPeriod tseries)))))
 
 (defn fire-series
   "Aggregates fires into timeseries."
   [t-res start end src]
   (let [empty (FireTuple. 0 0 0 0)]
-    (<- [?dataset ?m-res ?t-res ?tilestring ?tperiod ?sample ?line ?tseries]
+    (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?ct-series]
         (src ?dataset ?m-res ?t-res ?tilestring ?tperiod ?sample ?line ?tuple)
         (:sort ?tperiod)
-        (sparse-expansion [t-res start end empty] ?tperiod ?tuple :> ?tseries))))
+        (sparse-expansion [t-res start end empty] ?tperiod ?tuple :> ?tseries)
+        (running-fire-sum ?tseries :> ?ct-series))))
 
 (defn run-rip
   "Rips apart fires!"
