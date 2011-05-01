@@ -107,19 +107,26 @@
 
 
 (defn bad-ends
-  "collect a set of the indices of bad ends."
-  [bad-val coll]
+  "collect a set of the indices of bad ends. if the bad value is, say, 2, then the
+  predicate would be #{2}"
+  [pred coll]
   (let [m-coll (map-indexed vector coll)
         r-coll (reverse m-coll)]
     (set 
      (apply concat
-            (map #(for [[m n] % :while (= n bad-val) m])
+            (map #(for [[m n] % :while (pred n)] m)
                  [m-coll r-coll])))))
 
+(defn act-on-good
+  [func bad-set coll]
+  (func
+   (filter #(not (contains? bad-set %))
+           coll)))
 
-(defn deal-w-bad-ends
-  [coll bad-set avg]
-  (map #((if (contains? bad-set %1) avg %2)) coll))
+(defn neutralize-ends
+  [bad-set reli-coll val-coll]
+  (let [avg (act-on-good average bad-set val-coll)
+        ends (bad-ends bad-set reli-coll)]))
 
 ;; (map #(if (#{8049} %) 54 %) (mask #{2} reli-test ndvi-test))
 
