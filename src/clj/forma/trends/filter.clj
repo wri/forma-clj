@@ -101,10 +101,6 @@
   [pred qual-coll val-coll]
   (map-indexed vector (mask pred qual-coll val-coll)))
 
-(defn avg-of-verity
-  [pred coll]
-  (average (filter pred coll)))
-
 
 (defn bad-ends
   "collect a set of the indices of bad ends. if the bad value is, say, 2, then the
@@ -126,7 +122,8 @@
 (defn neutralize-ends
   [bad-set reli-coll val-coll]
   (let [avg (act-on-good average bad-set val-coll)
-        ends (bad-ends bad-set reli-coll)]))
+        ends (bad-ends bad-set reli-coll)]
+    ends))
 
 ;; (map #(if (#{8049} %) 54 %) (mask #{2} reli-test ndvi-test))
 
