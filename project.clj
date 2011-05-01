@@ -2,7 +2,7 @@
   :description "[FORMA](http://goo.gl/4YTBw) gone Functional."
   :source-path "src/clj"
   :java-source-path "src/jvm"
-  :warn-on-reflection true
+  :dev-resources-path "dev"
   :marginalia {:javascript ["mathjax/MathJax.js"]}
   :javac-options {:debug "true" :fork "true"}
   :repositories {"conjars" "http://conjars.org/repo/"

@@ -228,3 +228,10 @@
                   c/sum
                   ascii-path
                   (s3-path output-path)))
+
+;; (cascalog.io/with-fs-tmp [fs tmp-dir]
+;;   (let [pix-tap (pixel-generator tmp-dir res tileseq)]
+;;     (?<- (stdout)
+;;          [?mod-h ?mod-v ?sample ?line]
+;;          (pix-tap ?mod-h ?mod-v ?sample ?line))))
+

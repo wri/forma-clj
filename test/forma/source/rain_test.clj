@@ -4,4 +4,3 @@
         clojure.test))
 
 (fact float-bytes => 4)
-
