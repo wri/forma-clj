@@ -64,10 +64,10 @@ pred, `new-val` will be subbed into the sequence.
               tup-seq tuples
               v (transient [])]
          (let [[pos val] (first tup-seq)]
-           (cond (halt? idx tup-seq) (persistent! v)
+           (cond (halt? idx tup-seq)    (persistent! v)
                  (when pos (= idx pos)) (recur (inc idx) (rest tup-seq) (conj! v val))
                  (when pos (> idx pos)) (recur (inc idx) (rest tup-seq) (conj! v placeholder))
-                 :else       (recur (inc idx) tup-seq (conj! v placeholder))))))))
+                 :else                  (recur (inc idx) tup-seq (conj! v placeholder))))))))
 
 (defn idx->colrow
   "Takes an index within a row vector, and returns the appropriate
