@@ -89,6 +89,7 @@
                          (partition 2 1 goodpos-seq))
                     (nth value-coll (last goodpos-seq))))))))
 
+
 (defn mask
   "create a new vector where values from `coll1` are only passed through
   if they satisfy the predicate `pred` for `coll2`.  All other values are
@@ -97,10 +98,16 @@
   {:pre [(= (count coll1) (count coll2))]}
   (map #(when-not (pred %2) %1) coll2 coll1))
 
-(defn fix-time-series
-  [pred qual-coll val-coll]
-  (map-indexed vector (mask pred qual-coll val-coll)))
+;; (defn fix-time-series
+;;   [pred qual-coll val-coll]
+;;   (vec
+;;    (map-indexed vector (mask pred qual-coll val-coll))))
 
+
+(defn replace-index-set
+  [idx-set new-val coll]
+  (for [[m n] (map-indexed vector coll)]
+    (if (idx-set m) new-val n)))
 
 (defn bad-ends
   "collect a set of the indices of bad ends. if the bad value is, say, 2, then the
@@ -114,18 +121,32 @@
                  [m-coll r-coll])))))
 
 (defn act-on-good
-  [func bad-set coll]
+  [func coll]
   (func
-   (filter #(not (contains? bad-set %))
-           coll)))
+   (filter (complement nil?) coll)))
 
 (defn neutralize-ends
   [bad-set reli-coll val-coll]
-  (let [avg (act-on-good average bad-set val-coll)
-        ends (bad-ends bad-set reli-coll)]
-    ends))
+  (let [avg (act-on-good average
+                         (mask bad-set reli-coll val-coll))]
+    (replace-index-set
+     (bad-ends bad-set reli-coll)
+     avg
+     val-coll)))
 
-;; (map #(if (#{8049} %) 54 %) (mask #{2} reli-test ndvi-test))
+(defn fix-time-series
+  ""
+  [bad-val-set quality-coll value-coll]
+  (if (empty? (filter bad-val-set quality-coll)) nil
+      (let [bad-end-set (bad-ends bad-val-set quality-coll)
+            new-qual (replace-index-set bad-end-set 1 quality-coll)
+            new-vals (neutralize-ends bad-val-set quality-coll value-coll)
+            goodpos-seq (positions (complement bad-val-set) new-qual)]
+        (vec (flatten
+              (vector (map (partial stretch-testing new-vals)
+                           (partition 2 1 goodpos-seq))
+                      (nth new-vals (last goodpos-seq))))))))
+
 
 (def reli-test [2 2 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2])
 
