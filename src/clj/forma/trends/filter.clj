@@ -8,12 +8,25 @@
         [clojure.contrib.seq :only (positions)])
   (:require [incanter.core :as i]))
 
+;; These functions clean and deseasonalize time-series. The first few
+;; functions are smaller in scope, and meant to be used in the
+;; higher-order functions toward the end of this script.  The first
+;; higher-order function is meant to smooth a time-series based on the
+;; Hodrick-Prescott convention.  Later, the target (vegetation)
+;; time-series is combined with a measure of reliability to
+;; interpolate across "bad" values.
+
+;; TODO: Pull out smaller functions into, perhaps, a utils namespace
+;; to be used in other contexts, namespaces.   
+
 ;; De-seasonalize time-series
 
 (defn seasonal-rows [n]
   "lazy sequence of monthly dummy vectors"
   (vec
-   (take n (partition 11 1 (cycle (cons 1 (repeat 11 0)))))))
+   (take n
+         (partition 11 1
+                    (cycle (cons 1 (repeat 11 0)))))))
 
 (defn seasonal-matrix
   "create a matrix of [num-months]x11 of monthly dummies, where
@@ -55,40 +68,33 @@
   [ts lambda]
   (let [T (count ts)
         coeff-matrix (i/mult lambda (hp-mat T))
-        trend-cond (i/solve (i/plus coeff-matrix (i/identity-matrix T)))]
+        trend-cond (i/solve
+                    (i/plus coeff-matrix
+                            (i/identity-matrix T)))]
     (i/mmult trend-cond ts)))
 
-(defn interpolate
-  [x y length]
-  (let [delta (/ (- y x) (dec length))]
-    (vec (for [n (range length)] (float (+ x (* n delta)))))))
+;; Interpolate unreliable values
 
-(defn stretch-testing
+(defn interpolate
+  "calculate a linear interpolation between `x1` and `x2` with the specified
+  `length` between them."
+  [x1 x2 length]
+  (let [delta (/ (- x2 x1) (dec length))]
+    (vec
+     (for [n (range length)]
+       (float (+ x1 (* n delta)))))))
+
+(defn stretch-ts
+  "stretch time-series across bad values if the left and right values of a
+  tuple are not sequential.  The original time-series is `ts` and the tuples
+  are a moving window (from `partition 2 1`) based on the valid values from
+  an associated time-series of reliability values."
   [ts [left right]]
   (if (= right (inc left))
     (nth ts left)
     (interpolate (nth ts left)
                  (nth ts right)
                  (- right left))))
-
-;; TODO: ensure that this works for even AND odd values; and ensure
-;; that the filter works with bad values at the end of the
-;; time-series; and that it will still work if there are no bad
-;; values, just returning the original time-series.
-
-;; TODO: Make fix-time-series its own cascalog query, to allow for the
-;; contingency of NO good values, which will ouytput nil.
-
-(defn fix-time-series
-  ""
-  [pred quality-coll value-coll]
-  (if (empty? (filter pred quality-coll)) nil
-    (let [goodpos-seq (positions pred quality-coll)]
-      (vec (flatten
-            (vector (map (partial stretch-testing value-coll)
-                         (partition 2 1 goodpos-seq))
-                    (nth value-coll (last goodpos-seq))))))))
-
 
 (defn mask
   "create a new vector where values from `coll1` are only passed through
@@ -98,34 +104,37 @@
   {:pre [(= (count coll1) (count coll2))]}
   (map #(when-not (pred %2) %1) coll2 coll1))
 
-;; (defn fix-time-series
-;;   [pred qual-coll val-coll]
-;;   (vec
-;;    (map-indexed vector (mask pred qual-coll val-coll))))
-
-
 (defn replace-index-set
+  "replace values in `coll` with `new-val` for all indices in `idx-set`"
   [idx-set new-val coll]
   (for [[m n] (map-indexed vector coll)]
     (if (idx-set m) new-val n)))
 
 (defn bad-ends
-  "collect a set of the indices of bad ends. if the bad value is, say, 2, then the
-  predicate would be #{2}"
-  [pred coll]
+  "make a set of indices of a collection `coll` for which there are continuous
+  *bad* values, given by the set of values in `bad-set` which serves as a
+  predicate function to (effectively) filter `coll` on the ends.  If there are
+  no bad values on either end, then the function will return an empty set."
+  [bad-set coll]
   (let [m-coll (map-indexed vector coll)
         r-coll (reverse m-coll)]
     (set 
      (apply concat
-            (map #(for [[m n] % :while (pred n)] m)
+            (map #(for [[m n] % :while (bad-set n)] m)
                  [m-coll r-coll])))))
 
 (defn act-on-good
+  "apply function `func` to all non-nil values within a collection `coll`"
   [func coll]
   (func
    (filter (complement nil?) coll)))
 
 (defn neutralize-ends
+  "replace the ends of a value-collection (like NDVI) if the ends are unreliable,
+  according to an associated reliability index, manifest in `reli-test`. if there
+  are no bad values (as indicated by `bad-set` values in `reli-coll`) then
+  `neutralize-ends` will return the original time-series. `bad-set` is a set of
+  `reli-coll` values that indicate unreliable pixels."
   [bad-set reli-coll val-coll]
   (let [avg (act-on-good average
                          (mask bad-set reli-coll val-coll))]
@@ -134,21 +143,34 @@
      avg
      val-coll)))
 
-(defn fix-time-series
-  ""
-  [bad-val-set quality-coll value-coll]
-  (if (empty? (filter bad-val-set quality-coll)) nil
-      (let [bad-end-set (bad-ends bad-val-set quality-coll)
-            new-qual (replace-index-set bad-end-set 1 quality-coll)
-            new-vals (neutralize-ends bad-val-set quality-coll value-coll)
-            goodpos-seq (positions (complement bad-val-set) new-qual)]
+;; TODO: This function works, but it's ugly.  Clean up. And put in
+;; pre- and post-conditions.
+
+(defn make-reliable
+  "This function has two parts: (1) replace bad values at the ends with the
+  average of the reliable values in the target coll, `value-coll`. (2) smooth
+  over *bad* values, given by `bad-set`, which are determined based on the
+  reliability (or quality) collection, `quality-coll`.  The `good-val` is a
+  single value indicating good pixels in the quality collection.  This could,
+  soon, be removed in place of a more general approach."
+  [bad-set good-val quality-coll value-coll]
+  (if (empty? (filter bad-set quality-coll)) nil
+      (let [bad-end-set (bad-ends
+                         bad-set
+                         quality-coll)
+            new-qual (replace-index-set
+                      bad-end-set
+                      good-val
+                      quality-coll)
+            new-vals (neutralize-ends
+                      bad-set
+                      quality-coll
+                      value-coll)
+            good-seq (positions
+                      (complement bad-set)
+                      new-qual)]
         (vec (flatten
-              (vector (map (partial stretch-testing new-vals)
-                           (partition 2 1 goodpos-seq))
-                      (nth new-vals (last goodpos-seq))))))))
-
-
-(def reli-test [2 2 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2])
-
-(def ndvi-test [7417 7568 7930 8049 8039 8533 8260 8192 7968 7148 7724 8800 8068 7680 7590 7882 8022 8194 8031 8100 7965 8538 7881 8347 8167 5295 8000 7874 8220 8283 8194 7826 8698 7838 8967 8136 7532 7838 8009 8136 8400 8219 8051 8091 7718 8095 8391 7983 8236 8091 7937 7958 8147 8134 7813 8146 7623 8525 8714 8058 6730 8232 7744 8030 8355 8216 7879 8080 8201 7987 8498 7868 7852 7983 8135 8012 8195 8157 7989 8372 8007 8081 7940 7712 7913 8021 8241 8041 7250 7884 8105 8033 8340 8288 7691 7599 8480 8563 8033 7708 7575 7996 7739 8058 7400 6682 7999 7655 7533 7904 8328 8056 7817 7601 7924 7905 7623 7615 7560 7330 7878 8524 8167 7526 7330 7325 7485 8108 7978 7035 7650 4000])
+              (vector (map (partial stretch-ts new-vals)
+                           (partition 2 1 good-seq))
+                      (nth new-vals (last good-seq))))))))
 
