@@ -16,5 +16,5 @@
 final compositions of functions."
  (count
   (filter (complement zero?)
-          (map - (make-reliable #{2} 1 reli-test ndvi-test)
+          (map - (make-reliable #{2} #{1} reli-test ndvi-test)
                ndvi-test))) => 6)

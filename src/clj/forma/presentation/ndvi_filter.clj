@@ -110,7 +110,7 @@
 ;; based on the interpolated NDVI values.
 
 (def plot2 (c/time-series-plot forma-range
-                               (hp-filter (make-reliable #{2} 1 reli ndvi) 2)
+                               (hp-filter (make-reliable #{2} #{1} reli ndvi) 2)
                                :title ""
                                :x-label ""
                                :y-label ""
@@ -122,7 +122,7 @@
 (defn add-conditioned-ndvi []
   (c/add-lines plot2
                forma-range
-               (make-reliable #{2} 1 reli ndvi)
+               (make-reliable #{2} #{1} reli ndvi)
                :series-label ""))
 
 ;; Add the slider to the original time-series plot, defined in the
@@ -131,7 +131,7 @@
 (defn add-ndvi-slider []
   (let [x forma-range]
     (c/slider #(i/set-data plot2
-                           [x (hp-filter (make-reliable #{2} 1 reli ndvi) %)])
+                           [x (hp-filter (make-reliable #{2} #{1} reli ndvi) %)])
               (map (partial round-places 2)
                    (range 0 1000 1))
               "lambda")))
@@ -174,5 +174,5 @@
 (defn add-filter []
   (doto (c/add-lines plot3
                      forma-range
-                     (hp-filter (make-reliable #{2} 1 reli ndvi) 2)
+                     (hp-filter (make-reliable #{2} #{1} reli ndvi) 2)
                      :series-label "FILTER")))

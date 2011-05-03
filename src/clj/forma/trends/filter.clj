@@ -150,17 +150,17 @@
   "This function has two parts: (1) replace bad values at the ends with the
   average of the reliable values in the target coll, `value-coll`. (2) smooth
   over *bad* values, given by `bad-set`, which are determined based on the
-  reliability (or quality) collection, `quality-coll`.  The `good-val` is a
-  single value indicating good pixels in the quality collection.  This could,
-  soon, be removed in place of a more general approach."
-  [bad-set good-val quality-coll value-coll]
+  reliability (or quality) collection, `quality-coll`.  The `good-set` parameter
+  is a set of passable values, presumably interchangeable.  If this assumption
+  is not true, then an adjustment will have to be made to this function."
+  [bad-set good-set quality-coll value-coll]
   (if (empty? (filter bad-set quality-coll)) nil
       (let [bad-end-set (bad-ends
                          bad-set
                          quality-coll)
             new-qual (replace-index-set
                       bad-end-set
-                      good-val
+                      (first good-set)
                       quality-coll)
             new-vals (neutralize-ends
                       bad-set
