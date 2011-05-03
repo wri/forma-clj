@@ -221,6 +221,7 @@
 (defn s3-path [path]
   (str "s3n://AKIAJ56QWQ45GBJELGQA:6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV@" path))
 
+
 (defn -main
   [dataset ascii-path output-path]
   (static-chunker [[27 7] [27 8] [27 9] [28 7] [28 8] [28 9] [29 8] [29 9] [30 8] [30 9] [31 8] [31 9]]
@@ -228,3 +229,10 @@
                   c/sum
                   ascii-path
                   (s3-path output-path)))
+
+;; (cascalog.io/with-fs-tmp [fs tmp-dir]
+;;   (let [pix-tap (pixel-generator tmp-dir res tileseq)]
+;;     (?<- (stdout)
+;;          [?mod-h ?mod-v ?sample ?line]
+;;          (pix-tap ?mod-h ?mod-v ?sample ?line))))
+

@@ -1,6 +1,6 @@
 (ns forma.trends.analysis
   (:use [forma.matrix.utils :only (variance-matrix average)]
-        [forma.trends.filter :only (deseasonalize fix-time-series)]
+        [forma.trends.filter :only (deseasonalize make-reliable)]
         [forma.presentation.ndvi-filter :only (ndvi reli rain)]
         [clojure.contrib.math :only (sqrt)])
   (:require [incanter.core :as i]
@@ -62,6 +62,9 @@
 ;; was 15 in the original FORMA specification (3) the length of the
 ;; window that smooths the OLS coefficients, which was originally 5.
 
+;; TODO: make sure that whoopbang can take a variety of different
+;; filters, including a composition of filters.
+
 (defn whoopbang
   "whoopbang will find the greatest OLS drop over a timeseries [ts] given 
   sub-timeseries of length [long-block].  The drops are smoothed by a moving 
@@ -119,16 +122,29 @@
       (catch IllegalArgumentException e
         (repeat (count attributes) 0)))))
 
-(def long-trend (partial long-trend-general [:coefs :t-tests]))
+
+(def
+  ^{:doc "force the collection of only the OLS coefficients and t-statistics
+  from the `long-trend-general` function, since this is what we have used for
+  the first implementation of FORMA. `long-trend` takes the same arguments
+  as `long-trend-general` except for the first parameter, `attributes`."}
+  long-trend
+  (partial long-trend-general [:coefs :t-tests]))
 
 (defn lengthening-ts
   [start-index end-index base-vec]
   (for [x (range start-index (inc end-index))]
     (subvec base-vec 0 x)))
 
+;; TODO: Also, force whizbang to output the reference period as one
+;; tuple, and then another sequence of tuples corresponding to output
+;; for the start-pd to end-pd.
+
 (defn whizbang
+  "Note that ALL COFACTORS must be vectors."
   [start-pd end-pd t-series & cofactors]
-  {:pre [(vector? t-series)]}
+  {:pre [(vector? t-series)
+         (every? #{true} (vec (map vector? cofactors)))]}
   (let [all-ts (apply vector t-series cofactors)]
     (->> all-ts
          (map (partial lengthening-ts start-pd end-pd))
