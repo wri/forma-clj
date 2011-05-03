@@ -1,6 +1,6 @@
 (ns forma.trends.analysis
   (:use [forma.matrix.utils :only (variance-matrix average)]
-        [forma.trends.filter :only (deseasonalize fix-time-series)]
+        [forma.trends.filter :only (deseasonalize make-reliable)]
         [forma.presentation.ndvi-filter :only (ndvi reli rain)]
         [clojure.contrib.math :only (sqrt)])
   (:require [incanter.core :as i]

@@ -1,7 +1,7 @@
 (ns forma.presentation.ndvi-filter
   (:use [forma.matrix.utils :only (logical-replace)]
         [forma.date-time :only (msec-range)]
-        [forma.trends.filter :only (hp-filter fix-time-series)]
+        [forma.trends.filter :only (hp-filter make-reliable)]
         [clj-time.core :only (date-time)]
         [clojure.contrib.math :only (round expt)])
   (:require [incanter.charts :as c]
@@ -110,7 +110,7 @@
 ;; based on the interpolated NDVI values.
 
 (def plot2 (c/time-series-plot forma-range
-                               (hp-filter (fix-time-series #{1} reli ndvi) 2)
+                               (hp-filter (make-reliable #{2} 1 reli ndvi) 2)
                                :title ""
                                :x-label ""
                                :y-label ""
@@ -122,7 +122,7 @@
 (defn add-conditioned-ndvi []
   (c/add-lines plot2
                forma-range
-               (fix-time-series #{1} reli ndvi)
+               (make-reliable #{2} 1 reli ndvi)
                :series-label ""))
 
 ;; Add the slider to the original time-series plot, defined in the
@@ -131,7 +131,7 @@
 (defn add-ndvi-slider []
   (let [x forma-range]
     (c/slider #(i/set-data plot2
-                           [x (hp-filter (fix-time-series #{1} reli ndvi) %)])
+                           [x (hp-filter (make-reliable #{2} 1 reli ndvi) %)])
               (map (partial round-places 2)
                    (range 0 1000 1))
               "lambda")))
@@ -174,5 +174,5 @@
 (defn add-filter []
   (doto (c/add-lines plot3
                      forma-range
-                     (hp-filter (fix-time-series #{1} reli ndvi) 2)
+                     (hp-filter (make-reliable #{2} 1 reli ndvi) 2)
                      :series-label "FILTER")))
