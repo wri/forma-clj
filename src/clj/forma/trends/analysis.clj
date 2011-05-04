@@ -80,8 +80,17 @@
   "`whoopbang` preps the short-term drop for the merge into the other data
   by separating out the reference period and the rest of the observations
   for estimation, that is, `for-est`!"
-  [ts reli-ts long-block window]
-  ts)
+  [ts reli-ts ref-pd start-pd end-pd long-block window]
+  (let [offset (+ long-block window)
+        [x y z] (map #(-> % (- offset) (+ 2)) [ref-pd start-pd end-pd])
+        full-ts (whoop-full ts reli-ts long-block window)]
+    (apply array-map
+           (interleave
+            [:reference :for-est]
+            (map (partial subvec full-ts) [(dec x) (dec y)] [x z])))))
+
+;; {:reference (subvec full-ts (dec x) x)
+;;      :for-est (subvec full-ts (dec y) z)}
 
 ;; WHIZBANG
 
