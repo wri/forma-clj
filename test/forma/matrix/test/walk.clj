@@ -6,7 +6,7 @@
                 (range j (+ j 5))))
 
 (fact
- "the `windowed-function` retains the number of elements of the original matrix"
+ "`windowed-function` retains the number of elements of the original matrix"
  (count (windowed-function + 1 test-mat)) => (count (flatten test-mat)))
 
 
