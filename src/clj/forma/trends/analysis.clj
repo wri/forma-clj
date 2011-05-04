@@ -5,11 +5,6 @@
   (:require [incanter.core :as i]
             [incanter.stats :as s]))
 
-;; NOTE Currently, the NDVI and reliability sample time-series comes from the NDVI
-;; trends presentation.  We will have to start a test data file at
-;; some point, but I don't want to fuck with the directory structure
-;; right now, while I am learning to navigate the project.
-
 ;; The first few functions are more general, and could be pulled into,
 ;; say, the matrix operation namespace.  For now, we will leave them
 ;; here, until we can talk more about what goes into that namespace.
@@ -40,9 +35,11 @@
   [f window xs]
   (pmap f (partition window 1 xs)))
 
-;; TODO: document this with examples
-
 (defn make-monotonic
+  "move through a collection `coll` picking up the min or max values, depending
+  on the value of `comparator` which can be either `min` or `max`.  This is very
+  similar, I think, to the `reduce` function, but with side effects that print
+  into a vector."
   [comparator coll]
   (reduce (fn [acc val]
             (conj acc
@@ -84,13 +81,8 @@
   (let [offset (+ long-block window)
         [x y z] (map #(-> % (- offset) (+ 2)) [ref-pd start-pd end-pd])
         full-ts (whoop-full ts reli-ts long-block window)]
-    (apply array-map
-           (interleave
-            [:reference :for-est]
-            (map (partial subvec full-ts) [(dec x) (dec y)] [x z])))))
-
-;; {:reference (subvec full-ts (dec x) x)
-;;      :for-est (subvec full-ts (dec y) z)}
+    {:reference (subvec full-ts (dec x) x)
+     :for-est   (subvec full-ts (dec y) z)}))
 
 ;; WHIZBANG
 
@@ -145,7 +137,6 @@
       (catch IllegalArgumentException e
         (repeat (count attributes) 0)))))
 
-
 (def
   ^{:doc "force the collection of only the OLS coefficients and t-statistics
   from the `long-trend-general` function, since this is what we have used for
@@ -161,8 +152,6 @@
   (for [x (range start-index (inc end-index))]
     (subvec base-vec 0 x)))
 
-;; TODO: make whizbang accept date strings. do the same for whoopbang.
-
 (defn estimate-thread
   "The first vector in `nested-vector` should be the dependent
   variable, and the rest of the vectors should be the cofactors.
@@ -177,7 +166,13 @@
 (defn whizbang
   "force whizbang into an output map where the tuple for the reference
   period is separate from the tuples for all other time periods -
-  those time periods that are used for est(imation) ... `for-est`!."
+  those time periods that are used for est(imation) ... `for-est`!.
+  NOTE: the reference, start, and end period for estimation have to
+  correspond to the element index from the start of the time-series.
+  That is, the date string will have to already be passed through the
+  datetime->period function in the date-time namespace.  For example,
+  in our original application, the integer 71 (corresponding to Dec 2005)
+  is passed in as `ref-pd`."
   [ref-pd start-pd end-pd t-series & cofactors]
   {:pre [(vector? t-series)
          (every? #{true} (vec (map vector? cofactors)))]}
