@@ -16,5 +16,5 @@
 
 (fact
  "check that whoopbang output is the correct shape for the estimation months"
- (count (:for-est (whoopbang ndvi reli-test 71 75 131 15 5)))
+ (count (:for-est (whoopbang ndvi (vec reli) 71 75 131 15 5)))
  => (inc (- 131 75)))
