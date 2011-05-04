@@ -44,7 +44,7 @@
   [f num-neighbors mat]
   {:pre [(> (count mat) (+ 1 (* 2 num-neighbors)))]}
   (let [window  (+ 1 (* 2 num-neighbors))
-        new-mat (buffer-matrix num-neighborys nil mat)]
+        new-mat (buffer-matrix num-neighbors nil mat)]
     (map (comp
           (partial apply f)
           (partial filter #(not= nil %))
