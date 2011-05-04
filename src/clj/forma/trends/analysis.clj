@@ -1,7 +1,6 @@
 (ns forma.trends.analysis
   (:use [forma.matrix.utils :only (variance-matrix average)]
         [forma.trends.filter :only (deseasonalize make-reliable)]
-        [forma.presentation.ndvi-filter :only (ndvi reli rain)]
         [clojure.contrib.math :only (sqrt)])
   (:require [incanter.core :as i]
             [incanter.stats :as s]))
@@ -41,6 +40,8 @@
   [f window xs]
   (pmap f (partition window 1 xs)))
 
+;; TODO: document this with examples
+
 (defn make-monotonic
   [comparator coll]
   (reduce (fn [acc val]
@@ -65,8 +66,8 @@
 ;; TODO: make sure that whoopbang can take a variety of different
 ;; filters, including a composition of filters.
 
-(defn whoopbang
-  "whoopbang will find the greatest OLS drop over a timeseries [ts] given 
+(defn whoop-full
+  "whoop-full will find the greatest OLS drop over a timeseries [ts] given 
   sub-timeseries of length [long-block].  The drops are smoothed by a moving 
   average window of length [window]."
   [ts reli-ts long-block window]
@@ -74,6 +75,13 @@
        (windowed-apply ols-coefficient long-block)
        (windowed-apply average window)
        (make-monotonic min)))
+
+(defn whoopbang
+  "`whoopbang` preps the short-term drop for the merge into the other data
+  by separating out the reference period and the rest of the observations
+  for estimation, that is, `for-est`!"
+  [ts reli-ts long-block window]
+  ts)
 
 ;; WHIZBANG
 
@@ -96,6 +104,12 @@
   [v]
   (range 1 (inc (count v))))
 
+(defn test-cof
+  [ts & cof]
+  (let [y (deseasonalize (vec ts))]
+    (do (println (count cof))
+        (i/sel 1 (apply i/bind-columns (t-range y) cof)))))
+
 (defn long-trend-general
   "A general version of the original whizbang function, which extracted the time
   trend and the t-statistic on the time trend from a given time-series.  The more
@@ -109,7 +123,7 @@
   element is that associated with the time-trend. The try statement is
   meant to check whether the cofactor matrix is singular."
   [attributes t-series & cofactors]
-  #_{:pre [(not (empty? cofactors))]}
+  {:pre [(not (empty? cofactors))]}
   (let [y (deseasonalize (vec t-series))
         X (if (empty? cofactors)
             (i/matrix (t-range y))
@@ -132,20 +146,34 @@
   (partial long-trend-general [:coefs :t-tests]))
 
 (defn lengthening-ts
+  "create a sequence of sequences, where each incremental sequence is one
+  element longer than the last, pinned to the same starting element."
   [start-index end-index base-vec]
   (for [x (range start-index (inc end-index))]
     (subvec base-vec 0 x)))
 
-;; TODO: Also, force whizbang to output the reference period as one
-;; tuple, and then another sequence of tuples corresponding to output
-;; for the start-pd to end-pd.
+;; TODO: make whizbang accept date strings. do the same for whoopbang.
+
+(defn estimate-thread
+  "The first vector in `nested-vector` should be the dependent
+  variable, and the rest of the vectors should be the cofactors.
+  `start` and `end` refer to the start and end periods for estimation
+  of long-trend. if `start` == `end` then only the estimation results
+  for the single time period are returned."
+  [start end nested-vector]
+  (->> nested-vector
+       (map (partial lengthening-ts start end))
+       (apply map long-trend)))
 
 (defn whizbang
-  "Note that ALL COFACTORS must be vectors."
-  [start-pd end-pd t-series & cofactors]
+  "force whizbang into an output map where the tuple for the reference
+  period is separate from the tuples for all other time periods -
+  those time periods that are used for est(imation) ... `for-est`!."
+  [ref-pd start-pd end-pd t-series & cofactors]
   {:pre [(vector? t-series)
          (every? #{true} (vec (map vector? cofactors)))]}
   (let [all-ts (apply vector t-series cofactors)]
-    (->> all-ts
-         (map (partial lengthening-ts start-pd end-pd))
-         (apply map long-trend))))
+    {:reference (flatten (estimate-thread ref-pd ref-pd all-ts))
+     :for-est  (estimate-thread start-pd end-pd all-ts)}))
+
+
