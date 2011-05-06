@@ -2,7 +2,8 @@
   (:use cascalog.api
         [forma.matrix.utils :only (idx->colrow)]
         [forma.hadoop.io :only (chunk-tap)]
-        [forma.hadoop.predicate :only (sparse-windower)]
+        [forma.hadoop.predicate :only (sparse-windower
+                                       pixel-generator)]
         [forma.reproject :only (wgs84-index
                                 dimensions-at-res
                                 modis-sample)]
@@ -12,6 +13,7 @@
                                    hv->tilestring)]
         [clojure.string :only (split)])
   (:require [cascalog.ops :as c]
+            [cascalog.io :as io]
             [clojure.contrib.duck-streams :as duck])
   (:gen-class))
 
@@ -92,20 +94,10 @@
         (liberate ?line :> ?row ?row-vec)
         (free-cols ?row-vec :> ?col ?val))))
 
-(defn mod-pixels
-  [t-seq]
-  (memory-source-tap
-   (for [[mod-h mod-v] t-seq
-         sample (range 1200)
-         line   (range 1200)]
-     ["1000" mod-h mod-v sample line])))
-
 ;; This is testing space for DAN! and it will probably be erased
 ;; before we merge this feature branch.  I am trying to figure out a
 ;; way to sample datasets at higher resolution than the MODIS base
 ;; grid.
-
-
 
 (defn high-res-ascii-source
   [path aggregator]
@@ -176,13 +168,13 @@
 
 (defn low-res-sample
   "sample values off of a lower resolution grid than the MODIS grid."
-  [dataset ascii-info mod-source grid-source]
+  [dataset m-res ascii-info pixel-tap grid-source]
   (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?outval]
       (grid-source ?row ?col ?outval)
       (identity dataset :> ?dataset)
       (identity "00" :> ?t-res)
-      (mod-source ?m-res ?mod-h ?mod-v ?sample ?line)
-      (modis-sample ascii-info ?m-res ?mod-h ?mod-v ?sample ?line :> ?row ?col)))
+      (pixel-tap ?mod-h ?mod-v ?sample ?line)
+      (modis-sample ascii-info m-res ?mod-h ?mod-v ?sample ?line :> ?row ?col)))
 
 ;; TODO: Right now, we use the 0.1 as an indicator for conversion
 ;; direction, between modis and wgs84. Replace with a calculation.
@@ -196,11 +188,11 @@
   aggregator (sum, max, etc.).  If lower, each MODIS pixel is tagged with the ASCII
   grid cell that it falls within.  Note that the ASCII grid must be in WGS84, with row
   indices prepended and the ASCII header lopped off."
-  ([m-res dataset tile-seq ascii-path & [agg]]
+  ([m-res dataset pixel-tap ascii-path & [agg]]
      (let [ascii-info ((keyword dataset) datasets)
            grid-source (ascii-source ascii-path)]
        (if (>= (:cellsize ascii-info) 0.01)
-         (low-res-sample dataset ascii-info (mod-pixels tile-seq) grid-source)
+         (low-res-sample dataset m-res ascii-info pixel-tap grid-source)
          (high-res-sample dataset m-res grid-source ascii-info agg)))))
 
 ;; THE JOB!
@@ -213,25 +205,23 @@
 
 (defn static-chunker
   "Last thing we need is the chunk-tap!"
-  [tile-seq dataset agg ascii-path output-path]
-  (let [src (sample-modis "1000" dataset tile-seq ascii-path agg)]
-    (?- (chunk-tap output-path)
-        (sparse-windower (tilestringer src) ["?sample" "?line"] "?val" 1200 20 0))))
+  [m-res tile-seq dataset agg ascii-path output-path]
+  (io/with-fs-tmp [fs tmp-dir]
+    (let [pix-tap (pixel-generator tmp-dir m-res tile-seq)
+          src (sample-modis m-res dataset pix-tap ascii-path agg)]
+      (?- (chunk-tap output-path)
+          (sparse-windower (tilestringer src) ["?sample" "?line"] "?val" 1200 20 0)))))
 
 (defn s3-path [path]
   (str "s3n://AKIAJ56QWQ45GBJELGQA:6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV@" path))
 
+(def country-tiles [[27 7] [27 8] [27 9] [28 7] [28 8] [28 9] [29 8] [29 9] [30 8] [30 9] [31 8] [31 9]])
+
 (defn -main
   [dataset ascii-path output-path]
-  (static-chunker [[27 7] [27 8] [27 9] [28 7] [28 8] [28 9] [29 8] [29 9] [30 8] [30 9] [31 8] [31 9]]
+  (static-chunker "1000"
+                  country-tiles
                   dataset
                   c/sum
                   ascii-path
                   (s3-path output-path)))
-
-;; (cascalog.io/with-fs-tmp [fs tmp-dir]
-;;   (let [pix-tap (pixel-generator tmp-dir res tileseq)]
-;;     (?<- (stdout)
-;;          [?mod-h ?mod-v ?sample ?line]
-;;          (pix-tap ?mod-h ?mod-v ?sample ?line))))
-
