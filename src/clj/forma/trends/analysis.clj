@@ -60,13 +60,17 @@
 ;; was 15 in the original FORMA specification (3) the length of the
 ;; window that smooths the OLS coefficients, which was originally 5.
 
-;; TODO: make sure that whoopbang can take a variety of different
-;; filters, including a composition of filters.
+;; TODO: check the values of reliability time-series data to make sure
+;; that the good- and bad-set values are correct in
+;; make-reliable. This need not be done for the first run, since it
+;; wasn't done for the original FORMA application.  All we did was
+;; deseasonalize the data, which is reflected below.  It would be a
+;; good and feasible (easy) bonus to utilize the reliability data.
 
 (defn whoop-full
-  "whoop-full will find the greatest OLS drop over a timeseries [ts] given 
-  sub-timeseries of length [long-block].  The drops are smoothed by a moving 
-  average window of length [window]."
+  "`whoop-full` will find the greatest OLS drop over a timeseries `ts` given 
+  sub-timeseries of length `long-block`.  The drops are smoothed by a moving 
+  average window of length `window`."
   [ts reli-ts long-block window]
   (->> (deseasonalize ts)
        (windowed-apply ols-coefficient long-block)
