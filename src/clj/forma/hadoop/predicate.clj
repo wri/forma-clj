@@ -49,6 +49,11 @@ I recommend wrapping queries that use this tap with
 
 ;; ### Operations
 
+(defn add-fields
+  "Adds an arbitrary number of fields to tuples in a cascalog query."
+  [& fields]
+  (vec fields))
+
 (defbufferop tuples->string
   {:doc "Returns a string representation of the tuples input to this
   buffer. Useful for testing!"}
