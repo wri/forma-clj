@@ -46,7 +46,7 @@
   (fn [c t] (and (> t 330)
                 (> c 50))))
 
-(defn tupleize
+(defn fire-tuple
   [t-above-330 c-above-50 both-preds count]
   (FireTuple. t-above-330 c-above-50 both-preds count))
 
@@ -58,7 +58,7 @@
       ((c/juxt #'conf-above-50 #'per-day) ?conf :> ?conf-50 ?count)
       (fires-above-330 ?kelvin :> ?temp-330)
       (both-preds ?conf ?kelvin :> ?both-preds)
-      (tupleize ?temp-330 ?conf-50 ?both-preds ?count :> ?tuple)))
+      (fire-tuple ?temp-330 ?conf-50 ?both-preds ?count :> ?tuple)))
 
 ;; ## Fire Queries
 
@@ -97,15 +97,15 @@
 (defn add-fires
   "Adds together two FireTuple objects."
   [t1 t2]
-  (tupleize (+ (.temp330 t1) (.temp330 t2))
-            (+ (.conf50 t1) (.conf50 t2))
-            (+ (.bothPreds t1) (.bothPreds t2))
-            (+ (.count t1) (.count t2))))
+  (fire-tuple (+ (.temp330 t1) (.temp330 t2))
+              (+ (.conf50 t1) (.conf50 t2))
+              (+ (.bothPreds t1) (.bothPreds t2))
+              (+ (.count t1) (.count t2))))
 
 
 ;; Combines various fire tuples into one.
 (defaggregateop comb
-  ([] (FireTuple. 0 0 0 0))
+  ([] (fire-tuple 0 0 0 0))
   ([state tuple] (add-fires state tuple))
   ([state] [state]))
 
@@ -132,7 +132,7 @@
 (defmapop [running-fire-sum [start end]]
   "Special case of `running-sum` for `FireTuple` thrift objects."
   [tseries]
-  (let [empty (FireTuple. 0 0 0 0)]
+  (let [empty (fire-tuple 0 0 0 0)]
     (->> tseries
          (running-sum [] empty add-fires)
          (mk-ts start end))))
@@ -143,7 +143,7 @@
   (let [start (datetime->period t-res start)
         end (datetime->period t-res end)
         length (inc (- end start))
-        mk-fire-tseries (p/vals->sparsevec start length (FireTuple. 0 0 0 0))]
+        mk-fire-tseries (p/vals->sparsevec start length (fire-tuple 0 0 0 0))]
     (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?ct-series]
         (src ?dataset ?m-res ?t-res ?tilestring ?tperiod ?sample ?line ?tuple)
         (mk-fire-tseries ?tperiod ?tuple :> _ ?tseries)
