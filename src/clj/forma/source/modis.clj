@@ -27,6 +27,11 @@
    "MOD13A2" "16"
    "MOD13A3" "32"})
 
+(defn wgs84-resolution
+  "each MODIS tile is 10 degrees on a side."
+  [res]
+  (/ 10. (pixels-at-res res)))
+
 (def
   #^{:doc "Set of coordinate pairs for all MODIS tiles that contain
 actual data. This set is calculated by taking a vector of offsets,

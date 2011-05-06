@@ -1,5 +1,6 @@
 (ns forma.source.static
   (:use cascalog.api
+        [forma.source.modis :only (wgs84-resolution)]
         [forma.static :only (static-datasets)]
         [forma.hadoop.io :only (chunk-tap)]        
         [forma.reproject :only (modis-sample)]
@@ -122,9 +123,6 @@
       (pixel-tap ?mod-h ?mod-v ?sample ?line)
       (modis-sample ascii-info m-res ?mod-h ?mod-v ?sample ?line :> ?row ?col)))
 
-;; TODO: Right now, we use the 0.1 as an indicator for conversion
-;; direction, between modis and wgs84. Replace with a calculation.
-
 (defn sample-modis
   "This function is based on the reference MODIS grid (currently at
   1000m res).  The objective of the function is to tag each MODIS
@@ -139,7 +137,7 @@
   ([m-res dataset pixel-tap ascii-path & [agg]]
      (let [ascii-info ((keyword dataset) static-datasets)
            grid-source (ascii-source ascii-path)]
-       (if (>= (:cellsize ascii-info) 0.01)
+       (if (>= (:cellsize ascii-info) (wgs84-resolution m-res))
          (upsample dataset m-res ascii-info grid-source pixel-tap)
          (downsample dataset m-res ascii-info grid-source agg)))))
 
