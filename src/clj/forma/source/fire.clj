@@ -12,7 +12,10 @@
 
 ;; ### Fire Predicates
 
+;; TODO: COME BACK
 (defn format-datestring
+  "Takes a datestring from our fire datasets, formatted as
+  `MM/DD/YYYY`, and returns a date formatted as `YYYY-MM-DD`."
   [datestring]
   (let [[month day year] (split datestring #"/")]
     (format "%s-%s-%s" year month day)))

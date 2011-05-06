@@ -28,7 +28,7 @@
  (per-year julian 8) => 46
  (per-year month 1) => 12)
 
-(fact (periodize "32" 2005 12 04) => 431)
+(fact (periodize "32" (date-time 2005 12 04)) => 431)
 
 (facts
  "Date conversion in various temporal resolutions."
