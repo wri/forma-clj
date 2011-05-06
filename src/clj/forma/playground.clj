@@ -12,7 +12,29 @@
         forma.hadoop.io)
   (:require [incanter.core :as i]
             [cascalog.ops :as c]
-            [clojure.string :as s]))
+            [clojure.string :as s])
+  (:gen-class
+   :name  testing.dyn
+   :extends javax.swing.JFrame
+   :implements [clojure.lang.IMeta]
+   :prefix df-
+   :state state
+   :init  init
+   :constructors {[String] [String]}
+   :methods [[display [java.awt.Container] void]
+             ^{:static true} [version [] String]])
+  (:import (javax.swing JFrame JPanel)
+           (java.awt BorderLayout Container)))
+
+(defn df-meta [this] @(.state this))
+(defn version [] "1.0")
+(defn df-display [this pane]
+  (doto this
+    (-> .getContentPane .removeAll)
+    (.setContentPane (doto (JPanel.)
+                       (.add pane BorderLayout/CENTER)))
+    (.pack)
+    (.setVisible true)))
 
 (defn file-count
   "Prints the total count of files in a given directory to stdout."
