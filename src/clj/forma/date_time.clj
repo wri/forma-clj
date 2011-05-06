@@ -107,10 +107,10 @@
 (def eights (partial delta-periods julian 8))
 
 (defn periodize
-  "Converts the supplied integers into a reference time interval at
-the supplied temporal resolution. Input can be any number of pieces of
-a date, from greatest to least significance. See clj-time's date-time
-function for more information."
+  "Converts the supplied `org.joda.time.DateTime` object into a
+reference time interval at the supplied temporal
+resolution. `DateTime` objects can be created with `clj-time`'s
+`date-time` function."
   [temporal-res date]
   (let [period-func (case temporal-res
                           "32" months
@@ -119,8 +119,10 @@ function for more information."
     (period-func (time/epoch) date)))
 
 (defn datetime->period
-  "Converts a datestring, formatted as `YYYY-MM-DD`, into an integer
-  time period at the supplied temporal resolution."
+  "Converts a formatted datestring, into an integer time period at the
+  supplied temporal resolution. The default format is
+  `:year-month-day`, or `YYYY-MM-DD`; additional datestrings can by
+  viewed with `(clj-time.format/show-formatters)`."
   ([res datestring]
      (datetime->period res datestring :year-month-day))
   ([res datestring format]
