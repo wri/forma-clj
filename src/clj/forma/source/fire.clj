@@ -12,7 +12,6 @@
 
 ;; ### Fire Predicates
 
-;; TODO: COME BACK
 (defn format-datestring
   "Takes a datestring from our fire datasets, formatted as
   `MM/DD/YYYY`, and returns a date formatted as `YYYY-MM-DD`."
@@ -51,8 +50,8 @@
   (FireTuple. t-above-330 c-above-50 both-preds count))
 
 (def
-  ^{:doc "Generates a tuple of fire characteristics from confidence
-  and temperature."}
+  ^{:doc "Predicate macro to generate a tuple of fire characteristics
+  from confidence and temperature."}
   fire-characteristics
   (<- [?conf ?kelvin :> ?tuple]
       ((c/juxt #'conf-above-50 #'per-day) ?conf :> ?conf-50 ?count)
@@ -63,7 +62,9 @@
 ;; ## Fire Queries
 
 (defn mk-ts
-  "TODO: DOCS"
+  "Creates a `TimeSeries` object from a start period, end period, and
+  sequence of timeseries entries. This is appropriate only for
+  `FireTuple` entries."
   [start end ts-seq]
   (doto (TimeSeries.)
     (.setStartPeriod start)
@@ -77,10 +78,9 @@
   (let [vs (v/gen-non-nullable-vars 5)]
     (<- [?dataset ?datestring ?t-res ?lat ?lon ?tuple]
         (source ?line)
-        (identity "fire" :> ?dataset)
-        (identity "01" :> ?t-res)
-        (format-datestring ?date :> ?datestring)
         (p/mangle ?line :> ?lat ?lon ?kelvin _ _ ?date _ _ ?conf _ _ _)
+        (p/add-fields "fire" "01" :> ?dataset ?t-res)
+        (format-datestring ?date :> ?datestring)
         (fire-characteristics ?conf ?kelvin :> ?tuple))))
 
 (defn rip-fires
@@ -92,7 +92,7 @@
         (fires ?dataset ?datestring ?t-res ?lat ?lon ?tuple)
         (latlon->modis m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
         (hv->tilestring ?mod-h ?mod-v :> ?tilestring)
-        (identity m-res :> ?m-res))))
+        (p/add-fields m-res :> ?m-res))))
 
 (defn add-fires
   "Adds together two FireTuple objects."
@@ -104,6 +104,7 @@
 
 
 ;; Combines various fire tuples into one.
+
 (defaggregateop comb
   ([] (fire-tuple 0 0 0 0))
   ([state tuple] (add-fires state tuple))
