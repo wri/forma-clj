@@ -1,7 +1,6 @@
 (ns forma.source.tilesets
   (:use forma.source.modis))
 
-
 (def country-tile
   ^{:doc "MODIS tiles for the selected countries, identified by their ISO3 codes
   where each two-vector is the  horizontal and vertical position of the MODIS
