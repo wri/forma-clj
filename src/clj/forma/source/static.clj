@@ -14,11 +14,12 @@
 
 (defn index-textfile
   "Prepend a row index to a text file `old-file-name`, located at `base-path`,
-  and save in the same directory with new name `new-file-name`. The `num-drop`
-  parameter specifies the number of lines to drop from the beginning of the 
-  text file.  Note that indexing begins with the first textline not dropped,
-  and starts at 0. This function was originally written to clean an ASCII
-  raster file for input into the sampling functions."
+  and save in the same directory with new name `new-file-name`. The
+  `num-drop` parameter specifies the number of lines to drop from the
+  beginning of the text file.  Note that indexing begins with the
+  first textline not dropped, and starts at 0. This function was
+  originally written to clean an ASCII raster file for input into the
+  sampling functions."
   [base-path old-file-name new-file-name num-drop]
   (let [old-file (str base-path old-file-name)
         new-file (str base-path new-file-name)]
@@ -53,11 +54,12 @@
   (map-indexed vector row))
 
 (defn ascii-source [path]
-  "create a source out of a pre-cleaned ASCII grid, which is associated with a
-  map of characteristic values, such as resolution and extent.  The cleaned
-  grid is located at `path` and has the row index values prepended on the rows,
-  with the ASCII prelude (which is automatically added by Arc) already stripped
-  and cataloged in the map of characteristic values."
+  "create a source out of a pre-cleaned ASCII grid, which is
+  associated with a map of characteristic values, such as resolution
+  and extent.  The cleaned grid is located at `path` and has the row
+  index values prepended on the rows, with the ASCII prelude (which is
+  automatically added by Arc) already stripped and cataloged in the
+  map of characteristic values."
   (let [source (hfs-textline path)]
     (<- [?row ?col ?val]
         (source ?line)
@@ -70,11 +72,11 @@
 ;; grid.
 
 (defn travel
-  "travel along a grid with cellsize `step` in the direction
-  given by `dir` from an initial position `start` to a position
-  `pos` which is intended to be, for most applications, row or
-  column within the grid.  Note that this takes you to the
-  centroid of the row or column position that you specify."
+  "travel along a grid with cellsize `step` in the direction given by
+  `dir` from an initial position `start` to a position `pos` which is
+  intended to be, for most applications, row or column within the
+  grid.  Note that this takes you to the centroid of the row or column
+  position that you specify."
   [step dir start pos]
   (-> start (dir (* pos step)) (dir (/ step 2))))
 
@@ -97,11 +99,11 @@
        (apply m/latlon->modis m-res)))
 
 (defn downsample
-  "This query is for a point grid at higher resolution than the reference
-  grid, which is the MODIS grid in this case. (This is a constraining
-  assumption, since MODIS is hard-coded into this function.  The aggregator
-  function should be called as follows: c/sum, c/max, where c is the prefix
-  refering to cascalog.ops."
+  "This query is for a point grid at higher resolution than the
+  reference grid, which is the MODIS grid in this case. (This is a
+  constraining assumption, since MODIS is hard-coded into this
+  function.  The aggregator function should be called as follows:
+  c/sum, c/max, where c is the prefix refering to cascalog.ops."
   [dataset m-res ascii-info grid-source agg]
   (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?outval]
       (grid-source ?row ?col ?val)
@@ -124,14 +126,16 @@
 ;; direction, between modis and wgs84. Replace with a calculation.
 
 (defn sample-modis
-  "This function is based on the reference MODIS grid (currently at 1000m res).  The
-  objective of the function is to tag each MODIS pixel with a value from an input
-  ASCII grid.  The process diverges based on whether the ASCII grid is at coarser or
-  finer resolution than the MODIS grid.  If higher, then each ASCII point is assigned
-  a unique MODIS identifier, and the duplicate values are aggregated based on an input
-  aggregator (sum, max, etc.).  If lower, each MODIS pixel is tagged with the ASCII
-  grid cell that it falls within.  Note that the ASCII grid must be in WGS84, with row
-  indices prepended and the ASCII header lopped off."
+  "This function is based on the reference MODIS grid (currently at
+  1000m res).  The objective of the function is to tag each MODIS
+  pixel with a value from an input ASCII grid.  The process diverges
+  based on whether the ASCII grid is at coarser or finer resolution
+  than the MODIS grid.  If higher, then each ASCII point is assigned a
+  unique MODIS identifier, and the duplicate values are aggregated
+  based on an input aggregator (sum, max, etc.).  If lower, each MODIS
+  pixel is tagged with the ASCII grid cell that it falls within.  Note
+  that the ASCII grid must be in WGS84, with row indices prepended and
+  the ASCII header lopped off."
   ([m-res dataset pixel-tap ascii-path & [agg]]
      (let [ascii-info ((keyword dataset) static-datasets)
            grid-source (ascii-source ascii-path)]
