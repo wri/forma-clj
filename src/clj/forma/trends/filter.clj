@@ -16,9 +16,6 @@
 ;; time-series is combined with a measure of reliability to
 ;; interpolate across "bad" values.
 
-;; TODO: Pull out smaller functions into, perhaps, a utils namespace
-;; to be used in other contexts, namespaces.   
-
 ;; De-seasonalize time-series
 
 (defn seasonal-rows [n]
