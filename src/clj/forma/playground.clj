@@ -56,3 +56,6 @@
   (let [source (globhfs-wholefile pattern)]
     (?<- (stdout) [?filename]
          (source ?filename ?file))))
+
+
+
