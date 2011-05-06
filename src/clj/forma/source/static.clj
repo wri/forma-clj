@@ -163,9 +163,6 @@
 (defn s3-path [path]
   (str "s3n://AKIAJ56QWQ45GBJELGQA:6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV@" path))
 
-;; TODO: Here we have tiles for Indonesia and Malaysia. Split these
-;; into sets, and put them in forma.source.tilesets.
-
 (def country-tiles
   [[27 7] [27 8] [27 9] [28 7]
    [28 8] [28 9] [29 8] [29 9]
