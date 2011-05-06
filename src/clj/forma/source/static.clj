@@ -1,5 +1,6 @@
 (ns forma.source.static
   (:use cascalog.api
+        [forma.static :only (static-datasets)]
         [forma.hadoop.io :only (chunk-tap)]        
         [forma.reproject :only (modis-sample)]
         [clojure.string :only (split)]
@@ -10,31 +11,6 @@
             [cascalog.io :as io]
             [clojure.contrib.duck-streams :as duck])
   (:gen-class))
-
-(def datasets {:gadm {:ncols 36001
-                      :nrows 13962
-                      :xulcorner -180.000001
-                      :yulcorner 83.635972
-                      :cellsize 0.01
-                      :nodata -9999}
-               :ecoid {:ncols 36000
-                       :nrows 17352
-                       :xulcorner -179.99996728576
-                       :yulcorner 83.628027
-                       :cellsize 0.01
-                       :nodata -9999}
-               :hansen {:ncols 86223
-                        :nrows 19240
-                        :xulcorner -179.99998844516
-                        :yulcorner 40.164567
-                        :cellsize 0.0041752289295106
-                        :nodata -9999}
-               :vcf {:ncols 86223
-                     :nrows 19240
-                     :xulcorner -179.99998844516
-                     :yulcorner 40.164567
-                     :cellsize 0.0041752289295106
-                     :nodata -9999}})
 
 (defn index-textfile
   "Prepend a row index to a text file `old-file-name`, located at `base-path`,
@@ -93,32 +69,6 @@
 ;; way to sample datasets at higher resolution than the MODIS base
 ;; grid.
 
-(defn high-res-ascii-source
-  [path aggregator]
-  (let [source (hfs-textline path)]
-    (<- [?mod-h ?mod-v ?line ?sample ?row ?col ?val]
-        (source ?line)
-        (liberate ?line :> ?row ?row-vec)
-        (free-cols ?row-vec :> ?col ?val)
-        #_(colval->modis ascii-info ?row ?col :> ?mod-h ?mod-v ?line ?sample))))
-
-
-(def high-res-source-tap
-  [
-   [8000 11000 01]
-   [8001 11000 23]
-   [8002 11000 45]
-   [8003 11000 67]
-   [8004 11000 89]
-   [8005 11000 1011]
-   [8006 11001 1213]
-   [8007 11001 1415]
-   [8008 11001 1617]
-   [8009 11001 1819]
-   [8010 11001 2021]
-   [8011 11001 2223]
-   ])
-
 (defn travel
   "travel along a grid with cellsize `step` in the direction
   given by `dir` from an initial position `start` to a position
@@ -146,13 +96,13 @@
   (->> (rowcol->latlon ascii-info row col)
        (apply m/latlon->modis m-res)))
 
-(defn high-res-sample
+(defn downsample
   "This query is for a point grid at higher resolution than the reference
   grid, which is the MODIS grid in this case. (This is a constraining
   assumption, since MODIS is hard-coded into this function.  The aggregator
   function should be called as follows: c/sum, c/max, where c is the prefix
   refering to cascalog.ops."
-  [dataset m-res grid-source ascii-info agg]
+  [dataset m-res ascii-info grid-source agg]
   (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?outval]
       (grid-source ?row ?col ?val)
       (identity dataset :> ?dataset)
@@ -160,9 +110,9 @@
       (agg ?val :> ?outval)
       (colval->modis m-res ascii-info ?row ?col :> ?mod-h ?mod-v ?sample ?line)))
 
-(defn low-res-sample
+(defn upsample
   "sample values off of a lower resolution grid than the MODIS grid."
-  [dataset m-res ascii-info pixel-tap grid-source]
+  [dataset m-res ascii-info grid-source pixel-tap]
   (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?outval]
       (grid-source ?row ?col ?outval)
       (identity dataset :> ?dataset)
@@ -183,11 +133,11 @@
   grid cell that it falls within.  Note that the ASCII grid must be in WGS84, with row
   indices prepended and the ASCII header lopped off."
   ([m-res dataset pixel-tap ascii-path & [agg]]
-     (let [ascii-info ((keyword dataset) datasets)
+     (let [ascii-info ((keyword dataset) static-datasets)
            grid-source (ascii-source ascii-path)]
        (if (>= (:cellsize ascii-info) 0.01)
-         (low-res-sample dataset m-res ascii-info pixel-tap grid-source)
-         (high-res-sample dataset m-res grid-source ascii-info agg)))))
+         (upsample dataset m-res ascii-info grid-source pixel-tap)
+         (downsample dataset m-res ascii-info grid-source agg)))))
 
 ;; THE JOB!
 
