@@ -1,18 +1,12 @@
 (ns forma.source.static
   (:use cascalog.api
-        [forma.matrix.utils :only (idx->colrow)]
-        [forma.hadoop.io :only (chunk-tap)]
+        [forma.hadoop.io :only (chunk-tap)]        
+        [forma.reproject :only (modis-sample)]
+        [clojure.string :only (split)]
         [forma.hadoop.predicate :only (sparse-windower
-                                       pixel-generator)]
-        [forma.reproject :only (wgs84-index
-                                dimensions-at-res
-                                modis-sample)]
-        [forma.source.modis :only (modis->latlon
-                                   latlon->modis
-                                   pixels-at-res
-                                   hv->tilestring)]
-        [clojure.string :only (split)])
+                                       pixel-generator)])
   (:require [cascalog.ops :as c]
+            [forma.source.modis :as m]
             [cascalog.io :as io]
             [clojure.contrib.duck-streams :as duck])
   (:gen-class))
@@ -150,7 +144,7 @@
   into modis characteristics at resolution `m-res`."
   [m-res ascii-info row col]
   (->> (rowcol->latlon ascii-info row col)
-       (apply latlon->modis m-res)))
+       (apply m/latlon->modis m-res)))
 
 (defn high-res-sample
   "This query is for a point grid at higher resolution than the reference
@@ -201,7 +195,7 @@
   [src]
   (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?val]
       (src ?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?val)
-      (hv->tilestring ?mod-h ?mod-v :> ?tilestring)))
+      (m/hv->tilestring ?mod-h ?mod-v :> ?tilestring)))
 
 (defn static-chunker
   "Last thing we need is the chunk-tap!"
