@@ -107,25 +107,28 @@
 (def eights (partial delta-periods julian 8))
 
 (defn periodize
-  "Converts the supplied integers into a reference time interval at
-the supplied temporal resolution. Input can be any number of pieces of
-a date, from greatest to least significance. See clj-time's date-time
-function for more information."
-  [temporal-res & int-pieces]
-  (let [date (apply date-time int-pieces)
-        period-func (case temporal-res
+  "Converts the supplied `org.joda.time.DateTime` object into a
+reference time interval at the supplied temporal
+resolution. `DateTime` objects can be created with `clj-time`'s
+`date-time` function."
+  [temporal-res date]
+  (let [period-func (case temporal-res
                           "32" months
                           "16" sixteens
                           "8" eights)]
     (period-func (time/epoch) date)))
 
 (defn datetime->period
-  "Converts a datestring, formatted as `YYYY-MM-DD`, into an integer
-  time period at the supplied temporal resolution."
-  [res date]
-  (apply periodize
-         res
-         (map #(Integer. %) (split date #"-"))))
+  "Converts a formatted datestring, into an integer time period at the
+  supplied temporal resolution. The default format is
+  `:year-month-day`, or `YYYY-MM-DD`; additional datestrings can by
+  viewed with `(clj-time.format/show-formatters)`."
+  ([res datestring]
+     (datetime->period res datestring :year-month-day))
+  ([res datestring format]
+     (let [date (f/parse (f/formatters format)
+                         datestring)]
+       (periodize res date))))
 
 (defn current-period
   "Returns the current time period for the supplied resolution. For
@@ -134,9 +137,7 @@ function for more information."
     (current-period \"32\")
     => 495 ;; (on April 27, 2011, this function's birthday!)"
   [res]
-  (let [date (f/unparse (f/formatters :year-month-day)
-                        (time/now))]
-    (datetime->period res date)))
+  (periodize res (time/now)))
 
 ;; ### Jobtag
 ;;
