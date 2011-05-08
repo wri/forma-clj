@@ -37,9 +37,7 @@
 
 (defn make-monotonic
   "move through a collection `coll` picking up the min or max values, depending
-  on the value of `comparator` which can be either `min` or `max`.  This is very
-  similar, I think, to the `reduce` function, but with side effects that print
-  into a vector."
+  on the value of `comparator` which can be either `min` or `max`."
   [comparator coll]
   (reduce (fn [acc val]
             (conj acc
@@ -49,7 +47,7 @@
           []
           coll))
 
-;; WHOOPBANG
+;; ### WHOOPBANG
 
 ;; The following is a routine, under the header WHOOPBANG,
 ;; which collects the greatest short-term drop in a preconditioned and
@@ -88,7 +86,7 @@
     {:reference (subvec full-ts (dec x) x)
      :for-est   (subvec full-ts (dec y) z)}))
 
-;; WHIZBANG
+;; ### WHIZBANG
 
 ;; These functions will extract the OLS coefficient associated with a
 ;; time trend, along with the t-statistic on that coefficient.  For
@@ -183,5 +181,3 @@
   (let [all-ts (apply vector t-series cofactors)]
     {:reference (flatten (estimate-thread ref-pd ref-pd all-ts))
      :for-est  (estimate-thread start-pd end-pd all-ts)}))
-
-
