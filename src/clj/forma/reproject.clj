@@ -49,7 +49,7 @@
   0 longitude. Columns move east, wrapping around the globe, and rows
   move north.)"
   [ll-res max-width lat lon]
-  (let [abs-lon (if (neg? lon) (- lon) lon)
+  (let [abs-lon (Math/abs lon)
         lon-idx (bucket ll-res abs-lon)
         lat-idx (bucket ll-res (+ lat 90))]
     [lat-idx (if (neg? lon)
