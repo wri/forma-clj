@@ -28,7 +28,11 @@
    "MOD13A3" "32"})
 
 (defn wgs84-resolution
-  "each MODIS tile is 10 degrees on a side."
+  "Returns the step size on a `<lat, lon>` grid corresponding to the
+  supplied MODIS resolution. As each MODIS tile is 10 degrees on a
+  side, we find this value by calculating the number of degrees
+  spanned by each MODIS pixel. This is not exact, as MODIS uses a
+  sinusoidal projection, but it's close enough for rough estimation."
   [res]
   (/ 10. (pixels-at-res res)))
 
