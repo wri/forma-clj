@@ -3,7 +3,7 @@
 ;; sinusoidal grid at arbitrary resolution.
 
 (ns forma.reproject
-  (:use cascalog.api      
+  (:use cascalog.api    
         [forma.matrix.utils :only (idx->colrow
                                    colrow->idx)])
   (:require [forma.source.modis :as m]))
