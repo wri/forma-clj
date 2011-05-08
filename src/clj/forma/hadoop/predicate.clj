@@ -54,29 +54,31 @@ I recommend wrapping queries that use this tap with
   [& fields]
   (vec fields))
 
-(defbufferop tuples->string
-  {:doc "Returns a string representation of the tuples input to this
+(defbufferop
+  ^{:doc "Returns a string representation of the tuples input to this
   buffer. Useful for testing!"}
+  tuples->string
   [tuples]
   [(apply str (map str tuples))])
 
-(defmapop [window->array [type]]
+(defmapop
   ^{:doc "Converts nested clojure vectors into an array of the
   supplied type. For example:
 
     (window->array [Integer/TYPE] ?chunk :> ?int-chunk)
 
   flattens the chunk and returns an integer array."}
+  [window->array [type]]
   [window]
   [(into-array type (flatten window))])
 
-(defbufferop [sparse-expansion [start length missing-val]]
-  {:doc "Receives 2-tuple pairs of the form `<idx, val>`, inserts each
+(defbufferop
+  ^{:doc "Receives 2-tuple pairs of the form `<idx, val>`, inserts each
   `val` into a sparse vector at the corresponding `idx`. The `idx` of
   the first tuple will be treated as the zero value. The first tuple
   will `missing-val` will be substituted for any missing value."}
+  [sparse-expansion [start length missing-val]]
   [tuples]
-  (println tuples)
   [[(sparse-expander missing-val
                      tuples
                      :start start

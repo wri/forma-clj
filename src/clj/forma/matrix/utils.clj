@@ -92,7 +92,7 @@ supplied, assumes a square matrix."
      {:post [(< % (* width height))]}
      (+ col (* width row))))
 
-;; ## Multi-dimensional matrix operations
+;; ## Multi-Dimensional Matrix Operations
 
 (defn variance-matrix
   "construct a variance-covariance matrix from a given matrix `X`. If
