@@ -1,6 +1,7 @@
 (ns forma.source.static
   (:use cascalog.api
         [forma.source.modis :only (wgs84-resolution)]
+        [forma.source.tilesets :only (tile-set)]
         [forma.static :only (static-datasets)]
         [forma.hadoop.io :only (chunk-tap)]        
         [forma.reproject :only (modis-sample)]
@@ -162,15 +163,10 @@
 (defn s3-path [path]
   (str "s3n://AKIAJ56QWQ45GBJELGQA:6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV@" path))
 
-(def country-tiles
-  [[27 7] [27 8] [27 9] [28 7]
-   [28 8] [28 9] [29 8] [29 9]
-   [30 8] [30 9] [31 8] [31 9]])
-
 (defn -main
   [dataset ascii-path output-path]
   (static-chunker "1000"
-                  country-tiles
+                  (tile-set :IND :MYS)
                   dataset
                   c/sum
                   ascii-path
