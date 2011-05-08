@@ -4,7 +4,6 @@
 
 (ns forma.reproject
   (:use cascalog.api      
-        [clojure.contrib.generic.math-functions :only (floor)]
         [forma.matrix.utils :only (idx->colrow
                                    colrow->idx)])
   (:require [forma.source.modis :as m]))
@@ -27,13 +26,13 @@
   "Takes a floating-point value and step size, and returns the
   step-sized bucket into which the value falls. For example:
 
-     (index 0.4 1.3)
+     (bucket 0.4 1.3)
      ;=> 3
 
-     (index 0.9 1.3)
+     (bucket 0.9 1.3)
      ;=> 1"
   [step val]
-  (->> step (/ 1) (* val) floor int))
+  (->> step (/ 1) (* val) Math/floor int))
 
 (defn dimensions-at-res
   "returns the <horz, vert> dimensions of a WGS84 grid at the supplied
