@@ -64,10 +64,10 @@ pred, `new-val` will be subbed into the sequence.
               tup-seq tuples
               v (transient [])]
          (let [[pos val] (first tup-seq)]
-           (cond (halt? idx tup-seq)    (persistent! v)
+           (cond (halt? idx tup-seq) (persistent! v)
                  (when pos (= idx pos)) (recur (inc idx) (rest tup-seq) (conj! v val))
                  (when pos (> idx pos)) (recur (inc idx) (rest tup-seq) (conj! v placeholder))
-                 :else                  (recur (inc idx) tup-seq (conj! v placeholder))))))))
+                 :else (recur (inc idx) tup-seq (conj! v placeholder))))))))
 
 (defn idx->colrow
   "Takes an index within a row vector, and returns the appropriate
@@ -95,9 +95,10 @@ supplied, assumes a square matrix."
 ;; ## Multi-dimensional matrix operations
 
 (defn variance-matrix
-  "construct a variance-covariance matrix from a given matrix `X`. If the
-  value of the matrix multiplication yields an integer value, then we
-  vectorize.  This would be equivalent to the var function in incanter.stats."
+  "construct a variance-covariance matrix from a given matrix `X`. If
+  the value of the matrix multiplication yields an integer value, then
+  we vectorize.  This would be equivalent to the var function in
+  incanter.stats."
   [X]
   (let [product (i/mmult (i/trans X) X)]
     (i/solve (if (seq? product)
