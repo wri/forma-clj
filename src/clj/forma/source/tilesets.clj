@@ -1,5 +1,6 @@
 (ns forma.source.tilesets
-  (:use forma.source.modis))
+  (:use forma.source.modis
+        [clojure.set :only (union)]))
 
 (def
   ^{:doc "MODIS tiles for the selected countries, identified by their
