@@ -4,17 +4,28 @@
         [clojure.string :only (split)]
         [forma.source.modis :only (latlon->modis
                                    hv->tilestring)])
-  (:require [forma.hadoop.predicate :as p]
-            [cascalog.ops :as c]
-            [cascalog.vars :as v])
+  (:require [forma.hadoop.predicate :as p])
   (:import [forma.schema FireTuple TimeSeries]
            [java.util ArrayList]))
-
 
 (defn fire-tuple
   "Clojure wrapper around the java `FireTuple` constructor."
   [t-above-330 c-above-50 both-preds count]
   (FireTuple. t-above-330 c-above-50 both-preds count))
+
+(defn extract-fields
+  [f-tuple]
+  [(.temp330 f-tuple)
+   (.conf50 f-tuple)
+   (.bothPreds f-tuple)
+   (.count f-tuple)])
+
+(defn add-fires
+  "Adds together two FireTuple objects."
+  [t1 t2]
+  (let [[f1 f2] (map extract-fields [t1 t2])]
+    (apply fire-tuple
+           (map + f1 f2))))
 
 (defn fire-tseries
   "Creates a `TimeSeries` object from a start period, end period, and
@@ -35,83 +46,24 @@
   (let [[month day year] (split datestring #"/")]
     (format "%s-%s-%s" year month day)))
 
-(p/defpredsummer [filtered-count [limit]]
-  [val] #(> % limit))
-
-(p/defpredsummer per-day
-  [val] identity)
-
-(p/defpredsummer both-preds
-  [conf temp]
-  (fn [c t] (and (> t 330)
-                (> c 50))))
-
 (def
   ^{:doc "Predicate macro to generate a tuple of fire characteristics
   from confidence and temperature."}
   fire-characteristics
   (<- [?conf ?kelvin :> ?tuple]
-      (per-day ?conf :> ?count)
-      (filtered-count [330] ?kelvin :> ?temp-330)
-      (filtered-count [50] ?conf :> ?conf-50)
-      (both-preds ?conf ?kelvin :> ?both-preds)
+      (p/full-count ?conf :> ?count)
+      (p/filtered-count [330] ?kelvin :> ?temp-330)
+      (p/filtered-count [50] ?conf :> ?conf-50)
+      (p/bi-filtered-count [330 50] ?conf ?kelvin :> ?both-preds)
       (fire-tuple ?temp-330 ?conf-50 ?both-preds ?count :> ?tuple)))
 
-;; ## Fire Queries
+;; Aggregates a number of firetuples by adding up the values of each
+;; `FireTuple` property.
 
-(defn fire-source
-  "Takes a source of textlines, and returns 2-tuples with latitude and
-  longitude."
-  [source]
-  (let [vs (v/gen-non-nullable-vars 5)]
-    (<- [?dataset ?datestring ?t-res ?lat ?lon ?tuple]
-        (source ?line)
-        (p/mangle ?line :> ?lat ?lon ?kelvin _ _ ?date _ _ ?conf _ _ _)
-        (p/add-fields "fire" "01" :> ?dataset ?t-res)
-        (format-datestring ?date :> ?datestring)
-        (fire-characteristics ?conf ?kelvin :> ?tuple))))
-
-(defn rip-fires
-  "Aggregates fire data at the supplied path by modis pixel at the
-  supplied resolution."
-  [m-res source]
-  (let [fires (fire-source source)]
-    (<- [?dataset ?m-res ?t-res ?tilestring ?datestring ?sample ?line ?tuple]
-        (fires ?dataset ?datestring ?t-res ?lat ?lon ?tuple)
-        (latlon->modis m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
-        (hv->tilestring ?mod-h ?mod-v :> ?tilestring)
-        (p/add-fields m-res :> ?m-res))))
-
-(defn extract-fields
-  [f-tuple]
-  [(.temp330 f-tuple)
-   (.conf50 f-tuple)
-   (.bothPreds f-tuple)
-   (.count f-tuple)])
-
-(defn add-fires
-  "Adds together two FireTuple objects."
-  [t1 t2]
-  (let [[f1 f2] (map extract-fields [t1 t2])]
-    (apply fire-tuple
-           (map + f1 f2))))
-
-;; Combines various fire tuples into one.
-
-(defaggregateop merge-tuples
+(defaggregateop merge-firetuples
   ([] [0 0 0 0])
   ([state tuple] (map + state (extract-fields tuple)))
   ([state] [(apply fire-tuple state)]))
-
-(defn aggregate-fires
-  "Converts the datestring into a time period based on the supplied
-  temporal resolution."
-  [t-res src]
-  (<- [?dataset ?m-res ?new-t-res ?tilestring ?tperiod ?sample ?line ?newtuple]
-      (src ?dataset ?m-res ?t-res ?tilestring ?datestring ?sample ?line ?tuple)
-      (datetime->period ?new-t-res ?datestring :> ?tperiod)
-      (p/add-fields t-res :> ?new-t-res)
-      (merge-tuples ?tuple :> ?newtuple)))
 
 (defn running-sum
   "Given an accumulator, an initial value and an addition function,
@@ -124,13 +76,49 @@
                  [acc init]
                  tseries)))
 
+;; Special case of `running-sum` for `FireTuple` thrift objects.
 (defmapop [running-fire-sum [start end]]
-  "Special case of `running-sum` for `FireTuple` thrift objects."
   [tseries]
   (let [empty (fire-tuple 0 0 0 0)]
     (->> tseries
          (running-sum [] empty add-fires)
          (fire-tseries start end))))
+
+;; ## Fire Queries
+
+(defn fire-source
+  "Takes a source of textlines, and returns tuples with dataset, date,
+  position and value all defined. In this case, the value `?tuple` is
+  a `FireTuple` thrift object containing all relevant characteristics
+  of fires for that particular day."
+  [source]
+  (<- [?dataset ?datestring ?t-res ?lat ?lon ?tuple]
+      (source ?line)
+      (p/mangle ?line :> ?lat ?lon ?kelvin _ _ ?date _ _ ?conf _ _ _)
+      (p/add-fields "fire" "01" :> ?dataset ?t-res)
+      (format-datestring ?date :> ?datestring)
+      (fire-characteristics ?conf ?kelvin :> ?tuple)))
+
+(defn reproject-fires
+  "Aggregates fire data at the supplied path by modis pixel at the
+  supplied resolution."
+  [m-res source]
+  (let [fires (fire-source source)]
+    (<- [?dataset ?m-res ?t-res ?tilestring ?datestring ?sample ?line ?tuple]
+        (p/add-fields m-res :> ?m-res)
+        (fires ?dataset ?datestring ?t-res ?lat ?lon ?tuple)
+        (latlon->modis m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
+        (hv->tilestring ?mod-h ?mod-v :> ?tilestring))))
+
+(defn aggregate-fires
+  "Converts the datestring into a time period based on the supplied
+  temporal resolution."
+  [t-res src]
+  (<- [?dataset ?m-res ?new-t-res ?tilestring ?tperiod ?sample ?line ?newtuple]
+      (p/add-fields t-res :> ?new-t-res)
+      (src ?dataset ?m-res ?t-res ?tilestring ?datestring ?sample ?line ?tuple)
+      (datetime->period ?new-t-res ?datestring :> ?tperiod)
+      (merge-firetuples ?tuple :> ?newtuple)))
 
 (defn fire-series
   "Aggregates fires into timeseries."

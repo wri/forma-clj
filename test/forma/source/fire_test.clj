@@ -26,6 +26,7 @@
   "Rips apart fires!"
   [t-res start end]
   (?- (stdout)
-      (->> (rip-fires "1000" new-fire-tap)
+      (->> new-fire-tap
+           (reproject-fires "1000")
            (aggregate-fires t-res)
            (fire-series t-res start end))))
