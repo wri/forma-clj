@@ -5,8 +5,7 @@
 (ns forma.date-time
   (:use [clj-time.core :only (date-time month year)]
         [clj-time.format :only (unparse formatters)]
-        [clojure.string :only (split)]
-        [clojure.contrib.math :only (ceil)])
+        [clojure.string :only (split)])
   (:require [clj-time.core :as time]
             [clj-time.format :as f]))
 
@@ -84,7 +83,7 @@
   isn't full."
   [unit span]
   (let [m {julian 365 month 12}]
-    (ceil (/ (m unit) span))))
+    (Math/ceil (/ (m unit) span))))
 
 (defn delta-periods
   "Calculates the difference between the supplied start and end dates

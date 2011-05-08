@@ -2,8 +2,6 @@
   (:use cascalog.api
         clojure.contrib.java-utils
         [clojure.string :only (split)]
-        [clojure.contrib.math :only (ceil)]
-        [clojure.contrib.seq :only (positions)]
         [forma.matrix.utils :only (sparse-expander matrix-of)]
         [forma.source.modis :only (pixels-at-res)])
   (:require [cascalog.ops :as c]
@@ -113,13 +111,6 @@ I recommend wrapping queries that use this tap with
 
 ;; ### Special Functions
 
-;; TODO: Test this in the 3d case. I don't think it's actually doing
-;; what I want it to be doing. In fact, it fails in any case but 2d.
-;;
-;; I think we need outpos, outval, and then n + 1 other values to
-;; cycle around. We should take in a map of positions <-> dimension
-;; length.
-
 (defn sparse-windower
   "Aggregates cascalog generator values up into multidimensional
   windows of nested vectors of `split-length` based on the supplied
@@ -141,19 +132,17 @@ I recommend wrapping queries that use this tap with
   to produce a new generator that would create
 
     (s ?mod-h ?mod-v ?window-col ?window-row ?window)"
-  ([gen in-syms val split-length sparse-val]
-     (sparse-windower gen in-syms val split-length split-length sparse-val))
-  ([gen in-syms val split-length split-width sparse-val]
-     (let [dim-vec [split-length split-width]
-           swap (partial swap-syms gen (into in-syms [val]))
-           [inpos nextpos outpos inval outval] (v/gen-non-nullable-vars 5)]
-       (reduce #(%2 %1)
-               gen
-               (for [dim (range (count in-syms))
-                     :let [length (dim-vec dim)
-                           empty (matrix-of sparse-val dim length)
-                           aggr (vals->sparsevec length empty)]]
-                 (fn [src]
-                   (construct (swap [nextpos outpos outval])
-                              [[src :>> (swap [inpos nextpos inval])]
-                               [aggr inpos inval :> outpos outval]])))))))
+  [gen in-syms dim-vec val sparse-val]
+  (let [[outpos outval] (v/gen-non-nullable-vars 2)
+        dim-vec (if (coll? dim-vec) dim-vec (vector dim-vec))]
+    (reduce #(%2 %1)
+            gen
+            (for [[dim inpos] (map-indexed vector in-syms)
+                  :let [length (try (dim-vec dim)
+                                    (catch Exception e (last dim-vec)))
+                        empty (matrix-of sparse-val dim length)
+                        aggr (vals->sparsevec length empty)]]
+              (fn [src]
+                (construct (swap-syms gen [inpos val] [outpos outval])
+                           [[src :>> (get-out-fields gen)]
+                            [aggr inpos val :> outpos outval]]))))))
