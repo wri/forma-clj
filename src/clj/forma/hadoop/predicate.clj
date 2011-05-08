@@ -47,17 +47,20 @@ I recommend wrapping queries that use this tap with
 
 ;; ### Operations
 
+;; #### Defmapops
+
 (defn add-fields
   "Adds an arbitrary number of fields to tuples in a cascalog query."
   [& fields]
   (vec fields))
 
-(defbufferop
-  ^{:doc "Returns a string representation of the tuples input to this
-  buffer. Useful for testing!"}
-  tuples->string
-  [tuples]
-  [(apply str (map str tuples))])
+(defn mangle
+  "Mangles textlines connected with commas."
+  [line]
+  (map (fn [val]
+         (try (Float. val)
+              (catch Exception _ val)))
+       (split line #",")))
 
 (defmapop
   ^{:doc "Converts nested clojure vectors into an array of the
@@ -69,6 +72,15 @@ I recommend wrapping queries that use this tap with
   [window->array [type]]
   [window]
   [(into-array type (flatten window))])
+
+;; #### Aggregators
+
+(defbufferop
+  ^{:doc "Returns a string representation of the tuples input to this
+  buffer. Useful for testing!"}
+  tuples->string
+  [tuples]
+  [(apply str (map str tuples))])
 
 (defbufferop
   ^{:doc "Receives 2-tuple pairs of the form `<idx, val>`, inserts each
@@ -82,13 +94,17 @@ I recommend wrapping queries that use this tap with
                      :start start
                      :length length)]])
 
-(defn mangle
-  "Mangles textlines connected with commas."
-  [line]
-  (map (fn [val]
-         (try (Float. val)
-              (catch Exception _ val)))
-       (split line #",")))
+(defmacro defpredsummer
+  "Generates cascalog defaggregateops for counting items that satisfy
+  some custom predicate. Defaggregateops don't allow anonymous
+  functions, so we went this route instead."
+  [name vals pred]
+  `(defaggregateop ~name
+     ([] 0)
+     ([count# ~@vals] (if (~pred ~@vals)
+                      (inc count#)
+                      count#))
+     ([count#] [count#])))
 
 ;; ### Predicate Macros
 

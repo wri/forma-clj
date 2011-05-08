@@ -10,6 +10,22 @@
   (:import [forma.schema FireTuple TimeSeries]
            [java.util ArrayList]))
 
+
+(defn fire-tuple
+  "Clojure wrapper around the java `FireTuple` constructor."
+  [t-above-330 c-above-50 both-preds count]
+  (FireTuple. t-above-330 c-above-50 both-preds count))
+
+(defn fire-tseries
+  "Creates a `TimeSeries` object from a start period, end period, and
+  sequence of timeseries entries. This is appropriate only for
+  `FireTuple` entries."
+  [start end ts-seq]
+  (doto (TimeSeries.)
+    (.setStartPeriod start)
+    (.setEndPeriod end)
+    (.setValues (ArrayList. ts-seq))))
+
 ;; ### Fire Predicates
 
 (defn format-datestring
@@ -19,57 +35,29 @@
   (let [[month day year] (split datestring #"/")]
     (format "%s-%s-%s" year month day)))
 
-(defmacro defpredsummer
-  "Generates cascalog defaggregateops for counting items that satisfy
-  some custom predicate. Defaggregateops don't allow anonymous
-  functions, so we went this route instead."
-  [name vals pred]
-  `(defaggregateop ~name
-     ([] 0)
-     ([count# ~@vals] (if (~pred ~@vals)
-                      (inc count#)
-                      count#))
-     ([count#] [count#])))
+(p/defpredsummer [filtered-count [limit]]
+  [val] #(> % limit))
 
-(defpredsummer fires-above-330
-  [val] #(> % 330))
-
-(defpredsummer conf-above-50
-  [val] #(> % 50))
-
-(defpredsummer per-day
+(p/defpredsummer per-day
   [val] identity)
 
-(defpredsummer both-preds
+(p/defpredsummer both-preds
   [conf temp]
   (fn [c t] (and (> t 330)
                 (> c 50))))
-
-(defn fire-tuple
-  [t-above-330 c-above-50 both-preds count]
-  (FireTuple. t-above-330 c-above-50 both-preds count))
 
 (def
   ^{:doc "Predicate macro to generate a tuple of fire characteristics
   from confidence and temperature."}
   fire-characteristics
   (<- [?conf ?kelvin :> ?tuple]
-      ((c/juxt #'conf-above-50 #'per-day) ?conf :> ?conf-50 ?count)
-      (fires-above-330 ?kelvin :> ?temp-330)
+      (per-day ?conf :> ?count)
+      (filtered-count [330] ?kelvin :> ?temp-330)
+      (filtered-count [50] ?conf :> ?conf-50)
       (both-preds ?conf ?kelvin :> ?both-preds)
       (fire-tuple ?temp-330 ?conf-50 ?both-preds ?count :> ?tuple)))
 
 ;; ## Fire Queries
-
-(defn mk-ts
-  "Creates a `TimeSeries` object from a start period, end period, and
-  sequence of timeseries entries. This is appropriate only for
-  `FireTuple` entries."
-  [start end ts-seq]
-  (doto (TimeSeries.)
-    (.setStartPeriod start)
-    (.setEndPeriod end)
-    (.setValues (ArrayList. ts-seq))))
 
 (defn fire-source
   "Takes a source of textlines, and returns 2-tuples with latitude and
@@ -142,7 +130,7 @@
   (let [empty (fire-tuple 0 0 0 0)]
     (->> tseries
          (running-sum [] empty add-fires)
-         (mk-ts start end))))
+         (fire-tseries start end))))
 
 (defn fire-series
   "Aggregates fires into timeseries."
