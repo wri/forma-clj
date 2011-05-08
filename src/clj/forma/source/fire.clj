@@ -94,31 +94,36 @@
         (hv->tilestring ?mod-h ?mod-v :> ?tilestring)
         (p/add-fields m-res :> ?m-res))))
 
+(defn extract-fields
+  [f-tuple]
+  [(.temp330 f-tuple)
+   (.conf50 f-tuple)
+   (.bothPreds f-tuple)
+   (.count f-tuple)])
+
 (defn add-fires
   "Adds together two FireTuple objects."
   [t1 t2]
-  (fire-tuple (+ (.temp330 t1) (.temp330 t2))
-              (+ (.conf50 t1) (.conf50 t2))
-              (+ (.bothPreds t1) (.bothPreds t2))
-              (+ (.count t1) (.count t2))))
-
+  (let [[f1 f2] (map extract-fields [t1 t2])]
+    (apply fire-tuple
+           (map + f1 f2))))
 
 ;; Combines various fire tuples into one.
 
-(defaggregateop comb
-  ([] (fire-tuple 0 0 0 0))
-  ([state tuple] (add-fires state tuple))
-  ([state] [state]))
+(defaggregateop merge-tuples
+  ([] [0 0 0 0])
+  ([state tuple] (map + state (extract-fields tuple)))
+  ([state] [(apply fire-tuple state)]))
 
 (defn aggregate-fires
   "Converts the datestring into a time period based on the supplied
   temporal resolution."
   [t-res src]
   (<- [?dataset ?m-res ?new-t-res ?tilestring ?tperiod ?sample ?line ?newtuple]
+      (src ?dataset ?m-res ?t-res ?tilestring ?datestring ?sample ?line ?tuple)
       (datetime->period ?new-t-res ?datestring :> ?tperiod)
-      (identity t-res :> ?new-t-res)
-      (comb ?tuple :> ?newtuple)
-      (src ?dataset ?m-res ?t-res ?tilestring ?datestring ?sample ?line ?tuple)))
+      (p/add-fields t-res :> ?new-t-res)
+      (merge-tuples ?tuple :> ?newtuple)))
 
 (defn running-sum
   "Given an accumulator, an initial value and an addition function,
@@ -128,7 +133,8 @@
   (first (reduce (fn [[coll last] new]
                    (let [last (add-func last new)]
                      [(conj coll last) last]))
-                 [acc init] tseries)))
+                 [acc init]
+                 tseries)))
 
 (defmapop [running-fire-sum [start end]]
   "Special case of `running-sum` for `FireTuple` thrift objects."
