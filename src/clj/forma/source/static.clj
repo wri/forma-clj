@@ -137,7 +137,8 @@
   ([m-res dataset pixel-tap ascii-path & [agg]]
      (let [ascii-info ((keyword dataset) static-datasets)
            grid-source (ascii-source ascii-path)]
-       (if (>= (:cellsize ascii-info) (wgs84-resolution m-res))
+       (if (>= (:cellsize ascii-info)
+               (wgs84-resolution m-res))
          (upsample dataset m-res ascii-info grid-source pixel-tap)
          (downsample dataset m-res ascii-info grid-source agg)))))
 
