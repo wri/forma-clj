@@ -6,7 +6,6 @@
                                 globbed-wholefile-tap)])
   (:require [forma.source.hdf :as h]
             [forma.source.rain :as r]
-            [forma.source.modis :as m]
             [forma.static :as s])
   (:gen-class))
 
@@ -33,9 +32,12 @@
         (r/rain-chunks m-res ll-res chunk-size tile-seq source))))
 
 ;; TEMPORARY stuff for the big run :-*
+;;
+;; TODO: move to hadoop.io
+
 (defn tiles->globstring
   [& tiles]
-  {:pre [(m/valid-modis? tiles)]}
+  {:pre [(valid-modis? tiles)]}
   (let [hv-seq (interpose "," (for [[th tv] tiles]
                                 (format "h%02dv%02d" th tv)))]
     (format "*{%s}*" (apply str hv-seq))))
@@ -48,7 +50,6 @@
 
    hadoop jar forma-standalone.jar modisdata/MOD13A3/ reddoutput/ [8 6] [10 12]"
   [input-path output-path & tiles]
-  {:pre [(m/valid-modis? tiles)]}
   (let [tileseq (map read-string tiles)
         tilestring (str input-path (apply tiles->globstring tileseq))]
     (modis-chunker s/forma-subsets s/chunk-size
@@ -58,7 +59,6 @@
 (defn rain-main
   "TODO: Example usage."
   [input-path output-path & tiles]
-  {:pre [(m/valid-modis? tiles)]}
   (rain-chunker "1000" 0.5 s/chunk-size (map read-string tiles)
                 (s3-path input-path)
                 (s3-path output-path)))
