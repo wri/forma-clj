@@ -153,7 +153,7 @@ I recommend wrapping queries that use this tap with
 
   one could wrap s like so:
 
-    (sparse-windower s [\"?sample\" \"?line\" \"?val\"] 3000 0)
+    (sparse-windower s [\"?sample\" \"?line\"] 3000 \"?val\" 0)
 
   to produce a new generator that would create
 
