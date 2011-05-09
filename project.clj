@@ -19,7 +19,5 @@
                      [swank-clojure "1.4.0-SNAPSHOT"]
                      [clojure-source "1.2.0"] [marginalia "0.5.0"]
                      [midje "1.1"]]
-  :namespaces [forma.hadoop.jobs.chunk-rain
-               forma.hadoop.jobs.chunk-modis
-               forma.hadoop.jobs.load-tseries
-               forma.source.static])
+  :namespaces [forma.hadoop.jobs.preprocess
+               forma.hadoop.jobs.load-tseries])
