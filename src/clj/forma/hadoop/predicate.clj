@@ -54,13 +54,11 @@ I recommend wrapping queries that use this tap with
   [& fields]
   (vec fields))
 
-(defn mangle
-  "Mangles textlines connected with commas."
-  [line]
-  (map (fn [val]
-         (try (Float. val)
-              (catch Exception _ val)))
-       (split line #",")))
+(defmapcatop
+  ^{:doc "splits a sequence of values into nested 2-tuples formatted
+  as `<idx, val>`. Indexing is zero based."}
+  index [sequence]
+  (map-indexed vector sequence))
 
 (defmapop
   ^{:doc "Converts nested clojure vectors into an array of the
