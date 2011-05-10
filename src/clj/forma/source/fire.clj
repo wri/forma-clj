@@ -61,6 +61,14 @@
   (let [[month day year] (split datestring #"/")]
     (format "%s-%s-%s" year month day)))
 
+(defn mangle
+  "Mangles textlines connected with commas."
+  [line]
+  (map (fn [val]
+         (try (Float. val)
+              (catch Exception _ val)))
+       (split line #",")))
+
 (def
   ^{:doc "Predicate macro that converts confidence and temperature
   into a tuple of fire characteristics."}
@@ -110,7 +118,7 @@
   [src]
   (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
       (src ?line)
-      (p/mangle ?line :> ?lat ?lon ?kelvin _ _ ?datestring _ _ ?conf _ _ _)
+      (mangle ?line :> ?lat ?lon ?kelvin _ _ ?datestring _ _ ?conf _ _ _)
       (p/add-fields "fire" "01" :> ?dataset ?t-res)
       (format-datestring ?datestring :> ?date)
       (fire-characteristics ?conf ?kelvin :> ?tuple)))
@@ -128,7 +136,8 @@
 
 ;; These come after the initial bucketing.
 ;;
-;; TODO: Split this business off into a separate job.
+;; TODO: Split this business off into a separate job. Incorporate this
+;;stuff 
 
 (defn aggregate-fires
   "Converts the datestring into a time period based on the supplied

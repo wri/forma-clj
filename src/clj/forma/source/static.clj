@@ -10,10 +10,12 @@
                                        pixel-generator)])
   (:require [cascalog.ops :as c]
             [forma.source.modis :as m]
+            [forma.hadoop.predicate :as p]
             [cascalog.io :as io]
             [clojure.contrib.duck-streams :as duck])
   (:gen-class))
 
+;; TODO: Move out
 (defn index-textfile
   "Prepend a row index to a text file `old-file-name`, located at `base-path`,
   and save in the same directory with new name `new-file-name`. The
@@ -46,15 +48,6 @@
                               (split line #" "))]
     [idx (int-array row-vals)]))
 
-(defmapcatop
-  ^{:doc "split a row into nested vectors, with the value as the second entry
-  and the column index (from 0) as the first entry.  Note that this is
-  particularly useful if the `row` had already been prepended with the
-  row index -- which is not passed into `free-cols`"}
-  free-cols
-  [row]
-  (map-indexed vector row))
-
 (defn ascii-source [path]
   "create a source out of a pre-cleaned ASCII grid, which is
   associated with a map of characteristic values, such as resolution
@@ -66,7 +59,7 @@
     (<- [?row ?col ?val]
         (source ?line)
         (liberate ?line :> ?row ?row-vec)
-        (free-cols ?row-vec :> ?col ?val))))
+        (p/index ?row-vec :> ?col ?val))))
 
 ;; This is testing space for DAN! and it will probably be erased
 ;; before we merge this feature branch.  I am trying to figure out a
@@ -82,22 +75,21 @@
   [step dir start pos]
   (-> start (dir (* pos step)) (dir (/ step 2))))
 
+;; TODO: this just needs the corner and cell size.
 (defn rowcol->latlon
   "Given an ASCII header map, find the latlon of the centroid of
   a cell given by `row` and `col`."
-  [ascii-info row col]
-  (let [csz (:cellsize ascii-info)
-        [yul xul] (map ascii-info [:yulcorner :xulcorner])]
-    (map (partial travel csz)
-     [- +]
-     [yul xul]
-     [row col])))
+  [step yul xul row col]
+  (map (partial travel step)
+       [- +]
+       [yul xul]
+       [row col]))
 
-(defn colval->modis
+(defn rowcol->modis
   "first convert row col into lat lon, and then convert lat lon
   into modis characteristics at resolution `m-res`."
-  [m-res ascii-info row col]
-  (->> (rowcol->latlon ascii-info row col)
+  [m-res {:keys [step yul xul]} row col]
+  (->> (rowcol->latlon step yul xul row col)
        (apply m/latlon->modis m-res)))
 
 (defn downsample
@@ -112,7 +104,7 @@
       (identity dataset :> ?dataset)
       (identity "00" :> ?t-res)
       (agg ?val :> ?outval)
-      (colval->modis m-res ascii-info ?row ?col :> ?mod-h ?mod-v ?sample ?line)))
+      (rowcol->modis m-res ascii-info ?row ?col :> ?mod-h ?mod-v ?sample ?line)))
 
 (defn upsample
   "sample values off of a lower resolution grid than the MODIS grid."
