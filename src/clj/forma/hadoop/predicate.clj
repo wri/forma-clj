@@ -160,7 +160,7 @@ I recommend wrapping queries that use this tap with
     (s ?mod-h ?mod-v ?window-col ?window-row ?window)"
   [gen in-syms dim-vec val sparse-val]
   (let [[outpos outval] (v/gen-non-nullable-vars 2)
-        dim-vec (if (coll? dim-vec) dim-vec (vector dim-vec))]
+        dim-vec (if (coll? dim-vec) dim-vec [dim-vec])]
     (reduce #(%2 %1)
             gen
             (for [[dim inpos] (map-indexed vector in-syms)

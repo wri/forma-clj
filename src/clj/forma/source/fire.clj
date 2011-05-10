@@ -108,11 +108,11 @@
   a `FireTuple` thrift object containing all relevant characteristics
   of fires for that particular day."
   [source]
-  (<- [?dataset ?datestring ?t-res ?lat ?lon ?tuple]
+  (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
       (source ?line)
-      (p/mangle ?line :> ?lat ?lon ?kelvin _ _ ?date _ _ ?conf _ _ _)
+      (p/mangle ?line :> ?lat ?lon ?kelvin _ _ ?datestring _ _ ?conf _ _ _)
       (p/add-fields "fire" "01" :> ?dataset ?t-res)
-      (format-datestring ?date :> ?datestring)
+      (format-datestring ?datestring :> ?date)
       (fire-characteristics ?conf ?kelvin :> ?tuple)))
 
 (defn reproject-fires
@@ -120,9 +120,9 @@
   supplied resolution."
   [m-res source]
   (let [fires (fire-source source)]
-    (<- [?dataset ?m-res ?t-res ?tilestring ?datestring ?sample ?line ?tuple]
+    (<- [?dataset ?m-res ?t-res ?tilestring ?date ?sample ?line ?tuple]
         (p/add-fields m-res :> ?m-res)
-        (fires ?dataset ?datestring ?t-res ?lat ?lon ?tuple)
+        (fires ?dataset ?date ?t-res ?lat ?lon ?tuple)
         (latlon->modis m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
         (hv->tilestring ?mod-h ?mod-v :> ?tilestring))))
 

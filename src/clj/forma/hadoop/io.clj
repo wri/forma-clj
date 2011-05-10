@@ -10,6 +10,7 @@
         [clojure.contrib.math :only (abs)])
   (:import [forma WholeFile]
            [cascading.tuple Fields]
+           [cascading.scheme Scheme]
            [cascading.tap TemplateTap SinkMode GlobHfs]
            [org.apache.hadoop.io BytesWritable])
   (:require [cascalog.workflow :as w]))
@@ -85,44 +86,47 @@
 ;; local fileystem, and Amazon S3 bucket paths; A path prefix of, respectively,
 ;; `hdfs://`, `file://`, and `s3://` forces the proper choice.
 
+(defn template-tap [^Scheme scheme path-or-file pathstr]
+  (TemplateTap. (w/hfs-tap scheme (w/path path-or-file))
+                pathstr))
+
 (defn template-seqfile
   "Opens up a Cascading [TemplateTap](http://goo.gl/Vsnm5) that sinks
 tuples into the supplied directory, using the format specified by
 `pathstr`."
   [path pathstr]
-  (TemplateTap. (w/hfs-tap (w/sequence-file Fields/ALL) path) pathstr))
+  (template-tap (w/sequence-file Fields/ALL) path pathstr))
+
+(defn hfs-wholefile
+  "Subquery to return distinct files in the supplied directory. Files
+  will be returned as 2-tuples, formatted as `<filename, file>` The
+  filename is a text object, while the entire, unchopped file is
+  encoded as a Hadoop `BytesWritable` object."
+  [path]
+  (w/hfs-tap (whole-file Fields/ALL) path))
 
 (defn globhfs-wholefile
+  "Subquery to return distinct files in the supplied directory that
+  match the supplied pattern. See [this link](http://goo.gl/uIEzu) for
+  details on Hadoop's globbing pattern syntax.
+
+  As with `hfs-wholefile`, files will be returned as 2-tuples,
+  formatted as `<filename, file>` The filename is a text object, while
+  the entire, unchopped file is encoded as a Hadoop `BytesWritable`
+  object."
   [pattern]
   (GlobHfs. (whole-file Fields/ALL) pattern))
 
 (defn globhfs-seqfile
+  "Identical tap to `globhfs-wholefile`, to be used with
+  `SequenceFile`s instead of entire files."
   [pattern]
   (GlobHfs. (w/sequence-file Fields/ALL) pattern))
 
-(defn hfs-wholefile
-  "Creates a tap on HDFS using the wholefile format. Guaranteed not to
-   chop files up! Required for compression formats unsupported by
-   hadoop."
-  [path]
-  (w/hfs-tap (whole-file Fields/ALL) path))
-
-(defn wholefile-tap
-  "Subquery to return all files in the supplied directory. Files will
-  be returned as 2-tuples, formatted as (filename, file) The filename
-  is a text object, while the file is encoded as a Hadoop
-  BytesWritable."
-  [dir]
-  (let [source (hfs-wholefile dir)]
-    (<- [?filename ?file]
-        (source ?filename ?file))))
-
-(defn globbed-wholefile-tap
-  "Same as `wholefile-tap`, but takes a pattern."
+(defn globhfs-textline
+  "Identical tap to `globhfs-wholefile`, to be used with text files."
   [pattern]
-  (let [source (globhfs-wholefile pattern)]
-    (<- [?filename ?file]
-        (source ?filename ?file))))
+  (GlobHfs. (w/text-line ["line"] Fields/ALL) pattern))
 
 ;; ## Backend Data Processing Queries
 ;;
@@ -186,10 +190,10 @@ tuples into the supplied directory, using the format specified by
 
     Example Usage:
     (globstring \"s3n://bucket/\" [\"ndvi\" \"evi\"] [\"1000-32\"] *)
-    ;=> \"s3://bucket/{ndvi,evi}/{1000-32}/*/*/\"
+    ;=> \"s3://bucket/{ndvi,evi}/{1000-32}/*/\"
 
     (globstring \"s3n://bucket/\" * * [\"008006\" \"033011\"])
-    ;=> \"s3://bucket/*/*/{008006,033011}/*/\""
+    ;=> \"s3://bucket/*/*/{008006,033011}/\""
   [basepath & pieces]
   (let [comma-string (fn [arg] (apply str (interpose "," arg)))
         rest (map (fn [arg]

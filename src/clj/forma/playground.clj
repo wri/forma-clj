@@ -39,7 +39,7 @@
 (defn file-count
   "Prints the total count of files in a given directory to stdout."
   [dir]
-  (let [files (wholefile-tap dir)]
+  (let [files (hfs-wholefile dir)]
     (?<- (stdout) [?count]
          (files ?filename ?file)
          (c/count ?count))))
@@ -78,6 +78,3 @@
   (let [source (globhfs-wholefile pattern)]
     (?<- (stdout) [?filename]
          (source ?filename ?file))))
-
-
-
