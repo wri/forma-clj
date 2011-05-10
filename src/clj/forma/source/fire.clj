@@ -107,9 +107,9 @@
   position and value all defined. In this case, the value `?tuple` is
   a `FireTuple` thrift object containing all relevant characteristics
   of fires for that particular day."
-  [source]
+  [src]
   (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
-      (source ?line)
+      (src ?line)
       (p/mangle ?line :> ?lat ?lon ?kelvin _ _ ?datestring _ _ ?conf _ _ _)
       (p/add-fields "fire" "01" :> ?dataset ?t-res)
       (format-datestring ?datestring :> ?date)
@@ -118,8 +118,8 @@
 (defn reproject-fires
   "Aggregates fire data at the supplied path by modis pixel at the
   supplied resolution."
-  [m-res source]
-  (let [fires (fire-source source)]
+  [m-res src]
+  (let [fires (fire-source src)]
     (<- [?dataset ?m-res ?t-res ?tilestring ?date ?sample ?line ?tuple]
         (p/add-fields m-res :> ?m-res)
         (fires ?dataset ?date ?t-res ?lat ?lon ?tuple)
