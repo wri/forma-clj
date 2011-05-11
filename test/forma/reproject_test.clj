@@ -2,10 +2,11 @@
   (:use [forma.reproject] :reload)
   (:use midje.sweet))
 
-(fact
- "This is the only one I have so far... but we need to verify at
+(let [rain-indexer (wgs84-indexer "1000" 0.5 + + -90 0)]
+  (fact
+   "This is the only one I have so far... but we need to verify at
 least one of these indices."
- (wgs84-index "1000" 0.5 8 6 12 12) => 172569)
+   (rain-indexer 8 6 12 12) => 172569))
 
-(fact (dimensions-at-res 0.5) => [720 360])
-(fact (fit-to-grid 0.5 -90 0 -42.1 0) => [95 0])
+(fact (dimensions-for-step 0.5) => [720 360])
+(fact (fit-to-grid 0.5 + + -90 0 -42.1 0) => [95 0])
