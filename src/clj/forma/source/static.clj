@@ -1,23 +1,22 @@
 (ns forma.source.static
   (:use cascalog.api
-        [forma.source.modis :only (wgs84-resolution
-                                   pixels-at-res)]
-        [forma.source.tilesets :only (tile-set)]
+        [forma.source.modis :only (wgs84-resolution)]
         [forma.static :only (static-datasets)]
-        [forma.hadoop.io :only (chunk-tap)]        
         [forma.reproject :only (wgs84-indexer
                                 rowcol->modis)]
-        [clojure.string :only (split)]
-        [forma.hadoop.predicate :only (sparse-windower
-                                       pixel-generator)])
-  (:require [cascalog.ops :as c]
-            [forma.source.modis :as m]
+        [clojure.string :only (split)])
+  (:require [forma.source.modis :as m]
             [forma.hadoop.predicate :as p]
-            [cascalog.io :as io]
-            [clojure.contrib.duck-streams :as duck])
-  (:gen-class))
+            [clojure.contrib.duck-streams :as duck]))
 
-;; TODO: Move out
+;; ### Preprocessing
+;;
+;; Hadoop doesn't have the ability to find the line number of a
+;; specific line within a textfile; before working with ASCII grids
+;; out of ArcGIS, we need to manually process each file, adding a line
+;; number to the beginning of each line. This gives us the ability to
+;; retrieve the row index.
+
 (defn index-textfile
   "Prepend a row index to a text file `old-file-name`, located at `base-path`,
   and save in the same directory with new name `new-file-name`. The
@@ -50,13 +49,14 @@
                               (split line #" "))]
     [idx (int-array row-vals)]))
 
-(defn ascii-source [path]
+(defn ascii-source
   "create a source out of a pre-cleaned ASCII grid, which is
-  associated with a map of characteristic values, such as resolution
-  and extent.  The cleaned grid is located at `path` and has the row
-  index values prepended on the rows, with the ASCII prelude (which is
-  automatically added by Arc) already stripped and cataloged in the
-  map of characteristic values."
+  associated with a map of characteristic values, such as
+  resolution. The cleaned grid is located at `path` and has the row
+  index values prepended on the rows, with the ASCII
+  prelude (automatically added by Arc) already stripped and catalogued
+  in the map of characteristic values."
+  [path]
   (let [source (hfs-textline path)]
     (<- [?row ?col ?val]
         (source ?line)
@@ -81,9 +81,9 @@
   "sample values off of a lower resolution grid than the MODIS grid."
   [dataset m-res ascii-info grid-source pixel-tap]
   (let [{:keys [step corner travel]} ascii-info
-        [xul yul] corner
-        [x-dir y-dir] travel
-        indexer (wgs84-indexer m-res step y-dir x-dir yul xul)]
+        [lon0 lat0] corner
+        [lon-dir lat-dir] travel
+        indexer (wgs84-indexer m-res step lat-dir lon-dir lat0 lon0)]
     (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?outval]
         (grid-source ?row ?col ?outval)
         (identity dataset :> ?dataset)
@@ -110,40 +110,9 @@
          (upsample dataset m-res ascii-info grid-source pixel-tap)
          (downsample dataset m-res ascii-info grid-source agg)))))
 
-;; THE JOB!
-
 (defn tilestringer
+  "TODO: DOCS"
   [src]
   (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?val]
       (src ?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?val)
       (m/hv->tilestring ?mod-h ?mod-v :> ?tilestring)))
-
-;; TODO:
-;;
-;; Convert to pixels-at-res, so we get the width right. Also, get that
-;; nodata value working here, instead of 0.
-;;
-;; Move this stuff into the preprocess namespace.
-;;
-;; Add documentation in reproject.
-
-(defn static-chunker
-  "Last thing we need is the chunk-tap!"
-  [m-res tile-seq dataset agg ascii-path output-path]
-  (io/with-fs-tmp [fs tmp-dir]
-    (let [pix-tap (pixel-generator tmp-dir m-res tile-seq)
-          src (sample-modis m-res dataset pix-tap ascii-path agg)]
-      (?- (chunk-tap output-path)
-          (sparse-windower (tilestringer src) ["?sample" "?line"] "?val" 1200 20 0)))))
-
-(defn s3-path [path]
-  (str "s3n://AKIAJ56QWQ45GBJELGQA:6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV@" path))
-
-(defn -main
-  [dataset ascii-path output-path]
-  (static-chunker "1000"
-                  (tile-set :IND :MYS)
-                  dataset
-                  c/sum
-                  ascii-path
-                  (s3-path output-path)))
