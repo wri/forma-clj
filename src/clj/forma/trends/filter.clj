@@ -19,11 +19,11 @@
 ;; De-seasonalize time-series
 
 (defn seasonal-rows [n]
-  "lazy sequence of monthly dummy vectors"
-  (vec
-   (take n
-         (partition 11 1
-                    (cycle (cons 1 (repeat 11 0)))))))
+  "lazy sequence of monthly dummy vectors."
+  (->> (cycle (cons 1 (repeat 11 0)))
+       (partition 11 1)
+       (take n)
+       vec))
 
 (defn seasonal-matrix
   "create a matrix of [num-months]x11 of monthly dummies, where
@@ -39,8 +39,11 @@
   [ts]
   (let [avg-seq (repeat (count ts) (average ts))
         X    (seasonal-matrix (count ts))
-        fix  (i/mmult (variance-matrix X) (i/trans X) ts)
-        adj  (i/mmult (i/sel X :except-cols 0) (i/sel fix :except-rows 0))]
+        fix  (i/mmult (variance-matrix X)
+                      (i/trans X)
+                      ts)
+        adj  (i/mmult (i/sel X :except-cols 0)
+                      (i/sel fix :except-rows 0))]
     (i/minus ts adj)))
 
 ;; Hodrick-Prescott filter
@@ -58,7 +61,10 @@
           (insert-into-zeros idx T (cond (= x 0)  [1 2 -1]
                                          (= x 1)  [-2 5 4 1]
                                          :else [1 -4 6 -4 1])))]
-    (i/matrix (concat but-2 (map reverse [second first])))))
+    (->> [second first]
+         (map reverse)
+         (concat but-2)
+         i/matrix)))
 
 (defn hp-filter
   "return a smoothed time-series, given the HP filter parameter."
@@ -99,19 +105,23 @@
   set to nil."
   [pred coll1 coll2]
   {:pre [(= (count coll1) (count coll2))]}
-  (map #(when-not (pred %2) %1) coll2 coll1))
+  (map #(when-not (pred %2) %1)
+       coll2
+       coll1))
 
 (defn replace-index-set
-  "replace values in `coll` with `new-val` for all indices in `idx-set`"
+  "replace values in `coll` with `new-val` for all indices in
+  `idx-set`"
   [idx-set new-val coll]
   (for [[m n] (map-indexed vector coll)]
     (if (idx-set m) new-val n)))
 
 (defn bad-ends
-  "make a set of indices of a collection `coll` for which there are continuous
-  *bad* values, given by the set of values in `bad-set` which serves as a
-  predicate function to (effectively) filter `coll` on the ends.  If there are
-  no bad values on either end, then the function will return an empty set."
+  "make a set of indices of a collection `coll` for which there are
+  continuous *bad* values, given by the set of values in `bad-set`
+  which serves as a predicate function to (effectively) filter `coll`
+  on the ends.  If there are no bad values on either end, then the
+  function will return an empty set."
   [bad-set coll]
   (let [m-coll (map-indexed vector coll)
         r-coll (reverse m-coll)]
