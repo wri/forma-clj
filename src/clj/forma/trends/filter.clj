@@ -60,8 +60,8 @@
   (let [[first second :as but-2]
         (for [x (range (- T 2))
               :let [idx (if (>= x 2) (- x 2) 0)]]
-          (insert-into-zeros idx T (cond (= x 0)  [1 2 -1]
-                                         (= x 1)  [-2 5 4 1]
+          (insert-into-zeros idx T (cond (= x 0)  [1 -2 1]
+                                         (= x 1)  [-2 5 -4 1]
                                          :else [1 -4 6 -4 1])))]
     (->> [second first]
          (map reverse)
