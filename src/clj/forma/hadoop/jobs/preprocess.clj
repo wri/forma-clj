@@ -1,19 +1,24 @@
 (ns forma.hadoop.jobs.preprocess
   (:use cascalog.api
         [forma.source.modis :only (valid-modis?)]
+        [forma.source.tilesets :only (tile-set)]
+        [forma.source.modis :only (pixels-at-res)]
         [forma.hadoop.io :only (chunk-tap
                                 hfs-wholefile
                                 globhfs-wholefile
-                                globhfs-textline)])
+                                globhfs-textline)]
+        [forma.hadoop.predicate :only (sparse-windower
+                                       pixel-generator)])
   (:require [forma.source.hdf :as h]
             [forma.source.rain :as r]
             [forma.source.fire :as f]
-            [forma.static :as s])
+            [forma.source.static :as s]
+            [cascalog.ops :as c]
+            [cascalog.io :as io]
+            [forma.static :as static])
   (:gen-class))
 
-;; TEMPORARY stuff for the big run :-*
-;;
-;; TODO: move to hadoop.io
+;; TODO: move to forma.hadoop.io
 
 (defn tiles->globstring
   [& tiles]
@@ -57,6 +62,18 @@
     (?- (chunk-tap out-path)
         (f/reproject-fires m-res source))))
 
+(defn static-chunker
+  "TODO: DOCS!"
+  [m-res chunk-size tile-seq dataset agg ascii-path output-path]
+  (io/with-fs-tmp [fs tmp-dir]
+    (let [width (pixels-at-res m-res)
+          height (/ chunk-size width)
+          pix-tap (pixel-generator tmp-dir m-res tile-seq)
+          src (s/sample-modis m-res dataset pix-tap ascii-path agg)]
+      (?- (chunk-tap output-path)
+          (sparse-windower (s/tilestringer src)
+                           ["?sample" "?line"] "?val"
+                           width height -9999)))))
 (defn modis-main
   "Example usage:
 
@@ -64,8 +81,8 @@
   [path output-path & tiles]
   (let [tileseq (map read-string tiles)
         pattern (str path (apply tiles->globstring tileseq))]
-    (modis-chunker s/forma-subsets
-                   s/chunk-size
+    (modis-chunker static/forma-subsets
+                   static/chunk-size
                    (s3-path pattern)
                    (s3-path output-path))))
 
@@ -74,7 +91,7 @@
   [path output-path & tiles]
   (rain-chunker "1000"
                 0.5
-                s/chunk-size
+                static/chunk-size
                 (map read-string tiles)
                 (s3-path path)
                 (s3-path output-path)))
@@ -86,11 +103,24 @@
                 (s3-path pattern)
                 (s3-path output-path)))
 
+(defn static-main
+  "TODO: Example usage."
+  [dataset ascii-path output-path & countries]
+  (let [countries (map read-string countries)]
+    (static-chunker "1000"
+                    static/chunk-size
+                    (apply tile-set countries)
+                    dataset
+                    c/sum
+                    ascii-path
+                    (s3-path output-path))))
+
 (defn -main
   "Wrapper to allow for various calls to chunking functions."
   [func-name & args]
   (let [func (case func-name
                    "modis" modis-main
                    "rain" rain-main
-                   "fire" fire-main)]
+                   "fire" fire-main
+                   "static" static-main)]
     (apply func args)))
