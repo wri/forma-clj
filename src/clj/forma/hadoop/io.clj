@@ -179,10 +179,6 @@ tuples into the supplied directory, using the format specified by
 ;; projection. For details on the globbing syntax, see
 ;; [here](http://goo.gl/uIEzu).
 
-;; TODO: -- check docs for comment on jobtag, and update this
-;; section. We need to change this into a chunk-tap. Check the
-;; tracker project for how to do this!
-
 (defn globstring
   "Takes a path ending in `/` and collections of nested
   subdirectories, and returns a globstring formatted for cascading's
