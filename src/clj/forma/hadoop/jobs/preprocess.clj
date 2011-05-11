@@ -74,8 +74,8 @@
           src (s/sample-modis m-res dataset pix-tap line-tap agg)]
       (?- (chunk-tap output-path)
           (sparse-windower src
-                           ["?sample" "?line"] "?val"
-                           width height -9999)))))
+                           ["?sample" "?line"] "?val" width height
+                           -9999)))))
 (defn modis-main
   "Example usage:
 
@@ -92,6 +92,10 @@
   "TODO: Example usage."
   [path output-path & tiles]
   (rain-chunker "1000"
+<<<<<<< HEAD
+=======
+                0.5
+>>>>>>> Moved lots of stuff from static to preprocess.
                 static/chunk-size
                 (map read-string tiles)
                 (s3-path path)
