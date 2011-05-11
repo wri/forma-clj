@@ -69,9 +69,9 @@
   (io/with-fs-tmp [fs tmp-dir]
     (let [width (pixels-at-res m-res)
           height (/ chunk-size width)
-          pix-tap (pixel-generator tmp-dir m-res tile-seq)
-          ascii-tap (s/ascii-source (hfs-textline ascii-path))
-          src (s/sample-modis m-res dataset pix-tap ascii-tap agg)]
+          line-tap (hfs-textline ascii-path)
+          pix-tap  (pixel-generator tmp-dir m-res tile-seq)
+          src (s/sample-modis m-res dataset pix-tap line-tap agg)]
       (?- (chunk-tap output-path)
           (sparse-windower src
                            ["?sample" "?line"] "?val"
