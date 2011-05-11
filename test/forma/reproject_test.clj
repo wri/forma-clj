@@ -10,9 +10,13 @@
   (line-torus - 180 45 46)   => 179
   (line-torus + 10 -2 54)    => 6)
 
+(def ascii-map {:step 0.5
+                :corner [0 -90]
+                :travel [+ +]})
+
 (let [step 0.5
       [width] (dimensions-for-step step)
-      rain-indexer (wgs84-indexer "1000" step + + -90 0)]
+      rain-indexer (wgs84-indexer "1000" ascii-map)]
   (facts
     "This is the only one I have so far... but we need to verify at
 least one of these indices."
