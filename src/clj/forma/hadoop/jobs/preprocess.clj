@@ -69,9 +69,10 @@
     (let [width (pixels-at-res m-res)
           height (/ chunk-size width)
           pix-tap (pixel-generator tmp-dir m-res tile-seq)
-          src (s/sample-modis m-res dataset pix-tap ascii-path agg)]
+          ascii-tap (s/ascii-source (hfs-textline ascii-path))
+          src (s/sample-modis m-res dataset pix-tap ascii-tap agg)]
       (?- (chunk-tap output-path)
-          (sparse-windower (s/tilestringer src)
+          (sparse-windower src
                            ["?sample" "?line"] "?val"
                            width height -9999)))))
 (defn modis-main
