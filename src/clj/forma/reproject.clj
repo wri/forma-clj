@@ -3,9 +3,8 @@
 ;; sinusoidal grid at arbitrary resolution.
 
 (ns forma.reproject
-  (:use cascalog.api    
-        [forma.matrix.utils :only (idx->colrow
-                                   colrow->idx)])
+  (:use cascalog.api
+        [forma.matrix.utils :only (rowcol->idx)])
   (:require [forma.source.modis :as m]))
 
 ;; ### WGS84 -> MODIS Index Mapping
@@ -15,12 +14,6 @@
 ;; which WGS84 indices to sample for the data at each MODIS
 ;; pixel. (The following assume that WGS84 data is held in a row
 ;; vector.)
-;;
-;; In their current version, these functions make the assumption that
-;; the WGS84 grid begins at (-90, 0), with columns moving east and
-;; rows moving north. This goes against the MODIS convention of
-;; beginning at (-180, 90), and moving east and south. Future versions
-;; will accomodate arbitrary zero-points.
 
 (defn bucket
   "Takes a floating-point value and step size, and returns the
@@ -34,67 +27,87 @@
   [step val]
   (->> step (/ 1) (* val) Math/floor int))
 
-(defn dimensions-at-res
-  "returns the <horz, vert> dimensions of a WGS84 grid at the supplied
-  spatial resolution."
-  [res]
-  (map #(quot % res) [360 180]))
+(defn travel
+  "travel along a grid with cellsize `step` in the direction given by
+  `dir` from an initial position `start` to a position `pos` which is
+  intended to be, for most applications, row or column within the
+  grid.  Note that this takes you to the centroid of the row or column
+  position that you specify."
+  [step dir start pos]
+  (-> start
+      (dir (* pos step))
+      (dir (/ step 2))))
 
-(defn fit-to-grid
+(defn dimensions-for-step
+  "returns the <horz, vert> dimensions of a WGS84 grid with the
+  supplied spatial step between pixels."
+  [step]
+  (map #(quot % step) [360 180]))
+
+(defn line-torus
+  "Returns the magnitude of the difference between the supplied value
+  and the corner point within the supplied range. Values are assumed
+  to wrap around at the edge of the range. For example,
+
+    (line-torus + 10 -2 1) => 3
+    (line-torus + 10 -2 -3) => 9
+
+  The -3 value is assumed to have wrapped around the edge of the
+  range. Note that this function will wrap any number of times:
+
+    (line-torus + 10 -2 54) => 6"
+  [dir range corner val]
+  (mod (dir (- val corner)) range))
+
+(defn latlon->rowcol
   "Takes a coordinate pair and returns its [row, col] position on a
   WGS84 grid with the supplied spatial resolution and width in
-  columns.
+  columns."
+  [step lat-dir lon-dir lat-corner lon-corner lat lon]
+  (map (partial bucket step)
+       [(line-torus lat-dir 180 lat-corner lat)
+        (line-torus lon-dir 360 lon-corner lon)]))
 
- (`fit-to-grid` assumes that the WGS84 grid begins at -90 latitude and
-  0 longitude. Columns move east, wrapping around the globe, and rows
-  move north.)"
-  [ll-res max-width lat lon]
-  (let [abs-lon (Math/abs lon)
-        lon-idx (bucket ll-res abs-lon)
-        lat-idx (bucket ll-res (+ lat 90))]
-    [lat-idx (if (neg? lon)
-               (- (dec max-width) lon-idx)
-               lon-idx)]))
+(defn rowcol->latlon
+  "Returns the coordinates of the centroid of the point defined by
+  `row` and `col` on an ascii grid with the supplied corner point and
+  step size."
+  [step lat-dir lon-dir lat-corner lon-corner row col]
+  (map (partial travel step)
+       [lat-dir lon-dir]
+       [lat-corner lon-corner]
+       [row col]))
 
-;; TODO: compare this to plain-vanilla `bucket` to see if there is a
-;; way to make this more general, noting that `bucket` is used to
-;; sample rain, which has a different origin and ordering than all the
-;; static data samples, which begin at the top-left and are indexed
-;; proceeding to the right and downwards.
+(defn modis-indexer
+  "Generates a function that accepts WGS84 coordinates and returns the
+  corresponding `[mod-h, mod-v, sample, line]` in the modis grid at
+  the supplied resolution for an ASCII grid with the supplied
+  step-size, corner coordinates and directions traveled for each
+  axis."
+  [m-res ascii-map]
+  (let [{:keys [step corner travel]} ascii-map
+        [xul yul] corner
+        [x-dir y-dir] travel]
+    (fn [row col]
+      (->> (rowcol->latlon step y-dir x-dir yul xul row col)
+          (apply m/latlon->modis m-res)))))
 
-(defn map-bucket
-  "Find the grid cell that a particular point (with `lat` and `lon`
-  coordinates) falls within, given a map of grid attributes."
-  [grid-info lat lon]
-  (let [top  (:yulcorner grid-info)
-        left (:xulcorner grid-info)]
-    (map #(bucket (:cellsize grid-info) %)
-         [(- top lat) (- lon left)])))
-
-;; TODO: write an additional function to see if we can incorporate the
-;; rain raster into a sample like this.  Note that modis-sample is
-;; very, very similar to wgs84-index.  Something can be done about this.
-
-(defn modis-sample
-  "Mimics ArcGIS sample function for MODIS points and a raster that is
-  of coarser spatial resolution. (Another function has to be written
-  to deal with base rasters at higher resolution than the MODISpoints.)
-  The function requires a hash-map of ASCII raster characteristics and the
-  latitude and longitude of a single MODIS point in WGS84."
-  [grid-info m-res mod-h mod-v sample line]
-  (let [[lat lon] (m/modis->latlon m-res mod-h mod-v sample line)]
-    (map-bucket grid-info lat lon)))
-
-(defn wgs84-index
-  "takes a modis coordinate at the supplied resolution, and returns
-  the index within a row vector of WGS84 data at the supplied
-  resolution."
-  [m-res ll-res mod-h mod-v sample line]
-  {:pre [(m/valid-modis? m-res mod-h mod-v sample line)]}
-  (let [[max-width] (dimensions-at-res ll-res)
-        [lat lon] (m/modis->latlon m-res mod-h mod-v sample line)
-        [row col] (fit-to-grid ll-res max-width lat lon)]
-    (colrow->idx max-width col row)))
+(defn wgs84-indexer
+  "Generates a function that accepts MODIS tile coordinates and
+  returns the corresponding `[row, col]` within a WGS84 grid of values
+  with the supplied step-size, corner coordinates and directions
+  traveled for each axis."
+  [m-res ascii-map]
+  (let [{:keys [step corner travel]} ascii-map
+        [lon-corner lat-corner] corner
+        [lon-dir lat-dir] travel]
+    (fn [mod-h mod-v sample line]
+      {:pre [(m/valid-modis? m-res mod-h mod-v sample line)]}
+      (->> (m/modis->latlon m-res mod-h mod-v sample line)
+           (apply latlon->rowcol
+                  step
+                  lat-dir lon-dir
+                  lat-corner lon-corner)))))
 
 ;; ## MODIS Sampler
 ;;
@@ -143,20 +156,21 @@
 ;; produce a single chunk for 1km tiles. 250 meter data, with 16x the
 ;; pixels, would run at the same speed with 16x the machines.
 
-(defmapcatop [project-to-modis [m-res ll-res chunk-size]]
+(defmapcatop [project-to-modis [m-res ascii-info chunk-size]]
   ^{:doc "Accepts a MODIS tile coordinate and a month of PREC/L data
-  at `ll-res` resolution on the WGS84 grid, and samples the rain data
+  at `step` resolution on the WGS84 grid, and samples the rain data
   into chunks of pixels in the MODIS sinusoidal projection. The
   function emits a 2-tuple of the form `[chunk-idx chunk-seq]`.
 
   WARNING: Handles one tile at a time. Not good for 250m data!"}
   [rain-month mod-h mod-v]
-  (let [edge (m/pixels-at-res m-res)
-        numpix (#(* % %) edge)
+  (let [[width] (dimensions-for-step (:step ascii-info))
+        numpix (#(* % %) (m/pixels-at-res m-res))
         rdata (vec rain-month)]
     (for [chunk (range (/ numpix chunk-size))
-          :let [indexer (partial wgs84-index m-res ll-res mod-h mod-v)
+          :let [indexer (comp (partial apply rowcol->idx width)
+                              (wgs84-indexer m-res ascii-info))
                 tpos (partial m/tile-position m-res chunk-size chunk)]]
       [chunk (map rdata
                   (for [pixel (range chunk-size)]
-                    (apply indexer (tpos pixel))))])))
+                    (apply indexer mod-h mod-v (tpos pixel))))])))

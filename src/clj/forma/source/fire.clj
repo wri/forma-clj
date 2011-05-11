@@ -61,6 +61,14 @@
   (let [[month day year] (split datestring #"/")]
     (format "%s-%s-%s" year month day)))
 
+(defn mangle
+  "Mangles textlines connected with commas."
+  [line]
+  (map (fn [val]
+         (try (Float. val)
+              (catch Exception _ val)))
+       (split line #",")))
+
 (def
   ^{:doc "Predicate macro that converts confidence and temperature
   into a tuple of fire characteristics."}
@@ -107,28 +115,29 @@
   position and value all defined. In this case, the value `?tuple` is
   a `FireTuple` thrift object containing all relevant characteristics
   of fires for that particular day."
-  [source]
-  (<- [?dataset ?datestring ?t-res ?lat ?lon ?tuple]
-      (source ?line)
-      (p/mangle ?line :> ?lat ?lon ?kelvin _ _ ?date _ _ ?conf _ _ _)
+  [src]
+  (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
+      (src ?line)
+      (mangle ?line :> ?lat ?lon ?kelvin _ _ ?datestring _ _ ?conf _ _ _)
       (p/add-fields "fire" "01" :> ?dataset ?t-res)
-      (format-datestring ?date :> ?datestring)
+      (format-datestring ?datestring :> ?date)
       (fire-characteristics ?conf ?kelvin :> ?tuple)))
 
 (defn reproject-fires
   "Aggregates fire data at the supplied path by modis pixel at the
   supplied resolution."
-  [m-res source]
-  (let [fires (fire-source source)]
-    (<- [?dataset ?m-res ?t-res ?tilestring ?datestring ?sample ?line ?tuple]
+  [m-res src]
+  (let [fires (fire-source src)]
+    (<- [?dataset ?m-res ?t-res ?tilestring ?date ?sample ?line ?tuple]
         (p/add-fields m-res :> ?m-res)
-        (fires ?dataset ?datestring ?t-res ?lat ?lon ?tuple)
+        (fires ?dataset ?date ?t-res ?lat ?lon ?tuple)
         (latlon->modis m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
         (hv->tilestring ?mod-h ?mod-v :> ?tilestring))))
 
 ;; These come after the initial bucketing.
 ;;
-;; TODO: Split this business off into a separate job.
+;; TODO: Split this business off into a separate job. Incorporate this
+;;stuff 
 
 (defn aggregate-fires
   "Converts the datestring into a time period based on the supplied

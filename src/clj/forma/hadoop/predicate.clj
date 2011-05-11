@@ -54,13 +54,19 @@ I recommend wrapping queries that use this tap with
   [& fields]
   (vec fields))
 
-(defn mangle
-  "Mangles textlines connected with commas."
+(defn liberate
+  "Takes a line with an index as the first value and numbers as the
+  rest, and converts it into a 2-tuple formatted as `[idx, row-vals]`,
+  where `row-vals` are sealed inside an `int-array`.
+
+  Example usage:
+
+    (liberate \"1 12 13 14 15\")
+    ;=> [1 #<int[] [I@1b66e87>]"
   [line]
-  (map (fn [val]
-         (try (Float. val)
-              (catch Exception _ val)))
-       (split line #",")))
+  (let [[idx & row-vals] (map #(Integer. %)
+                              (split line #" "))]
+    [idx (int-array row-vals)]))
 
 (defmapop
   ^{:doc "Converts nested clojure vectors into an array of the
@@ -72,6 +78,14 @@ I recommend wrapping queries that use this tap with
   [window->array [type]]
   [window]
   [(into-array type (flatten window))])
+
+;; #### Defmapcatops
+
+(defmapcatop
+  ^{:doc "splits a sequence of values into nested 2-tuples formatted
+  as `<idx, val>`. Indexing is zero based."}
+  index [sequence]
+  (map-indexed vector sequence))
 
 ;; #### Aggregators
 
@@ -118,6 +132,15 @@ I recommend wrapping queries that use this tap with
 
 ;; ### Predicate Macros
 
+(def
+  ^{:doc "Takes a source of textlines representing rows of a gridded
+  dataset (with indices prepended onto each row), and generates a
+  source of `row`, `col` and `val`."}
+  break
+  (<- [?line :> ?row ?col ?val]
+      (liberate ?line :> ?row ?row-vec)
+      (index ?row-vec :> ?col ?val)))
+
 (defn vals->sparsevec
   "Returns an aggregating predicate macro that stitches values into a
   sparse vector with all `?val`s at `?idx`, and `empty-val` at all
@@ -160,7 +183,7 @@ I recommend wrapping queries that use this tap with
     (s ?mod-h ?mod-v ?window-col ?window-row ?window)"
   [gen in-syms dim-vec val sparse-val]
   (let [[outpos outval] (v/gen-non-nullable-vars 2)
-        dim-vec (if (coll? dim-vec) dim-vec (vector dim-vec))]
+        dim-vec (if (coll? dim-vec) dim-vec [dim-vec])]
     (reduce #(%2 %1)
             gen
             (for [[dim inpos] (map-indexed vector in-syms)

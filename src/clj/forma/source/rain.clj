@@ -10,10 +10,11 @@
 (ns forma.source.rain
   (:use cascalog.api
         [forma.hadoop.io :only (get-bytes)]
-        [forma.hadoop.predicate :only (window->array)]
+        [forma.hadoop.predicate :only (window->array
+                                       add-fields)]
         [forma.source.modis :only (hv->tilestring)]
         [forma.reproject :only (project-to-modis
-                                dimensions-at-res)])
+                                dimensions-for-step)])
   (:require [cascalog.ops :as c]
             [clojure.contrib.io :as io])
   (:import  [java.io File InputStream]
@@ -35,19 +36,19 @@
 ;;
 ;; The NOAA PRECL data comes in files of binary arrays, with one file
 ;; for each year. Each file holds 24 datasets, alternating between
-;; precip. rate in mm/day and total # of gauges, gridded in WGS84 at
-;; 0.5 degree resolution. No metadata exists to mark byte offsets. We
+;; precip. rate in mm/day and total # of gauges, gridded in WGS84 at a
+;; 0.5 degree step. No metadata exists to mark byte offsets. We
 ;; process these datasets using input streams, so we need to know in
 ;; advance how many bytes to read off per dataset.
 
 (def float-bytes (/ ^Integer (Float/SIZE)
                     ^Integer (Byte/SIZE)))
 
-(defn floats-for-res
+(defn floats-for-step
   "Length of the row of floats (in # of bytes) representing the earth
-  at the specified resolution."
-  [res]
-  (apply * float-bytes (dimensions-at-res res)))
+  at the specified spatial step."
+  [step]
+  (apply * float-bytes (dimensions-for-step step)))
 
 (defn input-stream
   "Attempts to coerce the given argument to an InputStream, with added
@@ -59,7 +60,7 @@
   `forma.source.rain/force-fill`."
   [arg]
   (let [^InputStream stream (io/input-stream arg)
-        rainbuf-size (* 24 (floats-for-res 0.5))]
+        rainbuf-size (* 24 (floats-for-step 0.5))]
     (try
       (.mark stream 0)
       (GZIPInputStream. stream rainbuf-size)
@@ -93,12 +94,12 @@
   "Generates a lazy seq of byte-arrays from a binary NOAA PREC/L
   file. Elements alternate between precipitation rate in mm / day and
   total # of gauges."
-  ([ll-res ^InputStream stream]
-     (let [arr-size (floats-for-res ll-res)
+  ([step ^InputStream stream]
+     (let [arr-size (floats-for-step step)
            buf (byte-array arr-size)]
        (if (pos? (force-fill stream buf))
          (lazy-seq
-          (cons buf (lazy-months ll-res stream)))
+          (cons buf (lazy-months step stream)))
          (.close stream)))))
 
 ;; Once we have the byte arrays returned by `lazy-months`, we need to
@@ -146,21 +147,21 @@
   "Returns a lazy seq of 2-tuples representing NOAA PREC/L rain
   data. Note that we take every other element in the lazy-months seq,
   skipping data concerning # of gauges."
-  [ll-res stream]
+  [step stream]
   (map-indexed make-tuple
-               (take-nth 2 (lazy-months ll-res stream))))
+               (take-nth 2 (lazy-months step stream))))
 
 ;; This is our first cascalog query -- we use `defmapcatop`, as we
 ;; need to split each file out into twelve separate tuples, one for
 ;; each month.
 
-(defmapcatop [unpack-rain [ll-res]]
+(defmapcatop [unpack-rain [step]]
   ^{:doc "Unpacks a PREC/L binary file for a given year, and returns a
 lazy sequence of 2-tuples, in the form of (month, data). Assumes that
 binary files are packaged as hadoop BytesWritable objects."}
   [stream]
   (let [bytes (get-bytes stream)]
-    (rain-tuples ll-res (input-stream bytes))))
+    (rain-tuples step (input-stream bytes))))
 
 (defn to-datestring
   "Processes an NOAA PRECL filename and integer month index, and
@@ -192,17 +193,17 @@ binary files are packaged as hadoop BytesWritable objects."}
 
 (defn rain-months
   "Cascalog subquery to extract all months from a directory of PREC/L
-  datasets at the supplied WGS84 spatial resolution, paired with a
+  datasets at the supplied WGS84 spatial step, paired with a
   datestring of the format `yyyy-mm-dd`. Source can be any tap that
   supplies PRECL files named precl_mon_v1.0.lnx.YYYY.gri0.5m(.gz,
   optionally)."
-  [ll-res source]
-  (<- [?dataset ?temporal-res ?date ?raindata]
-      (source ?filename ?file)
-      (unpack-rain [ll-res] ?file :> ?month ?raindata)
-      (to-datestring ?filename ?month :> ?date)
-      (identity "32" :> ?temporal-res)
-      (identity "precl" :> ?dataset)))
+  [ascii-info source]
+  (let [step (:step ascii-info)]
+    (<- [?dataset ?temporal-res ?date ?raindata]
+        (source ?filename ?file)
+        (unpack-rain [step] ?file :> ?month ?raindata)
+        (to-datestring ?filename ?month :> ?date)
+        (add-fields "precl" "32" :> ?dataset ?temporal-res))))
 
 ;; Something interesting occurs in the next few functions. Rather than
 ;; combine `cross-join` and `fancy-index` into one query, we've
@@ -219,23 +220,23 @@ binary files are packaged as hadoop BytesWritable objects."}
 ;; As described in [this thread](http://goo.gl/TviNn) on
 ;; [cascalog-user](http://goo.gl/Tqihs), this is called a cross-join;
 ;; we're taking the [cartesian product](http://goo.gl/r5Qsw) of the
-;; two sets. We accomplish this by feeding every tuple into an
-;; identity step with argument `m-res`, the supplied MODIS resolution
-;; into which we're translating the PRECL sets. `identity` produces
-;; the common dynamic variable `?spatial-res`, needed by
-;; `fancy-index`.
+;; two sets. We accomplish this by feeding every tuple into
+;; `forma.hadoop.predicate/add-fields` with argument `m-res`, the
+;; supplied MODIS resolution into which we're translating the PRECL
+;; sets. `identity` produces the common dynamic variable
+;; `?spatial-res`, needed by `fancy-index`.
 
 (defn cross-join
   "Unpacks all NOAA PRECL files (at the supplied resolution) located
   at `source`, and cross-joins each month produced with each unique
   MODIS tile referenced within `tile-seq`."
-  [m-res ll-res tile-seq source]
+  [m-res ascii-info tile-seq source]
   (let [tiles (memory-source-tap tile-seq)
-        precl (rain-months ll-res source)]
+        precl (rain-months ascii-info source)]
     (<- [?dataset ?spatial-res ?temporal-res ?mod-h ?mod-v ?date ?raindata]
         (tiles ?mod-h ?mod-v)
         (precl ?dataset ?temporal-res ?date ?raindata)
-        (identity m-res :> ?spatial-res))))
+        (add-fields m-res :> ?spatial-res))))
 
 ;; The problem with cross-joining is that every tuple being joined is
 ;; joined by a single reducer. We need to map the index sequences onto
@@ -253,11 +254,11 @@ binary files are packaged as hadoop BytesWritable objects."}
   query because the cross-join forces all tuples to be processed by a
   single reducer. This step allows the flow to branch out again from
   that bottleneck, when run on a cluster."
-  [m-res ll-res chunk-size source]
+  [m-res ascii-map chunk-size source]
   (<- [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk]
       (source ?dataset ?spatial-res ?temporal-res ?mod-h ?mod-v ?date ?raindata)
       (hv->tilestring ?mod-h ?mod-v :> ?tilestring)
-      (project-to-modis [m-res ll-res chunk-size]
+      (project-to-modis [m-res ascii-map chunk-size]
                         ?raindata ?mod-h ?mod-v :> ?chunkid ?chunk)
       (window->array [Float/TYPE] ?chunk :> ?float-chunk)))
 
@@ -267,21 +268,21 @@ binary files are packaged as hadoop BytesWritable objects."}
 
 (defn rain-chunks
   "Cascalog subquery to fully process a WGS84 float array at the
-  supplied resolution (`ll-res`) into tuples suitable for comparison
-  to any MODIS dataset at the supplied modis resolution (`m-res`),
-  partitioned by the supplied chunk size."
-  [m-res ll-res chunk-size tile-seq source]
+  supplied resolution (`:step`, within `ascii-map`) into tuples
+  suitable for comparison to any MODIS dataset at the supplied modis
+  resolution (`m-res`), partitioned by the supplied chunk size."
+  [m-res ascii-map chunk-size tile-seq source]
   (let [rnd (int (* 100000 (rand)))
         tmp (hfs-seqfile (str "/tmp/" rnd))]
-    (?- tmp (cross-join m-res ll-res tile-seq source))
-    (fancy-index m-res ll-res chunk-size tmp)))
+    (?- tmp (cross-join m-res ascii-map tile-seq source))
+    (fancy-index m-res ascii-map chunk-size tmp)))
 
 ;; An alternate formulation of `rain-chunks` that skipped the
 ;; intermediate sequencefile would be:
 ;;
-;;     (defn rain-chunks [m-res ll-res chunk-size tile-seq source]
-;;       (let [precl (cross-join m-res ll-res tile-seq source)]
-;;         (fancy-index m-res ll-res chunk-size precl)))
+;;     (defn rain-chunks [m-res ascii-map chunk-size tile-seq source]
+;;       (let [precl (cross-join m-res ascii-map tile-seq source)]
+;;         (fancy-index m-res ascii-map chunk-size precl)))
 ;;
 ;; This is worth testing on the cluster, though I suspect it simply
 ;; won't branch out to multiple reduce jobs, leaving one poor machine

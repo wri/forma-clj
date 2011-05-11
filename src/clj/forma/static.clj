@@ -17,51 +17,53 @@
 
 (def chunk-size 24000)
 
-(def static-datasets
-  ^{:doc "These are the static datasets, described briefly below.  The inner
-   keys (e.g., :ncols) are a quick transformation on the ASCII header, where
-   the coordinates for the upper left corner are presented, rather than the
-   lower left corner.  The only value that changes, then, is the y-coord.
+(def
+  ^{:doc "These are the static datasets, described briefly below. The
+  inner keys are a transformation on the ASCII header, where the
+  coordinates for the upper left corner are presented.
 
-   gadm   :: administrative boundaries, found [here](http://goo.gl/2N5CT),
-   and converted to a raster with the cell value given by ID_2, an integer
-   value corresponding to the most detailed administrative unit.
+   [NOAA PRECL](http://goo.gl/yDQhA) :: Global precipitation rates in
+   mm/day, gridded at 0.5 degree resolution. The linked dataset is 2.5
+   degree -- we use a higher resolution dataset in binary format.
 
-   ecoid  :: ecoregions according to the World Wildlife Fund. The technical
-   paper can be found [here](http://goo.gl/yvssq). The polygons are converted
-   to a raster for sampling - much like the admin boundaries - where each cell
-   is assigned the value of the ecoregion id, the most detailed eco unit.
+   gadm :: administrative boundaries, found
+   [here](http://goo.gl/2N5CT), and converted to a raster with the
+   cell value given by ID_2, an integer value corresponding to the
+   most detailed administrative unit.
 
-   hansen :: forest cover loss hotspots data for training at 500m resolution,
-   found [here](http://goo.gl/HqvCW). Note that this has been projected into
-   WGS84 from Sinusoidal (463.3127m res).  The time period is 2000-2005.
+   ecoid :: ecoregions according to the World Wildlife Fund. The
+   technical paper can be found [here](http://goo.gl/yvssq). The
+   polygons are converted to a raster for sampling - much like the
+   admin boundaries - where each cell is assigned the value of the
+   ecoregion id, the most detailed eco unit.
 
-   vcf    :: vegetation continuous field index, derived from MODIS products for
-   the year 2000, found [here](http://goo.gl/KW8y1), and used to define the
-   extent of the sample area, given by the Forest Cover Loss Hotspots training
-   data set."}
-  
-  {:gadm   {:ncols 36001
-            :nrows 13962
-            :xulcorner -180.000001
-            :yulcorner 83.635972
-            :cellsize 0.01
+   hansen :: forest cover loss hotspots data for training at 500m
+   resolution, found [here](http://goo.gl/HqvCW). Note that this has
+   been projected into WGS84 from Sinusoidal (463.3127m res).  The
+   time period is 2000-2005.
+
+   vcf :: vegetation continuous field index, derived from MODIS
+   products for the year 2000, found [here](http://goo.gl/KW8y1), and
+   used to define the extent of the sample area, given by the Forest
+   Cover Loss Hotspots training data set."}
+  static-datasets
+  {:precl  {:corner [0 -90]
+            :travel [+ +]
+            :step 0.5
+            :nodata -999}
+   :gadm   {:corner [-180.000001 83.635972]
+            :travel [+ -]
+            :step 0.01
             :nodata -9999}
-   :ecoid  {:ncols 36000
-            :nrows 17352
-            :xulcorner -179.99996728576
-            :yulcorner 83.628027
-            :cellsize 0.01
+   :ecoid  {:corner [-179.99996728576 83.628027]
+            :travel [+ -]
+            :step 0.01
             :nodata -9999}
-   :hansen {:ncols 86223
-            :nrows 19240
-            :xulcorner -179.99998844516
-            :yulcorner 40.164567
-            :cellsize 0.0041752289295106
+   :hansen {:corner [-179.99998844516 40.164567]
+            :travel [+ -]
+            :step 0.0041752289295106
             :nodata -9999}
-   :vcf    {:ncols 86223
-            :nrows 19240
-            :xulcorner -179.99998844516
-            :yulcorner 40.164567
-            :cellsize 0.0041752289295106
+   :vcf    {:corner [-179.99998844516 40.164567]
+            :travel [+ -]
+            :step 0.0041752289295106
             :nodata -9999}})

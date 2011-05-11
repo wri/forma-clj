@@ -13,9 +13,7 @@
                       ["1000" 28 7 208 5]
                       ["1000" 28 7 208 6]]))
 
-(def ascii-info {:ncols 3600
-                 :nrows 1737
-                 :xulcorner -180
-                 :yulcorner 83.7
-                 :cellsize 0.1
+(def ascii-info {:corner [-180 83.8]
+                 :travel [+ -]
+                 :step 0.1
                  :nodata -9999})
