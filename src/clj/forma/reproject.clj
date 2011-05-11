@@ -45,15 +45,19 @@
   (map #(quot % step) [360 180]))
 
 (defn line-torus
-  "TODO: Docstring and rename."
+  "Returns the magnitude of the difference between the supplied value
+  and the corner point within the supplied range. Values are assumed
+  to wrap around at the edge of the range. For example,
+
+    (line-torus + 10 -2 1) => 3
+    (line-torus + 10 -2 -3) => 9
+
+  The -3 value is assumed to have wrapped around the edge of the
+  range. Note that this function will wrap any number of times:
+
+    (line-torus + 10 -2 54) => 6"
   [dir range corner val]
-  (let [[min max] (condp = dir
-                      - [corner (dir corner range)]
-                      + [(dir corner range) corner])]
-    (loop [out val]
-      (cond (< out max) (recur (+ out range))
-            (> out min) (recur (- out range))  
-            :else (- out corner)))))
+  (mod (dir (- val corner)) range))
 
 (defn latlon->rowcol
   "Takes a coordinate pair and returns its [row, col] position on a

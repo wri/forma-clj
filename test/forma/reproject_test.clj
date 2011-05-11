@@ -3,6 +3,13 @@
   (:use midje.sweet
         [forma.matrix.utils :only (rowcol->idx)]))
 
+(facts "line-torus tests."
+  (line-torus + 180 45 46)   => 1
+  (line-torus + 180 -90 -88) => 2
+  (line-torus + 180 -88 -90) => 178
+  (line-torus - 180 45 46)   => 179
+  (line-torus + 10 -2 54)    => 6)
+
 (let [step 0.5
       [width] (dimensions-for-step step)
       rain-indexer (wgs84-indexer "1000" step + + -90 0)]
