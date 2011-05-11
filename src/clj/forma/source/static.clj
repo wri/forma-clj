@@ -35,7 +35,6 @@
                           (duck/read-lines old-file)))]
         (println line)))))
 
-
 ;; ### Sampling
 
 (defn sample-modis
