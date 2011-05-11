@@ -78,29 +78,36 @@
        [lat-corner lon-corner]
        [row col]))
 
-(defn rowcol->modis
-  "Returns the MODIS coordinates for the supplied row and column in an
-  ascii grid with the given step size, corner point and axial
-  directions of travel."
-  [m-res {:keys [step corner travel]} row col]
-  (let [[xul yul] corner
+(defn modis-indexer
+  "Generates a function that accepts WGS84 coordinates and returns the
+  corresponding `[mod-h, mod-v, sample, line]` in the modis grid at
+  the supplied resolution for an ASCII grid with the supplied
+  step-size, corner coordinates and directions traveled for each
+  axis."
+  [m-res ascii-map]
+  (let [{:keys [step corner travel]} ascii-map
+        [xul yul] corner
         [x-dir y-dir] travel]
-    (->> (rowcol->latlon step y-dir x-dir yul xul row col)
-         (apply m/latlon->modis m-res))))
+    (fn [row col]
+      (->> (rowcol->latlon step y-dir x-dir yul xul row col)
+          (apply m/latlon->modis m-res)))))
 
 (defn wgs84-indexer
   "Generates a function that accepts MODIS tile coordinates and
   returns the corresponding `[row, col]` within a WGS84 grid of values
   with the supplied step-size, corner coordinates and directions
-  traveled along each axis."
-  [m-res step lat-dir lon-dir lat-corner lon-corner]
-  (fn [mod-h mod-v sample line]
-    {:pre [(m/valid-modis? m-res mod-h mod-v sample line)]}
-    (->> (m/modis->latlon m-res mod-h mod-v sample line)
-         (apply latlon->rowcol
-                step
-                lat-dir lon-dir
-                lat-corner lon-corner))))
+  traveled for each axis."
+  [m-res ascii-map]
+  (let [{:keys [step corner travel]} ascii-map
+        [lon-corner lat-corner] corner
+        [lon-dir lat-dir] travel]
+    (fn [mod-h mod-v sample line]
+      {:pre [(m/valid-modis? m-res mod-h mod-v sample line)]}
+      (->> (m/modis->latlon m-res mod-h mod-v sample line)
+           (apply latlon->rowcol
+                  step
+                  lat-dir lon-dir
+                  lat-corner lon-corner)))))
 
 ;; ## MODIS Sampler
 ;;
@@ -149,7 +156,7 @@
 ;; produce a single chunk for 1km tiles. 250 meter data, with 16x the
 ;; pixels, would run at the same speed with 16x the machines.
 
-(defmapcatop [project-to-modis [m-res step chunk-size]]
+(defmapcatop [project-to-modis [m-res ascii-info chunk-size]]
   ^{:doc "Accepts a MODIS tile coordinate and a month of PREC/L data
   at `step` resolution on the WGS84 grid, and samples the rain data
   into chunks of pixels in the MODIS sinusoidal projection. The
@@ -157,12 +164,12 @@
 
   WARNING: Handles one tile at a time. Not good for 250m data!"}
   [rain-month mod-h mod-v]
-  (let [[width] (dimensions-for-step step)
+  (let [[width] (dimensions-for-step (:step ascii-info))
         numpix (#(* % %) (m/pixels-at-res m-res))
         rdata (vec rain-month)]
     (for [chunk (range (/ numpix chunk-size))
           :let [indexer (comp (partial apply rowcol->idx width)
-                              (wgs84-indexer m-res step + + -90 0))
+                              (wgs84-indexer m-res ascii-info))
                 tpos (partial m/tile-position m-res chunk-size chunk)]]
       [chunk (map rdata
                   (for [pixel (range chunk-size)]
