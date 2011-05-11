@@ -8,5 +8,4 @@ least one of these indices."
  (wgs84-index "1000" 0.5 8 6 12 12) => 172569)
 
 (fact (dimensions-at-res 0.5) => [720 360])
-
-(fact (fit-to-grid 0.5 -40 720 -42 0) => [4 0])
+(fact (fit-to-grid 0.5 -90 0 -42.1 0) => [95 0])

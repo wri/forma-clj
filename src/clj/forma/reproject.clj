@@ -58,6 +58,8 @@
 ;;
 ;; The idea here is that we want to bucket well based on the corner,
 ;;and never have any negative bucket values.
+;;
+;; -40 -> -39 becomes 0 -> 180
 
 (defn fit-to-grid
   "Takes a coordinate pair and returns its [row, col] position on a
