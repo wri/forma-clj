@@ -66,8 +66,8 @@
   "This query is for a point grid at higher resolution than the
   reference grid, which is the MODIS grid in this case. (This is a
   constraining assumption, since MODIS is hard-coded into this
-  function.  The aggregator function should be called as follows:
-  c/sum, c/max, where c is the prefix refering to cascalog.ops."
+  function.  The aggregator function must be either `cascalop.ops/sum`
+  or `cascalog.ops/max`."
   [dataset m-res ascii-info ascii-tap agg]
   (let [indexer (modis-indexer m-res ascii-info)]
     (construct ["?dataset" "?m-res" "?t-res" "?tilestring" "?sample" "?line" "?outval"]
