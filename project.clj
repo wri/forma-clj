@@ -18,7 +18,7 @@
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
                      [swank-clojure "1.4.0-SNAPSHOT"]
                      [clojure-source "1.2.0"]
-                     [marginalia "0.5.0"]
+                     [marginalia "0.5.1"]
                      [midje "1.1"]]
-  :namespaces [forma.hadoop.jobs.preprocess
-               forma.hadoop.jobs.load-tseries])
+  :aot [forma.hadoop.jobs.preprocess
+        forma.hadoop.jobs.load-tseries])
