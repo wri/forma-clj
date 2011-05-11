@@ -3,9 +3,15 @@
         [forma.source.modis :only (wgs84-resolution)]
         [forma.static :only (static-datasets)]
         [forma.reproject :only (wgs84-indexer
+<<<<<<< HEAD
                                 modis-indexer)])
   (:require [cascalog.ops :as c]
             [forma.source.modis :as m]
+=======
+                                modis-indexer)]
+        [clojure.string :only (split)])
+  (:require [forma.source.modis :as m]
+>>>>>>> wgs84-indexer now accepts ascii-map in all cases.
             [forma.hadoop.predicate :as p]
             [clojure.contrib.duck-streams :as duck]))
 
