@@ -4,7 +4,7 @@
         [forma.source.tilesets :only (tile-set)]
         [forma.static :only (static-datasets)]
         [forma.hadoop.io :only (chunk-tap)]        
-        [forma.reproject :only (modis-sample)]
+        [forma.reproject :only (wgs84-indexer)]
         [clojure.string :only (split)]
         [forma.hadoop.predicate :only (sparse-windower
                                        pixel-generator)])
@@ -109,12 +109,14 @@
 (defn upsample
   "sample values off of a lower resolution grid than the MODIS grid."
   [dataset m-res ascii-info grid-source pixel-tap]
-  (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?outval]
-      (grid-source ?row ?col ?outval)
-      (identity dataset :> ?dataset)
-      (identity "00" :> ?t-res)
-      (pixel-tap ?mod-h ?mod-v ?sample ?line)
-      (modis-sample ascii-info m-res ?mod-h ?mod-v ?sample ?line :> ?row ?col)))
+  (let [{:keys [step yul xul]} ascii-info
+        sampler (wgs84-indexer m-res step - + yul xul)]
+    (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?outval]
+        (grid-source ?row ?col ?outval)
+        (identity dataset :> ?dataset)
+        (identity "00" :> ?t-res)
+        (pixel-tap ?mod-h ?mod-v ?sample ?line)
+        (sampler ?mod-h ?mod-v ?sample ?line :> ?row ?col))))
 
 (defn sample-modis
   "This function is based on the reference MODIS grid (currently at

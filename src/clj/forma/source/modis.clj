@@ -1,5 +1,5 @@
 (ns forma.source.modis
-  (:use [forma.matrix.utils :only (idx->colrow)]
+  (:use [forma.matrix.utils :only (idx->rowcol)]
         [clojure.contrib.generic.math-functions :only (cos)]))
 
 ;; From the [user's guide](http://goo.gl/uoi8p) to MODIS product MCD45
@@ -89,8 +89,9 @@ referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
   "For a given MODIS chunk and index within that chunk, returns
   [sample, line] within the MODIS tile."
   [m-res chunk-size chunk index]
-  (idx->colrow (pixels-at-res m-res)
-               (+ index (* chunk chunk-size))))
+  (reverse
+   (idx->rowcol (pixels-at-res m-res)
+                (+ index (* chunk chunk-size)))))
 
 ;; ### Spherical Sinusoidal Projection
 

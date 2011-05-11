@@ -63,34 +63,36 @@ pred, `new-val` will be subbed into the sequence.
        (loop [idx start
               tup-seq tuples
               v (transient [])]
-         (let [[pos val] (first tup-seq)]
+         (let [[[pos val] & more] tup-seq]
            (cond (halt? idx tup-seq) (persistent! v)
-                 (when pos (= idx pos)) (recur (inc idx) (rest tup-seq) (conj! v val))
-                 (when pos (> idx pos)) (recur (inc idx) (rest tup-seq) (conj! v placeholder))
+                 (when pos (= idx pos)) (recur (inc idx) more (conj! v val))
+                 (when pos (> idx pos)) (recur (inc idx) more (conj! v placeholder))
                  :else (recur (inc idx) tup-seq (conj! v placeholder))))))))
 
-(defn idx->colrow
+(defn idx->rowcol
   "Takes an index within a row vector, and returns the appropriate
-  column and row within a matrix with the supplied dimensions. If only
+  row and column within a matrix with the supplied dimensions. If only
   one dimension is supplied, assumes a square matrix."
   ([edge idx]
-     (idx->colrow edge edge idx))
-  ([width height idx]
-     {:pre [(< idx (* width height)), (not (neg? idx))]
-      :post [(and (< (first %) width)
-                  (< (second %) height))]}
-     ((juxt #(mod % width) #(quot % width)) idx)))
+     (idx->rowcol edge edge idx))
+  ([nrows ncols idx]
+     {:pre [(< idx (* nrows ncols)), (not (neg? idx))]
+      :post [(and (< (first %) ncols)
+                  (< (second %) nrows))]}
+     ((juxt #(quot % ncols) #(mod % ncols)) idx)))
 
-(defn colrow->idx
+(defn rowcol->idx
   "For the supplied column and row in a rectangular matrix of
 dimensions (height, width), returns the corresponding index within a
 row vector of size (* width height). If only one dimension is
 supplied, assumes a square matrix."
-  ([edge col row]
-     (colrow->idx edge edge col row))
-  ([width height col row]
-     {:post [(< % (* width height))]}
-     (+ col (* width row))))
+  ([edge row col]
+     (rowcol->idx edge edge row col))
+  ([nrows ncols row col]
+     {:pre [(not (or (>= row nrows)
+                     (>= col ncols)))]
+      :post [(< % (* nrows ncols))]}
+     (+ col (* ncols row))))
 
 ;; ## Multi-Dimensional Matrix Operations
 

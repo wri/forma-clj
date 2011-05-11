@@ -13,7 +13,7 @@
         [forma.hadoop.predicate :only (window->array)]
         [forma.source.modis :only (hv->tilestring)]
         [forma.reproject :only (project-to-modis
-                                dimensions-at-res)])
+                                dimensions-for-step)])
   (:require [cascalog.ops :as c]
             [clojure.contrib.io :as io])
   (:import  [java.io File InputStream]
@@ -35,19 +35,19 @@
 ;;
 ;; The NOAA PRECL data comes in files of binary arrays, with one file
 ;; for each year. Each file holds 24 datasets, alternating between
-;; precip. rate in mm/day and total # of gauges, gridded in WGS84 at
-;; 0.5 degree resolution. No metadata exists to mark byte offsets. We
+;; precip. rate in mm/day and total # of gauges, gridded in WGS84 at a
+;; 0.5 degree step. No metadata exists to mark byte offsets. We
 ;; process these datasets using input streams, so we need to know in
 ;; advance how many bytes to read off per dataset.
 
 (def float-bytes (/ ^Integer (Float/SIZE)
                     ^Integer (Byte/SIZE)))
 
-(defn floats-for-res
+(defn floats-for-step
   "Length of the row of floats (in # of bytes) representing the earth
-  at the specified resolution."
-  [res]
-  (apply * float-bytes (dimensions-at-res res)))
+  at the specified spatial step."
+  [step]
+  (apply * float-bytes (dimensions-for-step step)))
 
 (defn input-stream
   "Attempts to coerce the given argument to an InputStream, with added
@@ -59,7 +59,7 @@
   `forma.source.rain/force-fill`."
   [arg]
   (let [^InputStream stream (io/input-stream arg)
-        rainbuf-size (* 24 (floats-for-res 0.5))]
+        rainbuf-size (* 24 (floats-for-step 0.5))]
     (try
       (.mark stream 0)
       (GZIPInputStream. stream rainbuf-size)
@@ -94,7 +94,7 @@
   file. Elements alternate between precipitation rate in mm / day and
   total # of gauges."
   ([ll-res ^InputStream stream]
-     (let [arr-size (floats-for-res ll-res)
+     (let [arr-size (floats-for-step ll-res)
            buf (byte-array arr-size)]
        (if (pos? (force-fill stream buf))
          (lazy-seq
