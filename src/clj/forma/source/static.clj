@@ -3,8 +3,7 @@
         [forma.source.modis :only (wgs84-resolution)]
         [forma.static :only (static-datasets)]
         [forma.reproject :only (wgs84-indexer
-                                modis-indexer)]
-        [clojure.string :only (split)])
+                                modis-indexer)])
   (:require [forma.source.modis :as m]
             [forma.hadoop.predicate :as p]
             [clojure.contrib.duck-streams :as duck]))
@@ -35,32 +34,8 @@
                           (duck/read-lines old-file)))]
         (println line)))))
 
-(defn liberate
-  "Takes a line with an index as the first value and numbers as the
-  rest, and converts it into a 2-tuple formatted as `[idx, row-vals]`,
-  where `row-vals` are sealed inside an `int-array`.
 
-  Example usage:
-
-    (liberate \"1 12 13 14 15\")
-    ;=> [1 #<int[] [I@1b66e87>]"
-  [line]
-  (let [[idx & row-vals] (map #(Integer. %)
-                              (split line #" "))]
-    [idx (int-array row-vals)]))
-
-(defn ascii-source
-  "create a source out of a pre-cleaned ASCII grid, which is
-  associated with a map of characteristic values, such as
-  resolution. The cleaned grid is located at `path` and has the row
-  index values prepended on the rows, with the ASCII
-  prelude (automatically added by Arc) already stripped and catalogued
-  in the map of characteristic values."
-  [line-source]
-  (<- [?row ?col ?val]
-      (line-source ?line)
-      (liberate ?line :> ?row ?row-vec)
-      (p/index ?row-vec :> ?col ?val)))
+;; ### Sampling
 
 (defn downsample
   "This query is for a point grid at higher resolution than the
@@ -68,10 +43,11 @@
   constraining assumption, since MODIS is hard-coded into this
   function.  The aggregator function must be either `cascalop.ops/sum`
   or `cascalog.ops/max`."
-  [dataset m-res ascii-info ascii-tap agg]
+  [dataset m-res ascii-info line-tap agg]
   (let [indexer (modis-indexer m-res ascii-info)]
     (construct ["?dataset" "?m-res" "?t-res" "?tilestring" "?sample" "?line" "?outval"]
-               [[ascii-tap "?row" "?col" "?val"]
+               [[line-tap "?line"]
+                [p/break "?line" :> "?row" "?col" "?val"]
                 [p/add-fields dataset "00" :> "?dataset" "?t-res"]
                 [m/hv->tilestring "?mod-h" "?mod-v" :> "?tilestring"]
                 [agg "?val" :> "?outval"]
@@ -79,10 +55,11 @@
 
 (defn upsample
   "sample values off of a lower resolution grid than the MODIS grid."
-  [dataset m-res ascii-info ascii-tap pixel-tap]
+  [dataset m-res ascii-info line-tap pixel-tap]
   (let [indexer (wgs84-indexer m-res ascii-info)]
     (construct ["?dataset" "?m-res" "?t-res" "?tilestring" "?sample" "?line" "?outval"]
-               [[ascii-tap "?row" "?col" "?outval"]
+               [[line-tap "?line"]
+                [p/break "?line" :> "?row" "?col" "?outval"]
                 [p/add-fields dataset "00" :> "?dataset" "?t-res"]
                 [m/hv->tilestring "?mod-h" "?mod-v" :> "?tilestring"]
                 [pixel-tap "?mod-h" "?mod-v" "?sample" "?line"]
@@ -99,9 +76,9 @@
   pixel is tagged with the ASCII grid cell that it falls within.  Note
   that the ASCII grid must be in WGS84, with row indices prepended and
   the ASCII header lopped off."
-  ([m-res dataset pixel-tap ascii-tap & [agg]]
+  ([m-res dataset pixel-tap line-tap & [agg]]
      (let [ascii-info (static-datasets (keyword dataset))]
        (if (>= (:cellsize ascii-info)
                (wgs84-resolution m-res))
-         (upsample dataset m-res ascii-info ascii-tap pixel-tap)
-         (downsample dataset m-res ascii-info ascii-tap agg)))))
+         (upsample   dataset m-res ascii-info line-tap pixel-tap)
+         (downsample dataset m-res ascii-info line-tap agg)))))
