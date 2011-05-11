@@ -19,10 +19,12 @@
 
 (def
   ^{:doc "These are the static datasets, described briefly below. The
-   inner keys (e.g., :ncols) are a quick transformation on the ASCII
-   header, where the coordinates for the upper left corner are
-   presented, rather than the lower left corner.  The only value that
-   changes, then, is the y-coord.
+  inner keys are a transformation on the ASCII header, where the
+  coordinates for the upper left corner are presented.
+
+   [NOAA PRECL](http://goo.gl/yDQhA) :: Global precipitation rates in
+   mm/day, gridded at 0.5 degree resolution. The linked dataset is 2.5
+   degree -- we use a higher resolution dataset in binary format.
 
    gadm :: administrative boundaries, found
    [here](http://goo.gl/2N5CT), and converted to a raster with the
@@ -45,19 +47,24 @@
    used to define the extent of the sample area, given by the Forest
    Cover Loss Hotspots training data set."}
   static-datasets
-  {:gadm   {:xul -180.000001
-            :yul 83.635972
+  {:precl  {:corner [0 -90]
+            :dirs [+ +]
+            :step 0.5
+            :nodata -999}
+   :gadm   {:corner [-180.000001 83.635972]
+            :dirs [+ -]
             :step 0.01
             :nodata -9999}
    :ecoid  {:xul -179.99996728576
             :yul 83.628027
+            :dirs [+ -]
             :step 0.01
             :nodata -9999}
-   :hansen {:xul -179.99998844516
-            :yul 40.164567
+   :hansen {:corner [-179.99998844516 40.164567]
+            :travel [+ -]
             :step 0.0041752289295106
             :nodata -9999}
-   :vcf    {:xul -179.99998844516
-            :yul 40.164567
+   :vcf    {:corner [-179.99998844516 40.164567]
+            :travel [+ -]
             :step 0.0041752289295106
             :nodata -9999}})

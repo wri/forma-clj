@@ -1,10 +1,12 @@
 (ns forma.source.static
   (:use cascalog.api
-        [forma.source.modis :only (wgs84-resolution)]
+        [forma.source.modis :only (wgs84-resolution
+                                   pixels-at-res)]
         [forma.source.tilesets :only (tile-set)]
         [forma.static :only (static-datasets)]
         [forma.hadoop.io :only (chunk-tap)]        
-        [forma.reproject :only (wgs84-indexer)]
+        [forma.reproject :only (wgs84-indexer
+                                rowcol->modis)]
         [clojure.string :only (split)]
         [forma.hadoop.predicate :only (sparse-windower
                                        pixel-generator)])
@@ -61,37 +63,6 @@
         (liberate ?line :> ?row ?row-vec)
         (p/index ?row-vec :> ?col ?val))))
 
-;; This is testing space for DAN! and it will probably be erased
-;; before we merge this feature branch.  I am trying to figure out a
-;; way to sample datasets at higher resolution than the MODIS base
-;; grid.
-
-(defn travel
-  "travel along a grid with cellsize `step` in the direction given by
-  `dir` from an initial position `start` to a position `pos` which is
-  intended to be, for most applications, row or column within the
-  grid.  Note that this takes you to the centroid of the row or column
-  position that you specify."
-  [step dir start pos]
-  (-> start (dir (* pos step)) (dir (/ step 2))))
-
-;; TODO: this just needs the corner and cell size.
-(defn rowcol->latlon
-  "Given an ASCII header map, find the latlon of the centroid of
-  a cell given by `row` and `col`."
-  [step yul xul row col]
-  (map (partial travel step)
-       [- +]
-       [yul xul]
-       [row col]))
-
-(defn rowcol->modis
-  "first convert row col into lat lon, and then convert lat lon
-  into modis characteristics at resolution `m-res`."
-  [m-res {:keys [step yul xul]} row col]
-  (->> (rowcol->latlon step yul xul row col)
-       (apply m/latlon->modis m-res)))
-
 (defn downsample
   "This query is for a point grid at higher resolution than the
   reference grid, which is the MODIS grid in this case. (This is a
@@ -109,14 +80,16 @@
 (defn upsample
   "sample values off of a lower resolution grid than the MODIS grid."
   [dataset m-res ascii-info grid-source pixel-tap]
-  (let [{:keys [step yul xul]} ascii-info
-        sampler (wgs84-indexer m-res step - + yul xul)]
+  (let [{:keys [step corner travel]} ascii-info
+        [xul yul] corner
+        [x-dir y-dir] travel
+        indexer (wgs84-indexer m-res step y-dir x-dir yul xul)]
     (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?outval]
         (grid-source ?row ?col ?outval)
         (identity dataset :> ?dataset)
         (identity "00" :> ?t-res)
         (pixel-tap ?mod-h ?mod-v ?sample ?line)
-        (sampler ?mod-h ?mod-v ?sample ?line :> ?row ?col))))
+        (indexer ?mod-h ?mod-v ?sample ?line :> ?row ?col))))
 
 (defn sample-modis
   "This function is based on the reference MODIS grid (currently at
@@ -144,6 +117,15 @@
   (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?val]
       (src ?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?val)
       (m/hv->tilestring ?mod-h ?mod-v :> ?tilestring)))
+
+;; TODO:
+;;
+;; Convert to pixels-at-res, so we get the width right. Also, get that
+;; nodata value working here, instead of 0.
+;;
+;; Move this stuff into the preprocess namespace.
+;;
+;; Add documentation in reproject.
 
 (defn static-chunker
   "Last thing we need is the chunk-tap!"

@@ -14,12 +14,6 @@
 ;; which WGS84 indices to sample for the data at each MODIS
 ;; pixel. (The following assume that WGS84 data is held in a row
 ;; vector.)
-;;
-;; In their current version, these functions make the assumption that
-;; the WGS84 grid begins at (-90, 0), with columns moving east and
-;; rows moving north. This goes against the MODIS convention of
-;; beginning at (-180, 90), and moving east and south. Future versions
-;; will accomodate arbitrary zero-points.
 
 (defn bucket
   "Takes a floating-point value and step size, and returns the
@@ -33,6 +27,17 @@
   [step val]
   (->> step (/ 1) (* val) Math/floor int))
 
+(defn travel
+  "travel along a grid with cellsize `step` in the direction given by
+  `dir` from an initial position `start` to a position `pos` which is
+  intended to be, for most applications, row or column within the
+  grid.  Note that this takes you to the centroid of the row or column
+  position that you specify."
+  [step dir start pos]
+  (-> start
+      (dir (* pos step))
+      (dir (/ step 2))))
+
 (defn dimensions-for-step
   "returns the <horz, vert> dimensions of a WGS84 grid with the
   supplied spatial step between pixels."
@@ -42,15 +47,15 @@
 (defn line-torus
   "TODO: Docstring and rename."
   [dir range corner val]
-  (let [[min max] (if (= dir -)
-                    [corner (dir corner range)]
-                    [(dir corner range) corner])]
+  (let [[min max] (condp = dir
+                      - [corner (dir corner range)]
+                      + [(dir corner range) corner])]
     (loop [out val]
       (cond (< out max) (recur (+ out range))
             (> out min) (recur (- out range))  
             :else (- out corner)))))
 
-(defn fit-to-grid
+(defn latlon->rowcol
   "Takes a coordinate pair and returns its [row, col] position on a
   WGS84 grid with the supplied spatial resolution and width in
   columns."
@@ -58,6 +63,26 @@
   (map (partial bucket step)
        [(line-torus lat-dir 180 lat-corner lat)
         (line-torus lon-dir 360 lon-corner lon)]))
+
+(defn rowcol->latlon
+  "Returns the coordinates of the centroid of the point defined by
+  `row` and `col` on an ascii grid with the supplied corner point and
+  step size."
+  [step lat-dir lon-dir lat-corner lon-corner row col]
+  (map (partial travel step)
+       [lat-dir lon-dir]
+       [lat-corner lon-corner]
+       [row col]))
+
+(defn rowcol->modis
+  "Returns the MODIS coordinates for the supplied row and column in an
+  ascii grid with the given step size, corner point and axial
+  directions of travel."
+  [m-res {:keys [step corner travel]} row col]
+  (let [[xul yul] corner
+        [x-dir y-dir] travel]
+    (->> (rowcol->latlon step y-dir x-dir yul xul row col)
+         (apply m/latlon->modis m-res))))
 
 (defn wgs84-indexer
   "Generates a function that accepts MODIS tile coordinates and
@@ -68,7 +93,7 @@
   (fn [mod-h mod-v sample line]
     {:pre [(m/valid-modis? m-res mod-h mod-v sample line)]}
     (->> (m/modis->latlon m-res mod-h mod-v sample line)
-         (apply fit-to-grid step lat-dir lon-dir lat-corner
+         (apply latlon->rowcol step lat-dir lon-dir lat-corner
                 lon-corner))))
 
 ;; ## MODIS Sampler
