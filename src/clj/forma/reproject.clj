@@ -34,9 +34,7 @@
   grid.  Note that this takes you to the centroid of the row or column
   position that you specify."
   [step dir start pos]
-  (-> start
-      (dir (* pos step))
-      (dir (/ step 2))))
+  (dir start (* pos step) (/ step 2)))
 
 (defn dimensions-for-step
   "returns the <horz, vert> dimensions of a WGS84 grid with the
