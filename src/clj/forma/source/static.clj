@@ -56,12 +56,11 @@
   index values prepended on the rows, with the ASCII
   prelude (automatically added by Arc) already stripped and catalogued
   in the map of characteristic values."
-  [path]
-  (let [source (hfs-textline path)]
-    (<- [?row ?col ?val]
-        (source ?line)
-        (liberate ?line :> ?row ?row-vec)
-        (p/index ?row-vec :> ?col ?val))))
+  [line-source]
+  (<- [?row ?col ?val]
+      (line-source ?line)
+      (liberate ?line :> ?row ?row-vec)
+      (p/index ?row-vec :> ?col ?val)))
 
 (defn downsample
   "This query is for a point grid at higher resolution than the
@@ -69,27 +68,27 @@
   constraining assumption, since MODIS is hard-coded into this
   function.  The aggregator function should be called as follows:
   c/sum, c/max, where c is the prefix refering to cascalog.ops."
-  [dataset m-res ascii-info grid-source agg]
-  (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?outval]
-      (grid-source ?row ?col ?val)
-      (identity dataset :> ?dataset)
-      (identity "00" :> ?t-res)
+  [dataset m-res ascii-info ascii-tap agg]
+  (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?outval]
+      (rowcol->modis m-res ascii-info ?row ?col :> ?mod-h ?mod-v ?sample ?line)
+      (ascii-tap ?row ?col ?val)
       (agg ?val :> ?outval)
-      (rowcol->modis m-res ascii-info ?row ?col :> ?mod-h ?mod-v ?sample ?line)))
+      (m/hv->tilestring ?mod-h ?mod-v :> ?tilestring)
+      (p/add-fields dataset "00" :> ?dataset ?t-res)))
 
 (defn upsample
   "sample values off of a lower resolution grid than the MODIS grid."
-  [dataset m-res ascii-info grid-source pixel-tap]
+  [dataset m-res ascii-info ascii-tap pixel-tap]
   (let [{:keys [step corner travel]} ascii-info
         [lon0 lat0] corner
         [lon-dir lat-dir] travel
         indexer (wgs84-indexer m-res step lat-dir lon-dir lat0 lon0)]
-    (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?outval]
-        (grid-source ?row ?col ?outval)
-        (identity dataset :> ?dataset)
-        (identity "00" :> ?t-res)
+    (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?outval]
+        (ascii-tap ?row ?col ?outval)
         (pixel-tap ?mod-h ?mod-v ?sample ?line)
-        (indexer ?mod-h ?mod-v ?sample ?line :> ?row ?col))))
+        (indexer ?mod-h ?mod-v ?sample ?line :> ?row ?col)
+        (m/hv->tilestring ?mod-h ?mod-v :> ?tilestring)
+        (p/add-fields dataset "00" :> ?dataset ?t-res))))
 
 (defn sample-modis
   "This function is based on the reference MODIS grid (currently at
@@ -102,17 +101,9 @@
   pixel is tagged with the ASCII grid cell that it falls within.  Note
   that the ASCII grid must be in WGS84, with row indices prepended and
   the ASCII header lopped off."
-  ([m-res dataset pixel-tap ascii-path & [agg]]
-     (let [ascii-info ((keyword dataset) static-datasets)
-           grid-source (ascii-source ascii-path)]
+  ([m-res dataset pixel-tap ascii-tap & [agg]]
+     (let [ascii-info ((keyword dataset) static-datasets)]
        (if (>= (:cellsize ascii-info)
                (wgs84-resolution m-res))
-         (upsample dataset m-res ascii-info grid-source pixel-tap)
-         (downsample dataset m-res ascii-info grid-source agg)))))
-
-(defn tilestringer
-  "TODO: DOCS"
-  [src]
-  (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?val]
-      (src ?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?val)
-      (m/hv->tilestring ?mod-h ?mod-v :> ?tilestring)))
+         (upsample dataset m-res ascii-info ascii-tap pixel-tap)
+         (downsample dataset m-res ascii-info ascii-tap agg)))))
