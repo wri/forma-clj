@@ -48,16 +48,15 @@
    Cover Loss Hotspots training data set."}
   static-datasets
   {:precl  {:corner [0 -90]
-            :dirs [+ +]
+            :travel [+ +]
             :step 0.5
             :nodata -999}
    :gadm   {:corner [-180.000001 83.635972]
-            :dirs [+ -]
+            :travel [+ -]
             :step 0.01
             :nodata -9999}
-   :ecoid  {:xul -179.99996728576
-            :yul 83.628027
-            :dirs [+ -]
+   :ecoid  {:corner [-179.99996728576 83.628027]
+            :travel [+ -]
             :step 0.01
             :nodata -9999}
    :hansen {:corner [-179.99998844516 40.164567]
