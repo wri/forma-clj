@@ -18,6 +18,8 @@
 
 ;; De-seasonalize time-series
 
+;; TODO: What's a monthly dummy vector? Can you describe why we need
+;; these?
 (defn seasonal-rows [n]
   "lazy sequence of monthly dummy vectors."
   (->> (cycle (cons 1 (repeat 11 0)))
@@ -145,10 +147,9 @@
   [bad-set reli-coll val-coll]
   (let [avg (act-on-good average
                          (mask bad-set reli-coll val-coll))]
-    (replace-index-set
-     (bad-ends bad-set reli-coll)
-     avg
-     val-coll)))
+    (replace-index-set (bad-ends bad-set reli-coll)
+                       avg
+                       val-coll)))
 
 ;; TODO: This function works, but it's ugly.  Clean up. And put in
 ;; pre- and post-conditions.
@@ -162,22 +163,16 @@
   is not true, then an adjustment will have to be made to this function."
   [bad-set good-set quality-coll value-coll]
   (if (empty? (filter bad-set quality-coll)) nil
-      (let [bad-end-set (bad-ends
-                         bad-set
-                         quality-coll)
-            new-qual (replace-index-set
-                      bad-end-set
-                      (first good-set)
-                      quality-coll)
-            new-vals (neutralize-ends
-                      bad-set
-                      quality-coll
-                      value-coll)
-            good-seq (positions
-                      (complement bad-set)
-                      new-qual)]
+      (let [bad-end-set (bad-ends bad-set quality-coll)
+            new-qual (replace-index-set bad-end-set
+                                        (first good-set)
+                                        quality-coll)
+            new-vals (neutralize-ends bad-set
+                                      quality-coll
+                                      value-coll)
+            good-seq (positions (complement bad-set)
+                                new-qual)]
         (vec (flatten
               (vector (map (partial stretch-ts new-vals)
                            (partition 2 1 good-seq))
                       (nth new-vals (last good-seq))))))))
-
