@@ -66,25 +66,29 @@
 ;; good and feasible (easy) bonus to utilize the reliability data.
 
 (defn whoop-full
-  "`whoop-full` will find the greatest OLS drop over a timeseries `ts` given 
-  sub-timeseries of length `long-block`.  The drops are smoothed by a moving 
-  average window of length `window`."
-  [ts reli-ts long-block window]
-  (->> (deseasonalize ts)
-       (windowed-apply ols-coefficient long-block)
-       (windowed-apply average window)
-       (make-monotonic min)))
+  "`whoop-full` will find the greatest OLS drop over a timeseries `ts`
+  given sub-timeseries of length `long-block`.  The drops are smoothed
+  by a moving average window of length `window`."
+  ([long-block window ts]
+     (whoop-full ts [] long-block window))
+  ([long-block window ts reli-ts]
+     (->> (deseasonalize ts)
+          (windowed-apply ols-coefficient long-block)
+          (windowed-apply average window)
+          (make-monotonic min))))
 
 (defn whoopbang
   "`whoopbang` preps the short-term drop for the merge into the other data
   by separating out the reference period and the rest of the observations
   for estimation, that is, `for-est`!"
-  [ts reli-ts ref-pd start-pd end-pd long-block window]
-  (let [offset (+ long-block window)
-        [x y z] (map #(-> % (- offset) (+ 2)) [ref-pd start-pd end-pd])
-        full-ts (whoop-full ts reli-ts long-block window)]
-    {:reference (subvec full-ts (dec x) x)
-     :for-est   (subvec full-ts (dec y) z)}))
+  ([ref-pd start-pd end-pd long-block window ts]
+     (whoopbang ts [] ref-pd start-pd end-pd long-block window))
+  ([ref-pd start-pd end-pd long-block window ts reli-ts]
+     (let [offset (+ long-block window)
+           [x y z] (map #(-> % (- offset) (+ 2)) [ref-pd start-pd end-pd])
+           full-ts (whoop-full long-block window ts reli-ts)]
+       {:reference (subvec full-ts (dec x) x)
+        :for-est   (subvec full-ts (dec y) z)})))
 
 ;; ### WHIZBANG
 
@@ -105,7 +109,7 @@
   This function was first used to create a time-trend variable to extract
   the linear trend from a time-series (ndvi)."
   [v]
-  (range 1 (inc (count v))))
+  (map inc (range (count v))))
 
 (defn test-cof
   [ts & cof]
