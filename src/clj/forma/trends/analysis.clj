@@ -28,7 +28,10 @@
   [ts]
   (let [ycol (i/trans [ts])
         X (time-trend-cofactor (count ts))]
-    (i/sel (i/mmult (variance-matrix X) (i/trans X) ycol) 1 0)))
+    (i/sel (i/mmult (variance-matrix X)
+                    (i/trans X)
+                    ycol)
+           1 0)))
 
 (defn windowed-apply 
   "apply a function [f] to a window along a sequence [xs] of length [window]"
@@ -87,7 +90,7 @@
      (let [offset (+ long-block window)
            [x y z] (map #(-> % (- offset) (+ 2)) [ref-pd start-pd end-pd])
            full-ts (whoop-full long-block window ts reli-ts)]
-       {:reference (subvec full-ts (dec x) x)
+       {:reference (full-ts (dec x))
         :for-est   (subvec full-ts (dec y) z)})))
 
 ;; ### WHIZBANG

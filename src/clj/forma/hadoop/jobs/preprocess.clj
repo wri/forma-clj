@@ -117,6 +117,7 @@
                     ascii-path
                     (s3-path output-path))))
 
+;;TODO: call read-string on the args.
 (defn -main
   "Wrapper to allow for various calls to chunking functions."
   [func-name & args]
