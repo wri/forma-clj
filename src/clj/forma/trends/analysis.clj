@@ -87,13 +87,27 @@
   by separating out the reference period and the rest of the observations
   for estimation, that is, `for-est`!"
   ([ref-pd start-pd end-pd long-block window ts]
-     (whoopbang ts [] ref-pd start-pd end-pd long-block window))
+     (whoopbang ref-pd start-pd end-pd long-block window ts []))
   ([ref-pd start-pd end-pd long-block window ts reli-ts]
      (let [offset (+ long-block window)
            [x y z] (map #(-> % (- offset) (+ 2)) [ref-pd start-pd end-pd])
            full-ts (whoop-full long-block window ts reli-ts)]
        {:reference (full-ts (dec x))
         :for-est   (subvec full-ts (dec y) z)})))
+
+(defn whoop-shell
+  [long-block window ref p-start p-end tseries-start tseries-end tseries]
+  (let [[ref p-start p-end] (map #(int (- % tseries-start)) [ref p-start p-end])]
+    (map (whoopbang ref p-start p-end long-block window tseries)
+         [:reference :for-est])))
+
+(defn whoop-shell
+  [ts-start ts-end ts-series options-map]
+  (let [[ref p-start p-end long-block window] (map options-map
+                                                   [:ref])
+        [ref p-start p-end] (map #(int (- % ts-start)) [ref p-start p-end])]
+    (map (whoopbang ref p-start p-end long-block window tseries)
+         [:reference :for-est])))
 
 ;; WHIZBANG
 
