@@ -30,7 +30,7 @@
   "Given a source of chunks, this subquery generates timeseries with
   all relevant accompanying information."
   [chunk-source]
-  (<- [?dataset ?spatial-res ?temporal-res ?tile-h ?tile-v ?sample ?line ?pix-idx ?t-start ?t-end ?tseries]
+  (<- [?dataset ?spatial-res ?temporal-res ?tile-h ?tile-v ?sample ?line ?t-start ?t-end ?tseries]
       (chunk-source ?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?int-chunk)
       (count ?int-chunk :> ?chunk-size)
       (extract-tseries ?temporal-res ?date ?int-chunk :> ?pix-idx ?t-start ?t-end ?tseries)

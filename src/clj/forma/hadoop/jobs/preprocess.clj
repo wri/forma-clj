@@ -74,8 +74,9 @@
           src (s/sample-modis m-res dataset pix-tap line-tap agg)]
       (?- (chunk-tap output-path)
           (sparse-windower src
-                           ["?sample" "?line"] "?val"
-                           width height -9999)))))
+                           ["?sample" "?line"] "?val" width height
+                           -9999)))))
+
 (defn modis-main
   "Example usage:
 
@@ -116,6 +117,7 @@
                     ascii-path
                     (s3-path output-path))))
 
+;;TODO: call read-string on the args.
 (defn -main
   "Wrapper to allow for various calls to chunking functions."
   [func-name & args]

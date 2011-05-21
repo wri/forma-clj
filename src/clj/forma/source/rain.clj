@@ -193,10 +193,12 @@ binary files are packaged as hadoop BytesWritable objects."}
 
 (defn rain-months
   "Cascalog subquery to extract all months from a directory of PREC/L
-  datasets at the supplied WGS84 spatial step, paired with a
-  datestring of the format `yyyy-mm-dd`. Source can be any tap that
-  supplies PRECL files named precl_mon_v1.0.lnx.YYYY.gri0.5m(.gz,
-  optionally)."
+  datasets with the supplied map of WGS84 dataset information, paired
+  with a datestring of the format `yyyy-mm-dd`. (See `forma.static`
+  for examples of well-formed wgs84 dataset maps.)
+
+  Source can be any tap that supplies PRECL files named
+  precl_mon_v1.0.lnx.YYYY.gri0.5m(.gz, optionally)."
   [ascii-info source]
   (let [step (:step ascii-info)]
     (<- [?dataset ?temporal-res ?date ?raindata]
@@ -223,7 +225,7 @@ binary files are packaged as hadoop BytesWritable objects."}
 ;; two sets. We accomplish this by feeding every tuple into
 ;; `forma.hadoop.predicate/add-fields` with argument `m-res`, the
 ;; supplied MODIS resolution into which we're translating the PRECL
-;; sets. `identity` produces the common dynamic variable
+;; sets. `add-fields` produces the common dynamic variable
 ;; `?spatial-res`, needed by `fancy-index`.
 
 (defn cross-join
@@ -270,7 +272,7 @@ binary files are packaged as hadoop BytesWritable objects."}
   "Cascalog subquery to fully process a WGS84 float array at the
   supplied resolution (`:step`, within `ascii-map`) into tuples
   suitable for comparison to any MODIS dataset at the supplied modis
-  resolution (`m-res`), partitioned by the supplied chunk size."
+  resolution `m-res`, partitioned by the supplied chunk size."
   [m-res ascii-map chunk-size tile-seq source]
   (let [rnd (int (* 100000 (rand)))
         tmp (hfs-seqfile (str "/tmp/" rnd))]

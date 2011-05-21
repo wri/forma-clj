@@ -134,10 +134,9 @@
         (latlon->modis m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
         (hv->tilestring ?mod-h ?mod-v :> ?tilestring))))
 
-;; These come after the initial bucketing.
+;; TODO: Split this business off into a separate job.
 ;;
-;; TODO: Split this business off into a separate job. Incorporate this
-;;stuff 
+;; #### Time Series Processing
 
 (defn aggregate-fires
   "Converts the datestring into a time period based on the supplied

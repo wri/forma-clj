@@ -138,26 +138,31 @@ resolution. `DateTime` objects can be created with `clj-time`'s
   [res]
   (periodize res (time/now)))
 
-;; ### Jobtag
-;;
-;; TODO: -- more information on what's going on here.
 (defn jobtag
-  "Generates a unique tag for a job, based on the current time."
+  "Generates a unique string based on the current date and time. For
+  example, on May 11th, 2011:
+
+  (jobtag)
+   => \"20110511T221422Z\"
+
+  `jobtag` is useful for hadoop runs in which data must be bucketed
+  into a unique directory."
   []
   (unparse (formatters :basic-date-time-no-ms)
            (time/now)))
 
-;; TODO: Add docstrings
 (defn msecs-from-epoch
-  "Docstring."
+  "Total number of milliseconds passed since January 1st, 1970 (the
+  Unix epoch)."
   [date]
   (time/in-msecs
    (time/interval (time/epoch) date)))
 
 (defn msec-range
-  "Docstring."
-  [start end]
-  (let [total-months (inc (delta-periods month 1 start end))]
+  "Returns the difference, in milliseconds, between two date-time
+  objects created with `clj-time.core/date-time`."
+  [start-date end-date]
+  (let [total-months (inc (delta-periods month 1 start-date end-date))]
     (for [month-offset (range total-months)]
-      (msecs-from-epoch (time/plus start
+      (msecs-from-epoch (time/plus start-date
                                    (time/months month-offset))))))
