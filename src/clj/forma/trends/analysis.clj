@@ -1,5 +1,5 @@
 (ns forma.trends.analysis
-  (:use [forma.date-time :only (datetime->period)]
+  (:use [forma.date-time :only (datetime->period relative-period)]
         [forma.matrix.utils :only (variance-matrix average)]
         [forma.trends.filter :only (deseasonalize make-reliable)]
         [clojure.contrib.math :only (sqrt)])
@@ -98,12 +98,9 @@
 
 (defn whoop-shell
   [{:keys [ref-date est-start est-end t-res long-block window]} ts-start ts-series]
-  (let [[ref p-start p-end] (map (comp
-                                  int
-                                  #(- % ts-start)
-                                  (partial datetime->period t-res))
-                                 [ref-date est-start est-end])]
-    (map (whoopbang ref p-start p-end long-block window ts-series)
+  (let [[ref-date est-start est-end]
+        (relative-period t-res ts-start ref-date est-start est-end)]
+    (map (whoopbang ref-date est-start est-end long-block window ts-series)
          [:reference :for-est])))
 
 ;; WHIZBANG
