@@ -1,5 +1,6 @@
 (ns forma.trends.analysis
-  (:use [forma.matrix.utils :only (variance-matrix average)]
+  (:use [forma.date-time :only (datetime->period)]
+        [forma.matrix.utils :only (variance-matrix average)]
         [forma.trends.filter :only (deseasonalize make-reliable)]
         [clojure.contrib.math :only (sqrt)])
   (:require [incanter.core :as i]
@@ -96,17 +97,13 @@
         :for-est   (subvec full-ts (dec y) z)})))
 
 (defn whoop-shell
-  [long-block window ref p-start p-end tseries-start tseries-end tseries]
-  (let [[ref p-start p-end] (map #(int (- % tseries-start)) [ref p-start p-end])]
-    (map (whoopbang ref p-start p-end long-block window tseries)
-         [:reference :for-est])))
-
-(defn whoop-shell
-  [ts-start ts-end ts-series options-map]
-  (let [[ref p-start p-end long-block window] (map options-map
-                                                   [:ref])
-        [ref p-start p-end] (map #(int (- % ts-start)) [ref p-start p-end])]
-    (map (whoopbang ref p-start p-end long-block window tseries)
+  [{:keys [ref-date est-start est-end t-res long-block window]} ts-start ts-series]
+  (let [[ref p-start p-end] (map (comp
+                                  int
+                                  #(- % ts-start)
+                                  (partial datetime->period t-res))
+                                 [ref-date est-start est-end])]
+    (map (whoopbang ref p-start p-end long-block window ts-series)
          [:reference :for-est])))
 
 ;; WHIZBANG

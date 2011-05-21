@@ -67,13 +67,6 @@
 (def test-data [["ndvi" "1000" "32" 8 6 100 100 361 491 ndvi1]
                 ["ndvi" "1000" "32" 8 6 100 101 361 491 ndvi2]])
 
-(defn tester-casc [data]
-  (let [ref (int (datetime->period "32" "2005-12-01"))]
-    (?<- (stdout)
-         [?h ?v ?s ?l ?refdata]
-         (data ?dset ?s-res ?t-res ?h ?v ?s ?l ?t-start ?t-end ?tseries)
-         (whoop-shell 15 5 ref ref ?t-end ?t-start ?t-end ?tseries :> ?refdata ?estdata))))
-
 (def options-map
   {:ref-date  "2005-12-01"
    :est-start "2005-12-01"
@@ -82,18 +75,12 @@
    :long-block 15
    :window     5})
 
-(defn mk-transform
-  [{:keys [ref-date t-res]}]
-  (let [ref (int (datetime->period t-res ref-date))]
-    (<- [?t-start ?t-end ?tseries :> ?refdata ?estdata]
-        (whoop-shell 15 5 ref ref ?t-end ?t-start ?t-end ?tseries :> ?refdata ?estdata))))
-
 (defn tester-casc
   [data]
   (?<- (stdout)
        [?h ?v ?s ?l ?refdata]
        (data ?dset ?s-res ?t-res ?h ?v ?s ?l ?t-start ?t-end ?t-series)
-       (whoop-shell ?t-start ?t-end ?t-series options-map :> ?refdata ?estdata)))
+       (whoop-shell options-map ?t-start ?t-series :> ?refdata ?estdata)))
 
 (defn -main
   "TODO: Docs.
