@@ -151,6 +151,21 @@ resolution. `DateTime` objects can be created with `clj-time`'s
   (unparse (formatters :basic-date-time-no-ms)
            (time/now)))
 
+(defn relative-period
+  "convert periods (string) to an integer value that is relative to the
+  start period.
+
+  Example usage:
+  (relative-period \"32\" 391 [\"2005-02-01\" \"2005-03-01\"])
+  => (30 31)"
+  [t-res start pd-vec]
+  (map (comp
+        int
+        #(- % start)
+        (partial datetime->period t-res))
+       pd-vec))
+
+
 (defn msecs-from-epoch
   "Total number of milliseconds passed since January 1st, 1970 (the
   Unix epoch)."
