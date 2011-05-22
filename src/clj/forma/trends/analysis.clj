@@ -53,9 +53,9 @@
           []
           coll))
 
-;; WHOOPBANG
+;; WHOOPBANG :: Collect the short-term drop associated with a time-series
 
-;; The following is a routine, under the header WHOOPBANG,
+;; The following is a routine, under the header WHOOPBANG (original name),
 ;; which collects the greatest short-term drop in a preconditioned and
 ;; filtered time-series of a vegetation index.  Currently, the final
 ;; function requires three values: (1) time-series as a vector or
@@ -71,39 +71,40 @@
 ;; deseasonalize the data, which is reflected below.  It would be a
 ;; good and feasible (easy) bonus to utilize the reliability data.
 
-(defn whoop-full
-  "`whoop-full` will find the greatest OLS drop over a timeseries `ts`
+(defn short-trend
+  "`short-trend` will find the greatest OLS drop over a timeseries `ts`
   given sub-timeseries of length `long-block`.  The drops are smoothed
   by a moving average window of length `window`."
   ([long-block window ts]
-     (whoop-full ts [] long-block window))
+     (short-trend ts [] long-block window))
   ([long-block window ts reli-ts]
      (->> (deseasonalize ts)
           (windowed-apply ols-coefficient long-block)
           (windowed-apply average window)
           (make-monotonic min))))
 
-(defn whoopbang
-  "`whoopbang` preps the short-term drop for the merge into the other data
-  by separating out the reference period and the rest of the observations
-  for estimation, that is, `for-est`!"
+(defn collect-short-trend
+  "preps the short-term drop for the merge into the other data by separating
+  out the reference period and the rest of the observations for estimation,
+  that is, `for-est`!"
   ([ref-pd start-pd end-pd long-block window ts]
-     (whoopbang ref-pd start-pd end-pd long-block window ts []))
+     (collect-short-trend ref-pd start-pd end-pd long-block window ts []))
   ([ref-pd start-pd end-pd long-block window ts reli-ts]
      (let [offset (+ long-block window)
            [x y z] (map #(-> % (- offset) (+ 2)) [ref-pd start-pd end-pd])
-           full-ts (whoop-full long-block window ts reli-ts)]
+           full-ts (short-trend long-block window ts reli-ts)]
        {:reference (full-ts (dec x))
         :for-est   (subvec full-ts (dec y) z)})))
 
-(defn whoop-shell
+(defn short-trend-shell
+  "a wrapper to collect the short-term trends into a form that can be manipulated
+  from within cascalog."
   [{:keys [ref-date est-start est-end t-res long-block window]} ts-start ts-series]
-  (let [[ref-date est-start est-end]
-        (relative-period t-res ts-start ref-date est-start est-end)]
-    (map (whoopbang ref-date est-start est-end long-block window ts-series)
+  (let [[ref-date est-start est-end] (relative-period t-res ts-start [ref-date est-start est-end])]
+    (map (collect-short-trend ref-date est-start est-end long-block window ts-series)
          [:reference :for-est])))
 
-;; WHIZBANG
+;; WHIZBANG :: Collect the long-term drop of a time-series
 
 ;; These functions will extract the OLS coefficient associated with a
 ;; time trend, along with the t-statistic on that coefficient.  For
@@ -123,12 +124,6 @@
   the linear trend from a time-series (ndvi)."
   [v]
   (map inc (range (count v))))
-
-(defn test-cof
-  [ts & cof]
-  (let [y (deseasonalize (vec ts))]
-    (do (println (count cof))
-        (i/sel 1 (apply i/bind-columns (t-range y) cof)))))
 
 (defn long-trend-general
   "A general version of the original whizbang function, which extracted the time
@@ -182,22 +177,28 @@
        (map (partial lengthening-ts start end))
        (apply map long-trend)))
 
-(defn whizbang
-  "force whizbang into an output map where the tuple for the reference
-  period is separate from the tuples for all other time periods -
-  those time periods that are used for est(imation) ... `for-est`!.
-  NOTE: the reference, start, and end period for estimation have to
-  correspond to the element index from the start of the time-series.
-  That is, the date string will have to already be passed through the
-  datetime->period function in the date-time namespace.  For example,
-  in our original application, the integer 71 (corresponding to Dec 2005)
-  is passed in as `ref-pd`."
+(defn collect-long-trend
+  "collect the long-term trend coefficient and t-statistic for a time-series, after
+  taking into account an arbitrary number of cofactors.  `collect-long-trend`
+  returns a map with the trends for the reference period separate for the estimation
+  period."
   [ref-pd start-pd end-pd t-series & cofactors]
   {:pre [(vector? t-series)
          (every? #{true} (vec (map vector? cofactors)))]}
   (let [all-ts (apply vector t-series cofactors)]
     {:reference (flatten (estimate-thread ref-pd ref-pd all-ts))
      :for-est  (estimate-thread start-pd end-pd all-ts)}))
+
+(defn long-trend-shell
+  "a wrapper that takes a map of options and attributes of the input time-series (and
+  cofactors) to extract the long-term trends and t-statistics from the time-series."
+  [{:keys [ref-date est-start est-end t-res long-block window]} ts-start ts-series & cofactors]
+  (let [[ref-date est-start est-end]
+        (relative-period t-res ts-start [ref-date est-start est-end])]
+    (map
+     (comp vec
+           (apply collect-long-trend ref-date est-start est-end ts-series cofactors))
+     [:reference :for-est])))
 
 ;; BFAST
 
