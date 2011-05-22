@@ -156,14 +156,14 @@ resolution. `DateTime` objects can be created with `clj-time`'s
   start period.
 
   Example usage:
-  (relative-period \"32\" 391 \"2005-02-01\" \"2005-03-01\")
-  => (60 61) "
-  [t-res start & pds]
+  (relative-period \"32\" 391 [\"2005-02-01\" \"2005-03-01\"])
+  => (30 31)"
+  [t-res start pd-vec]
   (map (comp
         int
         #(- % start)
         (partial datetime->period t-res))
-       (vec pds)))
+       pd-vec))
 
 
 (defn msecs-from-epoch

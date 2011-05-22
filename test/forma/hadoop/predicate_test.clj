@@ -57,6 +57,6 @@
     [1 1 1 2 [[5 6 7 8 9] [5 6 7 8 9]]]})
 
 (fact "Testing sparse-windower."
-  (apply set (??- (sparse-windower pixel-tap ["?s"] 5 "?v" 0))) => line-set
-  (apply set (??- (sparse-windower pixel-tap ["?s" "?l"] 5 "?v" 0))) => square-set
-  (apply set (??- (sparse-windower pixel-tap ["?s" "?l"] [5 2] "?v" 0))) => rect-set)
+      (apply set (??- (sparse-windower pixel-tap ["?s"] 5 "?v" 0))) => line-set
+      (apply set (??- (sparse-windower pixel-tap ["?s" "?l"] 5 "?v" 0))) => square-set
+      (apply set (??- (sparse-windower pixel-tap ["?s" "?l"] [5 2] "?v" 0))) => rect-set)

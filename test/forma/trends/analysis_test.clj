@@ -15,6 +15,6 @@
  => (long-trend-general [:coefs] ndvi rain))
 
 (fact
- "check that whoopbang output is the correct shape for the estimation months"
- (count (:for-est (whoopbang 71 75 131 15 5
+ "check that short-term trend output is the correct shape for the estimation months"
+ (count (:for-est (collect-short-trend 71 75 131 15 5
                              ndvi (vec reli)))) => (inc (- 131 75)))
