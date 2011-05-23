@@ -12,8 +12,8 @@
 ;; following function, since they're so similar.
 
 (defn insert-into-val
-  "insert vector `v` into a vector of value `val` of total length `len`
-  at index `idx`."
+  "insert vector `v` into a vector of value `val` of total length
+  `len` at index `idx`."
   [idx len val v]
   (vec
    (insert-at idx (repeat (- len (count v)) val) v)))

@@ -116,7 +116,7 @@ supplied, assumes a square matrix."
 (def ones-column (partial column-matrix 1))
 
 (defn matrix-of
-  "Returns an n-dimensional matrix of `val`, with edge length of
+  "Returns a `dims`-dimensional matrix of `val`, with edge length of
   `edge`."
   [val dims edge]
   (reduce #(%2 %1)
