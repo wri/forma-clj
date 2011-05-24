@@ -9,14 +9,16 @@
 (defn insert-at
   "insert list [b] into list [a] at index [idx]."
   [idx a b]
-  (let [opened (split-at idx a)]
-    (concat (first opened) b (second opened))))
+  (let [[beg end] (split-at idx a)]
+    (concat beg b end)))
 
-(defn insert-into-zeros
-  "insert vector [v] into a vector of zeros of total length [len]
-  at index [idx]."
-  [idx len v]
-  (insert-at idx (repeat (- len (count v)) 0) v))
+(defn insert-into-val
+  "insert vector `xs` into a repeated sequence of the supplied
+  length (filled with `val`) at the supplied insertion index."
+  [val insertion-idx length xs]
+  (insert-at insertion-idx
+             (-> length (- (count v)) (repeat val))
+             v))
 
 (defn pred-replace
   "Selectively replaces values in `v` based on the return value of the

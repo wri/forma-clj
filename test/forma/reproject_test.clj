@@ -15,12 +15,11 @@
                 :travel [+ +]})
 
 (let [step 0.5
-      [width] (dimensions-for-step step)
-      rain-indexer (wgs84-indexer "1000" ascii-map)]
+      [width] (dimensions-for-step step)]
   (facts
     "This is the only one I have so far... but we need to verify at
 least one of these indices."
-    (rain-indexer 8 6 12 12) => [239 489]
+    (wgs84-indexer "1000" ascii-map 8 6 12 12) => [239 489]
     (rowcol->idx width 239 489) => 172569))
 
 (fact (dimensions-for-step 0.5) => [720 360])

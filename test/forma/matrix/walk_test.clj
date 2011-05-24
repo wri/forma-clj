@@ -10,5 +10,9 @@
    [20 21 22 23 24]])
 
 (fact
- "test for windowed function"
- (windowed-function max 1 test-matrix) => '(6 7 8 9 9 11 12 13 14 14 16 17 18 19 19 21 22 23 24 24 21 22 23 24 24))
+  "test for windowed function"
+  (windowed-function max 1 test-matrix) => [6 7 8 9 9
+                                            11 12 13 14 14
+                                            16 17 18 19 19
+                                            21 22 23 24 24
+                                            21 22 23 24 24])

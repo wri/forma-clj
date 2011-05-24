@@ -3,7 +3,7 @@
                                    average
                                    variance-matrix
                                    insert-at
-                                   insert-into-zeros
+                                   insert-into-val
                                    sparse-expander)]
         [clojure.contrib.seq :only (positions)])
   (:require [incanter.core :as i]))
@@ -60,7 +60,7 @@
   (let [[first second :as but-2]
         (for [x (range (- T 2))
               :let [idx (if (>= x 2) (- x 2) 0)]]
-          (insert-into-zeros idx T (cond (= x 0)  [1 -2 1]
+          (insert-into-val 0 idx T (cond (= x 0)  [1 -2 1]
                                          (= x 1)  [-2 5 -4 1]
                                          :else [1 -4 6 -4 1])))]
     (->> [second first]

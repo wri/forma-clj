@@ -1,22 +1,7 @@
 (ns forma.matrix.walk
   (:use cascalog.api
       [clojure.contrib.math :only (floor)]
-      [forma.matrix.utils :only (insert-at)]))
-
-;; These functions are currently used to walk through matrices in two
-;; dimensions, with room to develop into more dimensions.  These
-;; functions were originally developed to collect neighboring values
-;; of fires, ndvi trends, etc. for a given month.
-
-;; TODO: look at forma.matrix.utils/insert-into-zeros and combine the
-;; following function, since they're so similar.
-
-(defn insert-into-val
-  "insert vector `v` into a vector of value `val` of total length
-  `len` at index `idx`."
-  [idx len val v]
-  (vec
-   (insert-at idx (repeat (- len (count v)) val) v)))
+      [forma.matrix.utils :only (insert-into-val)]))
 
 (defn walk-matrix
   "Walks along the rows and columns of a matrix at the given window
