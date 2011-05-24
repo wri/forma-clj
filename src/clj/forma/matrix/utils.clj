@@ -17,8 +17,8 @@
   length (filled with `val`) at the supplied insertion index."
   [val insertion-idx length xs]
   (insert-at insertion-idx
-             (-> length (- (count v)) (repeat val))
-             v))
+             (-> length (- (count xs)) (repeat val))
+             xs))
 
 (defn pred-replace
   "Selectively replaces values in `v` based on the return value of the
