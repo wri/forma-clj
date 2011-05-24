@@ -224,4 +224,3 @@
   "compute the running, cumulative sum of a vector"
   [v]
   )
-
