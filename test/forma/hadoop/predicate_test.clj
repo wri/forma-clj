@@ -60,3 +60,17 @@
       (apply set (??- (sparse-windower pixel-tap ["?s"] 5 "?v" 0))) => line-set
       (apply set (??- (sparse-windower pixel-tap ["?s" "?l"] 5 "?v" 0))) => square-set
       (apply set (??- (sparse-windower pixel-tap ["?s" "?l"] [5 2] "?v" 0))) => rect-set)
+
+(defmapcatop mk-run
+  [v]
+  (map-indexed (fn [i v]
+                 [i (* i v)])
+               (range 4)))
+
+(defmapcatop copy-window [w]
+  [[0 w] [1 w] [2 w] [3 w]])
+
+(def test-tap
+  (<- [?run ?mh ?mv ?s ?l ?new-v]
+      (mk-run ?v :> ?run ?new-v)
+      (pixels ?mh ?mv ?s ?l ?v)))

@@ -18,8 +18,10 @@
    :VNM #{[27 6] [27 7] [28 7] [28 8]}})
 
 (defn tile-set
-  "set of unique MODIS tiles for the specified countries (union).
-  -- Example usage: (tile-set :idn :mys :phl)"
+  "set of unique MODIS tiles for the specified
+  countries (union). Example usage:
+
+    (tile-set :IDN :MYS :PHL)"
   [& countries]
   (apply union
          (map country-tiles countries)))

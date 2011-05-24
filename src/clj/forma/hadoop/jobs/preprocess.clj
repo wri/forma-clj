@@ -74,13 +74,16 @@
           src (s/sample-modis m-res dataset pix-tap line-tap agg)]
       (?- (chunk-tap output-path)
           (sparse-windower src
-                           ["?sample" "?line"] "?val" width height
+                           ["?sample" "?line"]
+                           [width height]
+                           "?val"
                            -9999)))))
 
 (defn modis-main
   "Example usage:
 
-   hadoop jar forma-standalone.jar modis modisdata/MOD13A3/ reddoutput/ [8 6] [10 12]"
+   hadoop jar forma-standalone.jar forma.hadoop.jobs.preprocess
+          modis modisdata/MOD13A3/ reddoutput/ [8 6] [10 12]"
   [path output-path & tiles]
   (let [tileseq (map read-string tiles)
         pattern (str path (apply tiles->globstring tileseq))]
@@ -91,12 +94,13 @@
 
 (defn rain-main
   "TODO: Example usage."
-  [path output-path & tiles]
-  (rain-chunker "1000"
-                static/chunk-size
-                (map read-string tiles)
-                (s3-path path)
-                (s3-path output-path)))
+  [path output-path & countries]
+  (let [countries (map read-string countries)]
+    (rain-chunker "1000"
+                  static/chunk-size
+                  (apply tile-set countries)
+                  (s3-path path)
+                  (s3-path output-path))))
 
 (defn fire-main
   "TODO: Example usage."
@@ -108,14 +112,15 @@
 (defn static-main
   "TODO: Example usage."
   [dataset ascii-path output-path & countries]
-  (let [countries (map read-string countries)]
-    (static-chunker "1000"
-                    static/chunk-size
-                    (apply tile-set countries)
-                    dataset
-                    c/sum
-                    ascii-path
-                    (s3-path output-path))))
+  (static-chunker "1000"
+                  static/chunk-size
+                  (->> countries
+                       (map read-string)
+                       (apply tile-set))
+                  dataset
+                  c/sum
+                  ascii-path
+                  (s3-path output-path)))
 
 ;;TODO: call read-string on the args.
 (defn -main

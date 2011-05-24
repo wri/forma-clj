@@ -28,8 +28,8 @@
   (->> step (/ 1) (* val) Math/floor int))
 
 (defn travel
-  "travel along a grid with cellsize `step` in the direction given by
-  `dir` from an initial position `start` to a position `pos` which is
+  "travel along a grid with `step` in the direction given by `dir`
+  from an initial position `start` to a position `pos` which is
   intended to be, for most applications, row or column within the
   grid.  Note that this takes you to the centroid of the row or column
   position that you specify."
@@ -82,30 +82,26 @@
   the supplied resolution for an ASCII grid with the supplied
   step-size, corner coordinates and directions traveled for each
   axis."
-  [m-res ascii-map]
+  [m-res ascii-map row col]
   (let [{:keys [step corner travel]} ascii-map
         [xul yul] corner
         [x-dir y-dir] travel]
-    (fn [row col]
-      (->> (rowcol->latlon step y-dir x-dir yul xul row col)
-          (apply m/latlon->modis m-res)))))
+    (->> (rowcol->latlon step y-dir x-dir yul xul row col)
+         (apply m/latlon->modis m-res))))
 
 (defn wgs84-indexer
   "Generates a function that accepts MODIS tile coordinates and
   returns the corresponding `[row, col]` within a WGS84 grid of values
   with the supplied step-size, corner coordinates and directions
   traveled for each axis."
-  [m-res ascii-map]
+  [m-res ascii-map mod-h mod-v sample line]
+  {:pre [(m/valid-modis? m-res mod-h mod-v sample line)]}
   (let [{:keys [step corner travel]} ascii-map
         [lon-corner lat-corner] corner
         [lon-dir lat-dir] travel]
-    (fn [mod-h mod-v sample line]
-      {:pre [(m/valid-modis? m-res mod-h mod-v sample line)]}
-      (->> (m/modis->latlon m-res mod-h mod-v sample line)
-           (apply latlon->rowcol
-                  step
-                  lat-dir lon-dir
-                  lat-corner lon-corner)))))
+    (->> (m/modis->latlon m-res mod-h mod-v sample line)
+         (apply latlon->rowcol step lat-dir lon-dir lat-corner
+                lon-corner))))
 
 ;; ## MODIS Sampler
 ;;
@@ -167,7 +163,7 @@
         rdata (vec rain-month)]
     (for [chunk (range (/ numpix chunk-size))
           :let [indexer (comp (partial apply rowcol->idx width)
-                              (wgs84-indexer m-res ascii-info))
+                              (partial wgs84-indexer m-res ascii-info))
                 tpos (partial m/tile-position m-res chunk-size chunk)]]
       [chunk (map rdata
                   (for [pixel (range chunk-size)]

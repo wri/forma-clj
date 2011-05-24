@@ -138,7 +138,8 @@ referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
 
 (defn latlon->sinu-xy
   "Returns the sinusoidal x and y coordinates for the supplied
-  latitude and longitude (in degrees)."  [lat lon]
+  latitude and longitude (in degrees)."
+  [lat lon]
   (apply latlon-rad->sinu-xy
          (map #(Math/toRadians %) [lat lon])))
 

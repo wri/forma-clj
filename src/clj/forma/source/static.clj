@@ -37,6 +37,9 @@
 
 ;; ### Sampling
 
+;; TODO: Clean this fucker up! we need to get rid of that into
+;; duplication.
+
 (defn sample-modis
   "This function is based on the reference MODIS grid (currently at
   1000m res).  The objective of the function is to tag each MODIS
@@ -53,13 +56,11 @@
   (let [ascii-info (static-datasets (keyword dataset))
         mod-coords ["?mod-h" "?mod-v" "?sample" "?line"]
         rc-coords ["?row" "?col"]
-        upsample? (>= (:cellsize ascii-info) (wgs84-resolution m-res))
+        upsample? (>= (:step ascii-info) (wgs84-resolution m-res))
         aggers (if upsample?
-                 (let [indexer (wgs84-indexer m-res ascii-info)]
-                   [[pixel-tap :>> mod-coords]
-                    [indexer :<< mod-coords :>> rc-coords]])
-                 (let [indexer (modis-indexer m-res ascii-info)]
-                   [[indexer :<< rc-coords :>> mod-coords]]))]
+                 [[pixel-tap :>> mod-coords]
+                  [wgs84-indexer :<< (into [m-res ascii-info] mod-coords) :>> rc-coords]]
+                 [[modis-indexer :<< (into [m-res ascii-info] rc-coords) :>> mod-coords]])]
     (construct
      ["?dataset" "?m-res" "?t-res" "?tilestring" "?sample" "?line" "?outval"]
      (into aggers

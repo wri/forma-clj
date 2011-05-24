@@ -5,7 +5,10 @@
 ;; vector be calling vec on it.)
 
 (ns forma.trends
-  (:use cascalog.api))
+  (:use cascalog.api
+        [clojure.contrib.math :only (floor)]
+        [forma.matrix.utils :only (insert-at)]
+        [forma.hadoop.predicate :only (sparse-windower)]))
 
 ;; ### Time Series Generation
 ;;
@@ -101,3 +104,94 @@
 ;; how to get cascalog to sort by time period and provide tuples to
 ;; our final `timeseries` function. Note again that incoming chunks
 ;; will be either float or int arrays.
+
+;; ### Walk the Windows
+;;
+;; Now that we have a way to generate windows, we need some functions
+;;to actually walk around.
+
+;; TODO: -- documentation on why we do this. Nearest neighbor analysis links.
+
+(def test-matrix
+  [[0 1 2 3 4] [5 6 7 8 9] [10 11 12 13 14] [15 16 17 18 19] [20 21 22 23 24]])
+
+(defn insert-into-val
+  "insert vector `v` into a vector of value `val` of total length `len`
+  at index `idx`."
+  [idx len val v]
+  (vec
+   (insert-at idx (repeat (- len (count v)) val) v)))
+
+(defn walk-matrix
+  "Walks along the rows and columns of a matrix at the given window
+  size, returning all (window x window) snapshots."
+  [m window]
+  (mapcat (comp
+           (partial apply map vector)
+           (partial map (partial partition window 1)))
+          (partition window 1 m)))
+
+(defn buffer-matrix
+  "create a buffer of length `buf` around rectangular matrix `mat`, with
+  elements equal to `nil-val`"
+  [buf nil-val mat]
+  (let [new-w   (->> buf (* 2) (+ (count (first mat))))
+        buf-row (vec (repeat new-w nil-val))]
+    (into (->> mat
+               (map (partial insert-into-val buf new-w nil-val))
+               (apply conj [buf-row]))
+          [buf-row])))
+
+(defn windowed-function
+  "apply a function `fn` to each element in a matrix `mat` over a moving
+  window, defined by the number of neighbors."
+  [f num-neighbors mat]
+  {:pre [(> (count mat) (+ 1 (* 2 num-neighbors)))]}
+  (let [window  (+ 1 (* 2 num-neighbors))
+        new-mat (buffer-matrix num-neighbors nil mat)]
+    (map (comp
+          (partial apply f)
+          (partial filter #(not= nil %))
+          flatten)
+         (walk-matrix new-mat window))))
+
+
+;; TODO: update walk-matrix above to return useful shit.
+(defmapcatop [walk-mat [window]]
+  {:doc "In progress! Not sure yet how walk-mat's return values work out, here."}
+  [m]
+  (walk-matrix m window))
+
+
+(def pixels
+  (memory-source-tap
+   (for [mod-h  (range 3)
+         sample (range 20)
+         line   (range 20)
+         :let [val sample, mod-v 1]]
+     [mod-h mod-v sample line val])))
+
+(def pixel-tap
+  (<- [?mh ?mv ?s ?l ?v]
+      (pixels ?mh ?mv ?s ?l ?v)))
+
+(defn get-windows
+  "IN PROGRESS. Currently, this job fails due to incorrect comparator
+  settings for the tuples."
+  []
+  (let [window-source (sparse-windower pixel-tap ["?s" "?l" "?v"] 5 0)]
+    (?<- (stdout)
+         [?tile-h ?tile-v ?window-col ?window-row ?window]
+         (window-source ?tile-h ?tile-v ?window-col ?window-row ?window)
+         )))
+
+;; I think that I might be able to tag pixels as "edges", based on a
+;; combination of pixel value and length of groups. If I can get all
+;; of the edge pixels aggregated together... that would be a big win!
+;;
+;; Can we extend this to deal with the whole world, by calculating the
+;; global pixel sample and line? One issue would be that edges
+;; sometimes wouldn't be met be anything on the other side.
+;;
+;; ACTUALLY -- this is a problem now, and if we solve it, we solve the
+;; whole mess.
