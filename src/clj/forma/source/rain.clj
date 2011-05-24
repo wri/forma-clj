@@ -15,8 +15,7 @@
         [forma.source.modis :only (hv->tilestring)]
         [forma.reproject :only (project-to-modis
                                 dimensions-for-step)])
-  (:require [cascalog.ops :as c]
-            [clojure.contrib.io :as io])
+  (:require [clojure.contrib.io :as io])
   (:import  [java.io File InputStream]
             [java.util.zip GZIPInputStream]))
 
