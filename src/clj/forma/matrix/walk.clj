@@ -3,11 +3,6 @@
         [forma.matrix.utils :only (insert-into-val
                                    insert-at)]))
 
-;; TODO: -- documentation on why we do this. Nearest neighbor analysis
-;; links.
-
-;; TODO: update walk-matrix to return useful shit.
-
 (defn walk-matrix
   "Walks along the rows and columns of a matrix at the given window
   size, returning all (window x window) snapshots."
@@ -44,11 +39,12 @@
   "apply a function `fn` to each element in a matrix `mat` over a moving
   window, defined by the number of neighbors."
   [f num-neighbors mat]
-  {:pre [(> (count mat) (+ 1 (* 2 num-neighbors)))]}
+  {:pre [(> (count mat)
+            (inc (* 2 num-neighbors)))]}
   (let [window  (+ 1 (* 2 num-neighbors))
         new-mat (buffer-matrix num-neighbors nil mat)]
     (map (comp
           (partial apply f)
-          (partial filter #(not= nil %))
+          (partial filter (complement nil?))
           flatten)
          (walk-matrix new-mat window))))
