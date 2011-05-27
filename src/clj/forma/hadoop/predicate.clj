@@ -84,7 +84,8 @@ I recommend wrapping queries that use this tap with
 (defmapcatop
   ^{:doc "splits a sequence of values into nested 2-tuples formatted
   as `<idx, val>`. Indexing is zero based."}
-  index [sequence]
+  index
+  [sequence]
   (map-indexed vector sequence))
 
 ;; #### Aggregators

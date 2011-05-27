@@ -27,6 +27,15 @@
    "MOD13A2" "16"
    "MOD13A3" "32"})
 
+(defn chunk-dims
+  "Returns the width and height in pixels of a chunk at the supplied
+  resolution with `chunk-size` total entries."
+  [m-res chunk-size]
+  {:pre (zero? (mod chunk-size (pixels-at-res m-res)))}
+  (let [width (pixels-at-res m-res)
+        height (quot chunk-size width)]
+    [width height]))
+
 (defn wgs84-resolution
   "Returns the step size on a `<lat, lon>` grid corresponding to the
   supplied MODIS resolution. As each MODIS tile is 10 degrees on a

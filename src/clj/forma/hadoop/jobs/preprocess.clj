@@ -48,10 +48,12 @@
 (defn rain-chunker
   "Like `modis-chunker`, for NOAA PRECL data files."
   [m-res chunk-size tile-seq path out-path]
-  (let [source (hfs-wholefile path)
-        ascii-map (:precl static/static-datasets)]
-    (?- (chunk-tap out-path)
-        (r/rain-chunks m-res ascii-map chunk-size tile-seq source))))
+  (io/with-fs-tmp [fs tmp-dir]
+    (let [file-tap (hfs-wholefile path)
+          pix-tap (pixel-generator tmp-dir m-res tile-seq)
+          ascii-map (:precl static/static-datasets)]
+      (?- (chunk-tap out-path)
+          (r/rain-chunks m-res ascii-map chunk-size file-tap pix-tap)))))
 
 ;; TODO: DOCUMENT. We should note that this is going to get bucketed
 ;; at daily temporal resolution. The static datasets are going to get
