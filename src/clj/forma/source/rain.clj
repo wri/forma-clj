@@ -140,7 +140,7 @@
   in this case, to make the number correspond to a month of the year,
   rather than an index in a seq."
   [index month]
-  (vector (inc index) (big-floats month)))
+  [(inc index) (big-floats month)])
 
 (defn rain-tuples
   "Returns a lazy seq of 2-tuples representing NOAA PREC/L rain
