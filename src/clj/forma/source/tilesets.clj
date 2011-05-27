@@ -23,10 +23,13 @@
   "set of unique MODIS tiles for the specified
   countries (union). Example usage:
 
-    (tile-set :IDN :MYS :PHL)"
-  [& countries]
+    (tile-set [8 6] :IDN :MYS :PHL)"
+  [& inputs]  
   (apply union
-         (map country-tiles countries)))
+         (map #(if (keyword? %)
+                 (country-tiles %)
+                 #{%})
+              inputs)))
 
 
 
