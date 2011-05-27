@@ -15,7 +15,8 @@
         [forma.source.modis :only (hv->tilestring)]
         [forma.reproject :only (project-to-modis
                                 dimensions-for-step)])
-  (:require [clojure.contrib.io :as io])
+  (:require [clojure.contrib.io :as io]
+            [clojure.string :as s])
   (:import  [java.io File InputStream]
             [java.util.zip GZIPInputStream]))
 
@@ -170,25 +171,17 @@ binary files are packaged as hadoop BytesWritable objects."}
   [filename month-int]
   (let [year (first (re-find #"(\d{4})" filename))
         month (format "%02d" month-int)]
-    (apply str (interpose "-" [year month "01"]))))
+    (s/join "-" [year month "01"])))
 
-;; The following functions bring everything together, making heavy use
-;; of the functionality supplied by `forma.reproject`. Rather than
-;; sampling PRECL data at the positions of every possible MODIS tile,
-;; we allow the user to supply a seq of TileIDs for processing. (No
-;; MODIS product covers every possible tile; any product containing
-;; the [NDVI](http://goo.gl/kjojh) only covers land, for example.)
+;; Rather than sampling PRECL data at the positions of every possible
+;; MODIS tile, we allow the user to supply a seq of TileIDs for
+;; processing. (No MODIS product covers every possible tile; any
+;; product containing the [NDVI](http://goo.gl/kjojh) only covers
+;; land, for example.)
 ;;
 ;; These functions are designed to be able to map between WGS84 and
 ;; MODIS datasets at arbitrary resolution. This explains the
 ;; resolution parameters seen in the functions below.
-;;
-;; (Note our use of `clojure.core/identity` in the following query;
-;; since `identity` returns its argument, and every tuple is processed
-;; through each operation, `identity` acts as a `defmapop` that adds a
-;; new field onto a tuple. In this case, we know that our rain data
-;; comes in monthly temporal resolution, and we need it to have some
-;; dataset identifier, so we hardcode these fields onto every tuple.)
 
 (defn rain-months
   "Cascalog subquery to extract all months from a directory of PREC/L
@@ -198,34 +191,12 @@ binary files are packaged as hadoop BytesWritable objects."}
 
   Source can be any tap that supplies PRECL files named
   precl_mon_v1.0.lnx.YYYY.gri0.5m(.gz, optionally)."
-  [ascii-info source]
-  (let [step (:step ascii-info)]
-    (<- [?dataset ?temporal-res ?date ?raindata]
-        (source ?filename ?file)
-        (unpack-rain [step] ?file :> ?month ?raindata)
-        (to-datestring ?filename ?month :> ?date)
-        (add-fields "precl" "32" :> ?dataset ?temporal-res))))
-
-;; Something interesting occurs in the next few functions. Rather than
-;; combine `cross-join` and `fancy-index` into one query, we've
-;; decided to break them out into subqueries, joined together by one
-;; larger function that routes them through an intermediate
-;; sequencefile. What's going on here?
-;;
-;; We have a method of producing sampling our the tiles we want from a
-;; clojure data structure, and a method of unpacking rain-data for the
-;; entire globe, for each month. To maintain the ability to
-;; parallelize the sampling process, we need to pair up every tile
-;; with every rain-month.
-
-;; As described in [this thread](http://goo.gl/TviNn) on
-;; [cascalog-user](http://goo.gl/Tqihs), this is called a cross-join;
-;; we're taking the [cartesian product](http://goo.gl/r5Qsw) of the
-;; two sets. We accomplish this by feeding every tuple into
-;; `forma.hadoop.predicate/add-fields` with argument `m-res`, the
-;; supplied MODIS resolution into which we're translating the PRECL
-;; sets. `add-fields` produces the common dynamic variable
-;; `?spatial-res`, needed by `fancy-index`.
+  [{:keys [step]} source]
+  (<- [?dataset ?temporal-res ?date ?raindata]
+      (source ?filename ?file)
+      (unpack-rain [step] ?file :> ?month ?raindata)
+      (to-datestring ?filename ?month :> ?date)
+      (add-fields "precl" "32" :> ?dataset ?temporal-res)))
 
 (defn cross-join
   "Unpacks all NOAA PRECL files (at the supplied resolution) located

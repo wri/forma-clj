@@ -77,11 +77,10 @@
        [row col]))
 
 (defn modis-indexer
-  "Generates a function that accepts WGS84 coordinates and returns the
-  corresponding `[mod-h, mod-v, sample, line]` in the modis grid at
-  the supplied resolution for an ASCII grid with the supplied
-  step-size, corner coordinates and directions traveled for each
-  axis."
+  "Accepts WGS84 coordinates and returns the corresponding `[mod-h,
+  mod-v, sample, line]` in the modis grid at the supplied resolution
+  for an ASCII grid with the supplied step-size, corner coordinates
+  and directions traveled for each axis."
   [m-res ascii-map row col]
   (let [{:keys [step corner travel]} ascii-map
         [xul yul] corner
@@ -90,10 +89,9 @@
          (apply m/latlon->modis m-res))))
 
 (defn wgs84-indexer
-  "Generates a function that accepts MODIS tile coordinates and
-  returns the corresponding `[row, col]` within a WGS84 grid of values
-  with the supplied step-size, corner coordinates and directions
-  traveled for each axis."
+  "Accepts MODIS tile coordinates and returns the corresponding `[row,
+  col]` within a WGS84 grid of values with the supplied step-size,
+  corner coordinates and directions traveled for each axis."
   [m-res ascii-map mod-h mod-v sample line]
   {:pre [(m/valid-modis? m-res mod-h mod-v sample line)]}
   (let [{:keys [step corner travel]} ascii-map
@@ -110,53 +108,12 @@
 ;; onto the MODIS grid. NOAA's PREC/L dataset, for example, is
 ;; arranged in a lat, long grid, at a resolution of 0.5 degrees per
 ;; pixel.
-;;
-;; To resample in parallel, we decided to pre-generate a set of array
-;; indices, to map from a specific (lat, lon) resolution into some
-;; MODIS resolution. When this map in hand, running
-;;
-;;     (map dataset new-coords)
-;;
-;; will sample the old dataset into MODIS at the resolution we want.
-;;
-;; To parellelize this process effectively, we'll generate maps for
-;; chunks of pixels at fixed size, rather than for each tile. If we
-;; use the tile level, we have to use one mapper for each tile -- at
-;; high resolutions, this becomes inefficient. With "chunks", mappers
-;; scale with total number of pixels, which scales directly with
-;; spatial resolution.
-;;
-;; We made the decision to take a single MODIS tile id and a month of
-;; rain data as dynamic variables, against my earlier idea of
-;; pregenerating indices for each chunk, and pairing the rain months
-;; up against these. The idea of pregenerating indices was spurred by
-;; the thought that the sampling process, applied at the tile level,
-;; wouldn't scale well as resolution increased. This is still true;
-;; for high resolutions, this function takes on a rather heavy
-;; burden. Additionally, with this current method, we generate the
-;; sampling indices for every tile & rain-data combination.
-;;
-;; Still, we decided to stay at the tile level, as the tuple blowup
-;; caused by pairing each rain-month with chunks of 24,000 was
-;; enormous. Each of these methods requires a cross join between
-;; rain-months and some dataset, either tiles or the chunk indices,
-;; and a cross join has to funnel through a single reducer. The
-;; intermediate data for a chunk-size of 24,000 at 250m resolution
-;; would have produced 2TB of intermediate data.
-;;
-;; If it becomes clear how to send a `(* 1200 1200)` vector out of
-;; this function, one way to guarantee efficiency here would be to
-;; pregenerate indices, but choose a chunk-size of `(* 1200 1200)`,to
-;; produce a single chunk for 1km tiles. 250 meter data, with 16x the
-;; pixels, would run at the same speed with 16x the machines.
 
 (defmapcatop [project-to-modis [m-res ascii-info chunk-size]]
   ^{:doc "Accepts a MODIS tile coordinate and a month of PREC/L data
   at `step` resolution on the WGS84 grid, and samples the rain data
   into chunks of pixels in the MODIS sinusoidal projection. The
-  function emits a 2-tuple of the form `[chunk-idx chunk-seq]`.
-
-  WARNING: Handles one tile at a time. Not good for 250m data!"}
+  function emits a 2-tuple of the form `[chunk-idx chunk-seq]`."}
   [rain-month mod-h mod-v]
   (let [[width] (dimensions-for-step (:step ascii-info))
         numpix (#(* % %) (m/pixels-at-res m-res))

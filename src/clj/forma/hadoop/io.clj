@@ -7,7 +7,8 @@
 (ns forma.hadoop.io
   (:use cascalog.api
         [forma.date-time :only (jobtag)]
-        [clojure.contrib.math :only (abs)])
+        [clojure.contrib.math :only (abs)]
+        [clojure.string :only (join)])
   (:import [forma WholeFile]
            [cascading.tuple Fields]
            [cascading.scheme Scheme]
@@ -191,14 +192,15 @@ tuples into the supplied directory, using the format specified by
     (globstring \"s3n://bucket/\" * * [\"008006\" \"033011\"])
     ;=> \"s3://bucket/*/*/{008006,033011}/\""
   [basepath & pieces]
-  (let [comma-string (fn [arg] (apply str (interpose "," arg)))
-        rest (map (fn [arg]
-                    (if (= * arg)
-                      "*/"
-                      (format "{%s}/" (comma-string (if (coll? arg)
-                                                      arg [arg])))))
-                  pieces)]
-    (apply str basepath rest)))
+  (let [globber (fn [arg]
+                  (if (= * arg)
+                    "*/"
+                    (format "{%s}/" (join ","
+                                          (if (coll? arg) arg
+                                              [arg]))))) ]
+    (->> pieces
+         (map globber)
+         (apply str basepath))))
 
 (defn chunk-tap
   "Generalized source and sink for the chunk tuples stored and

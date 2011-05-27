@@ -4,6 +4,7 @@
 ;; use job specific cluster definitions.
 
 (ns forma.hadoop.cluster
+  (:use [clojure.string :only (join)])
   (:import [forma FloatsSerialization IntsSerialization]
            [backtype.hadoop ThriftSerialization]
            [cascading.tuple.hadoop BytesSerialization TupleSerialization]
@@ -19,7 +20,7 @@
                              TupleSerialization WritableSerialization
                              JavaSerialization]]
                     (.getName cls))]
-    (apply str (interpose "," class-seq))))
+    (join "," class-seq)))
 
 (def forma-config
   {:core-site {:io.serializations serializers}})
