@@ -5,7 +5,7 @@
 (def
   ^{:doc "MODIS tiles for the selected countries, identified by their
   ISO3 codes where each two-vector is the horizontal and vertical
-  position of the MODIS tile [`mod-h` `mod-v`]"}
+  position of the MODIS tile `[mod-h mod-v]`"}
   country-tiles
   {:BGD #{[25 6] [26 6]}
    :LAO #{[27 6] [27 7] [28 7]}
