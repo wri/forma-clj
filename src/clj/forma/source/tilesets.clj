@@ -17,8 +17,6 @@
    :THA #{[27 6] [27 7] [28 7] [27 8] [28 8]}
    :VNM #{[27 6] [27 7] [28 7] [28 8]}})
 
-;; TODO: If we get vectors, do something. if we get a keywork, look it
-;; up in the map.
 (defn tile-set
   "set of unique MODIS tiles for the specified
   countries (union). Example usage:
