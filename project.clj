@@ -20,5 +20,6 @@
                      [clojure-source "1.2.0"]
                      [marginalia "0.5.1"]
                      [midje "1.1"]]
+  :tasks [marginalia.tasks]
   :aot [forma.hadoop.jobs.preprocess
         forma.hadoop.jobs.load-tseries])

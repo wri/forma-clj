@@ -1,38 +1,29 @@
 (ns forma.hadoop.jobs.preprocess
   (:use cascalog.api
-        [forma.source.modis :only (valid-modis?)]
         [forma.source.tilesets :only (tile-set)]
-        [forma.source.modis :only (pixels-at-res)]
-        [forma.hadoop.io :only (chunk-tap
-                                hfs-wholefile
-                                globhfs-wholefile
-                                globhfs-textline)]
+        [cascalog.io :only (with-fs-tmp)]
+        [forma.source.modis :only (pixels-at-res
+                                   chunk-dims)]
         [forma.hadoop.predicate :only (sparse-windower
                                        pixel-generator)])
-  (:require [forma.source.hdf :as h]
+  (:require [forma.hadoop.predicate :as p]
+            [forma.hadoop.io :as io]
+            [forma.source.hdf :as h]
             [forma.source.rain :as r]
             [forma.source.fire :as f]
             [forma.source.static :as s]
-            [cascalog.ops :as c]
-            [cascalog.io :as io]
-            [forma.static :as static])
+            [forma.static :as static]
+            [cascalog.ops :as c])
   (:gen-class))
-
-;; TODO: move to forma.hadoop.io
-
-(defn tiles->globstring
-  [& tiles]
-  {:pre [(valid-modis? tiles)]}
-  (let [hv-seq (interpose "," (for [[th tv] tiles]
-                                (format "h%02dv%02d" th tv)))]
-    (format "*{%s}*" (apply str hv-seq))))
-
-(defn s3-path [path]
-  (str "s3n://AKIAJ56QWQ45GBJELGQA:6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV@" path))
 
 ;; And, here we are, at the chunkers. These simply execute the
 ;; relevant subqueries, using a TemplateTap designed to sink our
 ;; tuples into our custom directory structure.
+
+(defn chunk-job
+  [out-path query]
+  (?- (io/chunk-tap out-path)
+      query))
 
 (defn modis-chunker
   "Cascalog job that takes set of dataset identifiers, a chunk size, a
@@ -41,19 +32,28 @@
   sinks them into a custom directory structure inside of
   `output-dir`."
   [subsets chunk-size pattern out-path]
-  (let [source (globhfs-wholefile pattern)]
-    (?- (chunk-tap out-path)
-        (h/modis-chunks subsets chunk-size source))))
+  (let [source (io/globhfs-wholefile pattern)]
+    (chunk-job out-path
+               (h/modis-chunks subsets chunk-size source))))
 
 (defn rain-chunker
   "Like `modis-chunker`, for NOAA PRECL data files."
   [m-res chunk-size tile-seq path out-path]
-  (io/with-fs-tmp [fs tmp-dir]
-    (let [file-tap (hfs-wholefile path)
-          pix-tap (pixel-generator tmp-dir m-res tile-seq)
+  (with-fs-tmp [fs tmp-dir]
+    (let [file-tap (io/hfs-wholefile path)
+          pix-tap (p/pixel-generator tmp-dir m-res tile-seq)
           ascii-map (:precl static/static-datasets)]
-      (?- (chunk-tap out-path)
-          (r/rain-chunks m-res ascii-map chunk-size file-tap pix-tap)))))
+      (chunk-job out-path
+                 (r/rain-chunks m-res ascii-map chunk-size file-tap pix-tap)))))
+
+(defn static-chunker
+  "TODO: DOCS!"
+  [m-res chunk-size tile-seq dataset agg ascii-path out-path]
+  (with-fs-tmp [fs tmp-dir]
+    (let [line-tap (hfs-textline ascii-path)
+          pix-tap  (p/pixel-generator tmp-dir m-res tile-seq)]
+      (chunk-job out-path
+                 (s/static-chunks m-res chunk-size dataset agg line-tap pix-tap)))))
 
 ;; TODO: DOCUMENT. We should note that this is going to get bucketed
 ;; at daily temporal resolution. The static datasets are going to get
@@ -61,25 +61,9 @@
 (defn fire-chunker
   "Preprocessing for fires data."
   [m-res pattern out-path]
-  (let [source (globhfs-textline pattern)]
-    (?- (chunk-tap out-path)
-        (f/reproject-fires m-res source))))
-
-(defn static-chunker
-  "TODO: DOCS!"
-  [m-res chunk-size tile-seq dataset agg ascii-path output-path]
-  (io/with-fs-tmp [fs tmp-dir]
-    (let [width (pixels-at-res m-res)
-          height (/ chunk-size width)
-          line-tap (hfs-textline ascii-path)
-          pix-tap  (pixel-generator tmp-dir m-res tile-seq)
-          src (s/sample-modis m-res dataset pix-tap line-tap agg)]
-      (?- (chunk-tap output-path)
-          (sparse-windower src
-                           ["?sample" "?line"]
-                           [width height]
-                           "?val"
-                           -9999)))))
+  (let [source (io/globhfs-textline pattern)]
+    (chunk-job out-path
+               (f/reproject-fires m-res source))))
 
 (defn modis-main
   "Example usage:
@@ -88,11 +72,11 @@
           modis modisdata/MOD13A3/ reddoutput/ [8 6] [10 12]"
   [path output-path & tiles]
   (let [tileseq (map read-string tiles)
-        pattern (str path (apply tiles->globstring tileseq))]
+        pattern (str path (apply io/tiles->globstring tileseq))]
     (modis-chunker static/forma-subsets
                    static/chunk-size
-                   (s3-path pattern)
-                   (s3-path output-path))))
+                   (io/s3-path pattern)
+                   (io/s3-path output-path))))
 
 (defn rain-main
   "TODO: Example usage."
@@ -101,15 +85,8 @@
     (rain-chunker "1000"
                   static/chunk-size
                   (apply tile-set countries)
-                  (s3-path path)
-                  (s3-path output-path))))
-
-(defn fire-main
-  "TODO: Example usage."
-  [pattern output-path]
-  (fire-chunker "1000"
-                (s3-path pattern)
-                (s3-path output-path)))
+                  (io/s3-path path)
+                  (io/s3-path output-path))))
 
 (defn static-main
   "TODO: Example usage."
@@ -122,7 +99,14 @@
                   dataset
                   c/sum
                   ascii-path
-                  (s3-path output-path)))
+                  (io/s3-path output-path)))
+
+(defn fire-main
+  "TODO: Example usage."
+  [pattern output-path]
+  (fire-chunker "1000"
+                (io/s3-path pattern)
+                (io/s3-path output-path)))
 
 ;;TODO: call read-string on the args.
 (defn -main

@@ -7,14 +7,14 @@
 (ns forma.hadoop.io
   (:use cascalog.api
         [forma.date-time :only (jobtag)]
-        [clojure.contrib.math :only (abs)]
-        [clojure.string :only (join)])
+        [clojure.string :only (join)]
+        [forma.source.modis :only (valid-modis?)])
+  (:require [cascalog.workflow :as w])
   (:import [forma WholeFile]
            [cascading.tuple Fields]
            [cascading.scheme Scheme]
            [cascading.tap TemplateTap SinkMode GlobHfs]
-           [org.apache.hadoop.io BytesWritable])
-  (:require [cascalog.workflow :as w]))
+           [org.apache.hadoop.io BytesWritable]))
 
 ;; ## Custom File Input
 ;;
@@ -180,6 +180,17 @@ tuples into the supplied directory, using the format specified by
 ;; projection. For details on the globbing syntax, see
 ;; [here](http://goo.gl/uIEzu).
 
+(defn tiles->globstring
+  [& tiles]
+  {:pre [(valid-modis? tiles)]}
+  (->> (for [[th tv] tiles]
+         (format "h%02dv%02d" th tv))
+       (join "," )
+       (format "*{%s}*")))
+
+(defn s3-path [path]
+  (str "s3n://AKIAJ56QWQ45GBJELGQA:6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV@" path))
+
 (defn globstring
   "Takes a path ending in `/` and collections of nested
   subdirectories, and returns a globstring formatted for cascading's
@@ -240,7 +251,7 @@ tuples into the supplied directory, using the format specified by
   "Generates a unique identifier for the supplied BytesWritable
   object. Useful as a filename, when worried about clashes."
   [^BytesWritable bytes]
-  (str (abs (.hashCode bytes))))
+  (-> bytes .hashCode Math/abs str))
 
 (defn get-bytes
   "Extracts a byte array from a Hadoop BytesWritable object. As
