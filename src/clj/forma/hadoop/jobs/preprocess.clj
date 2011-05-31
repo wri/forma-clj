@@ -75,8 +75,8 @@
         pattern (str path (apply io/tiles->globstring tileseq))]
     (modis-chunker static/forma-subsets
                    static/chunk-size
-                   (io/s3-path pattern)
-                   (io/s3-path output-path))))
+                   pattern
+                   output-path)))
 
 (defn rain-main
   "TODO: Example usage."
@@ -85,8 +85,8 @@
     (rain-chunker "1000"
                   static/chunk-size
                   (apply tile-set countries)
-                  (io/s3-path path)
-                  (io/s3-path output-path))))
+                  path
+                  output-path)))
 
 (defn static-main
   "TODO: Example usage."
@@ -99,14 +99,14 @@
                   dataset
                   c/sum
                   ascii-path
-                  (io/s3-path output-path)))
+                  output-path))
 
 (defn fire-main
   "TODO: Example usage."
   [pattern output-path]
   (fire-chunker "1000"
-                (io/s3-path pattern)
-                (io/s3-path output-path)))
+                pattern
+                output-path))
 
 ;;TODO: call read-string on the args.
 (defn -main

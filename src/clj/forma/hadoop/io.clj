@@ -85,7 +85,7 @@
 ;; and the tap inhales everything inside of it, passing it in as food
 ;; for whatever scheme it's associated with. HFS can deal with HDFS,
 ;; local fileystem, and Amazon S3 bucket paths; A path prefix of, respectively,
-;; `hdfs://`, `file://`, and `s3://` forces the proper choice.
+;; `hdfs://`, `file://`, and `s3n://` forces the proper choice.
 
 (defn template-tap [^Scheme scheme path-or-file pathstr]
   (TemplateTap. (w/hfs-tap scheme (w/path path-or-file))
@@ -187,9 +187,6 @@ tuples into the supplied directory, using the format specified by
          (format "h%02dv%02d" th tv))
        (join "," )
        (format "*{%s}*")))
-
-(defn s3-path [path]
-  (str "s3n://AKIAJ56QWQ45GBJELGQA:6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV@" path))
 
 (defn globstring
   "Takes a path ending in `/` and collections of nested

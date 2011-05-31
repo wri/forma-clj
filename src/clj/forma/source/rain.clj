@@ -179,6 +179,7 @@ binary files are packaged as hadoop BytesWritable objects."}
 ;; product containing the [NDVI](http://goo.gl/kjojh) only covers
 ;; land, for example.)
 
+;; TODO: Change 1s to ?month
 (defn rain-months
   "Generates a predicate macro to extract all months from a directory
   of PREC/L datasets, paired with a datestring of the format
@@ -187,8 +188,8 @@ binary files are packaged as hadoop BytesWritable objects."}
     precl_mon_v1.0.lnx.YYYY.gri0.5m(.gz, optionally)."
   [step]
   (<- [?filename ?file :> ?date ?raindata]
-      (unpack-rain [step] ?file :> ?month ?raindata)
-      (to-datestring ?filename ?month :> ?date)))
+      (unpack-rain [step] ?file :> 1 ?raindata)
+      (to-datestring ?filename 1 :> ?date)))
 
 ;; TODO: Merge into hadoop.predicate.
 (defmapcatop
