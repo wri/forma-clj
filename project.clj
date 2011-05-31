@@ -6,19 +6,29 @@
   :marginalia {:javascript ["mathjax/MathJax.js"]}
   :javac-options {:debug "true" :fork "true"}
   :repositories {"conjars" "http://conjars.org/repo/"
-                 "sonatype" "http://oss.sonatype.org/content/repositories/releases"}
+                 "sonatype-release"
+                 "http://oss.sonatype.org/content/repositories/releases/"
+                 "sonatype-snap"
+                 "http://oss.sonatype.org/content/repositories/snapshots/"}
   :dependencies [[org.clojure/clojure "1.2.0"]
                  [org.clojure/clojure-contrib "1.2.0"]
                  [incanter "1.2.3" :exclusions [swank-clojure]]
                  [cascalog "1.7.0"]
                  [clj-time "0.3.0"]
-                 [backtype/cascading-thrift "0.1.0" :exclusions [backtype/thriftjava]]
                  [redd/thrift "0.5.0"]
-                 [org.clojars.sritchie09/gdal-java-native "1.8.0"]]
+                 [org.clojars.sritchie09/gdal-java-native "1.8.0"]
+                 [backtype/cascading-thrift "0.1.0"
+                  :exclusions [backtype/thriftjava]]]
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
+                     [vmfest/vmfest "0.2.2"]
+                     [pallet-hadoop "0.1.0-SNAPSHOT"]
                      [swank-clojure "1.4.0-SNAPSHOT"]
                      [clojure-source "1.2.0"]
                      [marginalia "0.5.1"]
                      [midje "1.1"]]
+  :tasks [marginalia.tasks]
   :aot [forma.hadoop.jobs.preprocess
         forma.hadoop.jobs.load-tseries])
+
+
+

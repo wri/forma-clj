@@ -10,13 +10,13 @@
 (ns forma.source.rain
   (:use cascalog.api
         [forma.hadoop.io :only (get-bytes)]
-        [forma.hadoop.predicate :only (window->array
-                                       add-fields)]
-        [forma.source.modis :only (hv->tilestring)]
-        [forma.reproject :only (project-to-modis
+        [forma.source.modis :only (hv->tilestring
+                                   chunk-dims)]
+        [forma.reproject :only (wgs84-indexer
                                 dimensions-for-step)])
-  (:require [cascalog.ops :as c]
-            [clojure.contrib.io :as io])
+  (:require [forma.hadoop.predicate :as p]
+            [clojure.contrib.io :as io]
+            [clojure.string :as s])
   (:import  [java.io File InputStream]
             [java.util.zip GZIPInputStream]))
 
@@ -141,7 +141,7 @@
   in this case, to make the number correspond to a month of the year,
   rather than an index in a seq."
   [index month]
-  (vector (inc index) (big-floats month)))
+  [(inc index) (big-floats month)])
 
 (defn rain-tuples
   "Returns a lazy seq of 2-tuples representing NOAA PREC/L rain
@@ -171,123 +171,81 @@ binary files are packaged as hadoop BytesWritable objects."}
   [filename month-int]
   (let [year (first (re-find #"(\d{4})" filename))
         month (format "%02d" month-int)]
-    (apply str (interpose "-" [year month "01"]))))
+    (s/join "-" [year month "01"])))
 
-;; The following functions bring everything together, making heavy use
-;; of the functionality supplied by `forma.reproject`. Rather than
-;; sampling PRECL data at the positions of every possible MODIS tile,
-;; we allow the user to supply a seq of TileIDs for processing. (No
-;; MODIS product covers every possible tile; any product containing
-;; the [NDVI](http://goo.gl/kjojh) only covers land, for example.)
-;;
-;; These functions are designed to be able to map between WGS84 and
-;; MODIS datasets at arbitrary resolution. This explains the
-;; resolution parameters seen in the functions below.
-;;
-;; (Note our use of `clojure.core/identity` in the following query;
-;; since `identity` returns its argument, and every tuple is processed
-;; through each operation, `identity` acts as a `defmapop` that adds a
-;; new field onto a tuple. In this case, we know that our rain data
-;; comes in monthly temporal resolution, and we need it to have some
-;; dataset identifier, so we hardcode these fields onto every tuple.)
+;; Rather than sampling PRECL data at the positions of every possible
+;; MODIS tile, we allow the user to supply a seq of TileIDs for
+;; processing. (No MODIS product covers every possible tile; any
+;; product containing the [NDVI](http://goo.gl/kjojh) only covers
+;; land, for example.)
 
+;; TODO: Change 1s to ?month
 (defn rain-months
-  "Cascalog subquery to extract all months from a directory of PREC/L
-  datasets with the supplied map of WGS84 dataset information, paired
-  with a datestring of the format `yyyy-mm-dd`. (See `forma.static`
-  for examples of well-formed wgs84 dataset maps.)
+  "Generates a predicate macro to extract all months from a directory
+  of PREC/L datasets, paired with a datestring of the format
+  `yyyy-mm-dd`.  Filename must be of the format
 
-  Source can be any tap that supplies PRECL files named
-  precl_mon_v1.0.lnx.YYYY.gri0.5m(.gz, optionally)."
-  [ascii-info source]
-  (let [step (:step ascii-info)]
-    (<- [?dataset ?temporal-res ?date ?raindata]
+    precl_mon_v1.0.lnx.YYYY.gri0.5m(.gz, optionally)."
+  [step]
+  (<- [?filename ?file :> ?date ?raindata]
+      (unpack-rain [step] ?file :> 1 ?raindata)
+      (to-datestring ?filename 1 :> ?date)))
+
+;; TODO: Merge into hadoop.predicate.
+(defmapcatop
+  ^{:doc "Converts a month's worth of PRECL data, stored in an
+  int-array, into single rows of data, based on the supplied step
+  size. `to-rows` outputs 2-tuples of the form `[row-idx,
+  row-array]`."}
+  [to-rows [step]]
+  [coll]
+  (let [[row-length] (dimensions-for-step step)]
+    (->> coll
+         (partition row-length)
+         (map-indexed (fn [idx xs]
+                        [idx (int-array xs)])))))
+
+(defn rain-values
+  "Generates a cascalog subquery from the supplied WGS84 step size and
+  source of `?filename` and `?file` tiles; this subquery returns
+  individual rain values, marked by `?row`, `?col` and `?val` from the
+  original WGS84 matrix. A date field is also included."
+  [step source]
+  (let [unpack (rain-months step)]
+    (<- [?date ?row ?col ?val]
         (source ?filename ?file)
-        (unpack-rain [step] ?file :> ?month ?raindata)
-        (to-datestring ?filename ?month :> ?date)
-        (add-fields "precl" "32" :> ?dataset ?temporal-res))))
+        (unpack ?filename ?file :> ?date ?raindata)
+        (to-rows [step] ?raindata :> ?row ?row-data)
+        (p/index ?row-data :> ?col ?val))))
 
-;; Something interesting occurs in the next few functions. Rather than
-;; combine `cross-join` and `fancy-index` into one query, we've
-;; decided to break them out into subqueries, joined together by one
-;; larger function that routes them through an intermediate
-;; sequencefile. What's going on here?
-;;
-;; We have a method of producing sampling our the tiles we want from a
-;; clojure data structure, and a method of unpacking rain-data for the
-;; entire globe, for each month. To maintain the ability to
-;; parallelize the sampling process, we need to pair up every tile
-;; with every rain-month.
-
-;; As described in [this thread](http://goo.gl/TviNn) on
-;; [cascalog-user](http://goo.gl/Tqihs), this is called a cross-join;
-;; we're taking the [cartesian product](http://goo.gl/r5Qsw) of the
-;; two sets. We accomplish this by feeding every tuple into
-;; `forma.hadoop.predicate/add-fields` with argument `m-res`, the
-;; supplied MODIS resolution into which we're translating the PRECL
-;; sets. `add-fields` produces the common dynamic variable
-;; `?spatial-res`, needed by `fancy-index`.
-
-(defn cross-join
-  "Unpacks all NOAA PRECL files (at the supplied resolution) located
-  at `source`, and cross-joins each month produced with each unique
-  MODIS tile referenced within `tile-seq`."
-  [m-res ascii-info tile-seq source]
-  (let [tiles (memory-source-tap tile-seq)
-        precl (rain-months ascii-info source)]
-    (<- [?dataset ?spatial-res ?temporal-res ?mod-h ?mod-v ?date ?raindata]
-        (tiles ?mod-h ?mod-v)
-        (precl ?dataset ?temporal-res ?date ?raindata)
-        (add-fields m-res :> ?spatial-res))))
-
-;; The problem with cross-joining is that every tuple being joined is
-;; joined by a single reducer. We need to map the index sequences onto
-;; the rain data to produce our chunks, but we don't want the single
-;; reducer to take on the entire job. As Nathan Marz suggests [in this
-;; post](http://goo.gl/2EqHh), we can solve this problem by storing
-;; all tuples into an intermediate sequencefile, forcing cascading to
-;; create a new MapReduce task for the fancy-indexing. On one machine,
-;; this slows performance slightly. On a cluster, it should give us a
-;; big bump.
-
-(defn fancy-index
-  "Reduction step to process all tuples produced by
-  `forma.source.rain/cross-join`. We break this out into a separate
-  query because the cross-join forces all tuples to be processed by a
-  single reducer. This step allows the flow to branch out again from
-  that bottleneck, when run on a cluster."
-  [m-res ascii-map chunk-size source]
-  (<- [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk]
-      (source ?dataset ?spatial-res ?temporal-res ?mod-h ?mod-v ?date ?raindata)
-      (hv->tilestring ?mod-h ?mod-v :> ?tilestring)
-      (project-to-modis [m-res ascii-map chunk-size]
-                        ?raindata ?mod-h ?mod-v :> ?chunkid ?chunk)
-      (window->array [Float/TYPE] ?chunk :> ?float-chunk)))
-
-;; Finally, the chunker. This subquery is analogous to
-;; `forma.source.hdf/modis-chunks`. This is the only subquery that
-;; needs to be called, when processing new PRECL data.
+(defn resample-rain
+  "Cascalog query that merges the `?row` `?col` and `?val` generated
+  by `rain-values` with the MODIS coordinate tuples generated by
+  `pix-tap`. Cascalog does the heavy lifting here, simply because of
+  the common name between the generated and supplied `?row` and `?col`
+  fields. Powerful stuff!"
+  [m-res {:keys [step] :as ascii-map} file-tap pix-tap]
+  (let [rain-vals (rain-values step file-tap)
+        mod-coords ["?mod-h" "?mod-v" "?sample" "?line"]]
+    (<- [?date ?mod-h ?mod-v ?sample ?line ?val]
+        (rain-vals ?date ?row ?col ?val)
+        (pix-tap :>> mod-coords)
+        (wgs84-indexer :<< (into [m-res ascii-map] mod-coords) :> ?row ?col))))
 
 (defn rain-chunks
   "Cascalog subquery to fully process a WGS84 float array at the
   supplied resolution (`:step`, within `ascii-map`) into tuples
   suitable for comparison to any MODIS dataset at the supplied modis
   resolution `m-res`, partitioned by the supplied chunk size."
-  [m-res ascii-map chunk-size tile-seq source]
-  (let [rnd (int (* 100000 (rand)))
-        tmp (hfs-seqfile (str "/tmp/" rnd))]
-    (?- tmp (cross-join m-res ascii-map tile-seq source))
-    (fancy-index m-res ascii-map chunk-size tmp)))
-
-;; An alternate formulation of `rain-chunks` that skipped the
-;; intermediate sequencefile would be:
-;;
-;;     (defn rain-chunks [m-res ascii-map chunk-size tile-seq source]
-;;       (let [precl (cross-join m-res ascii-map tile-seq source)]
-;;         (fancy-index m-res ascii-map chunk-size precl)))
-;;
-;; This is worth testing on the cluster, though I suspect it simply
-;; won't branch out to multiple reduce jobs, leaving one poor machine
-;; to do all of the work. If successful, fancy-index should be
-;; merged into this function, which should replace the intermediate
-;; sequencefile solution.
+  [m-res {:keys [nodata] :as ascii-map} chunk-size file-tap pix-tap]
+  (let [[width height] (chunk-dims m-res chunk-size)
+        window-src (-> (resample-rain m-res ascii-map file-tap pix-tap)
+                       (p/sparse-windower ["?sample" "?line"]
+                                          [width height]
+                                          "?val"
+                                          nodata))]
+    (<- [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk]
+        (window-src ?date ?mod-h ?mod-v _ ?chunkid ?window)
+        (p/window->array [Integer/TYPE] ?window :> ?chunk)
+        (hv->tilestring ?mod-h ?mod-v :> ?tilestring)
+        (p/add-fields "precl" "32" m-res :> ?dataset ?temporal-res ?spatial-res))))

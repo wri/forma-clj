@@ -7,13 +7,14 @@
 (ns forma.hadoop.io
   (:use cascalog.api
         [forma.date-time :only (jobtag)]
-        [clojure.contrib.math :only (abs)])
+        [clojure.string :only (join)]
+        [forma.source.modis :only (valid-modis?)])
+  (:require [cascalog.workflow :as w])
   (:import [forma WholeFile]
            [cascading.tuple Fields]
            [cascading.scheme Scheme]
            [cascading.tap TemplateTap SinkMode GlobHfs]
-           [org.apache.hadoop.io BytesWritable])
-  (:require [cascalog.workflow :as w]))
+           [org.apache.hadoop.io BytesWritable]))
 
 ;; ## Custom File Input
 ;;
@@ -84,7 +85,7 @@
 ;; and the tap inhales everything inside of it, passing it in as food
 ;; for whatever scheme it's associated with. HFS can deal with HDFS,
 ;; local fileystem, and Amazon S3 bucket paths; A path prefix of, respectively,
-;; `hdfs://`, `file://`, and `s3://` forces the proper choice.
+;; `hdfs://`, `file://`, and `s3n://` forces the proper choice.
 
 (defn template-tap [^Scheme scheme path-or-file pathstr]
   (TemplateTap. (w/hfs-tap scheme (w/path path-or-file))
@@ -179,6 +180,14 @@ tuples into the supplied directory, using the format specified by
 ;; projection. For details on the globbing syntax, see
 ;; [here](http://goo.gl/uIEzu).
 
+(defn tiles->globstring
+  [& tiles]
+  {:pre [(valid-modis? tiles)]}
+  (->> (for [[th tv] tiles]
+         (format "h%02dv%02d" th tv))
+       (join "," )
+       (format "*{%s}*")))
+
 (defn globstring
   "Takes a path ending in `/` and collections of nested
   subdirectories, and returns a globstring formatted for cascading's
@@ -191,14 +200,15 @@ tuples into the supplied directory, using the format specified by
     (globstring \"s3n://bucket/\" * * [\"008006\" \"033011\"])
     ;=> \"s3://bucket/*/*/{008006,033011}/\""
   [basepath & pieces]
-  (let [comma-string (fn [arg] (apply str (interpose "," arg)))
-        rest (map (fn [arg]
-                    (if (= * arg)
-                      "*/"
-                      (format "{%s}/" (comma-string (if (coll? arg)
-                                                      arg [arg])))))
-                  pieces)]
-    (apply str basepath rest)))
+  (let [globber (fn [arg]
+                  (if (= * arg)
+                    "*/"
+                    (format "{%s}/" (join ","
+                                          (if (coll? arg) arg
+                                              [arg]))))) ]
+    (->> pieces
+         (map globber)
+         (apply str basepath))))
 
 (defn chunk-tap
   "Generalized source and sink for the chunk tuples stored and
@@ -238,7 +248,7 @@ tuples into the supplied directory, using the format specified by
   "Generates a unique identifier for the supplied BytesWritable
   object. Useful as a filename, when worried about clashes."
   [^BytesWritable bytes]
-  (str (abs (.hashCode bytes))))
+  (-> bytes .hashCode Math/abs str))
 
 (defn get-bytes
   "Extracts a byte array from a Hadoop BytesWritable object. As

@@ -69,3 +69,16 @@
             [agg "?val" :> "?outval"]
             [p/add-fields dataset "00" :> "?dataset" "?t-res"]
             [m/hv->tilestring "?mod-h" "?mod-v" :> "?tilestring"]]))))
+
+(defn static-chunks
+  "TODO: DOCS!"
+  [m-res chunk-size dataset agg line-tap pix-tap]
+  (let [[width height] (m/chunk-dims m-res chunk-size)
+        window-src (-> (sample-modis m-res dataset pix-tap line-tap agg)
+                       (p/sparse-windower ["?sample" "?line"]
+                                          [width height]
+                                          "?outval"
+                                          -9999))]
+    (<- [?dataset ?spatial-res ?t-res ?tilestring ?chunkid ?chunk]
+        (window-src ?dataset ?spatial-res ?t-res ?tilestring  _ ?chunkid ?window)
+        (p/window->array [Float/TYPE] ?window :> ?chunk))))
