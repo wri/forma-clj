@@ -90,7 +90,7 @@
                       :compute env/ec2-service
                       :environment env/remote-env)
         (lift-cluster cluster
-                      config-redd
+                      :phase config-redd
                       :compute env/ec2-service
                       :environment env/remote-env)
         (start-cluster cluster

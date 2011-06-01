@@ -18,7 +18,7 @@
                  [backtype/cascading-thrift "0.1.0"
                   :exclusions [backtype/thriftjava]]]
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
-                     [pallet-hadoop "0.1.1"]
+                     [pallet-hadoop "0.1.0"]
                      [org.jclouds/jclouds-all "1.0-beta-9c"]
                      [org.jclouds.driver/jclouds-jsch "1.0-beta-9c"]
                      [org.jclouds.driver/jclouds-log4j "1.0-beta-9c"]
