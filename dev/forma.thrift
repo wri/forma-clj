@@ -12,3 +12,11 @@ struct TimeSeries {
   2: i32 endPeriod,
   3: list<FireTuple> values
 }
+
+struct FloatArray {
+  1: list<double> floats
+}
+
+struct IntArray {
+  1: list<i32> ints
+}

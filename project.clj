@@ -6,10 +6,8 @@
   :marginalia {:javascript ["mathjax/MathJax.js"]}
   :javac-options {:debug "true" :fork "true"}
   :repositories {"conjars" "http://conjars.org/repo/"
-                 "sonatype-release"
-                 "http://oss.sonatype.org/content/repositories/releases/"
-                 "sonatype-snap"
-                 "http://oss.sonatype.org/content/repositories/snapshots/"}
+                 "sonatype"
+                 "http://oss.sonatype.org/content/repositories/releases/"}
   :dependencies [[org.clojure/clojure "1.2.0"]
                  [org.clojure/clojure-contrib "1.2.0"]
                  [incanter "1.2.3" :exclusions [swank-clojure]]
@@ -20,8 +18,12 @@
                  [backtype/cascading-thrift "0.1.0"
                   :exclusions [backtype/thriftjava]]]
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
+                     [pallet-hadoop "0.1.0"]
+                     [org.jclouds/jclouds-all "1.0-beta-9c"]
+                     [org.jclouds.driver/jclouds-jsch "1.0-beta-9c"]
+                     [org.jclouds.driver/jclouds-log4j "1.0-beta-9c"]
+                     [log4j/log4j "1.2.14"]
                      [vmfest/vmfest "0.2.2"]
-                     [pallet-hadoop "0.1.0-SNAPSHOT"]
                      [swank-clojure "1.4.0-SNAPSHOT"]
                      [clojure-source "1.2.0"]
                      [marginalia "0.5.1"]

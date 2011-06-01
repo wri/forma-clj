@@ -60,8 +60,8 @@
   [nodecount]
   (let [lib-path (str fw-path "/usr/lib")]
     (cluster-spec :private
-                  {:jobtracker (hadoop-node [:jobtracker :namenode])
-                   :slaves (slave-node nodecount)}
+                  {:jobtracker (node-group [:jobtracker :namenode])
+                   :slaves (slave-group nodecount)}
                   :base-machine-spec {
                                       ;; :hardware-id "cc1.4xlarge"
                                       ;; :image-id "us-east-1/ami-321eed5b"
