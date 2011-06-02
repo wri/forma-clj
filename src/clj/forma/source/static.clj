@@ -37,10 +37,8 @@
 
 ;; ### Sampling
 
-;; TODO: Clean this fucker up! we need to get rid of that into
-;; duplication.
-
-(defn sample-modis
+;; TODO: UPDATE DOCS
+(defn upsample-modis
   "This function is based on the reference MODIS grid (currently at
   1000m res).  The objective of the function is to tag each MODIS
   pixel with a value from an input ASCII grid.  The process diverges
@@ -51,30 +49,48 @@
   pixel is tagged with the ASCII grid cell that it falls within.  Note
   that the ASCII grid must be in WGS84, with row indices prepended and
   the ASCII header lopped off."
-  [m-res dataset pixel-tap line-tap agg]
+  [m-res dataset pixel-tap line-tap]
+  (let [ascii-info (static-datasets (keyword dataset))]
+    (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?outval]
+        (line-tap ?line)
+        (p/break ?line :> ?row ?col ?outval)
+        (pixel-tap ?mod-h ?mod-v ?sample ?line)
+        (wgs84-indexer m-res ascii-info ?mod-h ?mod-v ?sample ?line :> ?row ?col)
+        (m/hv->tilestring ?mod-h ?mod-v :> ?tilestring)
+        (p/add-fields dataset m-res "00" :> ?dataset ?m-res ?t-res))))
+
+;; TODO: UPDATE DOCS
+(defn downsample-modis
+  "This function is based on the reference MODIS grid (currently at
+  1000m res).  The objective of the function is to tag each MODIS
+  pixel with a value from an input ASCII grid.  The process diverges
+  based on whether the ASCII grid is at coarser or finer resolution
+  than the MODIS grid.  If higher, then each ASCII point is assigned a
+  unique MODIS identifier, and the duplicate values are aggregated
+  based on an input aggregator (sum, max, etc.).  If lower, each MODIS
+  pixel is tagged with the ASCII grid cell that it falls within.  Note
+  that the ASCII grid must be in WGS84, with row indices prepended and
+  the ASCII header lopped off."
+  [m-res dataset line-tap agg]
   {:pre [(or (= agg c/sum) (= agg c/max))]}
-  (let [ascii-info (static-datasets (keyword dataset))
-        mod-coords ["?mod-h" "?mod-v" "?sample" "?line"]
-        rc-coords ["?row" "?col"]
-        upsample? (>= (:step ascii-info) (wgs84-resolution m-res))
-        aggers (if upsample?
-                 [[pixel-tap :>> mod-coords]
-                  [wgs84-indexer :<< (into [m-res ascii-info] mod-coords) :>> rc-coords]]
-                 [[modis-indexer :<< (into [m-res ascii-info] rc-coords) :>> mod-coords]])]
-    (construct
-     ["?dataset" "?m-res" "?t-res" "?tilestring" "?sample" "?line" "?outval"]
-     (into aggers
-           [[line-tap "?line"]
-            [p/break "?line" :> "?row" "?col" "?val"]
-            [agg "?val" :> "?outval"]
-            [p/add-fields dataset "00" :> "?dataset" "?t-res"]
-            [m/hv->tilestring "?mod-h" "?mod-v" :> "?tilestring"]]))))
+  (let [ascii-info (static-datasets (keyword dataset))]
+    (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?outval]
+        (line-tap ?line)
+        (p/break ?line :> ?row ?col ?val)
+        (modis-indexer m-res ascii-info ?row ?col :> ?mod-h ?mod-v ?sample ?line)
+        (agg ?val :> ?outval)
+        (p/add-fields dataset m-res "00" :> ?dataset ?m-res ?t-res)
+        (m/hv->tilestring ?mod-h ?mod-v :> ?tilestring))))
 
 (defn static-chunks
   "TODO: DOCS!"
   [m-res chunk-size dataset agg line-tap pix-tap]
   (let [[width height] (m/chunk-dims m-res chunk-size)
-        window-src (-> (sample-modis m-res dataset pix-tap line-tap agg)
+        upsample? (>= (-> dataset keyword static-datasets :step)
+                      (wgs84-resolution m-res))
+        window-src (-> (if upsample?
+                         (upsample-modis m-res dataset pix-tap line-tap)
+                         (downsample-modis m-res dataset line-tap agg))
                        (p/sparse-windower ["?sample" "?line"]
                                           [width height]
                                           "?outval"
