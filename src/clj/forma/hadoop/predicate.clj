@@ -67,7 +67,7 @@ I recommend wrapping queries that use this tap with
   [line]
   (let [[idx & row-vals] (map #(Integer. %)
                               (split line #" "))]
-    [idx (int-array row-vals)]))
+    [idx (io/int-struct row-vals)]))
 
 (defmapop
   ^{:doc "Converts nested clojure vectors into an array of the
@@ -102,8 +102,8 @@ I recommend wrapping queries that use this tap with
   ^{:doc "splits a sequence of values into nested 2-tuples formatted
   as `<idx, val>`. Indexing is zero based."}
   index
-  [sequence]
-  (map-indexed vector sequence))
+  [xs]
+  (map-indexed vector xs))
 
 ;; #### Aggregators
 
@@ -150,14 +150,18 @@ I recommend wrapping queries that use this tap with
 
 ;; ### Predicate Macros
 
+(defmapcatop struct-index
+  [struct]
+  (map-indexed vector (.getInts struct)))
+
 (def
   ^{:doc "Takes a source of textlines representing rows of a gridded
   dataset (with indices prepended onto each row), and generates a
   source of `row`, `col` and `val`."}
   break
   (<- [?line :> ?row ?col ?val]
-      (liberate ?line :> ?row ?row-vec)
-      (index ?row-vec :> ?col ?val)))
+      (liberate ?line :> ?row ?row-struct)
+      (struct-index ?row-struct :> ?col ?val)))
 
 (defn vals->sparsevec
   "Returns an aggregating predicate macro that stitches values into a

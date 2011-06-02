@@ -37,46 +37,42 @@
 
 ;; ### Sampling
 
-;; TODO: UPDATE DOCS
 (defn upsample-modis
-  "This function is based on the reference MODIS grid (currently at
-  1000m res).  The objective of the function is to tag each MODIS
-  pixel with a value from an input ASCII grid.  The process diverges
-  based on whether the ASCII grid is at coarser or finer resolution
-  than the MODIS grid.  If higher, then each ASCII point is assigned a
-  unique MODIS identifier, and the duplicate values are aggregated
-  based on an input aggregator (sum, max, etc.).  If lower, each MODIS
-  pixel is tagged with the ASCII grid cell that it falls within.  Note
-  that the ASCII grid must be in WGS84, with row indices prepended and
-  the ASCII header lopped off."
+  "Returns a cascalog query designed to pair each value on an ASCII
+  data grid with a particular MODIS pixel at the specified spatial
+  resolution, `m-res`.
+
+ `upsample-modis` handles the case in which the resolution of the
+  supplied ASCII grid is lower than the supplied MODIS resolution. We
+  accept a source of MODIS coordinates along with the source of text
+  lines, determine the position within the ascii grid of the centroid
+  of each modis coordinate, and perform an inner join on the ASCII
+  data, effectively sampling all ASCII data into a higher resolution."
   [m-res dataset pixel-tap line-tap]
   (let [ascii-info (static-datasets (keyword dataset))]
     (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?outval]
-        (line-tap ?line)
-        (p/break ?line :> ?row ?col ?outval)
+        (line-tap ?textline)
+        (p/break ?textline :> ?row ?col ?outval)
         (pixel-tap ?mod-h ?mod-v ?sample ?line)
         (wgs84-indexer m-res ascii-info ?mod-h ?mod-v ?sample ?line :> ?row ?col)
         (m/hv->tilestring ?mod-h ?mod-v :> ?tilestring)
         (p/add-fields dataset m-res "00" :> ?dataset ?m-res ?t-res))))
 
-;; TODO: UPDATE DOCS
 (defn downsample-modis
-  "This function is based on the reference MODIS grid (currently at
-  1000m res).  The objective of the function is to tag each MODIS
-  pixel with a value from an input ASCII grid.  The process diverges
-  based on whether the ASCII grid is at coarser or finer resolution
-  than the MODIS grid.  If higher, then each ASCII point is assigned a
-  unique MODIS identifier, and the duplicate values are aggregated
-  based on an input aggregator (sum, max, etc.).  If lower, each MODIS
-  pixel is tagged with the ASCII grid cell that it falls within.  Note
-  that the ASCII grid must be in WGS84, with row indices prepended and
-  the ASCII header lopped off."
-  [m-res dataset line-tap agg]
-  {:pre [(or (= agg c/sum) (= agg c/max))]}
+  "Returns a cascalog query designed to pair each value on an ASCII
+  data grid with a particular MODIS pixel at the specified spatial
+  resolution, `m-res`.
+
+ `downsample-modis` handles situations in which the ASCII resolution
+  is higher than the supplied MODIS resolution; more than one value is
+  guaranteed to exist for every MODIS pixel. `agg` (`c/sum` or `c/max`
+  are supported, currently) determines the way in which multiple
+  values are combined."  [m-res dataset line-tap agg] {:pre [(or (=
+  agg c/sum) (= agg c/max))]}
   (let [ascii-info (static-datasets (keyword dataset))]
     (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?outval]
-        (line-tap ?line)
-        (p/break ?line :> ?row ?col ?val)
+        (line-tap ?textline)
+        (p/break ?textline :> ?row ?col ?val)
         (modis-indexer m-res ascii-info ?row ?col :> ?mod-h ?mod-v ?sample ?line)
         (agg ?val :> ?outval)
         (p/add-fields dataset m-res "00" :> ?dataset ?m-res ?t-res)
