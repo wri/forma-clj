@@ -4,7 +4,8 @@
         [clojure.string :only (split)]
         [forma.matrix.utils :only (sparse-expander matrix-of)]
         [forma.source.modis :only (pixels-at-res)])
-  (:require [cascalog.ops :as c]
+  (:require [forma.hadoop.io :as io]
+            [cascalog.ops :as c]
             [cascalog.vars :as v])
   (:import [org.apache.hadoop.mapred JobConf]
            [cascalog Util]))
@@ -78,6 +79,22 @@ I recommend wrapping queries that use this tap with
   [window->array [type]]
   [window]
   [(into-array type (flatten window))])
+
+(defmapop
+  ^{:doc "Converts a window of nested clojure vectors into an Thrift
+  struct object designed to hold numbers of the supplied
+  type. Supported types are `:int` and `:double`. For example:
+
+    (window->struct [:int] ?chunk :> ?int-chunk)
+
+  flattens the chunk and returns an instance of
+  `forma.schema.IntArray`."}
+  [window->struct [type]]
+  [window]
+  (let [wrap (case type
+                   :double io/double-struct
+                   :int io/int-struct)]
+    [(-> window flatten wrap)]))
 
 ;; #### Defmapcatops
 

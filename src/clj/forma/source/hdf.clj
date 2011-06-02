@@ -14,7 +14,7 @@
 (ns forma.source.hdf
   (:use cascalog.api
         forma.hadoop.io
-        [forma.hadoop.predicate :only (window->array)]
+        [forma.hadoop.predicate :only (window->struct)]
         [forma.source.modis :only (temporal-res)]
         [cascalog.io :only (temp-dir)]
         [clojure.contrib.seq-utils :only (find-first indexed)])
@@ -260,5 +260,5 @@ of a MODIS TileID acts as a key to retrieve this data."
         (meta-values [keys] ?freetile :> ?productname ?tileid ?date)
         (t-res ?productname :> ?temporal-res)
         (split-id ?tileid :> ?spatial-res ?tilestring)
-        (window->array [Integer/TYPE] ?chunk :> ?int-chunk)
+        (window->struct [:int] ?chunk :> ?int-chunk)
         (:distinct false))))

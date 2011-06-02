@@ -6,6 +6,20 @@
             [pallet.core :as core])
   (:import [java.net InetAddress]))
 
+;; ### EC2 Environment
+
+(def remote-env
+  (let [default-image  {:image
+                        {:os-family :ubuntu
+                         :os-64-bit true}}]
+    {:tags (zipmap [:hadoop :namenode :jobtracker :slavenode]
+                   (repeat default-image))
+     :algorithms {:lift-fn pallet.core/parallel-lift
+                  :converge-fn pallet.core/parallel-adjust-node-counts}}))
+
+(def ec2-service
+  (compute/compute-service-from-config-file :aws))
+
 ;; ### Local Environment
 
 (def vm-service
@@ -31,17 +45,3 @@
 
 (def vm-env
   (merge local-node-specs parallel-env))
-
-;; ### EC2 Environment
-
-(def remote-env
-  (let [default-image  {:image
-                        {:os-family :ubuntu
-                         :os-64-bit true}}]
-    {:tags (zipmap [:hadoop :namenode :jobtracker :slavenode]
-                   (repeat default-image))
-     :algorithms {:lift-fn pallet.core/parallel-lift
-                  :converge-fn pallet.core/parallel-adjust-node-counts}}))
-
-(def ec2-service
-  (compute/compute-service-from-config-file :aws))

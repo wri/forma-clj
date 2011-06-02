@@ -26,16 +26,16 @@ import org.apache.thrift.meta_data.*;
 import org.apache.thrift.transport.*;
 import org.apache.thrift.protocol.*;
 
-public class FloatArray implements TBase<FloatArray, FloatArray._Fields>, java.io.Serializable, Cloneable {
-  private static final TStruct STRUCT_DESC = new TStruct("FloatArray");
+public class DoubleArray implements TBase<DoubleArray, DoubleArray._Fields>, java.io.Serializable, Cloneable {
+  private static final TStruct STRUCT_DESC = new TStruct("DoubleArray");
 
-  private static final TField FLOATS_FIELD_DESC = new TField("floats", TType.LIST, (short)1);
+  private static final TField DOUBLES_FIELD_DESC = new TField("doubles", TType.LIST, (short)1);
 
-  public List<Double> floats;
+  public List<Double> doubles;
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements TFieldIdEnum {
-    FLOATS((short)1, "floats");
+    DOUBLES((short)1, "doubles");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -50,8 +50,8 @@ public class FloatArray implements TBase<FloatArray, FloatArray._Fields>, java.i
      */
     public static _Fields findByThriftId(int fieldId) {
       switch(fieldId) {
-        case 1: // FLOATS
-          return FLOATS;
+        case 1: // DOUBLES
+          return DOUBLES;
         default:
           return null;
       }
@@ -96,91 +96,91 @@ public class FloatArray implements TBase<FloatArray, FloatArray._Fields>, java.i
   public static final Map<_Fields, FieldMetaData> metaDataMap;
   static {
     Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.FLOATS, new FieldMetaData("floats", TFieldRequirementType.DEFAULT, 
+    tmpMap.put(_Fields.DOUBLES, new FieldMetaData("doubles", TFieldRequirementType.DEFAULT, 
         new ListMetaData(TType.LIST, 
             new FieldValueMetaData(TType.DOUBLE))));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
-    FieldMetaData.addStructMetaDataMap(FloatArray.class, metaDataMap);
+    FieldMetaData.addStructMetaDataMap(DoubleArray.class, metaDataMap);
   }
 
-  public FloatArray() {
+  public DoubleArray() {
   }
 
-  public FloatArray(
-    List<Double> floats)
+  public DoubleArray(
+    List<Double> doubles)
   {
     this();
-    this.floats = floats;
+    this.doubles = doubles;
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
-  public FloatArray(FloatArray other) {
-    if (other.isSetFloats()) {
-      List<Double> __this__floats = new ArrayList<Double>();
-      for (Double other_element : other.floats) {
-        __this__floats.add(other_element);
+  public DoubleArray(DoubleArray other) {
+    if (other.isSetDoubles()) {
+      List<Double> __this__doubles = new ArrayList<Double>();
+      for (Double other_element : other.doubles) {
+        __this__doubles.add(other_element);
       }
-      this.floats = __this__floats;
+      this.doubles = __this__doubles;
     }
   }
 
-  public FloatArray deepCopy() {
-    return new FloatArray(this);
+  public DoubleArray deepCopy() {
+    return new DoubleArray(this);
   }
 
   @Override
   public void clear() {
-    this.floats = null;
+    this.doubles = null;
   }
 
-  public int getFloatsSize() {
-    return (this.floats == null) ? 0 : this.floats.size();
+  public int getDoublesSize() {
+    return (this.doubles == null) ? 0 : this.doubles.size();
   }
 
-  public java.util.Iterator<Double> getFloatsIterator() {
-    return (this.floats == null) ? null : this.floats.iterator();
+  public java.util.Iterator<Double> getDoublesIterator() {
+    return (this.doubles == null) ? null : this.doubles.iterator();
   }
 
-  public void addToFloats(double elem) {
-    if (this.floats == null) {
-      this.floats = new ArrayList<Double>();
+  public void addToDoubles(double elem) {
+    if (this.doubles == null) {
+      this.doubles = new ArrayList<Double>();
     }
-    this.floats.add(elem);
+    this.doubles.add(elem);
   }
 
-  public List<Double> getFloats() {
-    return this.floats;
+  public List<Double> getDoubles() {
+    return this.doubles;
   }
 
-  public FloatArray setFloats(List<Double> floats) {
-    this.floats = floats;
+  public DoubleArray setDoubles(List<Double> doubles) {
+    this.doubles = doubles;
     return this;
   }
 
-  public void unsetFloats() {
-    this.floats = null;
+  public void unsetDoubles() {
+    this.doubles = null;
   }
 
-  /** Returns true if field floats is set (has been asigned a value) and false otherwise */
-  public boolean isSetFloats() {
-    return this.floats != null;
+  /** Returns true if field doubles is set (has been asigned a value) and false otherwise */
+  public boolean isSetDoubles() {
+    return this.doubles != null;
   }
 
-  public void setFloatsIsSet(boolean value) {
+  public void setDoublesIsSet(boolean value) {
     if (!value) {
-      this.floats = null;
+      this.doubles = null;
     }
   }
 
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
-    case FLOATS:
+    case DOUBLES:
       if (value == null) {
-        unsetFloats();
+        unsetDoubles();
       } else {
-        setFloats((List<Double>)value);
+        setDoubles((List<Double>)value);
       }
       break;
 
@@ -189,8 +189,8 @@ public class FloatArray implements TBase<FloatArray, FloatArray._Fields>, java.i
 
   public Object getFieldValue(_Fields field) {
     switch (field) {
-    case FLOATS:
-      return getFloats();
+    case DOUBLES:
+      return getDoubles();
 
     }
     throw new IllegalStateException();
@@ -203,8 +203,8 @@ public class FloatArray implements TBase<FloatArray, FloatArray._Fields>, java.i
     }
 
     switch (field) {
-    case FLOATS:
-      return isSetFloats();
+    case DOUBLES:
+      return isSetDoubles();
     }
     throw new IllegalStateException();
   }
@@ -213,21 +213,21 @@ public class FloatArray implements TBase<FloatArray, FloatArray._Fields>, java.i
   public boolean equals(Object that) {
     if (that == null)
       return false;
-    if (that instanceof FloatArray)
-      return this.equals((FloatArray)that);
+    if (that instanceof DoubleArray)
+      return this.equals((DoubleArray)that);
     return false;
   }
 
-  public boolean equals(FloatArray that) {
+  public boolean equals(DoubleArray that) {
     if (that == null)
       return false;
 
-    boolean this_present_floats = true && this.isSetFloats();
-    boolean that_present_floats = true && that.isSetFloats();
-    if (this_present_floats || that_present_floats) {
-      if (!(this_present_floats && that_present_floats))
+    boolean this_present_doubles = true && this.isSetDoubles();
+    boolean that_present_doubles = true && that.isSetDoubles();
+    if (this_present_doubles || that_present_doubles) {
+      if (!(this_present_doubles && that_present_doubles))
         return false;
-      if (!this.floats.equals(that.floats))
+      if (!this.doubles.equals(that.doubles))
         return false;
     }
 
@@ -239,20 +239,20 @@ public class FloatArray implements TBase<FloatArray, FloatArray._Fields>, java.i
     return 0;
   }
 
-  public int compareTo(FloatArray other) {
+  public int compareTo(DoubleArray other) {
     if (!getClass().equals(other.getClass())) {
       return getClass().getName().compareTo(other.getClass().getName());
     }
 
     int lastComparison = 0;
-    FloatArray typedOther = (FloatArray)other;
+    DoubleArray typedOther = (DoubleArray)other;
 
-    lastComparison = Boolean.valueOf(isSetFloats()).compareTo(typedOther.isSetFloats());
+    lastComparison = Boolean.valueOf(isSetDoubles()).compareTo(typedOther.isSetDoubles());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetFloats()) {
-      lastComparison = TBaseHelper.compareTo(this.floats, typedOther.floats);
+    if (isSetDoubles()) {
+      lastComparison = TBaseHelper.compareTo(this.doubles, typedOther.doubles);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -274,16 +274,16 @@ public class FloatArray implements TBase<FloatArray, FloatArray._Fields>, java.i
         break;
       }
       switch (field.id) {
-        case 1: // FLOATS
+        case 1: // DOUBLES
           if (field.type == TType.LIST) {
             {
               TList _list4 = iprot.readListBegin();
-              this.floats = new ArrayList<Double>(_list4.size);
+              this.doubles = new ArrayList<Double>(_list4.size);
               for (int _i5 = 0; _i5 < _list4.size; ++_i5)
               {
                 double _elem6;
                 _elem6 = iprot.readDouble();
-                this.floats.add(_elem6);
+                this.doubles.add(_elem6);
               }
               iprot.readListEnd();
             }
@@ -306,11 +306,11 @@ public class FloatArray implements TBase<FloatArray, FloatArray._Fields>, java.i
     validate();
 
     oprot.writeStructBegin(STRUCT_DESC);
-    if (this.floats != null) {
-      oprot.writeFieldBegin(FLOATS_FIELD_DESC);
+    if (this.doubles != null) {
+      oprot.writeFieldBegin(DOUBLES_FIELD_DESC);
       {
-        oprot.writeListBegin(new TList(TType.DOUBLE, this.floats.size()));
-        for (double _iter7 : this.floats)
+        oprot.writeListBegin(new TList(TType.DOUBLE, this.doubles.size()));
+        for (double _iter7 : this.doubles)
         {
           oprot.writeDouble(_iter7);
         }
@@ -324,14 +324,14 @@ public class FloatArray implements TBase<FloatArray, FloatArray._Fields>, java.i
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("FloatArray(");
+    StringBuilder sb = new StringBuilder("DoubleArray(");
     boolean first = true;
 
-    sb.append("floats:");
-    if (this.floats == null) {
+    sb.append("doubles:");
+    if (this.doubles == null) {
       sb.append("null");
     } else {
-      sb.append(this.floats);
+      sb.append(this.doubles);
     }
     first = false;
     sb.append(")");

@@ -11,6 +11,8 @@
         [forma.source.modis :only (valid-modis?)])
   (:require [cascalog.workflow :as w])
   (:import [forma WholeFile]
+           [forma.schema DoubleArray IntArray]
+           [java.util ArrayList]
            [cascading.tuple Fields]
            [cascading.scheme Scheme]
            [cascading.tap TemplateTap SinkMode GlobHfs]
@@ -257,3 +259,21 @@ tuples into the supplied directory, using the format specified by
   [^BytesWritable bytes]
   (byte-array (.getLength bytes)
               (.getBytes bytes)))
+
+;; ## Thrift Wrappers
+
+(defn list-of
+  [f xs]
+  (ArrayList. (map f xs)))
+
+(defn int-struct
+  [xs]
+  (let [ints (list-of int xs)]
+    (doto (IntArray.)
+      (.setInts ints))))
+
+(defn double-struct
+  [xs]
+  (let [doubles (list-of double xs)]
+    (doto (DoubleArray.)
+      (.setDoubles doubles))))
