@@ -6,6 +6,7 @@
 
 (ns forma.trends
   (:use cascalog.api
+        [forma.hadoop.io :only (int-struct)]
         [forma.matrix.walk :only (walk-matrix)]
         [forma.hadoop.predicate :only (sparse-windower)]))
 
@@ -85,6 +86,8 @@
 ;; were using `transpose` here, then `map-indexed`) would speed things
 ;; up, and it did.
 
+;; TODO: UPDATE THIS to deal with the fact that we're going to have
+;; incoming float-structs and int-structs.
 (defbufferop
   ^{:doc "Takes in a number of <t-period, modis-chunk> tuples, sorted
   by time period, and transposes these into (n = chunk-size) 4-tuples,

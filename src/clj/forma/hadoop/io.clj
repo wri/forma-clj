@@ -263,17 +263,35 @@ tuples into the supplied directory, using the format specified by
 ;; ## Thrift Wrappers
 
 (defn list-of
+  "Maps `f` across all entries in `xs`, and returns the result wrapped
+  in an instance of `java.util.ArrayList`."
   [f xs]
   (ArrayList. (map f xs)))
 
 (defn int-struct
+  "Casts all numbers in the supplied sequence to ints, and returns
+  them wrapped in an instance of `forma.schema.IntArray`."
   [xs]
   (let [ints (list-of int xs)]
     (doto (IntArray.)
       (.setInts ints))))
 
 (defn double-struct
+  "Casts all numbers in the supplied sequence to doubles, and returns
+  them wrapped in an instance of `forma.schema.DoubleArray`."
   [xs]
   (let [doubles (list-of double xs)]
     (doto (DoubleArray.)
       (.setDoubles doubles))))
+
+(defn num-ints
+  "Returns a count of the number of integers wrapped by the supplied
+  instance of `forma.schema.IntArray`."
+  [i-struct]
+  (count (.getInts i-struct)))
+
+(defn num-doubles
+  "Returns a count of the number of doubles wrapped by the supplied
+  instance of `forma.schema.DoubleArray`."
+  [d-struct]
+  (count (.getDoubles d-struct)))

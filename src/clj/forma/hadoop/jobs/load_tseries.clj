@@ -3,11 +3,11 @@
         [forma.date-time :only (datetime->period current-period)]
         [forma.source.modis :only (tile-position
                                    tilestring->hv)]
-        [forma.hadoop.io :only (chunk-tap)]
         [forma.static :only (chunk-size)]
         [forma.trends :only (timeseries)]
         [forma.trends.analysis :only (long-trend-shell short-trend-shell)])
-  (:require [cascalog.ops :as c]
+  (:require [forma.hadoop.io :as io]
+            [cascalog.ops :as c]
             [forma.hadoop.predicate :as p])
   (:gen-class))
 
@@ -47,6 +47,6 @@
              \"1000-32\" [\"008006\" \"008009\"])"
   [base-input-path output-path & pieces]
   (let [pieces (map read-string pieces)
-        chunk-source (apply chunk-tap base-input-path pieces)]
+        chunk-source (apply io/chunk-tap base-input-path pieces)]
     (?- (hfs-seqfile output-path)
         (process-tseries chunk-source))))
