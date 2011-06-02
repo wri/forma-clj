@@ -66,4 +66,8 @@
    :vcf    {:corner [-179.99998844516 40.164567]
             :travel [+ -]
             :step 0.0041752289295106
+            :nodata -9999}
+   :cabove {:corner [-180 90]
+            :travel [+ -]
+            :step 0.5
             :nodata -9999}})
