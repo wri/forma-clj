@@ -75,16 +75,17 @@
                                :hdfs-site {:dfs.data.dir "/mnt/dfs/data"
                                            :dfs.name.dir "/mnt/dfs/name"}
                                :core-site {:io.serializations serializers
-                                           :fs.s3.awsAccessKeyId "AKIAJ56QWQ45GBJELGQA"
-                                           :fs.s3.awsSecretAccessKey "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"}
+                                           :fs.s3n.awsAccessKeyId "AKIAJ56QWQ45GBJELGQA"
+                                           :fs.s3n.awsSecretAccessKey "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"}
                                :mapred-site {:mapred.task.timeout 300000
-                                             :mapred.reduce.tasks (int (* 1.2 15 nodecount))
+                                             :mapred.reduce.tasks (int (* 1.5 15 nodecount))
                                              :mapred.tasktracker.map.tasks.maximum 15
                                              :mapred.tasktracker.reduce.tasks.maximum 15
                                              :mapred.child.java.opts (str "-Djava.library.path=" native-path " -Xms1024m -Xmx1024m")
                                              :mapred.child.env (str "LD_LIBRARY_PATH=" lib-path)}})))
 
-(defn create-cluster [node-count]
+(defn create-cluster
+  [node-count]
   (let [cluster (forma-cluster node-count)]
     (do (boot-cluster cluster
                       :compute env/ec2-service
