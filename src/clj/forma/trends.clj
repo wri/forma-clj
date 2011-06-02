@@ -8,7 +8,8 @@
   (:use cascalog.api
         [forma.hadoop.io :only (int-struct)]
         [forma.matrix.walk :only (walk-matrix)]
-        [forma.hadoop.predicate :only (sparse-windower)]))
+        [forma.hadoop.predicate :only (sparse-windower)])
+  (:require [forma.hadoop.io :as io]))
 
 ;; ### Time Series Generation
 ;;
@@ -86,21 +87,31 @@
 ;; were using `transpose` here, then `map-indexed`) would speed things
 ;; up, and it did.
 
-;; TODO: UPDATE THIS to deal with the fact that we're going to have
-;; incoming float-structs and int-structs.
+;; TODO: Some sort of protocol, not multimethod, that gets count and
+;; the inner values, etc for these bad boys, depending on the
+;; class. `Vector`, `IntArray`, `DoubleArray`. Right now, we can only
+;; support `DoubleArray`.
+
 (defbufferop
-  ^{:doc "Takes in a number of <t-period, modis-chunk> tuples, sorted
-  by time period, and transposes these into (n = chunk-size) 4-tuples,
-  formatted as <pixel-idx, t-start, t-end, t-series>, where the
-  `t-series` field is represented by an int-array. Entering chunks
-  should be sorted in descending order."}
+  ^{:doc "Takes in a number of `<t-period, modis-chunk>` tuples,
+  sorted by time period, and transposes these into (n = chunk-size)
+  4-tuples, formatted as <pixel-idx, t-start, t-end, t-series>, where
+  the `t-series` field is represented by an instance of
+  `forma.schema.DoubleArray`.
+
+  Entering chunks should be sorted by `t-period` in ascending
+  order. `modis-chunk` tuple fields must be instances of
+  `forma.schema.DoubleArray`."}
   timeseries [tuples]
   (let [[periods chunks] (apply map vector tuples)
         periodize (partial vector
                            (first periods)
                            (last periods))
-        tupleize (comp periodize int-array vector)]
-    (map-indexed cons (apply map tupleize chunks))))
+        tupleize (comp periodize io/double-struct vector)]
+    (->> chunks
+         (map io/get-doubles)
+         (apply map tupleize)
+         (map-indexed cons))))
 
 ;; [This gist](https://gist.github.com/845813) is a solid example of
 ;; how to get cascalog to sort by time period and provide tuples to

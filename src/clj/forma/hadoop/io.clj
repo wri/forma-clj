@@ -261,6 +261,9 @@ tuples into the supplied directory, using the format specified by
               (.getBytes bytes)))
 
 ;; ## Thrift Wrappers
+;;
+;; TODO: This is a nice candidate for some sort of protocol that these
+;; all adhere to. We want to get count, chunks, etc.
 
 (defn list-of
   "Maps `f` across all entries in `xs`, and returns the result wrapped
@@ -283,6 +286,12 @@ tuples into the supplied directory, using the format specified by
   (let [doubles (list-of double xs)]
     (doto (DoubleArray.)
       (.setDoubles doubles))))
+
+(defn get-ints [i-struct]
+  (.getInts i-struct))
+
+(defn get-doubles [d-struct]
+  (.getDoubles d-struct))
 
 (defn num-ints
   "Returns a count of the number of integers wrapped by the supplied
