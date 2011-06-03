@@ -93,4 +93,4 @@
                                           -9999))]
     (<- [?dataset ?spatial-res ?t-res ?tilestring ?chunkid ?chunk]
         (window-src ?dataset ?spatial-res ?t-res ?tilestring  _ ?chunkid ?window)
-        (p/window->struct [:double] ?window :> ?chunk))))
+        (p/window->struct [:int] ?window :> ?chunk))))
