@@ -69,10 +69,13 @@
   "Example usage:
 
    hadoop jar forma-standalone.jar forma.hadoop.jobs.preprocess
-          modis modisdata/MOD13A3/ reddoutput/ [8 6] [10 12]"
+          modis s3n://modisdata/MOD13A3/*/ s3n://redddata/ :IDN"
   [path output-path & tiles]
-  (let [tileseq (apply tile-set (map read-string tiles))
-        pattern (str path (apply io/tiles->globstring tileseq))]
+  (let [pattern (->> tiles
+                     (map read-string)
+                     (apply tile-set)
+                     (apply io/tiles->globstring)
+                     (str path))]
     (modis-chunker static/forma-subsets
                    static/chunk-size
                    pattern
@@ -88,6 +91,7 @@
                   path
                   output-path)))
 
+;; TODO: Abstract out this map read-string business.
 (defn static-main
   "TODO: Example usage."
   [dataset ascii-path output-path & countries]
