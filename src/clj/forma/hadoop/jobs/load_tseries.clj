@@ -1,12 +1,10 @@
 (ns forma.hadoop.jobs.load-tseries
   (:use cascalog.api
-        [forma.date-time :only (datetime->period current-period)]
+        [forma.trends :only (timeseries)]
+        [forma.date-time :only (datetime->period)]
         [forma.source.modis :only (tile-position
-                                   tilestring->hv)]
-        [forma.trends :only (timeseries)])
-  (:require [forma.hadoop.io :as io]
-            [cascalog.ops :as c]
-            [forma.hadoop.predicate :as p])
+                                   tilestring->hv)])
+  (:require [forma.hadoop.io :as io])
   (:gen-class))
 
 (def
@@ -21,9 +19,10 @@
 
 (defn extract-tseries
   [chunk-source]
-  (<- [?dataset ?s-res ?t-res ?tilestring ?chunk-size ?chunkid ?pix-idx ?t-start ?t-end ?tseries]
+  (<- [?dataset ?s-res ?t-res ?tilestring ?chunk-size
+       ?chunkid ?pix-idx ?t-start ?t-end ?tseries]
       (chunk-source ?dataset ?s-res ?t-res ?tilestring ?date ?chunkid ?chunk)
-      (io/num-doubles ?chunk :> ?chunk-size)
+      (io/count-vals ?chunk :> ?chunk-size)
       (form-tseries ?t-res ?date ?chunk :> ?pix-idx ?t-start ?t-end ?tseries)))
 
 (defn process-tseries

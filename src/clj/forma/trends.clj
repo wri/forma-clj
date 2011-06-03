@@ -6,7 +6,6 @@
 
 (ns forma.trends
   (:use cascalog.api
-        [forma.hadoop.io :only (int-struct)]
         [forma.matrix.walk :only (walk-matrix)]
         [forma.hadoop.predicate :only (sparse-windower)])
   (:require [forma.hadoop.io :as io]))
@@ -87,11 +86,6 @@
 ;; were using `transpose` here, then `map-indexed`) would speed things
 ;; up, and it did.
 
-;; TODO: Some sort of protocol, not multimethod, that gets count and
-;; the inner values, etc for these bad boys, depending on the
-;; class. `Vector`, `IntArray`, `DoubleArray`. Right now, we can only
-;; support `DoubleArray`.
-
 (defbufferop
   ^{:doc "Takes in a number of `<t-period, modis-chunk>` tuples,
   sorted by time period, and transposes these into (n = chunk-size)
@@ -100,16 +94,17 @@
   `forma.schema.DoubleArray`.
 
   Entering chunks should be sorted by `t-period` in ascending
-  order. `modis-chunk` tuple fields must be instances of
-  `forma.schema.DoubleArray`."}
+  order. `modis-chunk` tuple fields must be vectors or instances of
+  `forma.schema.DoubleArray` or `forma.schema.IntArray`, as dictated
+  by the Thriftable interface in `forma.hadoop.io`."}
   timeseries [tuples]
   (let [[periods chunks] (apply map vector tuples)
         periodize (partial vector
                            (first periods)
                            (last periods))
-        tupleize (comp periodize io/double-struct vector)]
+        tupleize (comp periodize io/to-struct vector)]
     (->> chunks
-         (map io/get-doubles)
+         (map io/get-vals)
          (apply map tupleize)
          (map-indexed cons))))
 
