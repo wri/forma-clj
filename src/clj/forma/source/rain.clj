@@ -245,6 +245,6 @@ binary files are packaged as hadoop BytesWritable objects."}
                                           nodata))]
     (<- [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk]
         (window-src ?date ?mod-h ?mod-v _ ?chunkid ?window)
-        (p/window->struct [:double] ?window :> ?chunk)
+        (p/window->struct [:int] ?window :> ?chunk)
         (hv->tilestring ?mod-h ?mod-v :> ?tilestring)
         (p/add-fields "precl" "32" m-res :> ?dataset ?temporal-res ?spatial-res))))
