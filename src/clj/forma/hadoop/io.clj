@@ -261,19 +261,44 @@ tuples into the supplied directory, using the format specified by
               (.getBytes bytes)))
 
 ;; ## Thrift Wrappers
-
+;;
 (defn list-of
+  "Maps `f` across all entries in `xs`, and returns the result wrapped
+  in an instance of `java.util.ArrayList`."
   [f xs]
   (ArrayList. (map f xs)))
 
 (defn int-struct
+  "Casts all numbers in the supplied sequence to ints, and returns
+  them wrapped in an instance of `forma.schema.IntArray`."
   [xs]
   (let [ints (list-of int xs)]
     (doto (IntArray.)
       (.setInts ints))))
 
 (defn double-struct
+  "Casts all numbers in the supplied sequence to doubles, and returns
+  them wrapped in an instance of `forma.schema.DoubleArray`."
   [xs]
   (let [doubles (list-of double xs)]
     (doto (DoubleArray.)
       (.setDoubles doubles))))
+
+(defprotocol Thriftable
+  (get-vals [x])
+  (count-vals [x])
+  (to-struct [xs]))
+
+(extend-protocol Thriftable
+  java.lang.Iterable
+  (to-struct [[v :as xs]]
+    (cond (integer? v) (int-struct xs)
+          (float? v) (double-struct xs)))
+  IntArray
+  (get-vals [x] (.getInts x))
+  (count-vals [x]
+    (count (.getInts x)))
+  DoubleArray
+  (get-vals [x] (.getDoubles x))
+  (count-vals [x]
+    (count (.getDoubles x))))

@@ -17,4 +17,4 @@
 (fact
  "check that short-term trend output is the correct shape for the estimation months"
  (count (:for-est (collect-short-trend 71 75 131 15 5
-                             ndvi (vec reli)))) => (inc (- 131 75)))
+                                       ndvi (vec reli)))) => (inc (- 131 75)))

@@ -83,7 +83,7 @@
   isn't full."
   [unit span]
   (let [m {julian 365 month 12}]
-    (Math/ceil (/ (m unit) span))))
+    (-> (m unit) (/ span) Math/ceil int)))
 
 (defn delta-periods
   "Calculates the difference between the supplied start and end dates

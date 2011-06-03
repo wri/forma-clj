@@ -7,7 +7,8 @@
 (ns forma.trends
   (:use cascalog.api
         [forma.matrix.walk :only (walk-matrix)]
-        [forma.hadoop.predicate :only (sparse-windower)]))
+        [forma.hadoop.predicate :only (sparse-windower)])
+  (:require [forma.hadoop.io :as io]))
 
 ;; ### Time Series Generation
 ;;
@@ -86,18 +87,26 @@
 ;; up, and it did.
 
 (defbufferop
-  ^{:doc "Takes in a number of <t-period, modis-chunk> tuples, sorted
-  by time period, and transposes these into (n = chunk-size) 4-tuples,
-  formatted as <pixel-idx, t-start, t-end, t-series>, where the
-  `t-series` field is represented by an int-array. Entering chunks
-  should be sorted in descending order."}
+  ^{:doc "Takes in a number of `<t-period, modis-chunk>` tuples,
+  sorted by time period, and transposes these into (n = chunk-size)
+  4-tuples, formatted as <pixel-idx, t-start, t-end, t-series>, where
+  the `t-series` field is represented by an instance of
+  `forma.schema.DoubleArray`.
+
+  Entering chunks should be sorted by `t-period` in ascending
+  order. `modis-chunk` tuple fields must be vectors or instances of
+  `forma.schema.DoubleArray` or `forma.schema.IntArray`, as dictated
+  by the Thriftable interface in `forma.hadoop.io`."}
   timeseries [tuples]
   (let [[periods chunks] (apply map vector tuples)
         periodize (partial vector
                            (first periods)
                            (last periods))
-        tupleize (comp periodize int-array vector)]
-    (map-indexed cons (apply map tupleize chunks))))
+        tupleize (comp periodize io/to-struct vector)]
+    (->> chunks
+         (map io/get-vals)
+         (apply map tupleize)
+         (map-indexed cons))))
 
 ;; [This gist](https://gist.github.com/845813) is a solid example of
 ;; how to get cascalog to sort by time period and provide tuples to
