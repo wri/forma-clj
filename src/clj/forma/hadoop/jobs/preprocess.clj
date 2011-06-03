@@ -71,7 +71,7 @@
    hadoop jar forma-standalone.jar forma.hadoop.jobs.preprocess
           modis modisdata/MOD13A3/ reddoutput/ [8 6] [10 12]"
   [path output-path & tiles]
-  (let [tileseq (map read-string tiles)
+  (let [tileseq (apply tile-set (map read-string tiles))
         pattern (str path (apply io/tiles->globstring tileseq))]
     (modis-chunker static/forma-subsets
                    static/chunk-size

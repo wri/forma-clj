@@ -13,13 +13,12 @@
 
 (ns forma.source.hdf
   (:use cascalog.api
-        forma.hadoop.io
-        [forma.hadoop.predicate :only (window->struct)]
+        [forma.hadoop.io :only (hash-str get-bytes to-struct)]
         [forma.source.modis :only (temporal-res)]
         [cascalog.io :only (temp-dir)]
         [clojure.contrib.seq-utils :only (find-first indexed)])
   (:require [clojure.contrib.string :as s]
-            [clojure.contrib.io :as io])
+            [clojure.contrib.io :as contrib.io])
   (:import [java.util Hashtable]
            [java.io File]
            [org.gdal.gdal gdal Dataset Band]
@@ -143,20 +142,19 @@ gdal formats, Creates a temp directory, then saves the byte array to
 disk. This byte array is processed with gdal. On teardown, the temp
 directory is destroyed. Function returns the decompressed MODIS file
 as a 1-tuple."}
-  ([]
-     (do
-       (gdal/AllRegister)
-       (temp-dir "hdf")))
+  ([] (do
+        (gdal/AllRegister)
+        (temp-dir "hdf")))
   ([tdir stream]
      (let [bytes (get-bytes stream)
-           temp-hdf (io/file tdir (hash-str stream))
+           temp-hdf (contrib.io/file tdir (hash-str stream))
            keep? (dataset-filter to-keep)]
        (do
-         (io/copy bytes temp-hdf)
+         (contrib.io/copy bytes temp-hdf)
          (map make-subdataset
               (filter keep? (subdataset-names temp-hdf))))))
   ([tdir]
-     (io/delete-file-recursively tdir)))
+     (contrib.io/delete-file-recursively tdir)))
 
 ;; ### Raster Chunking
 ;;
@@ -169,14 +167,17 @@ as a 1-tuple."}
   ^{:doc "Unpacks the data inside of a MODIS band and partitions it
   into chunks sized according to the supplied value. Specifically,
   returns a lazy sequence of 2-tuples of the form (chunk-index,
-  int-array)."}
+  `forma.schema.IntArray`.)."}
   [^Dataset data]
   (let [^Band band (.GetRasterBand data 1)
         width (.GetXSize band)
         height (.GetYSize band)
         ret (int-array (* width height))]
     (.ReadRaster band 0 0 width height ret)
-    (indexed (partition chunk-size ret))))
+    (->> ret
+         (partition chunk-size)
+         (map to-struct)
+         indexed)))
 
 ;; ### Metadata Parsing
 ;;
@@ -253,12 +254,11 @@ of a MODIS TileID acts as a key to retrieve this data."
   time for lookups."
   [datasets chunk-size source]
   (let [keys ["SHORTNAME" "TileID" "RANGEBEGINNINGDATE"]]
-    (<- [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?int-chunk]
+    (<- [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk]
         (source ?filename ?hdf)
         (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
         (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk)
         (meta-values [keys] ?freetile :> ?productname ?tileid ?date)
         (t-res ?productname :> ?temporal-res)
         (split-id ?tileid :> ?spatial-res ?tilestring)
-        (window->struct [:int] ?chunk :> ?int-chunk)
         (:distinct false))))

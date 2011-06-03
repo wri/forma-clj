@@ -17,6 +17,7 @@
       (:sort ?tperiod)
       (timeseries ?tperiod ?chunk :> ?pix-idx ?t-start ?t-end ?tseries)))
 
+;; TODO: Get count-vals working for int arrays
 (defn extract-tseries
   [chunk-source]
   (<- [?dataset ?s-res ?t-res ?tilestring ?chunk-size
@@ -34,6 +35,18 @@
                       ?chunk-size ?chunkid ?pix-idx ?t-start ?t-end ?tseries)
       (tilestring->hv ?tilestring :> ?tile-h ?tile-v)
       (tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line)))
+
+(defn main [in-path out-path]
+  (?- (hfs-seqfile out-path)
+      (-> (hfs-seqfile in-path)
+          extract-tseries
+          process-tseries)))
+
+(defn show [path]
+  (let [src (hfs-seqfile path)]
+    (<- [?dataset ?s-res ?t-res ?tile-h ?tile-v ?sample ?line ?t-start ?t-end ?tseries]
+        (src ?dataset ?s-res ?t-res ?tile-h ?tile-v ?sample ?line ?t-start ?t-end ?tseries))))
+
 
 (defn -main
   "TODO: Docs.

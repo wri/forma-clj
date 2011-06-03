@@ -261,7 +261,7 @@ tuples into the supplied directory, using the format specified by
               (.getBytes bytes)))
 
 ;; ## Thrift Wrappers
-;;
+
 (defn list-of
   "Maps `f` across all entries in `xs`, and returns the result wrapped
   in an instance of `java.util.ArrayList`."
