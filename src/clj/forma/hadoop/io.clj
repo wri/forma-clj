@@ -266,7 +266,9 @@ tuples into the supplied directory, using the format specified by
   "Maps `f` across all entries in `xs`, and returns the result wrapped
   in an instance of `java.util.ArrayList`."
   [f xs]
-  (ArrayList. (map f xs)))
+  (ArrayList. (for [x xs]
+                (try (f x)
+                     (catch Exception e nil)))))
 
 (defn int-struct
   "Casts all numbers in the supplied sequence to ints, and returns

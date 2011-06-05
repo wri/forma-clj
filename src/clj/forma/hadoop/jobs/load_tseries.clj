@@ -36,18 +36,6 @@
       (tilestring->hv ?tilestring :> ?tile-h ?tile-v)
       (tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line)))
 
-(defn main [in-path out-path]
-  (?- (hfs-seqfile out-path)
-      (-> (hfs-seqfile in-path)
-          extract-tseries
-          process-tseries)))
-
-(defn show [path]
-  (let [src (hfs-seqfile path)]
-    (<- [?dataset ?s-res ?t-res ?tile-h ?tile-v ?sample ?line ?t-start ?t-end ?tseries]
-        (src ?dataset ?s-res ?t-res ?tile-h ?tile-v ?sample ?line ?t-start ?t-end ?tseries))))
-
-
 (defn -main
   "TODO: Docs.
 
