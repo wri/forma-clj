@@ -157,8 +157,10 @@ I recommend wrapping queries that use this tap with
 ;; ### Predicate Macros
 
 (defmapcatop struct-index
-  [struct]
-  (map-indexed vector (.getInts struct)))
+  [idx-0 struct]
+  (map-indexed (fn [idx val]
+                 [(+ idx idx-0) val])
+               (io/get-vals struct)))
 
 (def
   ^{:doc "Takes a source of textlines representing rows of a gridded
@@ -167,7 +169,7 @@ I recommend wrapping queries that use this tap with
   break
   (<- [?line :> ?row ?col ?val]
       (liberate ?line :> ?row ?row-struct)
-      (struct-index ?row-struct :> ?col ?val)))
+      (struct-index 0 ?row-struct :> ?col ?val)))
 
 (defn vals->sparsevec
   "Returns an aggregating predicate macro that stitches values into a

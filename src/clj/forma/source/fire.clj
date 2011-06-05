@@ -3,7 +3,8 @@
         [forma.date-time :only (datetime->period
                                 convert)]
         [forma.source.modis :only (latlon->modis
-                                   hv->tilestring)])
+                                   hv->tilestring
+                                   tilestring->hv)])
   (:require [clojure.string :as s]
             [forma.hadoop.predicate :as p])
   (:import [forma.schema FireTuple TimeSeries]
@@ -174,8 +175,9 @@
   (let [[start end] (map (partial datetime->period t-res) [start end])
         length (-> end (- start) inc)
         mk-fire-tseries (p/vals->sparsevec start length (fire-tuple 0 0 0 0))]
-    (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?t-start ?t-end ?ct-series]
+    (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?t-start ?t-end ?ct-series]
         (src ?dataset ?m-res ?t-res ?tilestring ?tperiod ?sample ?line ?tuple)
+        (tilestring->hv ?tilestring :> ?mod-h ?mod-v)
         (mk-fire-tseries ?tperiod ?tuple :> _ ?tseries)
         (p/add-fields start end :> ?t-start ?t-end)
         (running-fire-sum [start end] ?tseries :> ?ct-series))))
