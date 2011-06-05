@@ -177,19 +177,16 @@ resolution. `DateTime` objects can be created with `clj-time`'s
   Example usage:
   (relative-period \"32\" 391 [\"2005-02-01\" \"2005-03-01\"])
   => (30 31)"
-  [t-res start pd-vec]
-  (map (comp
-        int
-        #(- % start)
-        (partial datetime->period t-res))
-       pd-vec))
+  [t-res start period-seq]
+  (map (comp #(int (- % start))
+             (partial datetime->period t-res))
+       period-seq))
 
 (defn msecs-from-epoch
   "Total number of milliseconds passed since January 1st, 1970 (the
   Unix epoch)."
   [date]
-  (time/in-msecs
-   (time/interval (time/epoch) date)))
+  (time/in-msecs (time/interval (time/epoch) date)))
 
 (defn msec-range
   "Returns the difference, in milliseconds, between two date-time

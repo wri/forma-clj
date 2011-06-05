@@ -1,6 +1,5 @@
 (ns forma.trends.analysis
-  (:use [forma.date-time :only (datetime->period relative-period)]
-        [forma.matrix.utils :only (variance-matrix average)]
+  (:use [forma.matrix.utils :only (variance-matrix average)]
         [forma.trends.filter :only (deseasonalize make-reliable)]
         [clojure.contrib.math :only (sqrt)])
   (:require [incanter.core :as i]
@@ -87,22 +86,13 @@
   "preps the short-term drop for the merge into the other data by separating
   out the reference period and the rest of the observations for estimation,
   that is, `for-est`!"
-  ([ref-pd start-pd end-pd long-block window ts]
-     (collect-short-trend ref-pd start-pd end-pd long-block window ts []))
-  ([ref-pd start-pd end-pd long-block window ts reli-ts]
+  ([start-pd end-pd long-block window ts]
+     (collect-short-trend start-pd end-pd long-block window ts []))
+  ([start-pd end-pd long-block window ts reli-ts]
      (let [offset (+ long-block window)
-           [x y z] (map #(-> % (- offset) (+ 2)) [ref-pd start-pd end-pd])
+           [y z] (map #(-> % (- offset) (+ 2)) [start-pd end-pd])
            full-ts (short-trend long-block window ts reli-ts)]
-       {:reference (full-ts (dec x))
-        :for-est   (subvec full-ts (dec y) z)})))
-
-(defn short-trend-shell
-  "a wrapper to collect the short-term trends into a form that can be manipulated
-  from within cascalog."
-  [{:keys [ref-date est-start est-end t-res long-block window]} ts-start ts-series]
-  (let [[ref-date est-start est-end] (relative-period t-res ts-start [ref-date est-start est-end])]
-    (map (collect-short-trend ref-date est-start est-end long-block window ts-series)
-         [:reference :for-est])))
+       (subvec full-ts (dec y) z))))
 
 ;; WHIZBANG :: Collect the long-term drop of a time-series
 
@@ -162,43 +152,26 @@
 (defn lengthening-ts
   "create a sequence of sequences, where each incremental sequence is one
   element longer than the last, pinned to the same starting element."
-  [start-index end-index base-vec]
-  (for [x (range start-index (inc end-index))]
-    (subvec base-vec 0 x)))
+  [start-index end-index base-seq]
+  (let [base-vec (vec base-seq)]
+    (for [x (range start-index (inc end-index))]
+      (subvec base-vec 0 x))))
 
-(defn estimate-thread
-  "The first vector in `nested-vector` should be the dependent
-  variable, and the rest of the vectors should be the cofactors.
-  `start` and `end` refer to the start and end periods for estimation
-  of long-trend. if `start` == `end` then only the estimation results
-  for the single time period are returned."
-  [start end nested-vector]
-  (->> nested-vector
-       (map (partial lengthening-ts start end))
-       (apply map long-trend)))
+;; The first vector in `nested-vector` should be the dependent
+;; variable, and the rest of the vectors should be the cofactors.
+;; `start` and `end` refer to the start and end periods for estimation
+;; of long-trend. if `start` == `end` then only the estimation results
+;; for the single time period are returned.
 
 (defn collect-long-trend
   "collect the long-term trend coefficient and t-statistic for a time-series, after
   taking into account an arbitrary number of cofactors.  `collect-long-trend`
   returns a map with the trends for the reference period separate for the estimation
   period."
-  [ref-pd start-pd end-pd t-series & cofactors]
-  {:pre [(vector? t-series)
-         (every? #{true} (vec (map vector? cofactors)))]}
-  (let [all-ts (apply vector t-series cofactors)]
-    {:reference (flatten (estimate-thread ref-pd ref-pd all-ts))
-     :for-est  (estimate-thread start-pd end-pd all-ts)}))
-
-(defn long-trend-shell
-  "a wrapper that takes a map of options and attributes of the input time-series (and
-  cofactors) to extract the long-term trends and t-statistics from the time-series."
-  [{:keys [ref-date est-start est-end t-res long-block window]} ts-start ts-series & cofactors]
-  (let [[ref-date est-start est-end]
-        (relative-period t-res ts-start [ref-date est-start est-end])]
-    (map
-     (comp vec
-           (apply collect-long-trend ref-date est-start est-end ts-series cofactors))
-     [:reference :for-est])))
+  [start end t-series & cofactors]
+  (->> (cons t-series cofactors)
+       (map (partial lengthening-ts start end))
+       (apply map long-trend)))
 
 ;; BFAST
 

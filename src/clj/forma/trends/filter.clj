@@ -46,7 +46,8 @@
                       ts)
         adj  (i/mmult (i/sel X :except-cols 0)
                       (i/sel fix :except-rows 0))]
-    (i/minus ts adj)))
+    (i/minus (i/matrix ts)
+             adj)))
 
 ;; Hodrick-Prescott filter
 

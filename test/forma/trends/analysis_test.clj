@@ -7,14 +7,16 @@
             [incanter.stats :as s]))
 
 (fact
- "check to make sure the long-trend-general coefficient matches up with
- the straight-up linear model trend coefficient."
- (let [y (deseasonalize (vec ndvi))
-       X (i/bind-columns (t-range y) (vec (take 131 rain)))]
-   (list (second ((s/linear-model y X) :coefs))))
- => (long-trend-general [:coefs] ndvi rain))
+  "check to make sure the long-trend-general coefficient matches up
+ with the linear model trend coefficient."
+  (let [y (deseasonalize (vec ndvi))
+        X (i/bind-columns (t-range y) (vec (take 131 rain)))
+        {coef :coefs} (s/linear-model y X)]
+    (long-trend-general [:coefs] ndvi rain) => [(second coef)]))
 
 (fact
- "check that short-term trend output is the correct shape for the estimation months"
- (count (:for-est (collect-short-trend 71 75 131 15 5
-                                       ndvi (vec reli)))) => (inc (- 131 75)))
+  "check that short-term trend output is the correct shape for the estimation months"
+  (let [start 75
+        end 131
+        final-count (inc (- 131 75))]
+    (count (collect-short-trend start end 15 5 ndvi (vec reli))) => final-count))

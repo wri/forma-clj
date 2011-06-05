@@ -37,3 +37,10 @@ struct DataChunk {
   6: DataValue chunkValue;
   7: optional string date;
 }
+
+struct FormaValue {
+  1: FireTuple fireValue;
+  2: double shortDrop;
+  3: double longDrop;
+  4: double tStat;
+}
