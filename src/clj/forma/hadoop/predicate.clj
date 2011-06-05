@@ -1,10 +1,10 @@
 (ns forma.hadoop.predicate
   (:use cascalog.api
         clojure.contrib.java-utils
-        [clojure.string :only (split)]
         [forma.matrix.utils :only (sparse-expander matrix-of)]
         [forma.source.modis :only (pixels-at-res)])
-  (:require [forma.hadoop.io :as io]
+  (:require [clojure.string :as s]
+            [forma.hadoop.io :as io]
             [cascalog.ops :as c]
             [cascalog.vars :as v])
   (:import [org.apache.hadoop.mapred JobConf]
@@ -55,6 +55,12 @@ I recommend wrapping queries that use this tap with
   [& fields]
   (vec fields))
 
+(defmapop
+  ^{:doc "Splits textlines using the supplied regex."}
+  [mangle [re]]
+  [line]
+  (s/split line re))
+
 (defn liberate
   "Takes a line with an index as the first value and numbers as the
   rest, and converts it into a 2-tuple formatted as `[idx, row-vals]`,
@@ -66,7 +72,7 @@ I recommend wrapping queries that use this tap with
     ;=> [1 #<int[] [I@1b66e87>]"
   [line]
   (let [[idx & row-vals] (map #(Integer. %)
-                              (split line #" "))]
+                              (s/split line #" "))]
     [idx (io/int-struct row-vals)]))
 
 (defmapop

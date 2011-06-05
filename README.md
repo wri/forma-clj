@@ -112,3 +112,19 @@ Steps for building the gdal tar file --
 
 Okay, we built all the gdal stuff... we're going to have to store it
 somewhere nice, maybe on S3 or on Dropbox. 
+
+### How to run FORMA ###
+
+Here's the code I used to run fires. Do this inside of `forma.source.fire`:
+
+    (defn run-fires
+      [daily-path monthly-path]
+      (?- (forma.hadoop.io/chunk-tap "s3n://redddata/" "%s/%s-%s/")
+          (->> (union (fire-source-daily (hfs-textline monthly-path))
+                      (fire-source-monthly (hfs-textline daily-path)))
+               (reproject-fires "1000"))))
+    
+    ;; (run-fires "/path/to/FIREDAYS/"
+    ;;            "/path/to/FIREMONTHS/")
+
+The months business only needed to happen the first time, really. The days are the files that need to get continually updated... This is a bad model, as we can't append onto our datastore. Really, we need to use something like Pail, to give ourselves safe updates.

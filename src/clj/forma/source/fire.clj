@@ -1,10 +1,11 @@
 (ns forma.source.fire
   (:use cascalog.api
-        [forma.date-time :only (datetime->period)]
-        [clojure.string :only (split)]
+        [forma.date-time :only (datetime->period
+                                convert)]
         [forma.source.modis :only (latlon->modis
                                    hv->tilestring)])
-  (:require [forma.hadoop.predicate :as p])
+  (:require [clojure.string :as s]
+            [forma.hadoop.predicate :as p])
   (:import [forma.schema FireTuple TimeSeries]
            [java.util ArrayList]))
 
@@ -54,20 +55,24 @@
 
 ;; ### Fire Predicates
 
-(defn format-datestring
-  "Takes a datestring from our fire datasets, formatted as
+(defn comma [& xs] (s/join "-" xs))
+
+(defn daily-datestring
+  "Takes a datestring from our daily fire datasets, formatted as
   `MM/DD/YYYY`, and returns a date formatted as `YYYY-MM-DD`."
   [datestring]
-  (let [[month day year] (split datestring #"/")]
-    (format "%s-%s-%s" year month day)))
+  (let [[month day year] (s/split datestring #"/")]
+    (comma year month day)))
 
-(defn mangle
-  "Mangles textlines connected with commas."
-  [line]
-  (map (fn [val]
-         (try (Float. val)
-              (catch Exception _ val)))
-       (split line #",")))
+(defn monthly-datestring
+  "Takes a datestring from our monthly fire datasets, formatted as
+  `YYYYMMDD`, and returns a date formatted as `YYYY-MM-DD`."
+  [datestring]
+  (convert datestring :basic-date :year-month-day))
+
+(defn strings->floats
+  [& strings]
+  (map #(Float. %) strings))
 
 (def
   ^{:doc "Predicate macro that converts confidence and temperature
@@ -110,7 +115,22 @@
 
 ;; ## Fire Queries
 
-(defn fire-source
+(defn fire-source-monthly
+  "Takes a source of monthly fire textlines from before , and returns tuples with dataset, date,
+  position and value all defined. In this case, the value `?tuple` is
+  a `FireTuple` thrift object containing all relevant characteristics
+  of fires for that particular day."
+  [src]
+  (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
+      (src ?line)
+      (p/mangle [#"\s+"] ?line :> ?datestring _ _ ?s-lat ?s-lon ?s-kelvin _ _ _ ?s-conf)
+      (not= "YYYYMMDD" ?datestring)
+      (strings->floats ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?lat ?lon ?kelvin ?conf)
+      (p/add-fields "fire" "01" :> ?dataset ?t-res)
+      (monthly-datestring ?datestring :> ?date)
+      (fire-characteristics ?conf ?kelvin :> ?tuple)))
+
+(defn fire-source-daily
   "Takes a source of textlines, and returns tuples with dataset, date,
   position and value all defined. In this case, the value `?tuple` is
   a `FireTuple` thrift object containing all relevant characteristics
@@ -118,25 +138,25 @@
   [src]
   (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
       (src ?line)
-      (mangle ?line :> ?lat ?lon ?kelvin _ _ ?datestring _ _ ?conf _ _ _)
+      (p/mangle [#","] ?line :> ?s-lat ?s-lon ?s-kelvin _ _ ?datestring _ _ ?s-conf _ _ _)
+      (strings->floats ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?lat ?lon ?kelvin ?conf )
       (p/add-fields "fire" "01" :> ?dataset ?t-res)
-      (format-datestring ?datestring :> ?date)
+      (daily-datestring ?datestring :> ?date)
       (fire-characteristics ?conf ?kelvin :> ?tuple)))
 
 (defn reproject-fires
   "Aggregates fire data at the supplied path by modis pixel at the
   supplied resolution."
   [m-res src]
-  (let [fires (fire-source src)]
-    (<- [?dataset ?m-res ?t-res ?tilestring ?date ?sample ?line ?tuple]
-        (p/add-fields m-res :> ?m-res)
-        (fires ?dataset ?date ?t-res ?lat ?lon ?tuple)
-        (latlon->modis m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
-        (hv->tilestring ?mod-h ?mod-v :> ?tilestring))))
+  (<- [?dataset ?m-res ?t-res ?tilestring ?date ?sample ?line ?tuple]
+      (p/add-fields m-res :> ?m-res)
+      (src ?dataset ?date ?t-res ?lat ?lon ?tuple)
+      (latlon->modis m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
+      (hv->tilestring ?mod-h ?mod-v :> ?tilestring)))
 
-;; TODO: Split this business off into a separate job.
-;;
 ;; #### Time Series Processing
+;;
+;; TODO: Split this business off into a separate job.
 
 (defn aggregate-fires
   "Converts the datestring into a time period based on the supplied
@@ -154,7 +174,8 @@
   (let [[start end] (map (partial datetime->period t-res) [start end])
         length (-> end (- start) inc)
         mk-fire-tseries (p/vals->sparsevec start length (fire-tuple 0 0 0 0))]
-    (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?ct-series]
+    (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?t-start ?t-end ?ct-series]
         (src ?dataset ?m-res ?t-res ?tilestring ?tperiod ?sample ?line ?tuple)
         (mk-fire-tseries ?tperiod ?tuple :> _ ?tseries)
+        (p/add-fields start end :> ?t-start ?t-end)
         (running-fire-sum [start end] ?tseries :> ?ct-series))))
