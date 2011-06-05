@@ -225,8 +225,9 @@ tuples into the supplied directory, using the format specified by
   supplied basepath and collections of datasets, resolutions, tiles
   and specific data runs, identified by jobtag."
   ([out-dir]
-     (template-seqfile out-dir
-                       (str "%s/%s-%s/%s/" (jobtag) "/")))
+     (chunk-tap out-dir "%s/%s-%s/%s/"))
+  ([out-dir pattern]
+     (template-seqfile out-dir (str pattern (jobtag) "/")))
   ([basepath datasets resolutions]
      (chunk-tap basepath datasets resolutions * *))
   ([basepath datasets resolutions tiles]

@@ -1,10 +1,10 @@
 (ns forma.hadoop.predicate
   (:use cascalog.api
         clojure.contrib.java-utils
-        [clojure.string :only (split)]
         [forma.matrix.utils :only (sparse-expander matrix-of)]
         [forma.source.modis :only (pixels-at-res)])
-  (:require [forma.hadoop.io :as io]
+  (:require [clojure.string :as s]
+            [forma.hadoop.io :as io]
             [cascalog.ops :as c]
             [cascalog.vars :as v])
   (:import [org.apache.hadoop.mapred JobConf]
@@ -55,6 +55,12 @@ I recommend wrapping queries that use this tap with
   [& fields]
   (vec fields))
 
+(defmapop
+  ^{:doc "Splits textlines using the supplied regex."}
+  [mangle [re]]
+  [line]
+  (s/split line re))
+
 (defn liberate
   "Takes a line with an index as the first value and numbers as the
   rest, and converts it into a 2-tuple formatted as `[idx, row-vals]`,
@@ -66,7 +72,7 @@ I recommend wrapping queries that use this tap with
     ;=> [1 #<int[] [I@1b66e87>]"
   [line]
   (let [[idx & row-vals] (map #(Integer. %)
-                              (split line #" "))]
+                              (s/split line #" "))]
     [idx (io/int-struct row-vals)]))
 
 (defmapop
@@ -151,8 +157,10 @@ I recommend wrapping queries that use this tap with
 ;; ### Predicate Macros
 
 (defmapcatop struct-index
-  [struct]
-  (map-indexed vector (.getInts struct)))
+  [idx-0 struct]
+  (map-indexed (fn [idx val]
+                 [(+ idx idx-0) val])
+               (io/get-vals struct)))
 
 (def
   ^{:doc "Takes a source of textlines representing rows of a gridded
@@ -161,7 +169,7 @@ I recommend wrapping queries that use this tap with
   break
   (<- [?line :> ?row ?col ?val]
       (liberate ?line :> ?row ?row-struct)
-      (struct-index ?row-struct :> ?col ?val)))
+      (struct-index 0 ?row-struct :> ?col ?val)))
 
 (defn vals->sparsevec
   "Returns an aggregating predicate macro that stitches values into a
