@@ -150,8 +150,9 @@
   (partial long-trend-general [:coefs :t-tests]))
 
 (defn lengthening-ts
-  "create a sequence of sequences, where each incremental sequence is one
-  element longer than the last, pinned to the same starting element."
+  "create a sequence of sequences, where each incremental sequence is
+  one element longer than the last, pinned to the same starting
+  element."
   [start-index end-index base-seq]
   (let [base-vec (vec base-seq)]
     (for [x (range start-index (inc end-index))]
@@ -164,12 +165,12 @@
 ;; for the single time period are returned.
 
 (defn collect-long-trend
-  "collect the long-term trend coefficient and t-statistic for a time-series, after
-  taking into account an arbitrary number of cofactors.  `collect-long-trend`
-  returns a map with the trends for the reference period separate for the estimation
-  period."
-  [start end t-series & cofactors]
-  (->> (cons t-series cofactors)
+  "collect the long-term trend coefficient and t-statistic for a
+  time-series, after taking into account an arbitrary number of
+  cofactors.  `collect-long-trend` returns a map with the trends for
+  the reference period separate for the estimation period."
+  [start end t-series cofactor-seq]
+  (->> (cons t-series cofactor-seq)
        (map (partial lengthening-ts start end))
        (apply map long-trend)))
 

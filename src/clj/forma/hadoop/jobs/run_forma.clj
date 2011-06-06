@@ -41,10 +41,10 @@
   [{:keys [est-start est-end t-res long-block window]} ts-start ts-series]
   (def test-start ts-start)
   (let [[start end] (date/relative-period t-res ts-start [est-start est-end])]
-    (vector (date/datetime->period t-res est-start)
-            (->> (io/get-vals ts-series)
-                 (a/collect-short-trend start end long-block window)
-                 io/to-struct))))
+    [(date/datetime->period t-res est-start)
+     (->> (io/get-vals ts-series)
+          (a/collect-short-trend start end long-block window)
+          io/to-struct)]))
 
 (defn long-trend-shell
   "a wrapper that takes a map of options and attributes of the input
@@ -52,11 +52,12 @@
   t-statistics from the time-series."
   [{:keys [est-start est-end t-res long-block window]} ts-start ts-series & cofactors]
   (let [[start end] (date/relative-period t-res ts-start [est-start est-end])]
-    (vector (date/datetime->period t-res est-start)
-            (-> (a/collect-long-trend start end
+    (apply vector
+           (date/datetime->period t-res est-start)
+           (->> (a/collect-long-trend start end
                                       (io/get-vals ts-series)
                                       (map io/get-vals cofactors))
-                io/to-struct))))
+                (apply map (comp io/to-struct vector))))))
 
 ;; TODO: ASK DAN
 (def some-map
@@ -68,13 +69,15 @@
 
 ;; Remove the whole idea of "training period" from the
 ;; forma.trends.analysis stuff.
+;;
+;; Also, we need to bring in the static data and filter on VCF.
 
 (defn dynamic-stats
   [est-map & countries]
   (let [tiles (map tile-set countries)
         ndvi-tap (hfs-seqfile "/path/to/ndviseries")
         precl-tap (hfs-seqfile "/path/to/preclseries")
-        fire-tap (hfs-seqfile "/path/to/preclseries")
+        fire-tap (hfs-seqfile "/path/to/fireseries")
         est-start (:est-start est-map)]
     (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?period ?forma-val]
         (ndvi-tap _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?n-start _ !n-series)
@@ -90,9 +93,12 @@
 (defn run-test
   [path]
   (let [ndvi-tap (hfs-seqfile path)
-        query (-> (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?est-start ?short-series]
-                      (ndvi-tap _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start _ ?series)
-                      (short-trend-shell some-map ?start ?series :> ?est-start ?short-series))
+        rain-tap (hfs-seqfile path)
+        query (-> (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?est-start ?short-series ?long-series ?cof-series]
+                      (ndvi-tap _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start _ ?ndvi-series)
+                      (rain-tap _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start _ ?rain-series)
+                      (short-trend-shell some-map ?start ?ndvi-series :> ?est-start ?short-series)
+                      (long-trend-shell some-map ?start ?ndvi-series ?rain-series :> ?est-start ?long-series ?cof-series))
                   (c/first-n 10))]
     (?- (stdout) query)))
 
