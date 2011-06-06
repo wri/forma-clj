@@ -6,6 +6,9 @@
 (def prepath "/Users/sritchie/Desktop/FORMA/FIRE/")
 (def testfile (str prepath "MCD14DL.2011074.txt"))
 
+;; TODO: Update test and tap to reference new fires information.
+;; TODO: Add daily and monthly fires to dev/testdata.
+
 (def new-fire-tap
   (memory-source-tap
    [["-4.214,152.190,319.9,1.6,1.2,06/15/2010,0035,T,0,5.0,301.3,27.8"]

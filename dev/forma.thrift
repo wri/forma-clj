@@ -8,9 +8,7 @@ struct FireTuple {
 }
 
 struct TimeSeries {
-  1: i32 startPeriod,
-  2: i32 endPeriod,
-  3: list<FireTuple> values
+  1: list<FireTuple> values
 }
 
 struct DoubleArray {

@@ -6,8 +6,9 @@
                                    hv->tilestring
                                    tilestring->hv)])
   (:require [clojure.string :as s]
+            [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p])
-  (:import [forma.schema FireTuple TimeSeries]
+  (:import [forma.schema FireTuple]
            [java.util ArrayList]))
 
 ;; ### Thrift Manipulation
@@ -44,15 +45,6 @@
        (map extract-fields)
        (apply map +)
        (apply fire-tuple)))
-
-(defn fire-tseries
-  "Creates a `TimeSeries` object from a start period, end period, and
-  sequence of `FireTuple` objects."
-  [start end ts-seq]
-  (doto (TimeSeries.)
-    (.setStartPeriod start)
-    (.setEndPeriod end)
-    (.setValues (ArrayList. ts-seq))))
 
 ;; ### Fire Predicates
 
@@ -107,12 +99,12 @@
                  tseries)))
 
 ;; Special case of `running-sum` for `FireTuple` thrift objects.
-(defmapop [running-fire-sum [start end]]
+(defmapop running-fire-sum
   [tseries]
   (let [empty (fire-tuple 0 0 0 0)]
     (->> tseries
          (running-sum [] empty add-fires)
-         (fire-tseries start end))))
+         io/fire-series)))
 
 ;; ## Fire Queries
 
@@ -180,4 +172,4 @@
         (tilestring->hv ?tilestring :> ?mod-h ?mod-v)
         (mk-fire-tseries ?tperiod ?tuple :> _ ?tseries)
         (p/add-fields start end :> ?t-start ?t-end)
-        (running-fire-sum [start end] ?tseries :> ?ct-series))))
+        (running-fire-sum ?tseries :> ?ct-series))))
