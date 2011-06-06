@@ -23,11 +23,6 @@
 ;; up collections of `FireTuple` objects in a `TimeSeries` thrift
 ;; object.
 
-(defn fire-tuple
-  "Clojure wrapper around the java `FireTuple` constructor."
-  [t-above-330 c-above-50 both-preds count]
-  (FireTuple. t-above-330 c-above-50 both-preds count))
-
 (defn extract-fields
   "Returns a vector containing the value of the `temp330`, `conf50`,
   `bothPreds` and `count` fields of the supplied `FireTuple` thrift
@@ -44,7 +39,7 @@
   (->> f-tuples
        (map extract-fields)
        (apply map +)
-       (apply fire-tuple)))
+       (apply io/fire-tuple)))
 
 ;; ### Fire Predicates
 
@@ -76,7 +71,7 @@
       (p/filtered-count [330] ?kelvin :> ?temp-330)
       (p/filtered-count [50] ?conf :> ?conf-50)
       (p/bi-filtered-count [330 50] ?conf ?kelvin :> ?both-preds)
-      (fire-tuple ?temp-330 ?conf-50 ?both-preds ?count :> ?tuple)))
+      (io/fire-tuple ?temp-330 ?conf-50 ?both-preds ?count :> ?tuple)))
 
 (defaggregateop
   ^{:doc " Aggregates a number of firetuples by adding up the values
@@ -84,7 +79,7 @@
   merge-firetuples
   ([] [0 0 0 0])
   ([state tuple] (map + state (extract-fields tuple)))
-  ([state] [(apply fire-tuple state)]))
+  ([state] [(apply io/fire-tuple state)]))
 
 ;; TODO: Move this to some other namespace.
 (defn running-sum
@@ -101,7 +96,7 @@
 ;; Special case of `running-sum` for `FireTuple` thrift objects.
 (defmapop running-fire-sum
   [tseries]
-  (let [empty (fire-tuple 0 0 0 0)]
+  (let [empty (io/fire-tuple 0 0 0 0)]
     (->> tseries
          (running-sum [] empty add-fires)
          io/fire-series)))
@@ -166,10 +161,46 @@
   [t-res start end src]
   (let [[start end] (map (partial datetime->period t-res) [start end])
         length (-> end (- start) inc)
-        mk-fire-tseries (p/vals->sparsevec start length (fire-tuple 0 0 0 0))]
+        mk-fire-tseries (p/vals->sparsevec start length (io/fire-tuple 0 0 0 0))]
     (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?t-start ?t-end ?ct-series]
         (src ?dataset ?m-res ?t-res ?tilestring ?tperiod ?sample ?line ?tuple)
         (tilestring->hv ?tilestring :> ?mod-h ?mod-v)
         (mk-fire-tseries ?tperiod ?tuple :> _ ?tseries)
         (p/add-fields start end :> ?t-start ?t-end)
         (running-fire-sum ?tseries :> ?ct-series))))
+
+(defn run-test [path out-path]
+  (?- (hfs-seqfile out-path)
+      (->> (hfs-textline path)
+           fire-source-daily
+           (reproject-fires "1000")
+           (aggregate-fires "32")
+           (fire-series "32" "2000-11-01" "2011-04-01"))))
+
+(def some-map
+  {:est-start "2005-12-01"
+   :est-end "2011-04-01"
+   :t-res "32"
+   :long-block 15
+   :window 5})
+
+(defn run-second [path]
+  (let [src (hfs-seqfile path)]
+    (?- (stdout)
+        (-> (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?est-start ?count]
+             (src ?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?start _ ?series)
+             (adjust-fires some-map ?start ?series :> ?est-start ?fire-series)
+             (io/count-vals ?fire-series :> ?count))
+            (cascalog.ops/first-n 2)))))
+
+(defn grab [tuple]
+  (def test-fires tuple)
+  tuple)
+
+(defn run-check []
+  (let [src (hfs-seqfile "/Users/sritchie/Desktop/FireOutput/")]
+    (?- (stdout)
+        (-> (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?t-start ?t-end ?ct-series]
+                (src ?dataset ?m-res ?t-res
+                     ?mod-h ?mod-v ?sample ?line ?t-start ?t-end ?ct-series))
+            (cascalog.ops/first-n 2)))))

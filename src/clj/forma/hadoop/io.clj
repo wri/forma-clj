@@ -11,7 +11,8 @@
         [forma.source.modis :only (valid-modis?)])
   (:require [cascalog.workflow :as w])
   (:import [forma WholeFile]
-           [forma.schema DoubleArray IntArray TimeSeries]
+           [forma.schema DoubleArray IntArray FireTuple
+            TimeSeries FormaValue FormaSeries]
            [java.util ArrayList]
            [cascading.tuple Fields]
            [cascading.scheme Scheme]
@@ -271,6 +272,11 @@ tuples into the supplied directory, using the format specified by
                 (try (f x)
                      (catch Exception e nil)))))
 
+(defn fire-tuple
+  "Clojure wrapper around the java `FireTuple` constructor."
+  [t-above-330 c-above-50 both-preds count]
+  (FireTuple. t-above-330 c-above-50 both-preds count))
+
 (defn int-struct
   "Casts all numbers in the supplied sequence to ints, and returns
   them wrapped in an instance of `forma.schema.IntArray`."
@@ -294,6 +300,13 @@ tuples into the supplied directory, using the format specified by
   (doto (TimeSeries.)
     (.setValues (ArrayList. xs))))
 
+(defn forma-series
+  "Creates a `FormaSeries` object from the supplied sequence of
+  `FormaValue` objects."
+  [xs]
+  (doto (FormaSeries.)
+    (.setValues (ArrayList. xs))))
+
 (defprotocol Thriftable
   (get-vals [x])
   (count-vals [x])
@@ -303,9 +316,14 @@ tuples into the supplied directory, using the format specified by
   java.lang.Iterable
   (to-struct [[v :as xs]]
     (cond (= forma.schema.FireTuple (type v)) (fire-series xs)
+          (= forma.schema.FormaValue (type v)) (forma-series xs)
           (integer? v) (int-struct xs)
           (float? v) (double-struct xs)))
   TimeSeries
+  (get-vals [x] (.getValues x))
+  (count-vals [x]
+    (count (.getValues x)))
+  FormaSeries
   (get-vals [x] (.getValues x))
   (count-vals [x]
     (count (.getValues x)))
