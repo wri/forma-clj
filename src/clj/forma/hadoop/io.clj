@@ -101,6 +101,14 @@ tuples into the supplied directory, using the format specified by
   [path pathstr]
   (template-tap (w/sequence-file Fields/ALL) path pathstr))
 
+;; TODO: Make more general.
+(defn forma-textline
+  [path pathstr]
+  (TemplateTap. (w/hfs-tap (w/text-line ["?text"])
+                           (w/path path))
+                pathstr
+                (w/fields ["?s-res" "?t-res" "?country" "?datestring"])))
+
 (defn hfs-wholefile
   "Subquery to return distinct files in the supplied directory. Files
   will be returned as 2-tuples, formatted as `<filename, file>` The

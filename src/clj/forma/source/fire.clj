@@ -152,12 +152,29 @@
         (p/add-fields start end :> ?t-start ?t-end)
         (running-fire-sum ?tseries :> ?ct-series))))
 
+;; First, we ran
+;;
+;; hadoop jar jarpath forma.source.fire "monthly" "path" "out-path"
+;;
+;; hadoop jar jarpath forma.source.fire "daily" "path" "out-path"
+;;
+;; hadoop jar jarpath forma.source.fire "32" "2000-11-01" "2011-04-01"
+;;s3n://redddata/fire/1000-01/*/ /timeseries/fire/
+;;
+;; The last command loads all of the fire timeseries into HDFS.
+
 (defn -main
-  [monthly-path daily-path out-dir]
-  (?- (io/chunk-tap out-dir)
-      (->> (cascalog.api/union (fire-source-daily (hfs-textline monthly-path))
-                               (fire-source-monthly (hfs-textline daily-path)))
-           (reproject-fires "1000"))))
+  ([type path out-dir]
+     (?- (io/chunk-tap out-dir "%s/%s-%s/")
+         (->> (case type
+                    "daily" (fire-source-daily (hfs-textline path))
+                    "monthly" (fire-source-monthly (hfs-textline path)))
+              (reproject-fires "1000"))))
+  ([t-res start end chunk-path tseries-path]
+     (?- (hfs-seqfile tseries-path)
+         (->> (hfs-seqfile chunk-path)
+              (aggregate-fires t-res)
+              (fire-series t-res start end)))))
 
 ;; TODO: Move this shit out of fires!
 ;;

@@ -10,7 +10,8 @@
             [forma.hadoop.predicate :as p]
             [forma.source.modis :as modis]
             [forma.trends.analysis :as a])
-  (:import [forma.schema FormaValue FormaNeighborValue]))
+  (:import [forma.schema FormaValue FormaNeighborValue])
+  (:gen-class))
 
 (defn adjust
   "Appropriately truncates the incoming Thrift timeseries structs, and
@@ -45,7 +46,6 @@
   must be supplied in the order specified by the arguments for
   `forma.hadoop.io/forma-value`."
   [& in-series]
-  (def my-series in-series)
   [(->> in-series
         (map #(if % (io/get-vals %) (repeat %)))
         (apply map io/forma-value)
@@ -55,7 +55,6 @@
   "a wrapper to collect the short-term trends into a form that can be
   manipulated from within cascalog."
   [{:keys [est-start est-end t-res long-block window]} ts-start ts-series]
-  (def test-start ts-start)
   (let [[start end] (date/relative-period t-res ts-start [est-start est-end])]
     [(date/datetime->period t-res est-start)
      (->> (io/get-vals ts-series)
@@ -89,10 +88,9 @@
       (static-src _ ?s-res _ ?tilestring ?chunkid ?chunk)
       (io/count-vals ?chunk :> ?chunk-size)
       (p/struct-index 0 ?chunk :> ?pix-idx ?val)
-      (modis/tilestring->hv ?tilestring :> ?tile-h ?tile-v)
+      (modis/tilestring->hv ?tilestring :> ?mod-h ?mod-v)
       (modis/tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line)))
 
-;; TODO: Filter by VCF. Do it here... that'll take care of everything.
 (defn dynamic-tap
   "Accepts an est-map, and sources for ndvi and rain timeseries and
   vcf values split up by pixel."
@@ -127,22 +125,25 @@
   "Combines a sequence of neighbors into the final average value that
   Dan needs."
   [forma-val-seq]
-  (let [[_ & one-vals] (io/unpack-forma-val (first forma-val-seq))
-        [fire sums mins] (reduce (fn [[f-tuple sums mins] val]
-                                   (let [[fire & fields] (io/unpack-forma-val val)]
-                                     [(io/add-fires f-tuple fire)
-                                      (map + sums fields)
-                                      (map min mins fields)]))
-                                 [(io/fire-tuple 0 0 0 0) [0 0 0] one-vals]
-                                 forma-val-seq)
-        num-neighbors (count forma-val-seq)
-        [avg-short avg-long avg-stat] (map #(/ % num-neighbors) sums)
-        [min-short min-long min-stat] mins]
-    (FormaNeighborValue. fire
-                         num-neighbors
-                         avg-short min-short
-                         avg-long min-long
-                         avg-stat min-stat)))
+  (if (empty? forma-val-seq)
+    (FormaNeighborValue. (io/fire-tuple 0 0 0 0)
+                         0 0 0 0 0 0 0)
+    (let [[_ & one-vals] (io/unpack-forma-val (first forma-val-seq))
+          [fire sums mins] (reduce (fn [[f-tuple sums mins] val]
+                                     (let [[fire & fields] (io/unpack-forma-val val)]
+                                       [(io/add-fires f-tuple fire)
+                                        (map + sums fields)
+                                        (map min mins fields)]))
+                                   [(io/fire-tuple 0 0 0 0) [0 0 0] one-vals]
+                                   forma-val-seq)
+          num-neighbors (count forma-val-seq)
+          [avg-short avg-long avg-stat] (map #(/ % num-neighbors) sums)
+          [min-short min-long min-stat] mins]
+      (FormaNeighborValue. fire
+                           num-neighbors
+                           avg-short min-short
+                           avg-long min-long
+                           avg-stat min-stat))))
 
 ;; Processes all neighbors... Returns the index within the chunk, the
 ;; value, and the aggregate of the neighbors.
@@ -159,7 +160,6 @@
 ;; sinusoidal projection. Look at the modis namespace.
 (defn pixel-position
   [num-cols num-rows win-col win-row idx]
-  (println "HELP!")
   (let [[ row col] (idx->rowcol num-rows num-cols idx)]
        [(+ col (* num-cols win-col))
         (+ row (* num-rows win-row))]))
@@ -202,14 +202,62 @@
         country-pixels (static-tap country-src)
         src (-> (forma-tap est-map ndvi-src rain-src vcf-src fire-src)
                 (p/sparse-windower ["?sample" "?line"] window-dims "?forma-val" nil))]
-    (<- [?s-res ?t-res ?country ?datestring ?text-line]
+    (<- [?s-res ?t-res ?country ?datestring ?text]
         (date/period->datetime ?t-res ?period :> ?datestring)
         (src ?s-res ?t-res ?mod-h ?mod-v ?win-col ?win-row ?period ?window)
         (country-pixels ?s-res ?mod-h ?mod-v ?sample ?line ?country)
         (process-neighbors [neighbors] ?window :> ?win-idx ?val ?neighbor-vals)
         (pixel-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)
-        (textify ?mod-h ?mod-v ?sample ?line ?val ?neighbor-vals :> ?text-line))))
+        (textify ?mod-h ?mod-v ?sample ?line ?val ?neighbor-vals :> ?text))))
 
 ;; Here, we'll use an output tap that discards the s-res, t-res,
 ;; country and period fields, and writes the rest to disk.
-(defn -main [])
+
+(def forma-map
+  {:est-start "2005-12-01"
+   :est-end "2011-04-01"
+   :t-res "32"
+   :neighbors 1
+   :window-dims [600 600]
+   :vcf-limit 25
+   :long-block 15
+   :window 5})
+
+(defn -main
+  [ndvi-series-path rain-series-path fire-path vcf-path country-path out-path]
+  (?- (io/forma-textline out-path "%s/%s-%s/%s/")
+      (forma-query forma-map
+                   (hfs-seqfile ndvi-series-path)
+                   (hfs-seqfile rain-series-path)
+                   (hfs-seqfile fire-path)
+                   (hfs-seqfile vcf-path)
+                   (hfs-seqfile country-path))))
+
+;; (defn -main
+;;   [out-path]
+;;   (?- (io/forma-textline out-path "%s/%s/%s/%s/")
+;;       (forma-query forma-map
+;;                    (hfs-seqfile "/timeseries/ndvi/")
+;;                    (hfs-seqfile "/timeseries/precl/")
+;;                    (hfs-seqfile
+;;                     "s3n://redddata/vcf/1000-00/*/*/")
+;;                    (hfs-seqfile
+;;                     "s3n://redddata/gadm/1000-00/*/*/")
+;;                    (hfs-seqfile "/timeseries/fire/"))))
+
+;; (defn -main
+;;   [out-path]
+;;   (?- (io/forma-textline out-path "%s/%s/%s/%s/")
+;;       (forma-query {:est-start "2005-12-01"
+;;                     :est-end "2011-04-01"
+;;                     :t-res "32"
+;;                     :neighbors 1
+;;                     :window-dims [4 4]
+;;                     :vcf-limit 25
+;;                     :long-block 15
+;;                     :window 5}
+;;                    [["ndvi" "1000" "32" 27 8 731 159 361 495 (io/int-struct [-3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000, -3000])]]
+;;                    [["precl" "1000" "32" 27 8 731 159 360 502 (io/double-struct [171.0, 204.0, 102.0, 36.0, 46.0, 36.0, 4.0, 22.0, 23.0, 22.0, 57.0, 51.0, 144.0, 161.0, 111.0, 74.0, 50.0, 60.0, 10.0, 2.0, 2.0, 78.0, 62.0, 75.0, 204.0, 176.0, 101.0, 44.0, 42.0, 8.0, 3.0, 4.0, 1.0, 7.0, 44.0, 53.0, 201.0, 236.0, 110.0, 44.0, 44.0, 6.0, 3.0, 4.0, 9.0, 59.0, 50.0, 111.0, 177.0, 180.0, 112.0, 51.0, 59.0, 24.0, 13.0, 1.0, 12.0, 7.0, 65.0, 105.0, 137.0, 141.0, 116.0, 45.0, 35.0, 65.0, 19.0, 18.0, 25.0, 45.0, 51.0, 129.0, 194.0, 208.0, 90.0, 61.0, 55.0, 24.0, 2.0, 2.0, 1.0, 5.0, 26.0, 102.0, 114.0, 202.0, 74.0, 67.0, 42.0, 37.0, 10.0, 14.0, 5.0, 28.0, 61.0, 156.0, 162.0, 228.0, 100.0, 38.0, 19.0, 20.0, 3.0, 26.0, 12.0, 40.0, 66.0, 134.0, 202.0, 201.0, 52.0, 67.0, 60.0, 30.0, 11.0, 5.0, 8.0, 20.0, 48.0, 90.0, 206.0, 182.0, 125.0, 78.0, 92.0, 78.0, 37.0, 61.0, 73.0, 58.0, 60.0, 112.0, 133.0, 127.0, 106.0, 88.0, -999.0, -999.0, -999.0, -999.0, -999.0, -999.0, -999.0])]]
+;;                    [["gadm" "1000" "32" "027008" 7 (io/int-struct (repeat 24000 130))]]
+;;                    [["vcf" "1000" "32" "027008" 7 (io/int-struct (repeat 24000 130))]]
+;;                    [["fire" "1000" "32" 27 8 731 159 360 502 (io/to-struct (repeat 126 (io/fire-tuple 1 1 1 1)))]])))

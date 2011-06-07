@@ -36,17 +36,36 @@
       (tilestring->hv ?tilestring :> ?tile-h ?tile-v)
       (tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line)))
 
+;; To get the rain and ndvi series loaded, we ran
+;;
+;; hadoop jar jarpath forma.hadoop.jobs.load_tseries
+;; s3n://redddata/ndvi/1000-32/*/*/ /timeseries/ndvi/
+;;
+;; hadoop jar jarpath forma.hadoop.jobs.load_tseries
+;; s3n://redddata/precl/1000-32/*/*/ /timeseries/precl/
+
 (defn -main
-  "TODO: Docs.
+  [in-path output-path]
+  (?- (hfs-seqfile output-path)
+      (-> (hfs-seqfile in-path)
+          extract-tseries
+          process-tseries)))
 
-  Sample usage:
+;; This is the old one, that allows for the pieces. We'll reinstitute
+;; it when I'm sure that the pieces get processed properly... not sure
+;; how `map read-string` does.
+;;
+;; (defn -main
+;;   "TODO: Docs.
 
-      (-main s3n://redddata/ /timeseries/ \"ndvi\"
-             \"1000-32\" [\"008006\" \"008009\"])"
-  [base-input-path output-path & pieces]
-  (let [pieces (map read-string pieces)
-        chunk-source (apply io/chunk-tap base-input-path pieces)]
-    (?- (hfs-seqfile output-path)
-        (-> chunk-source
-            extract-tseries
-            process-tseries))))
+;;   Sample usage:
+
+;;       (-main s3n://redddata/ /timeseries/ \"ndvi\"
+;;              \"1000-32\" [\"008006\" \"008009\"])"
+;;   [base-input-path output-path & pieces]
+;;   (let [pieces (map read-string pieces)
+;;         chunk-source (apply io/chunk-tap base-input-path pieces)]
+;;     (?- (hfs-seqfile output-path)
+;;         (-> chunk-source
+;;             extract-tseries
+;;             process-tseries))))
