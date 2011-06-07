@@ -41,7 +41,7 @@
 
   Sample usage:
 
-      (-main \"s3n://redddata/\" \"/timeseries/\" \"ndvi\"
+      (-main s3n://redddata/ /timeseries/ \"ndvi\"
              \"1000-32\" [\"008006\" \"008009\"])"
   [base-input-path output-path & pieces]
   (let [pieces (map read-string pieces)

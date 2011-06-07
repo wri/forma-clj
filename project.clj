@@ -30,7 +30,8 @@
                      [midje "1.1"]]
   :tasks [marginalia.tasks]
   :aot [forma.hadoop.jobs.preprocess
-        forma.hadoop.jobs.load-tseries])
+        forma.hadoop.jobs.load-tseries
+        forma.source.fire])
 
 
 

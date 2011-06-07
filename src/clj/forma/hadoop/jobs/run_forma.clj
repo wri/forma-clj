@@ -111,10 +111,9 @@
 (defn forma-tap
   "Accepts an est-map and sources for ndvi, rain, and fire timeseries,
   plus a source of static vcf pixels."
-  [est-map ndvi-src rain-src vcf-src fire-src & countries]
+  [est-map ndvi-src rain-src vcf-src fire-src]
   (let [dynamic-src (dynamic-tap est-map ndvi-src rain-src vcf-src)
-        fire-src (fire-tap est-map fire-src)
-        tiles (map tile-set countries)]
+        fire-src (fire-tap est-map fire-src)]
     (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?period ?forma-val]
         (dynamic-src ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start
                      ?short-series ?long-series ?t-stat-series)
@@ -159,8 +158,8 @@
 ;; TODO: This could be combined with the distance stuff we did for the
 ;; sinusoidal projection. Look at the modis namespace.
 (defn pixel-position
-  ""
   [num-cols num-rows win-col win-row idx]
+  (println "HELP!")
   (let [[ row col] (idx->rowcol num-rows num-cols idx)]
        [(+ col (* num-cols win-col))
         (+ row (* num-rows win-row))]))
@@ -197,11 +196,11 @@
 
 (defn forma-query
   "final query that walks the neighbors and spits out the values."
-  [est-map ndvi-src rain-src vcf-src country-src fire-src & countries]
+  [est-map ndvi-src rain-src vcf-src country-src fire-src]
   (let [{:keys [neighbors window-dims]} est-map
         [rows cols] window-dims
         country-pixels (static-tap country-src)
-        src (-> (forma-tap est-map ndvi-src rain-src vcf-src fire-src :IDN :MYS)
+        src (-> (forma-tap est-map ndvi-src rain-src vcf-src fire-src)
                 (p/sparse-windower ["?sample" "?line"] window-dims "?forma-val" nil))]
     (<- [?s-res ?t-res ?country ?datestring ?text-line]
         (date/period->datetime ?t-res ?period :> ?datestring)

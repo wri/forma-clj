@@ -9,7 +9,8 @@
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p])
   (:import [forma.schema FireTuple]
-           [java.util ArrayList]))
+           [java.util ArrayList])
+  (:gen-class))
 
 ;; ### Thrift Manipulation
 ;;
@@ -150,6 +151,13 @@
         (mk-fire-tseries ?tperiod ?tuple :> _ ?tseries)
         (p/add-fields start end :> ?t-start ?t-end)
         (running-fire-sum ?tseries :> ?ct-series))))
+
+(defn -main
+  [monthly-path daily-path out-dir]
+  (?- (io/chunk-tap out-dir)
+      (->> (cascalog.api/union (fire-source-daily (hfs-textline monthly-path))
+                               (fire-source-monthly (hfs-textline daily-path)))
+           (reproject-fires "1000"))))
 
 ;; TODO: Move this shit out of fires!
 ;;
