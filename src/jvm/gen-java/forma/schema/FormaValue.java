@@ -117,17 +117,31 @@ public class FormaValue implements TBase<FormaValue, FormaValue._Fields>, java.i
     Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
     tmpMap.put(_Fields.FIRE_VALUE, new FieldMetaData("fireValue", TFieldRequirementType.OPTIONAL, 
         new StructMetaData(TType.STRUCT, FireTuple.class)));
-    tmpMap.put(_Fields.SHORT_DROP, new FieldMetaData("shortDrop", TFieldRequirementType.OPTIONAL, 
+    tmpMap.put(_Fields.SHORT_DROP, new FieldMetaData("shortDrop", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.DOUBLE)));
-    tmpMap.put(_Fields.LONG_DROP, new FieldMetaData("longDrop", TFieldRequirementType.OPTIONAL, 
+    tmpMap.put(_Fields.LONG_DROP, new FieldMetaData("longDrop", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.DOUBLE)));
-    tmpMap.put(_Fields.T_STAT, new FieldMetaData("tStat", TFieldRequirementType.OPTIONAL, 
+    tmpMap.put(_Fields.T_STAT, new FieldMetaData("tStat", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.DOUBLE)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     FieldMetaData.addStructMetaDataMap(FormaValue.class, metaDataMap);
   }
 
   public FormaValue() {
+  }
+
+  public FormaValue(
+    double shortDrop,
+    double longDrop,
+    double tStat)
+  {
+    this();
+    this.shortDrop = shortDrop;
+    setShortDropIsSet(true);
+    this.longDrop = longDrop;
+    setLongDropIsSet(true);
+    this.tStat = tStat;
+    setTStatIsSet(true);
   }
 
   /**
@@ -348,8 +362,8 @@ public class FormaValue implements TBase<FormaValue, FormaValue._Fields>, java.i
         return false;
     }
 
-    boolean this_present_shortDrop = true && this.isSetShortDrop();
-    boolean that_present_shortDrop = true && that.isSetShortDrop();
+    boolean this_present_shortDrop = true;
+    boolean that_present_shortDrop = true;
     if (this_present_shortDrop || that_present_shortDrop) {
       if (!(this_present_shortDrop && that_present_shortDrop))
         return false;
@@ -357,8 +371,8 @@ public class FormaValue implements TBase<FormaValue, FormaValue._Fields>, java.i
         return false;
     }
 
-    boolean this_present_longDrop = true && this.isSetLongDrop();
-    boolean that_present_longDrop = true && that.isSetLongDrop();
+    boolean this_present_longDrop = true;
+    boolean that_present_longDrop = true;
     if (this_present_longDrop || that_present_longDrop) {
       if (!(this_present_longDrop && that_present_longDrop))
         return false;
@@ -366,8 +380,8 @@ public class FormaValue implements TBase<FormaValue, FormaValue._Fields>, java.i
         return false;
     }
 
-    boolean this_present_tStat = true && this.isSetTStat();
-    boolean that_present_tStat = true && that.isSetTStat();
+    boolean this_present_tStat = true;
+    boolean that_present_tStat = true;
     if (this_present_tStat || that_present_tStat) {
       if (!(this_present_tStat && that_present_tStat))
         return false;
@@ -502,21 +516,15 @@ public class FormaValue implements TBase<FormaValue, FormaValue._Fields>, java.i
         oprot.writeFieldEnd();
       }
     }
-    if (isSetShortDrop()) {
-      oprot.writeFieldBegin(SHORT_DROP_FIELD_DESC);
-      oprot.writeDouble(this.shortDrop);
-      oprot.writeFieldEnd();
-    }
-    if (isSetLongDrop()) {
-      oprot.writeFieldBegin(LONG_DROP_FIELD_DESC);
-      oprot.writeDouble(this.longDrop);
-      oprot.writeFieldEnd();
-    }
-    if (isSetTStat()) {
-      oprot.writeFieldBegin(T_STAT_FIELD_DESC);
-      oprot.writeDouble(this.tStat);
-      oprot.writeFieldEnd();
-    }
+    oprot.writeFieldBegin(SHORT_DROP_FIELD_DESC);
+    oprot.writeDouble(this.shortDrop);
+    oprot.writeFieldEnd();
+    oprot.writeFieldBegin(LONG_DROP_FIELD_DESC);
+    oprot.writeDouble(this.longDrop);
+    oprot.writeFieldEnd();
+    oprot.writeFieldBegin(T_STAT_FIELD_DESC);
+    oprot.writeDouble(this.tStat);
+    oprot.writeFieldEnd();
     oprot.writeFieldStop();
     oprot.writeStructEnd();
   }
@@ -535,24 +543,18 @@ public class FormaValue implements TBase<FormaValue, FormaValue._Fields>, java.i
       }
       first = false;
     }
-    if (isSetShortDrop()) {
-      if (!first) sb.append(", ");
-      sb.append("shortDrop:");
-      sb.append(this.shortDrop);
-      first = false;
-    }
-    if (isSetLongDrop()) {
-      if (!first) sb.append(", ");
-      sb.append("longDrop:");
-      sb.append(this.longDrop);
-      first = false;
-    }
-    if (isSetTStat()) {
-      if (!first) sb.append(", ");
-      sb.append("tStat:");
-      sb.append(this.tStat);
-      first = false;
-    }
+    if (!first) sb.append(", ");
+    sb.append("shortDrop:");
+    sb.append(this.shortDrop);
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("longDrop:");
+    sb.append(this.longDrop);
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("tStat:");
+    sb.append(this.tStat);
+    first = false;
     sb.append(")");
     return sb.toString();
   }

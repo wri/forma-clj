@@ -38,9 +38,20 @@ struct DataChunk {
 
 struct FormaValue {
   1: optional FireTuple fireValue;
-  2: optional double shortDrop;
-  3: optional double longDrop;
-  4: optional double tStat;
+  2: double shortDrop;
+  3: double longDrop;
+  4: double tStat;
+}
+
+struct FormaNeighborValue {
+  1: FireTuple fireValue;
+  2: i32 numNeighbors;
+  3: double avgShortDrop;
+  4: double minShortDrop;
+  5: double avgLongDrop;
+  6: double minLongDrop;
+  7: double avgTStat;
+  8: double minTStat;
 }
 
 struct FormaSeries {

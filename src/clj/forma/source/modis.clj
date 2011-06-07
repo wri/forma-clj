@@ -94,13 +94,14 @@ referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
              (partial apply str))
        (partition 3 tilestr)))
 
+;; TODO: Modify this bad boy to take in row, column, etc.
 (defn tile-position
   "For a given MODIS chunk and index within that chunk, returns
-  [sample, line] within the MODIS tile."
-  [m-res chunk-size chunk index]
+  [sample, line] within the MODIS tile." 
+  [m-res chunk-size chunk-row index]
   (reverse
    (idx->rowcol (pixels-at-res m-res)
-                (+ index (* chunk chunk-size)))))
+                (+ index (* chunk-row chunk-size)))))
 
 ;; ### Spherical Sinusoidal Projection
 

@@ -7,9 +7,8 @@
   "Walks along the rows and columns of a matrix at the given window
   size, returning all (window x window) snapshots."
   [m window]
-  (mapcat (comp
-           (partial apply map vector)
-           (partial map (partial partition window 1)))
+  (mapcat (comp (partial apply map vector)
+                (partial map (partial partition window 1)))
           (partition window 1 m)))
 
 (defn buffer-matrix
@@ -35,16 +34,50 @@
                (for [row mat]
                  (insert-into-val val buffer-size n row)))))
 
+;; TODO: Move to forma.utils. Replace all uses.
+(defn thrush [& args] (reduce #(%2 %1) args))
+
+;; TODO: Move to forma.utils.
+(defn nth-in
+  "Takes a nested collection and a sequence of keys, and returns the
+  value obtained by taking `nth` in turn on each level of the nested
+  collection."
+  [coll ks]
+  (apply thrush coll (for [k ks]
+                       (fn [xs] (nth xs k)))))
+
+;; TODO: Docs
+(defn wipe-out
+  "Takes a nested collection and a sequence of keys, and returns the
+  collection sans the value located at the position indicated by the
+  supplied key sequence."
+  [coll [k & ks]]
+  (concat (take k coll)
+          (when ks [(wipe-out (nth coll k) ks)])
+          (drop (inc k) coll)))
+
+(defn neighbor-scan
+  "Returns a lazy sequence of elements, along with a sequence of
+  non-nil neighbors."
+  [num-neighbors mat]
+  {:pre [(> (count mat)
+            (inc (* 2 num-neighbors)))]}
+  (let [window (inc (* 2 num-neighbors))
+        new-mat (buffer-matrix num-neighbors nil mat)]
+    (for [sub-win (walk-matrix new-mat window)]
+      ((juxt nth-in wipe-out) sub-win [num-neighbors num-neighbors]))))
+
 (defn windowed-function
   "apply a function `fn` to each element in a matrix `mat` over a moving
   window, defined by the number of neighbors."
-  [f num-neighbors mat]
+  [num-neighbors f mat]
   {:pre [(> (count mat)
             (inc (* 2 num-neighbors)))]}
   (let [window  (+ 1 (* 2 num-neighbors))
         new-mat (buffer-matrix num-neighbors nil mat)]
-    (map (comp
-          (partial apply f)
-          (partial filter (complement nil?))
-          flatten)
-         (walk-matrix new-mat window))))
+    (for [sub-win (walk-matrix new-mat window)]
+      (->> sub-win
+           (apply concat)
+           (filter (complement nil?))
+           (apply f)))))
+

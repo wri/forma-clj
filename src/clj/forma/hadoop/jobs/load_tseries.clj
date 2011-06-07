@@ -27,8 +27,8 @@
       (form-tseries ?t-res ?date ?chunk :> ?pix-idx ?t-start ?t-end ?tseries)))
 
 (defn process-tseries
-  "Given a source of chunks, this subquery generates timeseries with
-  all relevant accompanying information."
+  "Given a source of timeseries, this subquery extracts the proper
+  position information and outputs the timeseries tagged well."
   [tseries-source]
   (<- [?dataset ?s-res ?t-res ?tile-h ?tile-v ?sample ?line ?t-start ?t-end ?tseries]
       (tseries-source ?dataset ?s-res ?t-res ?tilestring

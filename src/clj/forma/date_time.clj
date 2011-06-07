@@ -133,11 +133,11 @@ reference time interval at the supplied temporal
 resolution. `DateTime` objects can be created with `clj-time`'s
 `date-time` function."
   [temporal-res date]
-  (let [period-func (case temporal-res
-                          "32" months
-                          "16" sixteens
-                          "8" eights)]
-    (period-func (time/epoch) date)))
+  (let [converter (case temporal-res
+                        "32" months
+                        "16" sixteens
+                        "8" eights)]
+    (converter (time/epoch) date)))
 
 (defn datetime->period
   "Converts a formatted datestring, into an integer time period at the
@@ -148,6 +148,22 @@ resolution. `DateTime` objects can be created with `clj-time`'s
   ([res datestring format]
      (let [date (parse datestring format)]
        (periodize res date))))
+
+(defn period->datetime
+  "Converts an integer time period at the supplied temporal resolution
+  into a formatted datestring. The default format is
+  `:year-month-day`, or `YYYY-MM-DD`."
+  ([res period]
+     (period->datetime res period :year-month-day))
+  ([res period format]
+     (let [[unit span f] (case res
+                               "32" [month 1 time/months]
+                               "16" [julian 16 time/days]
+                               "8" [julian 8 time/days])
+           [yrs pds] ((juxt quot mod) period (per-year unit span))]
+       (-> (time/epoch)
+           (time/plus (time/years yrs) (f pds))
+           (unparse format)))))
 
 (defn current-period
   "Returns the current time period for the supplied resolution. For

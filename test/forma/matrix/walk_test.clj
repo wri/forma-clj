@@ -21,7 +21,7 @@
                   [20 21 22 23 24]])
 
 (fact "Windowed function testing."
-  (windowed-function max 1 test-matrix) => [6 7 8 9 9
+  (windowed-function 1 max test-matrix) => [6 7 8 9 9
                                             11 12 13 14 14
                                             16 17 18 19 19
                                             21 22 23 24 24
