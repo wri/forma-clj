@@ -7,6 +7,7 @@
   (:require [forma.hadoop.io :as io])
   (:gen-class))
 
+;; TODO: Make sure that this is really the right missing val. Probably not!
 (def
   ^{:doc "Predicate macro aggregator that generates a timeseries, given
   `?chunk`, `?temporal-resolution` and `?date`. Currently only
@@ -15,7 +16,7 @@
   (<- [?temporal-res ?date ?chunk :> ?pix-idx ?t-start ?t-end ?tseries]
       (datetime->period ?temporal-res ?date :> ?tperiod)
       (:sort ?tperiod)
-      (timeseries ?tperiod ?chunk :> ?pix-idx ?t-start ?t-end ?tseries)))
+      (timeseries [-9999] ?tperiod ?chunk :> ?pix-idx ?t-start ?t-end ?tseries)))
 
 ;; TODO: Get count-vals working for int arrays
 (defn extract-tseries

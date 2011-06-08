@@ -159,7 +159,7 @@
 ;; hadoop jar jarpath forma.source.fire "daily" "path" "out-path"
 ;;
 ;; hadoop jar jarpath forma.source.fire "32" "2000-11-01" "2011-04-01"
-;;s3n://redddata/fire/1000-01/*/ /timeseries/fire/
+;; s3n://redddata/fire/1000-01/*/ /timeseries/fire/
 ;;
 ;; The last command loads all of the fire timeseries into HDFS.
 

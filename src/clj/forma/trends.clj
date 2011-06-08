@@ -6,6 +6,7 @@
 
 (ns forma.trends
   (:use cascalog.api
+        [forma.matrix.utils :only (sparse-expander)]
         [forma.matrix.walk :only (walk-matrix)]
         [forma.hadoop.predicate :only (sparse-windower)])
   (:require [forma.hadoop.io :as io]))
@@ -86,6 +87,8 @@
 ;; were using `transpose` here, then `map-indexed`) would speed things
 ;; up, and it did.
 
+;; TODO: Fix how we deal with missing values. Look at the develop
+;; branch for the old way.
 (defbufferop
   ^{:doc "Takes in a number of `<t-period, modis-chunk>` tuples,
   sorted by time period, and transposes these into (n = chunk-size)
@@ -97,12 +100,14 @@
   order. `modis-chunk` tuple fields must be vectors or instances of
   `forma.schema.DoubleArray` or `forma.schema.IntArray`, as dictated
   by the Thriftable interface in `forma.hadoop.io`."}
-  timeseries [tuples]
-  (let [[periods chunks] (apply map vector tuples)
-        periodize (partial vector
-                           (first periods)
-                           (last periods))
-        tupleize (comp periodize io/to-struct vector)]
+  [timeseries [missing-val]] [tuples]
+  (let [[periods [val]] (apply map vector tuples)
+        missing-struct (io/to-struct (repeat (io/count-vals val) missing-val))
+        [fp lp] ((juxt first last) periods)
+        chunks (sparse-expander missing-struct tuples :start fp)
+        tupleize (comp (partial vector fp lp)
+                       io/to-struct
+                       vector)]
     (->> chunks
          (map io/get-vals)
          (apply map tupleize)

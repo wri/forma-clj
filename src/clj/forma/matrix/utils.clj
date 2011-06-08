@@ -56,20 +56,20 @@ pred, `new-val` will be subbed into the sequence.
 
   If no starting index is supplied, `sparse-expander` assumes that
   counting begins with the first `<idx, val>` pair."
-  ([placeholder tuples & {:keys [start length]}]   
-     (let [start  (or start (ffirst tuples))
-           halt?  (fn [idx tup-seq]
-                    (if length
-                      (>= idx (+ start length))
-                      (empty? tup-seq)))]
-       (loop [idx start
-              tup-seq tuples
-              v (transient [])]
-         (let [[[pos val] & more] tup-seq]
-           (cond (halt? idx tup-seq) (persistent! v)
-                 (when pos (= idx pos)) (recur (inc idx) more (conj! v val))
-                 (when pos (> idx pos)) (recur (inc idx) more (conj! v placeholder))
-                 :else (recur (inc idx) tup-seq (conj! v placeholder))))))))
+  [placeholder tuples & {:keys [start length]}]   
+  (let [start (or start (ffirst tuples))
+        halt? (fn [idx tup-seq]
+                (if length
+                  (>= idx (+ start length))
+                  (empty? tup-seq)))]
+    (loop [idx start
+           tup-seq tuples
+           v (transient [])]
+      (let [[[pos val] & more] tup-seq]
+        (cond (halt? idx tup-seq) (persistent! v)
+              (when pos (= idx pos)) (recur (inc idx) more (conj! v val))
+              (when pos (> idx pos)) (recur (inc idx) more (conj! v placeholder))
+              :else (recur (inc idx) tup-seq (conj! v placeholder)))))))
 
 (defn idx->rowcol
   "Takes an index within a row vector, and returns the appropriate

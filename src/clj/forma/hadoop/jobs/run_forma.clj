@@ -101,7 +101,7 @@
         (ndvi-src _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?n-start _ ?n-series)
         (rain-src _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?r-start _ ?r-series)
         (vcf-pixels ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
-        (> ?vcf vcf-limit)
+        (>= ?vcf vcf-limit)
         (adjust ?r-start ?r-series ?n-start ?n-series :> ?start ?precl-series ?ndvi-series)
         (short-trend-shell est-map ?start ?ndvi-series :> ?est-start ?short-series)
         (long-trend-shell est-map ?start ?ndvi-series ?precl-series :> ?est-start ?long-series ?t-stat-series))))
@@ -121,6 +121,9 @@
 
 ;; TODO: Implement a function that merges a FormaValue into a
 ;; FormaNeighborhoodValue, and reduce with that.
+;;
+;; TODO: Fix the case where no neighbors exist.
+
 (defn combine-neighbors
   "Combines a sequence of neighbors into the final average value that
   Dan needs."
@@ -224,26 +227,24 @@
    :window 5})
 
 (defn -main
-  [ndvi-series-path rain-series-path fire-path vcf-path country-path out-path]
-  (?- (io/forma-textline out-path "%s/%s-%s/%s/")
+  [out-path]
+  (?- (io/forma-textline out-path "%s/%s/%s/%s/")
       (forma-query forma-map
-                   (hfs-seqfile ndvi-series-path)
-                   (hfs-seqfile rain-series-path)
-                   (hfs-seqfile fire-path)
-                   (hfs-seqfile vcf-path)
-                   (hfs-seqfile country-path))))
+                   (hfs-seqfile "/timeseries/ndvi2/")
+                   (hfs-seqfile "/timeseries/precl/")
+                   (hfs-seqfile "s3n://redddata/vcf/1000-00/*/*/")
+                   (hfs-seqfile "s3n://redddata/gadm/1000-00/*/*/")
+                   (hfs-seqfile "/timeseries/fire/"))))
 
 ;; (defn -main
-;;   [out-path]
-;;   (?- (io/forma-textline out-path "%s/%s/%s/%s/")
+;;   [ndvi-series-path rain-series-path fire-path vcf-path country-path out-path]
+;;   (?- (io/forma-textline out-path "%s/%s-%s/%s/")
 ;;       (forma-query forma-map
-;;                    (hfs-seqfile "/timeseries/ndvi/")
-;;                    (hfs-seqfile "/timeseries/precl/")
-;;                    (hfs-seqfile
-;;                     "s3n://redddata/vcf/1000-00/*/*/")
-;;                    (hfs-seqfile
-;;                     "s3n://redddata/gadm/1000-00/*/*/")
-;;                    (hfs-seqfile "/timeseries/fire/"))))
+;;                    (hfs-seqfile ndvi-series-path)
+;;                    (hfs-seqfile rain-series-path)
+;;                    (hfs-seqfile vcf-path)
+;;                    (hfs-seqfile country-path)
+;;                    (hfs-seqfile fire-path))))
 
 ;; (defn -main
 ;;   [out-path]
