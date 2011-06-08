@@ -190,6 +190,7 @@
              k330 c50 ck fire
              s-drop l-drop t-drop
              k330-n c50-n ck-n fire-n
+             (.getNumNeighbors neighbor-vals)
              (.getAvgShortDrop neighbor-vals)
              (.getMinShortDrop neighbor-vals)
              (.getAvgLongDrop neighbor-vals)
