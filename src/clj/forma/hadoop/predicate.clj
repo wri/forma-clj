@@ -21,6 +21,29 @@
 
 ;; ### Generators
 
+;; TODO: Cause pixel-generator to be a special case of this.
+(defn lazy-generator
+  "Returns a cascalog generator on the supplied lazy
+  sequence. `lazy-generator` serializes each item in the lazy sequence
+  into a sequencefile located at the supplied temporary directory, and
+  returns a tap into its guts.
+
+I recommend wrapping queries that use this tap with
+`cascalog.io/with-fs-tmp`; for example,
+
+    (with-fs-tmp [_ tmp-dir]
+      (let [lazy-tap (pixel-generator tmp-dir lazy-seq)]
+      (?<- (stdout)
+           [?field1 ?field2 ... etc]
+           (lazy-tap ?field1 ?field2)
+           ...)))"
+  [tmp-path lazy-seq]
+  (let [tap (hfs-seqfile tmp-path)]
+    (with-open [collector (.openForWrite tap (JobConf.))]
+      (doseq [item lazy-seq]
+        (.add collector (Util/coerceToTuple item))))
+    tap))
+
 (defn pixel-generator
   "Returns a cascalog generator that produces every pixel combination
   for the supplied sequence of tiles, given the supplied
@@ -31,8 +54,8 @@
 I recommend wrapping queries that use this tap with
 `cascalog.io/with-fs-tmp`; for example,
 
-    (with-fs-tmp [fs tmp-dir]
-      (let [pix-tap (pixel-generator res tmp-dir tileseq)]
+    (with-fs-tmp [_ tmp-dir]
+      (let [pix-tap (pixel-generator tmp-dir res tileseq)]
       (?<- (stdout)
            [?mod-h ?mod-v ... etc]
            (pix-tap ?mod-h ?mod-v ?sample ?line)
