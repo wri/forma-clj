@@ -103,7 +103,7 @@
   [timeseries [missing-val]] [tuples]
   (let [[periods [val]] (apply map vector tuples)
         missing-struct (io/to-struct (repeat (io/count-vals val) missing-val))
-        [fp lp] ((juxt first last) periods)
+        [fp lp] ((juxt first peek) periods)
         chunks (sparse-expander missing-struct tuples :start fp)
         tupleize (comp (partial vector fp lp)
                        io/to-struct
