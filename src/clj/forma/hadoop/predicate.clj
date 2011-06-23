@@ -126,13 +126,6 @@ I recommend wrapping queries that use this tap with
 ;; #### Aggregators
 
 (defbufferop
-  ^{:doc "Returns a string representation of the tuples input to this
-  buffer. Useful for testing!"}
-  tuples->string
-  [tuples]
-  [(apply str (map str tuples))])
-
-(defbufferop
   ^{:doc "Receives 2-tuple pairs of the form `<idx, val>`, inserts each
   `val` into a sparse vector at the corresponding `idx`. The `idx` of
   the first tuple will be treated as the zero value. The first tuple

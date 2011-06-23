@@ -18,4 +18,9 @@ testing operations."
                  (get-out-fields gen))]
     (??<- fields (gen :>> fields))))
 
-
+(defbufferop
+  ^{:doc "Returns a string representation of the tuples input to this
+  buffer. Useful for testing!"}
+  tuples->string
+  [tuples]
+  [(apply str tuples)])

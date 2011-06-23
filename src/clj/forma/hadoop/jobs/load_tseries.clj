@@ -1,11 +1,37 @@
 (ns forma.hadoop.jobs.load-tseries
   (:use cascalog.api
-        [forma.trends :only (timeseries)]
+        [forma.matrix.utils :only (sparse-expander)]
         [forma.date-time :only (datetime->period)]
+        [forma.matrix.walk :only (walk-matrix)]
+        [forma.hadoop.predicate :only (sparse-windower)]
         [forma.source.modis :only (tile-position
                                    tilestring->hv)])
   (:require [forma.hadoop.io :as io])
   (:gen-class))
+
+(defbufferop
+  ^{:doc "Takes in a number of `<t-period, modis-chunk>` tuples,
+  sorted by time period, and transposes these into (n = chunk-size)
+  4-tuples, formatted as <pixel-idx, t-start, t-end, t-series>, where
+  the `t-series` field is represented by an instance of
+  `forma.schema.DoubleArray`.
+
+  Entering chunks should be sorted by `t-period` in ascending
+  order. `modis-chunk` tuple fields must be vectors or instances of
+  `forma.schema.DoubleArray` or `forma.schema.IntArray`, as dictated
+  by the Thriftable interface in `forma.hadoop.io`."}
+  [timeseries [missing-val]] [tuples]
+  (let [[periods [val]] (apply map vector tuples)
+        [fp lp] ((juxt first peek) periods)
+        missing-struct (io/to-struct (repeat (io/count-vals val) missing-val))
+        chunks (sparse-expander missing-struct tuples :start fp)
+        tupleize (comp (partial vector fp lp)
+                       io/to-struct
+                       vector)]
+    (->> chunks
+         (map io/get-vals)
+         (apply map tupleize)
+         (map-indexed cons))))
 
 ;; TODO: Make sure that this is really the right missing val. Probably not!
 (def
