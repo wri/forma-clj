@@ -8,7 +8,7 @@
   :repositories {"conjars" "http://conjars.org/repo/"
                  "sonatype"
                  "http://oss.sonatype.org/content/repositories/releases/"}
-  :dependencies [[org.clojure/clojure "1.2.0"]
+  :dependencies [[org.clojure/clojure "1.2.1"]
                  [org.clojure/clojure-contrib "1.2.0"]
                  [incanter "1.2.3" :exclusions [swank-clojure]]
                  [cascalog "1.7.0"]
@@ -27,7 +27,7 @@
                      [swank-clojure "1.4.0-SNAPSHOT"]
                      [clojure-source "1.2.0"]
                      [marginalia "0.5.1"]
-                     [midje "1.1"]]
+                     [midje "1.2-alpha3"]]
   :tasks [marginalia.tasks]
   :aot [forma.hadoop.jobs.preprocess
         forma.hadoop.jobs.load-tseries

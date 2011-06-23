@@ -21,10 +21,9 @@
 
 ;; ### Generators
 
-;; TODO: Cause pixel-generator to be a special case of this.
 (defn lazy-generator
-  "Returns a cascalog generator on the supplied lazy
-  sequence. `lazy-generator` serializes each item in the lazy sequence
+  "Returns a cascalog generator on the supplied sequence of
+  tuples. `lazy-generator` serializes each item in the lazy sequence
   into a sequencefile located at the supplied temporary directory, and
   returns a tap into its guts.
 
@@ -38,6 +37,7 @@ I recommend wrapping queries that use this tap with
            (lazy-tap ?field1 ?field2)
            ...)))"
   [tmp-path lazy-seq]
+  {:pre [(coll? (first lazy-seq))]}
   (let [tap (hfs-seqfile tmp-path)]
     (with-open [collector (.openForWrite tap (JobConf.))]
       (doseq [item lazy-seq]
@@ -47,27 +47,15 @@ I recommend wrapping queries that use this tap with
 (defn pixel-generator
   "Returns a cascalog generator that produces every pixel combination
   for the supplied sequence of tiles, given the supplied
-  resolution. `pixel-generator` works by first writing every tuple to
-  a sequencefile into the supplied directory, then returning a tap
-  into its guts.
-
-I recommend wrapping queries that use this tap with
-`cascalog.io/with-fs-tmp`; for example,
-
-    (with-fs-tmp [_ tmp-dir]
-      (let [pix-tap (pixel-generator tmp-dir res tileseq)]
-      (?<- (stdout)
-           [?mod-h ?mod-v ... etc]
-           (pix-tap ?mod-h ?mod-v ?sample ?line)
-           ...)))"
+  resolution. `pixel-generator` stages each tuple into a sequence file
+  located at `tmp-dir`. See `forma.hadoop.predicate/lazy-generator`
+  for usage advice."
   [tmp-path res tileseq]
-  (let [tap (hfs-seqfile tmp-path)]
-    (with-open [collector (.openForWrite tap (JobConf.))]
-      (doseq [[h v] tileseq
-              s (range (pixels-at-res res))
-              l (range (pixels-at-res res))]
-        (.add collector (Util/coerceToTuple [h v s l]))))
-    tap))
+  (lazy-generator tmp-path
+                  (for [[h v] tileseq
+                        s (range (pixels-at-res res))
+                        l (range (pixels-at-res res))]
+                    [h v s l])))
 
 ;; ### Operations
 
@@ -87,12 +75,13 @@ I recommend wrapping queries that use this tap with
 (defn liberate
   "Takes a line with an index as the first value and numbers as the
   rest, and converts it into a 2-tuple formatted as `[idx, row-vals]`,
-  where `row-vals` are sealed inside an `int-array`.
+  where `row-vals` are sealed inside an instance of
+  `forma.schema.IntArray`.
 
   Example usage:
 
     (liberate \"1 12 13 14 15\")
-    ;=> [1 #<int[] [I@1b66e87>]"
+    ;=> [1 #<IntArray IntArray(ints:[12, 13, 14, 15])>"
   [line]
   (let [[idx & row-vals] (map #(Integer. %)
                               (s/split line #" "))]
