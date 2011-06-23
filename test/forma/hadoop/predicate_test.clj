@@ -28,7 +28,7 @@
      (let [tuple (first ?seq)
            n-fields (count (first ?seq))]
        (-> (lazy-generator tmp ?seq)
-           (sequify n-fields))) => (contains ?seq :in-any-order)))
+           (sequify n-fields))) => (just ?seq :in-any-order)))
  ?seq
  [[1] [2] [4] [3]]
  [[1 2] [4 3]]
@@ -77,7 +77,7 @@
 (tabular
  (fact "Tests of sparse-windower for a few combinations of aggregation dimension."
    (let [[result] (??- (sparse-windower pixel-tap ?dims ?sizes "?v" 0))]
-     result => (contains ?res :in-any-order)))
+     result => (just ?res :in-any-order)))
  ?dims       ?sizes ?res
  ["?s"]      5      line-set
  ["?s" "?l"] 5      square-set
