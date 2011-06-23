@@ -47,12 +47,12 @@
 ;; monthly, 16-day, or 8-day intervals. Each of these scales begins
 ;; counting on January 1st. Monthly datasets begin counting on the
 ;; first of each month, while the others mark off blocks of 16 or 8
-;; julian days from the beginning of the year.
+;; ordinal days from the beginning of the year.
 ;;
 ;; (It's important to note that time periods are NOT measured from the
 ;; activation date of a specific product. The first available NDVI
 ;; 16-day composite, for example, has a beginning date of February
-;; 18th 2001, or Julian day 49, the 1st day of the 4th period as
+;; 18th 2001, or ordinal day 49, the 1st day of the 4th period as
 ;; measured from January 1st. With our reference of January 1st, This
 ;; dataset will receive an index of 3, and will match up with any
 ;; other data that falls within that 16-day period. This provides
@@ -65,7 +65,7 @@
 ;;
 ;; So! To construct a date, the user supplies a number of date
 ;; "pieces", ranging from year down to microsecond. To compare two
-;; times on julian day, we use the clj-time library to calculate the
+;; times on ordinal day, we use the clj-time library to calculate the
 ;; interval between a given date and January 1st of the year in which
 ;; the date occurs.
 
@@ -74,14 +74,14 @@
   [interval]
   (-> interval time/in-minutes (/ 60) (/ 24) int))
 
-(defn julian
-  "Returns the julian day index of a given date."
+(defn ordinal
+  "Returns the ordinal day index of a given date."
   [a]
   (in-days
    (time/interval (date-time (year a))
              a)))
 
-;; the julian function complements the other "date-piece" functions
+;; the `ordinal` function complements the other "date-piece" functions
 ;; supplied by the clj-time library; day, month, year, and the others
 ;; each allow for extraction of that particular element of a date. We
 ;; define the delta function to allow us to take the difference of a
@@ -91,10 +91,10 @@
 
 ;; For example,
 ;;
-;;     (delta julian a b)
+;;     (delta ordinal a b)
 ;;
-;; returns the difference between the julian day values of the two
-;; supplied dates. (Note that `(partial delta julian)` ignores the
+;; returns the difference between the ordinal day values of the two
+;; supplied dates. (Note that `(partial delta ordinal)` ignores the
 ;; year value of each of the dates. That function returns the same
 ;; value for a = Jan 1st, 2000, b = Feb 25th, 2000 and b = Feb 25th,
 ;; 2002.)
@@ -104,13 +104,13 @@
   be found in a year. Includes the final period, even if that period
   isn't full."
   [unit span]
-  (let [m {julian 365 month 12}]
+  (let [m {ordinal 365 month 12}]
     (-> (m unit) (/ span) Math/ceil int)))
 
 (defn delta-periods
   "Calculates the difference between the supplied start and end dates
-  in span-sized groups of unit (months or julians). [unit span] could be
-  [julian 16], for example."
+  in span-sized groups of unit (months or ordinals). [unit span] could be
+  [ordinal 16], for example."
   [unit span start end]
   (let [[years units] (map #(delta % start end) [time/year unit])]
     (+ (* years (per-year unit span))
@@ -124,8 +124,8 @@
 ;; resolution, so time periods begin on January 9th.)
 
 (def months (partial delta-periods month 1))
-(def sixteens (partial delta-periods julian 16))
-(def eights (partial delta-periods julian 8))
+(def sixteens (partial delta-periods ordinal 16))
+(def eights (partial delta-periods ordinal 8))
 
 (defn periodize
   "Converts the supplied `org.joda.time.DateTime` object into a
@@ -158,8 +158,8 @@ resolution. `DateTime` objects can be created with `clj-time`'s
   ([res period format]
      (let [[unit span f] (case res
                                "32" [month 1 time/months]
-                               "16" [julian 16 time/days]
-                               "8" [julian 8 time/days])
+                               "16" [ordinal 16 time/days]
+                               "8" [ordinal 8 time/days])
            [yrs pds] ((juxt quot mod) period (per-year unit span))]
        (-> (time/epoch)
            (time/plus (time/years yrs) (f pds))
