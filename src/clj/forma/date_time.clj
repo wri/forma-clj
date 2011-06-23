@@ -76,10 +76,10 @@
 
 (defn ordinal
   "Returns the ordinal day index of a given date."
-  [a]
+  [dt]
   (in-days
-   (time/interval (date-time (year a))
-             a)))
+   (time/interval (date-time (year dt))
+                  dt)))
 
 ;; the `ordinal` function complements the other "date-piece" functions
 ;; supplied by the clj-time library; day, month, year, and the others
@@ -162,8 +162,18 @@ resolution. `DateTime` objects can be created with `clj-time`'s
                                "8" [ordinal 8 time/days])
            [yrs pds] ((juxt quot mod) period (per-year unit span))]
        (-> (time/epoch)
-           (time/plus (time/years yrs) (f pds))
+           (time/plus (time/years yrs) (f (* span pds)))
            (unparse format)))))
+
+(defn beginning
+  "Accepts a string representation of a date-time object, and returns
+a new string object representing the absolute beginning of time period
+in which `string` lies (according to the supplied resolution, `res`)."
+  ([res string]
+     (beginning res string :year-month-day))
+  ([res string format]
+     (let [period (datetime->period res string format)]
+       (period->datetime res period format))))
 
 (defn current-period
   "Returns the current time period for the supplied resolution. For
@@ -187,8 +197,8 @@ resolution. `DateTime` objects can be created with `clj-time`'s
   (unparse (time/now) :basic-date-time-no-ms))
 
 (defn relative-period
-  "convert periods (string) to an integer value that is relative to the
-  start period.
+  "convert periods (string) to an integer value that is relative to
+  the start period.
 
   Example usage:
   (relative-period \"32\" 391 [\"2005-02-01\" \"2005-03-01\"])
@@ -204,9 +214,11 @@ resolution. `DateTime` objects can be created with `clj-time`'s
   [date]
   (time/in-msecs (time/interval (time/epoch) date)))
 
-(defn msec-range
-  "Returns the difference, in milliseconds, between two date-time
-  objects created with `clj-time.core/date-time`."
+(defn monthly-msec-range
+  "Returns a sequence of msec values corresponding to each time period
+  at monthly resolution from the supplied `start-date` (inclusive) to
+  the `end-date` (exclusive). Both inputs must be date-time objects
+  created with `clj-time.core/date-time`."
   [start-date end-date]
   (let [total-months (inc (delta-periods month 1 start-date end-date))]
     (for [month-offset (range total-months)]

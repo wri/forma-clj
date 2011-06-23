@@ -3,12 +3,15 @@
   (:use midje.sweet
         [forma.matrix.utils :only (rowcol->idx)]))
 
-(facts "line-torus tests."
-  (line-torus + 180 45 46)   => 1
-  (line-torus + 180 -90 -88) => 2
-  (line-torus + 180 -88 -90) => 178
-  (line-torus - 180 45 46)   => 179
-  (line-torus + 10 -2 54)    => 6)
+(tabular
+ (fact "line-torus test."
+   (line-torus ?dir ?range ?corner ?val) ?arrow ?result)
+ ?dir ?range ?corner ?val ?arrow ?result
+ + 180  45  46 => 1
+ + 180 -90 -88 => 2
+ + 180 -88 -90 => 178
+ - 180  45  46 => 179
+ + 10   -2  54 => 6)
 
 (def ascii-map {:step 0.5
                 :corner [0 -90]

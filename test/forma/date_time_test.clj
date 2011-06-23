@@ -33,6 +33,12 @@
  [2008 3 1] 60
  [2009 3 1] 59)
 
+(facts "Delta testing."  
+  (delta #(* % %) 3 4) => 7
+  (delta ordinal
+         (date-time 2005 01 12)
+         (date-time 2005 01 15)) => 3)
+
 (tabular
  (fact "16 and 8 day periods per year, and 1 month periods per year."
    (per-year ordinal ?length ?days-per)
@@ -41,13 +47,30 @@
 
 (fact (periodize "32" (date-time 2005 12 04)) => 431)
 
+(facts "Beginning tests!"
+  (beginning "16" "2005-12-31") => "2005-12-19"
+  (beginning "32" "2005-12-31") => "2005-12-01"
+  (beginning "32" "2011-06-23T22" :date-hour) => "2011-06-01T00")
+
 (tabular
- (fact "Date conversion in various temporal resolutions."
-   (datetime->period ?res ?date) => ?period)
+ (facts "Date conversion, forward and backward, in various temporal
+ resolutions."
+   (datetime->period ?res ?date) => ?period
+   (period->datetime ?res ?period) => (beginning ?res ?date))
  ?res ?date        ?period
  "32" "2005-12-04" 431
  "32" "2006-01-01" 432
  "16" "2005-12-04" 826
  "16" "2003-04-22" 765
  "16" "2003-04-23" 766
- "8"  "2003-04-12" 1530)
+ "16" "2003-12-31" 781
+ "8"  "2003-04-12" 1530
+ "8"  "2003-12-31" 1563)
+
+(fact "Relative period test."
+  (relative-period "32" 391 ["2005-02-01" "2005-03-01"]) => [30 31])
+
+(fact "Millisecond tests."
+  (msecs-from-epoch (date-time 2002 12)) => 1038700800000
+  (monthly-msec-range (date-time 2005 11)
+                      (date-time 2005 12)) => [1130803200000 1133395200000])
