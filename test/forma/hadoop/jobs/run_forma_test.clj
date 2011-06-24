@@ -13,7 +13,8 @@
 (fact
   "Tests that the combine neighbors function produces the proper
 textual representation."
-  (textify 1 1 1 1 (first neighbors)
+  (textify 1 1 1 1
+           (first neighbors)
            (combine-neighbors neighbors)) =>
   "1 1 1 1 0 0 0 0 1.0 1.0 1.0 0 0 0 0 2 1.5 1.0 1.5 1.0 1.5 1.0")
 
