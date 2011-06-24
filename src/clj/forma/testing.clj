@@ -11,7 +11,7 @@ testing operations."
   (?- (stdout) gen))
 
 (defn sequify
-  "Returns a sequence containing the tuples produced by the supplied generator "
+  "Returns a sequence containing the tuples produced by the supplied generator."
   [gen & [num-fields]]
   (let [fields (if num-fields
                  (v/gen-nullable-vars num-fields)

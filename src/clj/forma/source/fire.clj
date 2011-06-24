@@ -1,5 +1,6 @@
 (ns forma.source.fire
   (:use cascalog.api
+        [forma.utils :only (running-sum)]
         [forma.date-time :only (datetime->period
                                 convert)]
         [forma.source.modis :only (latlon->modis
@@ -63,18 +64,6 @@
   ([] [0 0 0 0])
   ([state tuple] (map + state (io/extract-fields tuple)))
   ([state] [(apply io/fire-tuple state)]))
-
-;; TODO: Move this to some other namespace.
-(defn running-sum
-  "Given an accumulator, an initial value and an addition function,
-  transforms the input sequence into a new sequence of equal length,
-  increasing for each value."
-  [acc init add-func tseries]
-  (first (reduce (fn [[coll last] new]
-                   (let [last (add-func last new)]
-                     [(conj coll last) last]))
-                 [acc init]
-                 tseries)))
 
 ;; Special case of `running-sum` for `FireTuple` thrift objects.
 (defmapop running-fire-sum

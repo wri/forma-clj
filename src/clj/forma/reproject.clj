@@ -38,10 +38,22 @@
   [step-size dir start idx]
   (dir start (* (+ idx 0.5) step-size)))
 
+(defn constrain
+  "Constrains the supplied `val` to the range obtained by traveling
+  `range` in the positive direction from the supplied starting
+  value. If the value falls outside these bounds, it wraps around to
+  the other edge."
+  [range start val]
+  (+ start (mod (- val start) range)))
+
+(def constrain-lat (partial constrain 180 -90))
+(def constrain-lon (partial constrain 360 -180))
+
 (defn dimensions-for-step
   "returns the <horz, vert> dimensions of a WGS84 grid with the
   supplied spatial step-size between pixels."
   [step-size]
+  {:pre [(pos? step-size)]}
   (map #(quot % step-size) [360 180]))
 
 (defn line-torus
@@ -57,7 +69,7 @@
 
     (line-torus + 10 -2 54) => 6"
   [dir range corner val]
-  (mod (dir (- val corner)) range))
+  (constrain range 0 (dir (- val corner))))
 
 (defn latlon->rowcol
   "Takes a coordinate pair and returns its [row, col] position on a
@@ -73,19 +85,26 @@
   `row` and `col` on an ascii grid with the supplied corner point and
   step size."
   [step-size lat-dir lon-dir lat-corner lon-corner row col]
-  (map (partial travel step-size)
-       [lat-dir lon-dir]
-       [lat-corner lon-corner]
-       [row col]))
+  (let [move (partial travel step-size)]
+    [(constrain-lat (move lat-dir lat-corner row))
+     (constrain-lon (move lon-dir lon-corner col))]))
+
+(defn valid-rowcol?
+  "Determines whether or not the supplied ASCII row and column falls
+  within the bounds of an ASCII grid with the supplied step size."
+  [step row col]
+  (let [[cols rows] (dimensions-for-step step)]
+    (and (>= row 0) (< rows row)
+         (>= col 0) (< cols col))))
 
 (defn modis-indexer
   "Accepts WGS84 coordinates and returns the corresponding `[mod-h,
   mod-v, sample, line]` in the modis grid at the supplied resolution
   for an ASCII grid with the supplied step-size, corner coordinates
   and directions traveled for each axis."
-  [m-res ascii-map row col]
-  (let [{:keys [step corner travel]} ascii-map
-        [xul yul] corner
+  [m-res {:keys [step corner travel]} row col]
+  {:pre [(valid-rowcol? step row col)]}
+  (let [[xul yul] corner
         [x-dir y-dir] travel]
     (->> (rowcol->latlon step y-dir x-dir yul xul row col)
          (apply m/latlon->modis m-res))))
@@ -100,5 +119,6 @@
         [lon-corner lat-corner] corner
         [lon-dir lat-dir] travel]
     (->> (m/modis->latlon m-res mod-h mod-v sample line)
-         (apply latlon->rowcol step lat-dir lon-dir lat-corner
-                lon-corner))))
+         (apply latlon->rowcol step
+                lat-dir lon-dir
+                lat-corner lon-corner))))

@@ -1,6 +1,7 @@
 (ns forma.source.modis
   (:use [forma.matrix.utils :only (idx->rowcol)]
-        [clojure.contrib.generic.math-functions :only (cos)]))
+        [clojure.contrib.generic.math-functions :only (cos)])
+  (:require [forma.utils :as u]))
 
 ;; From the [user's guide](http://goo.gl/uoi8p) to MODIS product MCD45
 ;; (burned area): "The MODIS data are re-projected using an equiareal
@@ -104,13 +105,7 @@ referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
                 (+ index (* chunk-row chunk-size)))))
 
 ;; ### Spherical Sinusoidal Projection
-
-(defn scale
-  "Scales each element in a collection of numbers by the supplied
-  factor."
-  [fact sequence]
-  (for [x sequence] (* x fact)))
-
+;;
 ;; From [Wikipedia](http://goo.gl/qG7Hi), "the sinusoidal projection
 ;; is a pseudocylindrical equal-area map projection, sometimes called
 ;; the Sanson-Flamsteed or the Mercator equal-area projection. It is
@@ -144,7 +139,7 @@ referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
   "Returns the sinusoidal x and y coordinates for the supplied
   latitude and longitude (in radians)."
   [lat lon]
-  (scale rho [(* (cos lat) lon) lat]))
+  (u/scale rho [(* (cos lat) lon) lat]))
 
 (defn latlon->sinu-xy
   "Returns the sinusoidal x and y coordinates for the supplied
@@ -211,9 +206,9 @@ referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
   (let [edge-length (pixel-length res)
         edge-pixels (pixels-at-res res)]
     (->> [mod-h mod-v]
-         (scale edge-pixels)
+         (u/scale edge-pixels)
          (map + [sample line])
-         (scale edge-length)
+         (u/scale edge-length)
          (map #(+ % (/ edge-length 2))))))
 
 (defn global-mags->modis
