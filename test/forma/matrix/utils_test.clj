@@ -14,6 +14,8 @@
   (sparse-expander 0 [[10 1] [12 9]] :start 8 :length 10) => [0 0 1 0 9 0 0 0 0 0]
   (sparse-expander 0 [[10 1] [15 9]] :start 14 :length 3) => [0 9 0])
 
+(fact (rowcol->idx 720 239 489) => 172569)
+
 (deftest matrix-of-test
   (is (= [2 2 2 2] (matrix-of 2 1 4)))
   (is (= [[0 0] [0 0]] (matrix-of 0 2 2))))

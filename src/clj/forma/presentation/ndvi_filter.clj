@@ -1,6 +1,6 @@
 (ns forma.presentation.ndvi-filter
   (:use [forma.matrix.utils :only (logical-replace)]
-        [forma.date-time :only (msec-range)]
+        [forma.date-time :only (monthly-msec-range)]
         [forma.trends.filter :only (hp-filter make-reliable)]
         [clj-time.core :only (date-time)]
         [clojure.contrib.math :only (round expt)])
@@ -82,8 +82,8 @@
 ;; conversion.
 
 (def forma-range
-  (msec-range (date-time 2000 2)
-              (date-time 2010 12)))
+  (monthly-msec-range (date-time 2000 2)
+                      (date-time 2010 12)))
 
 ;; Initialize the first plot with the raw NDVI time-series; the
 ;; default color for this line is blue.  In order to view this plot,

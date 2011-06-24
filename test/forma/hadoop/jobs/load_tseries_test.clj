@@ -1,7 +1,8 @@
 (ns forma.hadoop.jobs.load-tseries-test
   (:use forma.hadoop.jobs.load-tseries
         clojure.test
-        midje.sweet))
+        midje.sweet)
+  (:require [forma.hadoop.io :as io]))
 
 (defn test-chunks
   "Returns a sample input to the timeseries creation buffer, or a
