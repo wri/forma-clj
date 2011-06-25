@@ -94,8 +94,8 @@
   within the bounds of an ASCII grid with the supplied step size."
   [step row col]
   (let [[cols rows] (dimensions-for-step step)]
-    (and (>= row 0) (< rows row)
-         (>= col 0) (< cols col))))
+    (and (>= row 0) (< row rows)
+         (>= col 0) (< col cols))))
 
 (defn modis-indexer
   "Accepts WGS84 coordinates and returns the corresponding `[mod-h,
