@@ -1,16 +1,17 @@
 (ns forma.matrix.utils
+  "Useful general functions for matrix operations or filters."
   (:require [incanter.core :as i]))
 
-;; Useful general functions for matrix operations or filters. The
-;; first functions should be very simple functions used as composites
-;; or filters.  The latter functions should be matrix operations that
-;; deal with arbitrarily large, multi-dimensional matrices.
+;; The first functions should be very simple functions used as
+;; composites or filters.  The latter functions should be matrix
+;; operations that deal with arbitrarily large, multi-dimensional
+;; matrices.
 
 (defn insert-at
-  "insert list [b] into list [a] at index [idx]."
-  [idx a b]
-  (let [[beg end] (split-at idx a)]
-    (concat beg b end)))
+  "Inserts `coll-b` into `coll-a` at the supplied `idx`."
+  [idx coll-a coll-b]
+  (let [[beg end] (split-at idx coll-a)]
+    (concat beg coll-b end)))
 
 (defn insert-into-val
   "insert vector `xs` into a repeated sequence of the supplied

@@ -1,8 +1,8 @@
 (ns forma.utils)
 
 (defn scale
-  "Scales each element in a collection of numbers by the supplied
-  factor."
+  "Returns a collection obtained by scaling each number in `coll` by
+  the supplied number `fact`."
   [fact coll]
   (for [x coll] (* x fact)))
 

@@ -2,6 +2,9 @@
   (:use forma.matrix.utils
         midje.sweet))
 
+(fact "insert-at tests."
+  )
+
 (tabular
  (fact "Checks on sparse expansion functionality."
    (sparse-expander 0 ?matrix) => ?result)
