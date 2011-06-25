@@ -1,7 +1,6 @@
 (ns forma.matrix.walk-test
   (:use [forma.matrix.walk] :reload)
-  (:use clojure.test
-        midje.sweet))
+  (:use midje.sweet))
 
 (def little-matrix [[0 1 2]
                     [3 4 5]])

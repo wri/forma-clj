@@ -1,7 +1,6 @@
 (ns forma.hadoop.io-test
   (:use [forma.hadoop.io] :reload)
-  (:use midje.sweet
-        clojure.test))
+  (:use midje.sweet))
 
 (tabular
  (fact "Globstring test."

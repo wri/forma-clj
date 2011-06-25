@@ -68,14 +68,14 @@
 ;; all other observations are represented by "1".
 
 (def reli
-  (-> ndvi
-      (logical-replace < 7000 2)
-      (logical-replace > 2 1)))
+  (->> ndvi
+       (logical-replace < 7000 2)
+       (logical-replace > 2 1)))
 
 ;; Mark all offending values in order to graph the "kill points" 
 
 (def kill-vals
-  (logical-replace ndvi > 7000 nil))
+  (logical-replace > 7000 nil ndvi))
 
 ;; Create a time range for the x-axis on the time-series graph; NOTE
 ;; that this will have to change, once the time functions are moved to

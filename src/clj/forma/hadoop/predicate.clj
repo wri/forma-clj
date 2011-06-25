@@ -1,6 +1,7 @@
 (ns forma.hadoop.predicate
   (:use cascalog.api
         clojure.contrib.java-utils
+        [forma.utils :only (thrush)]
         [forma.matrix.utils :only (sparse-expander matrix-of)]
         [forma.source.modis :only (pixels-at-res)])
   (:require [clojure.string :as s]
@@ -219,14 +220,14 @@ I recommend wrapping queries that use this tap with
   [gen in-syms dim-vec val sparse-val]
   (let [[outpos outval] (v/gen-non-nullable-vars 2)
         dim-vec (if (coll? dim-vec) dim-vec [dim-vec])]
-    (reduce #(%2 %1)
-            gen
-            (for [[dim inpos] (map-indexed vector in-syms)
-                  :let [length (try (dim-vec dim)
-                                    (catch Exception e (last dim-vec)))
-                        empty (matrix-of sparse-val dim length)
-                        aggr (vals->sparsevec length empty)]]
-              (fn [src]
-                (construct (swap-syms gen [inpos val] [outpos outval])
-                           [[src :>> (get-out-fields gen)]
-                            [aggr inpos val :> outpos outval]]))))))
+    (apply thrush
+           gen
+           (for [[dim inpos] (map-indexed vector in-syms)
+                 :let [length (try (dim-vec dim)
+                                   (catch Exception e (last dim-vec)))
+                       empty (matrix-of sparse-val dim length)
+                       aggr (vals->sparsevec length empty)]]
+             (fn [src]
+               (construct (swap-syms gen [inpos val] [outpos outval])
+                          [[src :>> (get-out-fields gen)]
+                           [aggr inpos val :> outpos outval]]))))))

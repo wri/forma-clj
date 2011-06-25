@@ -1,5 +1,17 @@
 (ns forma.utils)
 
+;; TODO: Test!
+(defn thrush [& args]
+  (reduce #(%2 %1) args))
+
+(defn nth-in
+  "Takes a nested collection and a sequence of keys, and returns the
+  value obtained by taking `nth` in turn on each level of the nested
+  collection."
+  [coll ks]
+  (apply thrush coll (for [k ks]
+                       (fn [xs] (nth xs k)))))
+
 (defn scale
   "Returns a collection obtained by scaling each number in `coll` by
   the supplied number `fact`."

@@ -1,5 +1,5 @@
 (ns forma.trends.analysis
-  (:use [forma.matrix.utils :only (variance-matrix average)]
+  (:use [forma.matrix.utils :only (variance-matrix coll-avg)]
         [forma.trends.filter :only (deseasonalize make-reliable)]
         [clojure.contrib.math :only (sqrt)])
   (:require [incanter.core :as i]
@@ -79,7 +79,7 @@
   ([long-block window ts reli-ts]
      (->> (deseasonalize ts)
           (windowed-apply ols-coefficient long-block)
-          (windowed-apply average window)
+          (windowed-apply coll-avg window)
           (make-monotonic min))))
 
 (defn collect-short-trend

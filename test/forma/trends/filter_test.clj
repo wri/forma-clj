@@ -1,7 +1,6 @@
 (ns forma.trends.filter-test
-  (:use [forma.trends.filter] :reload)
-  (:use [forma.matrix.utils :only (average)])
-  (:use midje.sweet))
+  (:use forma.trends.filter
+        midje.sweet))
 
 (def reli-test [2 2 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2])
 

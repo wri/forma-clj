@@ -1,5 +1,6 @@
 (ns forma.matrix.walk
   (:use cascalog.api
+        [forma.utils :only (nth-in)]
         [forma.matrix.utils :only (insert-into-val
                                    insert-at)]))
 
@@ -30,21 +31,9 @@
   (let [n (-> buffer-size (* 2) (+ (count row)))
         buf-row (repeat n val)]
     (insert-at buffer-size
-               (repeat (* 2 buffer-size) buf-row)
                (for [row mat]
-                 (insert-into-val val buffer-size n row)))))
-
-;; TODO: Move to forma.utils. Replace all uses.
-(defn thrush [& args] (reduce #(%2 %1) args))
-
-;; TODO: Move to forma.utils.
-(defn nth-in
-  "Takes a nested collection and a sequence of keys, and returns the
-  value obtained by taking `nth` in turn on each level of the nested
-  collection."
-  [coll ks]
-  (apply thrush coll (for [k ks]
-                       (fn [xs] (nth xs k)))))
+                 (insert-into-val val buffer-size n row))
+               (repeat (* 2 buffer-size) buf-row))))
 
 ;; TODO: Docs
 (defn wipe-out

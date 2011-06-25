@@ -1,13 +1,15 @@
 (ns forma.trends.filter
   (:use [forma.matrix.utils :only (ones-column
-                                   average
+                                   coll-avg
                                    variance-matrix
-                                   insert-at
                                    insert-into-val
                                    sparse-expander)]
         [clojure.contrib.seq :only (positions)])
   (:require [incanter.core :as i]))
 
+;; TODODAN: What does it mean to clean and deseasonalize timeseries?
+;; Give some wikipedia references.
+;; 
 ;; These functions clean and deseasonalize time-series. The first few
 ;; functions are smaller in scope, and meant to be used in the
 ;; higher-order functions toward the end of this script.  The first
@@ -16,9 +18,7 @@
 ;; time-series is combined with a measure of reliability to
 ;; interpolate across "bad" values.
 
-;; De-seasonalize time-series
-
-;; TODO: What's a monthly dummy vector? Can you describe why we need
+;; TODODAN: What's a monthly dummy vector? Can you describe why we need
 ;; these?
 (defn seasonal-rows [n]
   "lazy sequence of monthly dummy vectors."
@@ -27,6 +27,7 @@
        (take n)
        vec))
 
+;; TODODAN: What are monthly dummies? Clean up this docstring.
 (defn seasonal-matrix
   "create a matrix of [num-months]x11 of monthly dummies, where
   [num-months] indicates the number of months in the time-series"
@@ -34,12 +35,17 @@
   (i/bind-columns (ones-column num-months)
                   (seasonal-rows num-months)))
 
+;; TODODAN: What does deseasonalize mean? Describe the inputs and
+;; returns, and leave the implementation details out.
+;;
+;; Also, I see this i/mmult variance-matrix trans business in a couple
+;; of places. Can we generalize this pattern?
 (defn deseasonalize
   "deseasonalize a time-series [ts] using monthly dummies. returns
   a vector the same length of the original time-series, with desea-
   sonalized values."
   [ts]
-  (let [avg-seq (repeat (count ts) (average ts))
+  (let [avg-seq (repeat (count ts) (coll-avg ts))
         X    (seasonal-matrix (count ts))
         fix  (i/mmult (variance-matrix X)
                       (i/trans X)
@@ -146,7 +152,7 @@
   `neutralize-ends` will return the original time-series. `bad-set` is a set of
   `reli-coll` values that indicate unreliable pixels."
   [bad-set reli-coll val-coll]
-  (let [avg (act-on-good average
+  (let [avg (act-on-good coll-avg
                          (mask bad-set reli-coll val-coll))]
     (replace-index-set (bad-ends bad-set reli-coll)
                        avg
