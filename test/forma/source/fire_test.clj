@@ -1,7 +1,8 @@
 (ns forma.source.fire-test
   (:use [forma.source.fire] :reload)
   (:use cascalog.api
-        midje.sweet))
+        midje.sweet)
+  (:require [forma.testing :as t]))
 
 ;; TODO: Remove some of the data from this path.
 (def daily-fires-path

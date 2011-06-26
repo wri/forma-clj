@@ -5,6 +5,7 @@
   :dev-resources-path "dev"
   :marginalia {:javascript ["mathjax/MathJax.js"]}
   :javac-options {:debug "true" :fork "true"}
+  :jvm-opts ["-XX:MaxPermSize=128M"]
   :repositories {"conjars" "http://conjars.org/repo/"
                  "sonatype"
                  "http://oss.sonatype.org/content/repositories/releases/"}
