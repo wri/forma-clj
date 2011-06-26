@@ -3,12 +3,18 @@
   (:use cascalog.api
         midje.sweet))
 
-(def prepath "/Users/sritchie/Desktop/FORMA/FIRE/")
-(def testfile (str prepath "MCD14DL.2011074.txt"))
+;; TODO: Remove some of the data from this path.
+(def daily-fires-path
+  (t/dev-path "/testdata/FireDaily/MCD14DL.2011074.txt"))
+
+;; TODO: Remove some of the data from this path.
+(def monthly-fires-path
+  (t/dev-path "/testdata/FireMonthly/MCD14ML.200011.005.01.asc.gz"))
 
 ;; TODO: Update test and tap to reference new fires information.
 ;; TODO: Add daily and monthly fires to dev/testdata.
 
+;; TODO: Remove this test tap!
 (def new-fire-tap
   (memory-source-tap
    [["-4.214,152.190,319.9,1.6,1.2,06/15/2010,0035,T,0,5.0,301.3,27.8"]

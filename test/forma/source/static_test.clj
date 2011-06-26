@@ -1,7 +1,13 @@
 (ns forma.source.static-test
   (:use [forma.source.static] :reload)
   (:use cascalog.api
-        midje.sweet))
+        midje.sweet)
+  (:require [forma.testing :as t]))
+
+;; TODO: Add a sample ASCII grid, a small one, a textfile, here at
+;; this path.
+(def ascii-path
+  (t/dev-path "/testdata/ASCII/somepath.txt"))
 
 ;; Create a sample cascalog source comprised of MODIS resolution,
 ;; horizontal tile, vertical tile, row (line) and column (sample).
