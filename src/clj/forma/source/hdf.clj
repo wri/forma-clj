@@ -17,10 +17,10 @@
         [forma.source.modis :only (temporal-res)]
         [cascalog.io :only (temp-dir)]
         [clojure.contrib.seq-utils :only (find-first indexed)])
-  (:require [clojure.contrib.string :as s]
+  (:require [clojure.set :as set]
+            [clojure.contrib.string :as s]
             [clojure.contrib.io :as contrib.io])
-  (:import [java.util Hashtable]
-           [org.gdal.gdal gdal Dataset Band]
+  (:import [org.gdal.gdal gdal Dataset Band]
            [org.gdal.gdalconst gdalconstConstants]))
 
 ;; ## MODIS Introduction
@@ -54,6 +54,7 @@
   {:evi "monthly EVI"
    :qual "VI Quality"
    :red "red reflectance"
+   :mir "MIR reflectance"
    :nir "NIR reflectance"
    :azi "azimuth"
    :blue "blue reflectance"
@@ -74,17 +75,17 @@
   of being opened with `gdal/Open`, and binds the opened dataset to
   the supplied symbol."
   [[sym path] & body]
-  `(let [~sym (gdal/Open ~path)]
-     (try (do (gdal/AllRegister)
-              ~@body)
+  `(let [~sym (do (gdal/AllRegister)
+                  (gdal/Open ~path))]
+     (try ~@body
           (finally (. ~sym delete)))))
 
 (defn metadata
-  "Returns the metadata hashtable for the supplied MODIS Dataset."
+  "Returns the metadata map for the supplied MODIS Dataset."
   ([modis]
      (metadata modis ""))
   ([^Dataset modis key]
-     (.GetMetadata_Dict modis key)))
+     (into {} (.GetMetadata_Dict modis key))))
 
 ;; The "SUBDATASETS" metadata dictionary contains 
 ;;
@@ -106,33 +107,22 @@
 ;; specific subdataset, and filter it against `modis-subsets`.
 
 (defn subdataset-names
-  "Returns the NAME entries of the SUBDATASETS metadata Hashtable for
-  the dataset at a given filepath."
-  [hdf-file]
-  (let [path (str hdf-file)
-        dataset (gdal/Open path)]
-    (try
-      (vals (filter #(s/substring? "_NAME" (key %))
-                    (metadata dataset "SUBDATASETS")))
-      (finally (.delete dataset)))))
-
-;; TODO: Check if this is eqivalent with tests.
-(defn subdataset-names
-  "Returns the NAME entries of the SUBDATASETS metadata Hashtable for
-  the dataset at a given filepath."
+  "Returns the NAME entries of the SUBDATASETS metadata map for the
+  dataset at a given filepath."
   [hdf-path]
   (with-gdal-open [dataset (str hdf-path)]
-    (vals (filter #(s/substring? "_NAME" (key %))
-                  (metadata dataset "SUBDATASETS")))))
+    (for [[k v] (metadata dataset "SUBDATASETS")
+          :when (s/substring? "_NAME" k)]
+      v)))
 
 (defn subdataset-key
   "Takes a long-form path to a MODIS subdataset, and checks to see if
-  any of the values of the modis-subsets map can be found as
+  any of the values of the `modis-subsets` map can be found as
   substrings. If we find one, we return the associated key, cast to a
   string -- 'ndvi', for example."
   [path]
-  (s/as-str (find-first #(s/substring? (% modis-subsets) path)
-                        (keys modis-subsets))))
+  (find-first #(s/substring? (% modis-subsets) path)
+              (keys modis-subsets)))
 
 (defn dataset-filter
   "Generates a predicate function that checks a name from the
@@ -140,6 +130,7 @@
    acceptable dataset keys."
   [good-keys]
   (fn [name]
+    {:pre [(set/subset? good-keys modis-subsets)]}
     (->> good-keys
          (map modis-subsets)
          (some #(s/substring? % name)))))
@@ -149,31 +140,28 @@
  and returns a 2-tuple consisting of the modis-subsets key (\"ndvi\")
   and a gdal.Dataset object representing the unpacked MODIS data."
   [path]
-  [(subdataset-key path) (gdal/Open path)])
+  [(s/as-str (subdataset-key path)) (gdal/Open path)])
 
 ;; This is the first real "director" function; cascalog calls feeds
 ;; `BytesWritable` objects into `unpack-modis` and receives individual
 ;; datasets back.
 
-(defmapcatop [unpack-modis [to-keep]] {:stateful true}
+(defmapcatop [unpack-modis [to-keep]]
+  {:stateful true}
   ^{:doc "Stateful approach to unpacking HDF files. Registers all
 gdal formats, Creates a temp directory, then saves the byte array to
 disk. This byte array is processed with gdal. On teardown, the temp
 directory is destroyed. Function returns the decompressed MODIS file
 as a 1-tuple."}
-  ([] (do
-        (gdal/AllRegister)
-        (temp-dir "hdf")))
+  ([] (temp-dir "hdf"))
   ([tdir stream]
      (let [bytes (get-bytes stream)
-           temp-hdf (contrib.io/file tdir (hash-str stream))
-           keep? (dataset-filter to-keep)]
+           temp-hdf (contrib.io/file tdir (hash-str stream))]
        (do (contrib.io/copy bytes temp-hdf)
            (->> (subdataset-names temp-hdf)
-                (filter keep?)
+                (filter (dataset-filter to-keep))
                 (map make-subdataset)))))
-  ([tdir]
-     (contrib.io/delete-file-recursively tdir)))
+  ([tdir] (contrib.io/delete-file-recursively tdir)))
 
 ;; ### Raster Chunking
 ;;
@@ -185,8 +173,8 @@ as a 1-tuple."}
 (defmapcatop [raster-chunks [chunk-size]]  
   ^{:doc "Unpacks the data inside of a MODIS band and partitions it
   into chunks sized according to the supplied value. Specifically,
-  returns a lazy sequence of 2-tuples of the form (chunk-index,
-  `forma.schema.IntArray`.)."}
+  returns a lazy sequence of 2-tuples of the form `[chunk-index,
+  forma.schema.IntArray]`."}
   [^Dataset data]
   (let [^Band band (.GetRasterBand data 1)
         width (.GetXSize band)
@@ -208,9 +196,8 @@ as a 1-tuple."}
 (defmapop [meta-values [meta-keys]]
   ^{:doc "Returns metadata values for a given unpacked MODIS Dataset,
   corresponding to the supplied seq of keys."}
-  [modis]
-  (let [^Hashtable metadict (metadata modis)]
-    (map #(.get metadict %) meta-keys)))
+  [dataset]
+  (map (metadata dataset) meta-keys))
 
 ;; From [NASA's MODIS information](http://goo.gl/C28fG), "The MODLAND
 ;; Tile ID is an 8 digit integer, such as 51018009, that is used to

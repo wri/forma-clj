@@ -81,8 +81,7 @@
   buffer by default, the stream simply won't load the requested number
   of bytes. We keep trying until the damned thing is full."
   [^InputStream stream buffer]
-  (loop [len (count buffer)
-         off 0]
+  (loop [len (count buffer), off 0]
     (let [read (.read stream buffer off len)
           newlen (- len read)
           newoff (+ off read)]
