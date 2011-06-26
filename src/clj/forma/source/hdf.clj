@@ -69,6 +69,16 @@
 ;; provides us with everything we need for proper classification of
 ;; the data we need.
 
+(defmacro with-gdal-open
+  "Accepts a vector containing a symbol and a path to a file capable
+  of being opened with `gdal/Open`, and binds the opened dataset to
+  the supplied symbol."
+  [[sym path] & body]
+  `(let [~sym (gdal/Open ~path)]
+     (try (do (gdal/AllRegister)
+              ~@body)
+          (finally (. ~sym delete)))))
+
 (defn metadata
   "Returns the metadata hashtable for the supplied MODIS Dataset."
   ([modis]
@@ -106,6 +116,15 @@
                     (metadata dataset "SUBDATASETS")))
       (finally (.delete dataset)))))
 
+;; TODO: Check if this is eqivalent with tests.
+(defn subdataset-names
+  "Returns the NAME entries of the SUBDATASETS metadata Hashtable for
+  the dataset at a given filepath."
+  [hdf-path]
+  (with-gdal-open [dataset (str hdf-path)]
+    (vals (filter #(s/substring? "_NAME" (key %))
+                  (metadata dataset "SUBDATASETS")))))
+
 (defn subdataset-key
   "Takes a long-form path to a MODIS subdataset, and checks to see if
   any of the values of the modis-subsets map can be found as
@@ -120,9 +139,10 @@
    SUBDATASETS metadata dictionary against the supplied collection of
    acceptable dataset keys."
   [good-keys]
-  (let [substrings (map modis-subsets good-keys)]
-    (fn [name]
-      (some #(s/substring? % name) substrings))))
+  (fn [name]
+    (->> good-keys
+         (map modis-subsets)
+         (some #(s/substring? % name)))))
 
 (defn make-subdataset
   "Accepts a filepath from the SUBDATASETS dictionary of a MODIS Dataset,
@@ -148,10 +168,10 @@ as a 1-tuple."}
      (let [bytes (get-bytes stream)
            temp-hdf (contrib.io/file tdir (hash-str stream))
            keep? (dataset-filter to-keep)]
-       (do
-         (contrib.io/copy bytes temp-hdf)
-         (map make-subdataset
-              (filter keep? (subdataset-names temp-hdf))))))
+       (do (contrib.io/copy bytes temp-hdf)
+           (->> (subdataset-names temp-hdf)
+                (filter keep?)
+                (map make-subdataset)))))
   ([tdir]
      (contrib.io/delete-file-recursively tdir)))
 
