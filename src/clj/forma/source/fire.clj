@@ -115,7 +115,6 @@
 ;; #### Time Series Processing
 ;;
 ;; TODO: Split this business off into a separate job.
-
 (defn aggregate-fires
   "Converts the datestring into a time period based on the supplied
   temporal resolution."
@@ -139,18 +138,9 @@
         (p/add-fields start end :> ?t-start ?t-end)
         (running-fire-sum ?tseries :> ?ct-series))))
 
-;; First, we ran
-;;
-;; hadoop jar jarpath forma.source.fire "monthly" "path" "out-path"
-;;
-;; hadoop jar jarpath forma.source.fire "daily" "path" "out-path"
-;;
-;; hadoop jar jarpath forma.source.fire "32" "2000-11-01" "2011-04-01"
-;; s3n://redddata/fire/1000-01/*/ /timeseries/fire/
-;;
-;; The last command loads all of the fire timeseries into HDFS.
-
 (defn -main
+  "Path for running FORMA fires processing. See the forma-clj wiki for
+more details."
   ([type path out-dir]
      (?- (io/chunk-tap out-dir "%s/%s-%s/")
          (->> (case type
@@ -162,41 +152,3 @@
          (->> (hfs-seqfile chunk-path)
               (aggregate-fires t-res)
               (fire-series t-res start end)))))
-
-;; TODO: Move this shit out of fires!
-;;
-;; (defn run-test [path out-path]
-;;   (?- (hfs-seqfile out-path)
-;;       (->> (hfs-textline path)
-;;            fire-source-daily
-;;            (reproject-fires "1000")
-;;            (aggregate-fires "32")
-;;            (fire-series "32" "2000-11-01" "2011-04-01"))))
-
-;; (def some-map
-;;   {:est-start "2005-12-01"
-;;    :est-end "2011-04-01"
-;;    :t-res "32"
-;;    :long-block 15
-;;    :window 5})
-
-;; (defn run-second [path]
-;;   (let [src (hfs-seqfile path)]
-;;     (?- (stdout)
-;;         (-> (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?est-start ?count]
-;;              (src ?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?start _ ?series)
-;;              (adjust-fires some-map ?start ?series :> ?est-start ?fire-series)
-;;              (io/count-vals ?fire-series :> ?count))
-;;             (cascalog.ops/first-n 2)))))
-
-;; (defn grab [tuple]
-;;   (def test-fires tuple)
-;;   tuple)
-
-;; (defn run-check []
-;;   (let [src (hfs-seqfile "/Users/sritchie/Desktop/FireOutput/")]
-;;     (?- (stdout)
-;;         (-> (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?t-start ?t-end ?ct-series]
-;;                 (src ?dataset ?m-res ?t-res
-;;                      ?mod-h ?mod-v ?sample ?line ?t-start ?t-end ?ct-series))
-;;             (cascalog.ops/first-n 2)))))

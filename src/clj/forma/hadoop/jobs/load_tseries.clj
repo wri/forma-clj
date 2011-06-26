@@ -63,14 +63,6 @@
       (tilestring->hv ?tilestring :> ?tile-h ?tile-v)
       (tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line)))
 
-;; To get the rain and ndvi series loaded, we ran
-;;
-;; hadoop jar jarpath forma.hadoop.jobs.load_tseries
-;; s3n://redddata/ndvi/1000-32/*/*/ /timeseries/ndvi/
-;;
-;; hadoop jar jarpath forma.hadoop.jobs.load_tseries
-;; s3n://redddata/precl/1000-32/*/*/ /timeseries/precl/
-
 (defn -main
   [in-path output-path]
   (?- (hfs-seqfile output-path)

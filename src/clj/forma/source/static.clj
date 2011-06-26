@@ -82,6 +82,8 @@
 ;; they exist on S3. They need to be moved over to HDFS for that. I
 ;; think the answer here is to code up some sort of way to transfer
 ;; the textfile first, then open it up.
+;;
+;; Added to the wiki.
 
 (defn static-chunks
   "TODO: DOCS!"
