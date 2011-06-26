@@ -27,14 +27,12 @@
 
 ;; ### Fire Predicates
 
-(defn comma [& xs] (s/join "-" xs))
-
 (defn daily-datestring
   "Takes a datestring from our daily fire datasets, formatted as
   `MM/DD/YYYY`, and returns a date formatted as `YYYY-MM-DD`."
   [datestring]
   (let [[month day year] (s/split datestring #"/")]
-    (comma year month day)))
+    (s/join "-" [year month day])))
 
 (defn monthly-datestring
   "Takes a datestring from our monthly fire datasets, formatted as
@@ -76,10 +74,10 @@
 ;; ## Fire Queries
 
 (defn fire-source-monthly
-  "Takes a source of monthly fire textlines from before , and returns tuples with dataset, date,
-  position and value all defined. In this case, the value `?tuple` is
-  a `FireTuple` thrift object containing all relevant characteristics
-  of fires for that particular day."
+  "Takes a source of monthly fire textlines from before , and returns
+  tuples with dataset, date, position and value all defined. In this
+  case, the value `?tuple` is a `FireTuple` thrift object containing
+  all relevant characteristics of fires for that particular day."
   [src]
   (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
       (src ?line)

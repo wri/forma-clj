@@ -20,7 +20,6 @@
   (:require [clojure.contrib.string :as s]
             [clojure.contrib.io :as contrib.io])
   (:import [java.util Hashtable]
-           [java.io File]
            [org.gdal.gdal gdal Dataset Band]
            [org.gdal.gdalconst gdalconstConstants]))
 
@@ -72,10 +71,10 @@
 
 (defn metadata
   "Returns the metadata hashtable for the supplied MODIS Dataset."
-  ([^Dataset modis key]
-     (.GetMetadata_Dict modis key))
   ([modis]
-     (metadata modis "")))
+     (metadata modis ""))
+  ([^Dataset modis key]
+     (.GetMetadata_Dict modis key)))
 
 ;; The "SUBDATASETS" metadata dictionary contains 
 ;;
@@ -130,7 +129,7 @@
  and returns a 2-tuple consisting of the modis-subsets key (\"ndvi\")
   and a gdal.Dataset object representing the unpacked MODIS data."
   [path]
-  (vector (subdataset-key path) (gdal/Open path)))
+  [(subdataset-key path) (gdal/Open path)])
 
 ;; This is the first real "director" function; cascalog calls feeds
 ;; `BytesWritable` objects into `unpack-modis` and receives individual
