@@ -55,6 +55,17 @@ supplied collection returns true when compared to `compare-val` by
   {:pre [(coll? coll), (not (empty? coll))]}
   (float (/ (reduce + coll) (count coll))))
 
+(defn revolve
+  "Returns a lazy sequence of revolutions of the supplied
+  collection. (Note that the entire sequence must be realized, as the
+  first item is cycled to the end for each revolution.) For example:
+
+    (rotate [1 2 3])
+    ;=> ([1 2 3] [2 3 1] [3 1 2])"
+  [coll]
+  (let [ct (count coll)]
+    (->> coll cycle (partition ct 1) (take ct))))
+
 (defn sparse-expander
   "Takes in a sequence of 2-tuples of the form `<idx, val>` and
   generates a sparse expansion with each `val` inserted at its

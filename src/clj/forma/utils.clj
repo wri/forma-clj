@@ -1,6 +1,5 @@
 (ns forma.utils)
 
-;; TODO: Test!
 (defn thrush [& args]
   (reduce #(%2 %1) args))
 

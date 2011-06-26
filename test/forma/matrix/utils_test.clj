@@ -33,10 +33,14 @@ function, as per the documentation."
   ((above-x? 5) 5) => falsey
   ((above-x? 4) 5) => truthy)
 
-(facts "coll-avg testing. TODO: Update documentation."
+(facts "coll-avg testing."
   (coll-avg [1 2 3 4]) => 2.5
   (coll-avg 1) => (throws AssertionError)
   (coll-avg []) => (throws AssertionError))
+
+(facts "revolve tests."
+  (revolve [1 2 3]) => [[1 2 3] [2 3 1] [3 1 2]]
+  (revolve []) => [])
 
 (tabular
  (fact "Checks on sparse expansion functionality."
