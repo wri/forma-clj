@@ -23,3 +23,9 @@ is a function, not a macro, and can evaluate its arguments."
 (facts "Running sum test."
   (running-sum [] 0 + [1 1 1]) => [1 2 3]
   (running-sum [] 0 + [3 2 1]) => [3 5 6])
+
+
+;;TODO: update these tests for input-stream.
+(fact
+  (with-open [a (input-stream precl-path)]
+    (type a) => GZIPInputStream))

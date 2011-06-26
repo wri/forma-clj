@@ -10,15 +10,12 @@
 (ns forma.source.rain
   (:use cascalog.api
         [forma.hadoop.io :only (get-bytes)]
-        [forma.source.modis :only (hv->tilestring
-                                   chunk-dims)]
+        [forma.source.modis :only (hv->tilestring chunk-dims)]
         [forma.reproject :only (wgs84-indexer
                                 dimensions-for-step)])
-  (:require [forma.hadoop.predicate :as p]
-            [clojure.contrib.io :as io]
-            [clojure.string :as s])
-  (:import  [java.io File InputStream]
-            [java.util.zip GZIPInputStream]))
+  (:require [forma.utils :as u]
+            [forma.hadoop.predicate :as p]
+            [clojure.string :as s]))
 
 ;; ## Dataset Information
 ;;
@@ -50,45 +47,9 @@
   [step]
   (apply * float-bytes (dimensions-for-step step)))
 
-(defn input-stream
-  "Attempts to coerce the given argument to an InputStream, with added
-  support for gzipped files. If the input argument does point to a
-  gzipped file, the default buffer will be sized to fit one NOAA
-  PREC/L binary data file at 0.5 degree resolution, or 24 groups
-  of `(* 360 720)` floats. To make sure that the returned
-  GZIPInputStream will fully read into a supplied byte array, see
-  `forma.source.rain/force-fill`."
-  [arg]
-  (let [^InputStream stream (io/input-stream arg)
-        rainbuf-size (* 24 (floats-for-step 0.5))]
-    (try
-      (.mark stream 0)
-      (GZIPInputStream. stream rainbuf-size)
-      (catch java.io.IOException e
-        (.reset stream)
-        stream))))
-
 ;; ### Data Extraction
-;;
-;; When using an input-stream to feed lazy-seqs, it becomes difficult
-;; to use `with-open`, as we don't know when the application will be
-;; finished with the stream. We deal with this by calling close on the
-;; stream when our lazy-seq bottoms out.
 
-(defn force-fill
-  "Forces the given stream to fill the supplied buffer. In certain
-  cases, such as when a GZIPInputStream doesn't have a large enough
-  buffer by default, the stream simply won't load the requested number
-  of bytes. We keep trying until the damned thing is full."
-  [^InputStream stream buffer]
-  (loop [len (count buffer), off 0]
-    (let [read (.read stream buffer off len)
-          newlen (- len read)
-          newoff (+ off read)]
-      (cond (neg? read) read
-            (zero? newlen) (count buffer)
-            :else (recur newlen newoff)))))
-
+;; TODO: Turn into `stream-partition` and move to utils.
 (defn lazy-months
   "Generates a lazy seq of byte-arrays from a binary NOAA PREC/L
   file. Elements alternate between precipitation rate in mm / day and
@@ -96,7 +57,7 @@
   ([step ^InputStream stream]
      (let [arr-size (floats-for-step step)
            buf (byte-array arr-size)]
-       (if (pos? (force-fill stream buf))
+       (if (pos? (u/force-fill stream buf))
          (lazy-seq
           (cons buf (lazy-months step stream)))
          (.close stream)))))
@@ -109,6 +70,7 @@
 ;; endian order of a sequence of bytes -- we use this to coerce groups
 ;; of little-endian bytes into big-endian floats.
 
+;; TODO: Move to utils under its own section.
 (defn flipped-endian-float
   "Flips the endian order of the supplied byte sequence, and converts
   the sequence into a float."
@@ -147,8 +109,9 @@
   data. Note that we take every other element in the lazy-months seq,
   skipping data concerning # of gauges."
   [step stream]
-  (map-indexed make-tuple
-               (take-nth 2 (lazy-months step stream))))
+  (->> (lazy-months step stream)
+       (take-nth 2)
+       (map-indexed make-tuple)))
 
 ;; This is our first cascalog query -- we use `defmapcatop`, as we
 ;; need to split each file out into twelve separate tuples, one for
@@ -159,8 +122,10 @@
 lazy sequence of 2-tuples, in the form of (month, data). Assumes that
 binary files are packaged as hadoop BytesWritable objects."}
   [stream]
-  (let [bytes (get-bytes stream)]
-    (rain-tuples step (input-stream bytes))))
+  (let [bytes (get-bytes stream)
+        rainbuf-size (* 24 (floats-for-step 0.5))]
+    (->> (u/input-stream bytes rainbuf-size)
+         (rain-tuples step))))
 
 (defn to-datestring
   "Processes an NOAA PRECL filename and integer month index, and
