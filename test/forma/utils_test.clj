@@ -26,6 +26,9 @@ is a function, not a macro, and can evaluate its arguments."
 
 
 ;;TODO: update these tests for input-stream.
-(fact
-  (with-open [a (input-stream precl-path)]
-    (type a) => GZIPInputStream))
+;;
+;; Remove PRECL path.
+;;
+;; (fact
+;;   (with-open [a (input-stream precl-path)]
+;;     (type a) => GZIPInputStream))

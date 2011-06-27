@@ -15,7 +15,8 @@
                                 dimensions-for-step)])
   (:require [forma.utils :as u]
             [forma.hadoop.predicate :as p]
-            [clojure.string :as s]))
+            [clojure.string :as s])
+  (:import  [java.io InputStream]))
 
 ;; ## Dataset Information
 ;;
