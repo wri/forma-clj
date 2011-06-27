@@ -34,7 +34,6 @@
   :aot [forma.hadoop.jobs.preprocess
         forma.hadoop.jobs.load-tseries
         forma.hadoop.jobs.run-forma
-        forma.hadoop.jobs.test-forma
         forma.source.fire])
 
 

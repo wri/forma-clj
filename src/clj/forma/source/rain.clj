@@ -39,84 +39,43 @@
 ;; process these datasets using input streams, so we need to know in
 ;; advance how many bytes to read off per dataset.
 
-(def float-bytes (/ ^Integer (Float/SIZE)
-                    ^Integer (Byte/SIZE)))
-
 (defn floats-for-step
   "Length of the row of floats (in # of bytes) representing the earth
   at the specified spatial step."
   [step]
-  (apply * float-bytes (dimensions-for-step step)))
+  (apply * u/float-bytes (dimensions-for-step step)))
 
 ;; ### Data Extraction
 
-;; TODO: Turn into `stream-partition` and move to utils.
-(defn lazy-months
-  "Generates a lazy seq of byte-arrays from a binary NOAA PREC/L
-  file. Elements alternate between precipitation rate in mm / day and
-  total # of gauges."
-  ([step ^InputStream stream]
-     (let [arr-size (floats-for-step step)
-           buf (byte-array arr-size)]
-       (if (pos? (u/force-fill stream buf))
-         (lazy-seq
-          (cons buf (lazy-months step stream)))
-         (.close stream)))))
-
-;; Once we have the byte arrays returned by `lazy-months`, we need to
-;; process each one into meaningful data. Java reads primitive arrays
-;; using [big endian](http://goo.gl/os4SJ) format, by default. The
-;; PRECL dataset was stored using [little endian](http://goo.gl/KUpiy)
-;; floats, 4 bytes each. We define a function below that flips the
-;; endian order of a sequence of bytes -- we use this to coerce groups
-;; of little-endian bytes into big-endian floats.
-
-;; TODO: Move to utils under its own section.
-(defn flipped-endian-float
-  "Flips the endian order of the supplied byte sequence, and converts
-  the sequence into a float."
-  [bitseq]
-  (->> bitseq
-       (map-indexed (fn [idx bit]
-                      (bit-shift-left
-                       (bit-and bit 0xff)
-                       (* 8 idx))))
-       (reduce +)
-       (Float/intBitsToFloat)))
+;; Java reads primitive arrays using [big endian](http://goo.gl/os4SJ)
+;; format, by default. The PRECL dataset was stored using [little
+;; endian](http://goo.gl/KUpiy) floats, 4 bytes each. We define a
+;; function that converts an array of little-endian bytes into a
+;; vector of big-endian floats.
 
 (defn big-floats
   "Converts the supplied little-endian byte array into a seq of
   big-endian-ordered floats."
   [little-bytes]
-  (vec (map flipped-endian-float
-            (partition float-bytes little-bytes))))
-
-;; As our goal is to process each file into the tuple-set described
-;; above, we need to tag each month with metadata, to distinguish it
-;; from other datasets, and standardize the field information for
-;; later queries against all data. We hardcode the name "precl" for
-;; the data here, and store the month as an index, for later
-;; conversion to time period.
-
-(defn make-tuple
-  "Generates a 2-tuple for NOAA PREC/L months. We increment the index,
-  in this case, to make the number correspond to a month of the year,
-  rather than an index in a seq."
-  [index month]
-  [(inc index) (big-floats month)])
+  (vec (map u/flipped-endian-float
+            (partition u/float-bytes little-bytes))))
 
 (defn rain-tuples
   "Returns a lazy seq of 2-tuples representing NOAA PREC/L rain
-  data. Note that we take every other element in the lazy-months seq,
+  data. Each 2-tuple is of the form `[idx, month-vec]`, where `idx` is
+  the 1-based month and `month-vec` is a vector of `(* 720 360)`
+  big-endian floats.
+
+  Note that we take every other element in the `partition-stream` seq,
   skipping data concerning # of gauges."
   [step stream]
-  (->> (lazy-months step stream)
-       (take-nth 2)
-       (map-indexed make-tuple)))
-
-;; This is our first cascalog query -- we use `defmapcatop`, as we
-;; need to split each file out into twelve separate tuples, one for
-;; each month.
+  (let [n (floats-for-step step)
+        tupleize (fn [idx arr]
+                   [(inc idx) (big-floats arr)])]
+    (->> stream
+         (u/partition-stream n stream)
+         (take-nth 2)
+         (map-indexed tupleize))))
 
 (defmapcatop [unpack-rain [step]]
   ^{:doc "Unpacks a PREC/L binary file for a given year, and returns a
@@ -138,12 +97,6 @@ binary files are packaged as hadoop BytesWritable objects."}
         month (format "%02d" month-int)]
     (s/join "-" [year month "01"])))
 
-;; Rather than sampling PRECL data at the positions of every possible
-;; MODIS tile, we allow the user to supply a seq of TileIDs for
-;; processing. (No MODIS product covers every possible tile; any
-;; product containing the [NDVI](http://goo.gl/kjojh) only covers
-;; land, for example.)
-
 (defn rain-months
   "Generates a predicate macro to extract all months from a directory
   of PREC/L datasets, paired with a datestring of the format
@@ -155,12 +108,12 @@ binary files are packaged as hadoop BytesWritable objects."}
       (unpack-rain [step] ?file :> ?month ?raindata)
       (to-datestring ?filename ?month :> ?date)))
 
-;; TODO: Merge into hadoop.predicate.
+;; TODO: Merge into hadoop.predicate. We want to generalize that
+;; pattern of taking a 2d array and cutting it up into pixels.
 (defmapcatop
-  ^{:doc "Converts a month's worth of PRECL data, stored in an
-  int-array, into single rows of data, based on the supplied step
-  size. `to-rows` outputs 2-tuples of the form `[row-idx,
-  row-array]`."}
+  ^{:doc "Converts a month's worth of PRECL data, stored in a vector,
+  into single rows of data, based on the supplied step size. `to-rows`
+  outputs 2-tuples of the form `[row-idx, row-array]`."}
   [to-rows [step]]
   [coll]
   (let [[row-length] (dimensions-for-step step)]

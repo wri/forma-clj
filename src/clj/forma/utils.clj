@@ -33,15 +33,11 @@
 
 ;; ## IO Utils
 
-;; TODO: Update docs. Tests.
 (defn input-stream
-  "Attempts to coerce the given argument to an InputStream, with added
-  support for gzipped files. If the input argument does point to a
-  gzipped file, the default buffer will be sized to fit one NOAA
-  PREC/L binary data file at 0.5 degree resolution, or 24 groups
-  of `(* 360 720)` floats. To make sure that the returned
-  GZIPInputStream will fully read into a supplied byte array, see
-  `forma.source.rain/force-fill`."
+  "Attempts to coerce the given argument to an InputStream, with
+automatic flipping to `GZipInputStream` if appropriate for the
+supplied input. see `clojure.contrib.io/input-stream` for guidance on
+valid arguments."
   ([arg] (input-stream arg nil))
   ([arg default-bufsize]
      (let [^InputStream stream (io/input-stream arg)]
@@ -59,13 +55,13 @@
 ;; finished with the stream. We deal with this by calling close on the
 ;; stream when our lazy-seq bottoms out.
 
-;; TODO: Update docs. Tests.
 (defn force-fill
-  "Forces the given stream to fill the supplied buffer. In certain
-  cases, such as when a GZIPInputStream doesn't have a large enough
-  buffer by default, the stream simply won't load the requested number
-  of bytes. We keep trying until the damned thing is full."
-  [^InputStream stream buffer]
+  "Forces the contents of the supplied `InputStream` into the supplied
+  byte buffer. (In certain cases, such as when a GZIPInputStream
+  doesn't have a large enough buffer by default, the stream simply
+  won't load the requested number of bytes. `force-fill` blocks until
+  `buffer` has been filled."
+  [buffer ^InputStream stream]
   (loop [len (count buffer), off 0]
     (let [read (.read stream buffer off len)
           newlen (- len read)
@@ -73,3 +69,35 @@
       (cond (neg? read) read
             (zero? newlen) (count buffer)
             :else (recur newlen newoff)))))
+
+(defn partition-stream
+  "Generates a lazy seq of byte-arrays from a binary NOAA PREC/L
+  file. Elements alternate between precipitation rate in mm / day and
+  total # of gauges."
+  [n ^InputStream stream]
+  (let [buf (byte-array n)]
+    (if (pos? (force-fill buf stream))
+      (lazy-seq
+       (cons buf (partition-stream n stream)))
+      (.close stream))))
+
+;; ## Byte Manipulation
+
+(def float-bytes (/ ^Integer (Float/SIZE)
+                    ^Integer (Byte/SIZE)))
+
+;; We define a function below that flips the endian order of a
+;; sequence of bits -- we can use this to coerce groups of
+;; little-endian bytes into big-endian floats.
+
+(defn flipped-endian-float
+  "Flips the endian order of the supplied bit sequence, and converts
+  the sequence into a float."
+  [bitseq]
+  (->> bitseq
+       (map-indexed (fn [idx bit]
+                      (bit-shift-left
+                       (bit-and bit 0xff)
+                       (* 8 idx))))
+       (reduce +)
+       (Float/intBitsToFloat)))

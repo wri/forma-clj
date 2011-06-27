@@ -32,3 +32,6 @@ is a function, not a macro, and can evaluate its arguments."
 ;; (fact
 ;;   (with-open [a (input-stream precl-path)]
 ;;     (type a) => GZIPInputStream))
+
+;; Tests for Byte Manipulation
+(fact float-bytes => 4)
