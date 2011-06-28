@@ -3,6 +3,7 @@
         [forma.matrix.utils :only (idx->rowcol)]
         [forma.source.tilesets :only (tile-set)])
   (:require [cascalog.ops :as c]
+            [forma.utils :as u]
             [clojure.string :as s]
             [forma.matrix.walk :as w]
             [forma.date-time :as date]
@@ -17,7 +18,7 @@
   "Appropriately truncates the incoming Thrift timeseries structs, and
   outputs a new start and both truncated series."
   [& pairs]
-  (let [[starts seqs] (map #(take-nth 2 %) [pairs (rest pairs)])
+  (let [[starts seqs] (u/unweave pairs)
         distances (for [[x0 seq] (partition 2 (interleave starts seqs))]
                     (+ x0 (io/count-vals seq)))
         drop-bottoms (map #(- (apply max starts) %) starts)

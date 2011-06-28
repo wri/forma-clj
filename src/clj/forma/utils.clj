@@ -20,6 +20,16 @@
   (apply thrush coll (for [k ks]
                        (fn [xs] (nth xs k)))))
 
+(defn unzip
+  "Splits a sequence with an even number of entries into two sequences
+  by pulling alternating entries. For example:
+
+    (unzip [0 1 2 3])
+    ;=> [(0 2) (1 3)]"
+  [coll]
+  {:pre [(not (empty? coll)), (even? (count coll))]}
+  [(take-nth 2 coll) (take-nth 2 (rest coll))])
+
 (defn scale
   "Returns a collection obtained by scaling each number in `coll` by
   the supplied number `fact`."
