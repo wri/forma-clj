@@ -55,11 +55,11 @@ valid arguments."
 ;; finished with the stream. We deal with this by calling close on the
 ;; stream when our lazy-seq bottoms out.
 
-(defn force-fill
+(defn force-fill!
   "Forces the contents of the supplied `InputStream` into the supplied
   byte buffer. (In certain cases, such as when a GZIPInputStream
   doesn't have a large enough buffer by default, the stream simply
-  won't load the requested number of bytes. `force-fill` blocks until
+  won't load the requested number of bytes. `force-fill!` blocks until
   `buffer` has been filled."
   [buffer ^InputStream stream]
   (loop [len (count buffer), off 0]
@@ -71,30 +71,35 @@ valid arguments."
             :else (recur newlen newoff)))))
 
 (defn partition-stream
-  "Generates a lazy seq of byte-arrays from a binary NOAA PREC/L
-  file. Elements alternate between precipitation rate in mm / day and
-  total # of gauges."
+  "Generates a lazy seq of byte-arrays of size `n` pulled from the
+  supplied input stream `stream`."
   [n ^InputStream stream]
   (let [buf (byte-array n)]
-    (if (pos? (force-fill buf stream))
+    (if (pos? (force-fill! buf stream))
       (lazy-seq
        (cons buf (partition-stream n stream)))
       (.close stream))))
 
 ;; ## Byte Manipulation
 
-(def float-bytes (/ ^Integer (Float/SIZE)
-                    ^Integer (Byte/SIZE)))
+(def float-bytes
+  (/ ^Integer Float/SIZE
+     ^Integer Byte/SIZE))
+
+(def byte-array-type
+  (class (make-array Byte/TYPE 0)))
 
 ;; We define a function below that flips the endian order of a
-;; sequence of bits -- we can use this to coerce groups of
+;; sequence of bytes -- we can use this to coerce groups of
 ;; little-endian bytes into big-endian floats.
 
 (defn flipped-endian-float
-  "Flips the endian order of the supplied bit sequence, and converts
-  the sequence into a float."
-  [bitseq]
-  (->> bitseq
+  "Flips the endian order of each byte in the supplied byte sequence,
+  and converts the sequence into a float. Currently we limit the size
+  of the `byte-seq` to 4."
+  [byte-seq]
+  {:pre [(= 4 (count byte-seq))]}
+  (->> byte-seq
        (map-indexed (fn [idx bit]
                       (bit-shift-left
                        (bit-and bit 0xff)

@@ -28,13 +28,10 @@
                      [vmfest/vmfest "0.2.2"]
                      [swank-clojure "1.4.0-SNAPSHOT"]
                      [clojure-source "1.2.0"]
-                     [marginalia "0.5.1"]
+                     [marginalia "0.6.0"]
                      [midje "1.2-alpha3"]]
   :tasks [marginalia.tasks]
   :aot [forma.hadoop.jobs.preprocess
         forma.hadoop.jobs.load-tseries
         forma.hadoop.jobs.run-forma
         forma.source.fire])
-
-
-

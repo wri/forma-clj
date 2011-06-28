@@ -93,9 +93,10 @@ binary files are packaged as hadoop BytesWritable objects."}
   to by formatted as `precl_mon_v1.0.lnx.YYYY.gri0.5m`, with a single
   group of four digits representing the year."
   [filename month-int]
+  {:post [(= 10 (count %))]}
   (let [year (first (re-find #"(\d{4})" filename))
-        month (format "%02d" month-int)]
-    (s/join "-" [year month "01"])))
+        end (format "-%02d-01" month-int)]
+    (str year end)))
 
 (defn rain-months
   "Generates a predicate macro to extract all months from a directory

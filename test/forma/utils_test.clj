@@ -1,6 +1,9 @@
 (ns forma.utils-test
   (:use forma.utils
-        midje.sweet))
+        midje.sweet)
+  (:require [forma.testing :as t])
+  (:import  [java.io InputStream]
+            [java.util.zip GZIPInputStream]))
 
 (facts "thrush testing!
 
@@ -25,13 +28,36 @@ is a function, not a macro, and can evaluate its arguments."
   (running-sum [] 0 + [3 2 1]) => [3 5 6])
 
 
-;;TODO: update these tests for input-stream.
-;;
-;; Remove PRECL path.
-;;
-;; (fact
-;;   (with-open [a (input-stream precl-path)]
-;;     (type a) => GZIPInputStream))
+;; ## IO Tests
 
-;; Tests for Byte Manipulation
+(def test-gzip (t/dev-path "/testdata/sample.txt.gz"))
+(def test-txt  (t/dev-path "/testdata/sample.txt"))
+
+(facts "forma-flavored `input-stream` testing."
+  (with-open [gzip (input-stream test-gzip)
+              txt  (input-stream test-txt)]
+    (type gzip) => #(isa? % GZIPInputStream)
+    (type txt)  => #(isa? % InputStream)))
+
+(facts "force-fill test."
+  (with-open [txt (input-stream test-txt)]
+    (let [arr (byte-array 10)
+          bytes-filled (force-fill! arr txt)]
+      bytes-filled => 10
+      (every? (complement zero?) arr) => truthy)))
+
+(fact "partition-stream test. These are sort of crappy tests, but they
+do show that we have a sequence of byte arrays being generated."
+  (with-open [txt (input-stream test-txt)]
+    (let [result (partition-stream 10 txt)]
+      (count (first result)) => 10
+      (type (first result)) => byte-array-type
+      (count result) => 6)))
+
+;; ## Byte Manipulation Tests
+
 (fact float-bytes => 4)
+
+(fact "flipped-endian-float test."
+  (flipped-endian-float [0xD0 0x0F 0x49 0x40]) => (float 3.14159)
+  (flipped-endian-float [0xD0 0x0F 0x49]) => (throws AssertionError))
