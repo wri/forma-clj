@@ -5,6 +5,11 @@
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]))
 
+(facts "between? tests."
+  (between? -2 2 1) => truthy
+  (between? -2 2 -2) => truthy
+  (between? -2 2 -3) => falsey)
+
 (facts "thrush testing!
 
 Here are some examples of how to thread a value through a series of

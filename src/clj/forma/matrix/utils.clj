@@ -11,7 +11,7 @@
 (defn insert-at
   "Inserts `ins-coll` into `coll` at the supplied `idx`."
   [idx ins-coll coll]
-  {:pre [(and (>= idx 0) (<= idx (count coll)))]}
+  {:pre [(>= idx 0), (<= idx (count coll))]}
   (let [[beg end] (split-at idx coll)]
     (concat beg ins-coll end)))
 

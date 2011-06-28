@@ -30,9 +30,13 @@
 
 (defn chunk-dims
   "Returns the width and height in pixels of a chunk at the supplied
-  resolution with `chunk-size` total entries."
+  resolution with `chunk-size` total entries.
+
+  `chunk-size` must be a whole number multiple of the number of pixels
+  per row in a MODIS tile of the supplied resolution `m-res`."
   [m-res chunk-size]
-  {:pre (zero? (mod chunk-size (pixels-at-res m-res)))}
+  {:pre [(pos? chunk-size)
+         (zero? (mod chunk-size (pixels-at-res m-res)))]}
   (let [width (pixels-at-res m-res)
         height (quot chunk-size width)]
     [width height]))
@@ -84,6 +88,7 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
      (tilestring 8 6)
      ;=> \"008006\""
   [mod-h mod-v]
+  {:pre [(valid-modis? mod-h mod-v)]}
   (apply str (map (partial format "%03d")
                   [mod-h mod-v])))
 
@@ -91,6 +96,7 @@ available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
   "Extracts integer representations of the MODIS H and V coordinates
 referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
   [tilestr]
+  {:post [(valid-modis? [%])]}
   (map (comp #(Integer. %)
              (partial apply str))
        (partition 3 tilestr)))
@@ -135,6 +141,10 @@ referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
 ;; we need these values to appropriately map between meters and pixels
 ;; on the subdivided grid.
 
+(defn valid-latlon? [lat lon]
+  (and (u/between? -90 90 lat)
+       (u/between? -180 180 lon)))
+
 (defn latlon-rad->sinu-xy
   "Returns the sinusoidal x and y coordinates for the supplied
   latitude and longitude (in radians)."
@@ -145,6 +155,7 @@ referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
   "Returns the sinusoidal x and y coordinates for the supplied
   latitude and longitude (in degrees)."
   [lat lon]
+  {:pre [(valid-latlon? lat lon)]}
   (apply latlon-rad->sinu-xy
          (map #(Math/toRadians %) [lat lon])))
 

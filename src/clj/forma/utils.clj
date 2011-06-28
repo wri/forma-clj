@@ -3,6 +3,12 @@
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]))
 
+(defn between?
+  "Returns true of the supplied arg `x` falls between the supplied
+  `lower` and `upper` bounds (inclusive), false otherwise."
+  [lower upper x]
+  (and (>= x lower) (<= x upper)))
+
 (defn thrush [& args]
   (reduce #(%2 %1) args))
 
