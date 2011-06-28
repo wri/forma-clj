@@ -1,6 +1,6 @@
 (ns forma.presentation.ndvi-filter
   (:use [forma.matrix.utils :only (logical-replace)]
-        [forma.date-time :only (msec-range)]
+        [forma.date-time :only (monthly-msec-range)]
         [forma.trends.filter :only (hp-filter make-reliable)]
         [clj-time.core :only (date-time)]
         [clojure.contrib.math :only (round expt)])
@@ -68,22 +68,22 @@
 ;; all other observations are represented by "1".
 
 (def reli
-  (-> ndvi
-      (logical-replace < 7000 2)
-      (logical-replace > 2 1)))
+  (->> ndvi
+       (logical-replace < 7000 2)
+       (logical-replace > 2 1)))
 
 ;; Mark all offending values in order to graph the "kill points" 
 
 (def kill-vals
-  (logical-replace ndvi > 7000 nil))
+  (logical-replace > 7000 nil ndvi))
 
 ;; Create a time range for the x-axis on the time-series graph; NOTE
 ;; that this will have to change, once the time functions are moved to
 ;; conversion.
 
 (def forma-range
-  (msec-range (date-time 2000 2)
-              (date-time 2010 12)))
+  (monthly-msec-range (date-time 2000 2)
+                      (date-time 2010 12)))
 
 ;; Initialize the first plot with the raw NDVI time-series; the
 ;; default color for this line is blue.  In order to view this plot,

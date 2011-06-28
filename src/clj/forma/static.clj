@@ -18,9 +18,12 @@
 (def chunk-size 24000)
 
 (def
-  ^{:doc "These are the static datasets, described briefly below. The
-  inner keys are a transformation on the ASCII header, where the
-  coordinates for the upper left corner are presented.
+  ^{:doc "These are the static datasets, described briefly below. Each dataset must be formatted as:
+
+    {:corner [lon, lat]
+     :travel [lon-dir, lat-dir]
+     :step step-size
+     :nodata no-data-value}
 
    [NOAA PRECL](http://goo.gl/yDQhA) :: Global precipitation rates in
    mm/day, gridded at 0.5 degree resolution. The linked dataset is 2.5

@@ -17,13 +17,11 @@
      :algorithms {:lift-fn pallet.core/parallel-lift
                   :converge-fn pallet.core/parallel-adjust-node-counts}}))
 
-(def ec2-service
-  (compute/compute-service-from-config-file :aws))
+(def ec2-service (compute/service :aws))
 
 ;; ### Local Environment
 
-(def vm-service
-  (compute/compute-service-from-config-file :virtualbox))
+(def vm-service (compute/service :virtualbox))
 
 (def parallel-env
   {:algorithms

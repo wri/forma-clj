@@ -1,6 +1,5 @@
 (ns forma.source.tilesets
-  (:use forma.source.modis
-        [clojure.set :only (union)]))
+  (:use [clojure.set :only (union)]))
 
 (def
   ^{:doc "MODIS tiles for the selected countries, identified by their
@@ -22,17 +21,9 @@
   countries (union). Example usage:
 
     (tile-set [8 6] :IDN :MYS :PHL)"
-  [& inputs]  
-  (apply union
-         (map #(if (keyword? %)
+  [& inputs]
+  (->> inputs
+       (map #(if (keyword? %)
                  (country-tiles %)
-                 #{%})
-              inputs)))
-
-
-
-
-
-
-
-
+                 #{%}))
+       (apply union)))

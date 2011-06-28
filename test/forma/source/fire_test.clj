@@ -1,11 +1,20 @@
 (ns forma.source.fire-test
   (:use [forma.source.fire] :reload)
   (:use cascalog.api
-        midje.sweet))
+        midje.sweet)
+  (:require [forma.testing :as t]))
 
-(def prepath "/Users/sritchie/Desktop/FORMA/FIRE/")
-(def testfile (str prepath "MCD14DL.2011074.txt"))
+;; TODO: Remove some of the data from this path.
+(def daily-fires-path
+  (t/dev-path "/testdata/FireDaily/MCD14DL.2011074.txt"))
 
+;; TODO: Remove some of the data from this path.
+(def monthly-fires-path
+  (t/dev-path "/testdata/FireMonthly/MCD14ML.200011.005.01.asc.gz"))
+
+;; TODO: Update test and tap to reference new fires information.
+
+;; TODO: Remove this test tap!
 (def new-fire-tap
   (memory-source-tap
    [["-4.214,152.190,319.9,1.6,1.2,06/15/2010,0035,T,0,5.0,301.3,27.8"]
@@ -30,3 +39,43 @@
            (reproject-fires "1000")
            (aggregate-fires t-res)
            (fire-series t-res start end))))
+
+;; TODO: Check this code for possible tests. This comes from the main
+;; namespace, for the version of FORMA that requires preloading data
+;; into HDFS for processsing.
+;;
+;; (defn run-test [path out-path]
+;;   (?- (hfs-seqfile out-path)
+;;       (->> (hfs-textline path)
+;;            fire-source-daily
+;;            (reproject-fires "1000")
+;;            (aggregate-fires "32")
+;;            (fire-series "32" "2000-11-01" "2011-04-01"))))
+
+;; (def some-map
+;;   {:est-start "2005-12-01"
+;;    :est-end "2011-04-01"
+;;    :t-res "32"
+;;    :long-block 15
+;;    :window 5})
+
+;; (defn run-second [path]
+;;   (let [src (hfs-seqfile path)]
+;;     (?- (stdout)
+;;         (-> (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?est-start ?count]
+;;              (src ?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?start _ ?series)
+;;              (adjust-fires some-map ?start ?series :> ?est-start ?fire-series)
+;;              (io/count-vals ?fire-series :> ?count))
+;;             (cascalog.ops/first-n 2)))))
+
+;; (defn grab [tuple]
+;;   (def test-fires tuple)
+;;   tuple)
+
+;; (defn run-check []
+;;   (let [src (hfs-seqfile "/Users/sritchie/Desktop/FireOutput/")]
+;;     (?- (stdout)
+;;         (-> (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?t-start ?t-end ?ct-series]
+;;                 (src ?dataset ?m-res ?t-res
+;;                      ?mod-h ?mod-v ?sample ?line ?t-start ?t-end ?ct-series))
+;;             (cascalog.ops/first-n 2)))))

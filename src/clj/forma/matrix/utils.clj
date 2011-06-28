@@ -1,52 +1,70 @@
 (ns forma.matrix.utils
+  "Useful general functions for matrix operations or filters."
+  (:use [forma.utils :only (thrush)])
   (:require [incanter.core :as i]))
 
-;; Useful general functions for matrix operations or filters. The
-;; first functions should be very simple functions used as composites
-;; or filters.  The latter functions should be matrix operations that
-;; deal with arbitrarily large, multi-dimensional matrices.
+;; The first functions should be very simple functions used as
+;; composites or filters.  The latter functions should be matrix
+;; operations that deal with arbitrarily large, multi-dimensional
+;; matrices.
 
 (defn insert-at
-  "insert list [b] into list [a] at index [idx]."
-  [idx a b]
-  (let [[beg end] (split-at idx a)]
-    (concat beg b end)))
+  "Inserts `ins-coll` into `coll` at the supplied `idx`."
+  [idx ins-coll coll]
+  {:pre [(>= idx 0), (<= idx (count coll))]}
+  (let [[beg end] (split-at idx coll)]
+    (concat beg ins-coll end)))
 
 (defn insert-into-val
   "insert vector `xs` into a repeated sequence of the supplied
   length (filled with `val`) at the supplied insertion index."
   [val insertion-idx length xs]
+  {:pre [(<= (+ (count xs) insertion-idx) length)]}
   (insert-at insertion-idx
-             (-> length (- (count xs)) (repeat val))
-             xs))
+             xs
+             (-> length (- (count xs)) (repeat val))))
 
 (defn pred-replace
-  "Selectively replaces values in `v` based on the return value of the
+  "Selectively replaces values in `coll` based on the return value of the
  supplied predicate. `pred` will receive each value in turn; a truthy
- return will trigger a replacement of the seq item with `new-val`."
-  [v pred new-val]
-  (map #(if (pred %) new-val %) v))
+ return will trigger a replacement of the seq item with `val`."
+  [pred val coll]
+  (map #(if (pred %) val %) coll))
 
 (defn logical-replace
   "Special version of `pred-replace` tailored for logical
-operators. `pred` should be one of (<, >, >=, <=, =). if a value in
-the supplied vector returns true when compared to `compare-val` by
-pred, `new-val` will be subbed into the sequence.
+operators. `op` should be one of #{<, >, >=, <=, =}. if a value in the
+supplied collection returns true when compared to `compare-val` by
+`op`, `new-val` will be subbed into the sequence.
 
     Example usage:
 
-    (logical-replace [1 2 5 6] > 3 2)
+    (logical-replace > 3 2 [1 2 5 6])
     ;=> (1 2 2 2)"
+  [op compare-val new-val coll]
+  (pred-replace #(op % compare-val) new-val coll))
 
-  [v pred compare-val new-val]
-  (pred-replace v #(pred % compare-val) new-val))
+(defn above-x?
+  "Returns a partial function that accepts a single number. Returns
+  true if that number of greater than `x`, false otherwise."
+  [x] (partial < x))
 
-(defn above-x? [x] (partial < x))
+(defn coll-avg
+  "Returns the average value of the supplied collection of numbers."
+  [coll]
+  {:pre [(coll? coll), (not (empty? coll))]}
+  (float (/ (reduce + coll) (count coll))))
 
-(defn average
-  "average of a list"
-  [lst] 
-  (float (/ (reduce + lst) (count lst))))
+(defn revolve
+  "Returns a lazy sequence of revolutions of the supplied
+  collection. (Note that the entire sequence must be realized, as the
+  first item is cycled to the end for each revolution.) For example:
+
+    (rotate [1 2 3])
+    ;=> ([1 2 3] [2 3 1] [3 1 2])"
+  [coll]
+  (let [ct (count coll)]
+    (->> coll cycle (partition ct 1) (take ct))))
 
 (defn sparse-expander
   "Takes in a sequence of 2-tuples of the form `<idx, val>` and
@@ -56,20 +74,20 @@ pred, `new-val` will be subbed into the sequence.
 
   If no starting index is supplied, `sparse-expander` assumes that
   counting begins with the first `<idx, val>` pair."
-  ([placeholder tuples & {:keys [start length]}]   
-     (let [start  (or start (ffirst tuples))
-           halt?  (fn [idx tup-seq]
-                    (if length
-                      (>= idx (+ start length))
-                      (empty? tup-seq)))]
-       (loop [idx start
-              tup-seq tuples
-              v (transient [])]
-         (let [[[pos val] & more] tup-seq]
-           (cond (halt? idx tup-seq) (persistent! v)
-                 (when pos (= idx pos)) (recur (inc idx) more (conj! v val))
-                 (when pos (> idx pos)) (recur (inc idx) more (conj! v placeholder))
-                 :else (recur (inc idx) tup-seq (conj! v placeholder))))))))
+  [placeholder tuples & {:keys [start length]}]   
+  (let [start (or start (ffirst tuples))
+        halt? (fn [idx tup-seq]
+                (if length
+                  (>= idx (+ start length))
+                  (empty? tup-seq)))]
+    (loop [idx start
+           tup-seq tuples
+           v (transient [])]
+      (let [[[pos val] & more] tup-seq]
+        (cond (halt? idx tup-seq) (persistent! v)
+              (when pos (= idx pos)) (recur (inc idx) more (conj! v val))
+              (when pos (> idx pos)) (recur (inc idx) more (conj! v placeholder))
+              :else (recur (inc idx) tup-seq (conj! v placeholder)))))))
 
 (defn idx->rowcol
   "Takes an index within a row vector, and returns the appropriate
@@ -79,8 +97,8 @@ pred, `new-val` will be subbed into the sequence.
      (idx->rowcol edge edge idx))
   ([nrows ncols idx]
      {:pre [(< idx (* nrows ncols)), (not (neg? idx))]
-      :post [(and (< (first %) ncols)
-                  (< (second %) nrows))]}
+      :post [(and (< (first %) nrows)
+                  (< (second %) ncols))]}
      ((juxt #(quot % ncols) #(mod % ncols)) idx)))
 
 (defn rowcol->idx
@@ -91,28 +109,37 @@ supplied, assumes a square matrix."
   ([edge row col]
      (rowcol->idx edge edge row col))
   ([nrows ncols row col]
-     {:pre [(not (or (>= row nrows)
-                     (>= col ncols)))]
+     {:pre [(not (or (neg? row), (>= row nrows)
+                     (neg? col), (>= col ncols)))]
       :post [(< % (* nrows ncols))]}
      (+ col (* ncols row))))
 
 ;; ## Multi-Dimensional Matrix Operations
 
+;; TODODAN: Pre and post conditions on this function, please. It fails
+;; under a few cases... 1x2 matrices, for example. Also, please put in
+;; some links about what the function's supposed to be doing, and
+;; check the tests that I've returned.
+;;
+;; TODODAN: Also, please add some more tests!
+
 (defn variance-matrix
-  "construct a variance-covariance matrix from a given matrix `X`. If
-  the value of the matrix multiplication yields an integer value, then
-  we vectorize.  This would be equivalent to the var function in
-  incanter.stats."
+  "construct a variance-covariance matrix from the supplied matrix
+  `X`. (`X` can be an incanter matrix or a series of nested vectors.)
+  If the value of the matrix multiplication yields an integer value,
+  then we vectorize.  This is equivalent to
+  `incanter.stats/variance`."
   [X]
   (let [product (i/mmult (i/trans X) X)]
-    (i/solve (if (seq? product)
+    (i/solve (if (coll? product)
                product
-               (vector product)))))
+               [product]))))
 
 (defn column-matrix
-  "create an incanter column matrix of the supplied value with length
-  `x`."
+  "Returns an incanter column matrix of length `cols` filled with
+  `val`."
   [val cols]
+  {:pre [(>= cols 0), (number? val)]}
   (i/matrix val cols 1))
 
 (def ones-column (partial column-matrix 1))
@@ -121,6 +148,5 @@ supplied, assumes a square matrix."
   "Returns a `dims`-dimensional matrix of `val`, with edge length of
   `edge`."
   [val dims edge]
-  (reduce #(%2 %1)
-          val
-          (repeat dims (fn [v] (vec (repeat edge v))))))
+  (apply thrush val
+         (repeat dims (fn [v] (vec (repeat edge v))))))

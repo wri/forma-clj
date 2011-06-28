@@ -78,6 +78,13 @@
         (p/add-fields dataset m-res "00" :> ?dataset ?m-res ?t-res)
         (m/hv->tilestring ?mod-h ?mod-v :> ?tilestring))))
 
+;; TODO: Make a note that gzipped files can't be unpacked well when
+;; they exist on S3. They need to be moved over to HDFS for that. I
+;; think the answer here is to code up some sort of way to transfer
+;; the textfile first, then open it up.
+;;
+;; Added to the wiki.
+
 (defn static-chunks
   "TODO: DOCS!"
   [m-res chunk-size dataset agg line-tap pix-tap]
