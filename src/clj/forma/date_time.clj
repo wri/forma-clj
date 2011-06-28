@@ -4,7 +4,8 @@
 
 (ns forma.date-time
   (:use [clj-time.core :only (date-time month year)]
-        [clojure.string :only (split)])
+        [clojure.string :only (split)]
+        [clojure.contrib.def :only (defnk)])
   (:require [clj-time.core :as time]
             [clj-time.format :as f]))
 
@@ -30,6 +31,20 @@
   (-> s
       (parse from-format)
       (unparse to-format)))
+
+(defnk within-dates?
+  "Returns true if the supplied datestring `dt` falls within the dates
+  described by start and start end (exclusive)`, false otherwise. the
+  `:format` keyword argument can be used to specify the format of the
+  datestrings. Options for `:format` can be viewed with a call
+  to `(clj-time.format/show-formatters)`.
+
+  For example:
+    (within? \"2005-12-01\" \"2011-01-02\" \"2011-01-01\")
+    ;=> true"
+  [start end dt :format :year-month-day]
+  (let [[start end dt] (map #(parse % format) [start end dt])]
+    (time/within? (time/interval start end) dt)))
 
 ;; ### Reference Time
 ;;

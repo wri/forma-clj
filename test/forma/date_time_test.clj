@@ -8,6 +8,14 @@
   (parse "20110623" :basic-date) => (date-time 2011 6 23)
   (convert "2011-06-23" :year-month-day :basic-date) => "20110623")
 
+(facts "within-dates? test."
+  (within-dates? "2005-12-01" "2011-01-02" "2011-01-01") => true
+  (within-dates? "20051201" "20110101" "20110102" :format :basic-date) => false
+
+  "within-dates? can't accept datestrings that don't match the default
+or supplied formats."
+  (within-dates? "2005" "2011" "2010") => (throws RuntimeException))
+
 (tabular
  (fact "Day conversions."
    (let [t1 (date-time 2005 01 01)

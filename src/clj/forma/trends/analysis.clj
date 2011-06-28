@@ -1,7 +1,6 @@
 (ns forma.trends.analysis
   (:use [forma.matrix.utils :only (variance-matrix coll-avg)]
-        [forma.trends.filter :only (deseasonalize make-reliable)]
-        [clojure.contrib.math :only (sqrt)])
+        [forma.trends.filter :only (deseasonalize)])
   (:require [incanter.core :as i]
             [incanter.stats :as s]))
 
@@ -18,8 +17,8 @@
                         (range 1 (inc num-months)))))
 
 (defn singular?
-  "Check to see if the supplied matrix `X` is singular. note that `X` has to
-  be square, n x n, where n > 1."
+  "Check to see if the supplied matrix `X` is singular. note that `X`
+  has to be square, n x n, where n > 1."
   [X]
   (<= (i/det X) 0))
 
