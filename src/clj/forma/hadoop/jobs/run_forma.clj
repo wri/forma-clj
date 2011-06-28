@@ -92,13 +92,15 @@
       (modis/tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line)))
 
 (defn dynamic-filter
-  "Returns a new generator of ndvi and rain obtained by filtering out
-  all pixels with VCF less than the supplied `vcf-limit`."
+  "Returns a new generator of ndvi and rain timeseries obtained by
+  filtering out all pixels with VCF less than the supplied
+  `vcf-limit`."
   [vcf-limit ndvi-src rain-src vcf-src]
   (let [vcf-pixels (static-tap vcf-src)]
-    (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?n-start ?n-series ?r-start ?r-series]
+    (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi-series ?precl-series]
         (ndvi-src _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?n-start _ ?n-series)
         (rain-src _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?r-start _ ?r-series)
+        (adjust ?r-start ?r-series ?n-start ?n-series :> ?start ?precl-series ?ndvi-series)
         (vcf-pixels ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
         (>= ?vcf vcf-limit))))
 
@@ -107,8 +109,7 @@
   vcf values split up by pixel."
   [est-map dynamic-src]
   (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?est-start ?short-series ?long-series ?t-stat-series]
-      (dynamic-src ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?n-start ?n-series ?r-start ?r-series)
-      (adjust ?r-start ?r-series ?n-start ?n-series :> ?start ?precl-series ?ndvi-series)
+      (dynamic-src ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi-series ?precl-series)
       (short-trend-shell est-map ?start ?ndvi-series :> ?est-start ?short-series)
       (long-trend-shell est-map ?start ?ndvi-series ?precl-series :> ?est-start ?long-series ?t-stat-series)))
 
@@ -118,8 +119,8 @@
   [est-map ndvi-src rain-src vcf-src fire-src]
   (let [fire-src (fire-tap est-map fire-src)
         {lim :vcf-limit} est-map
-        dynamic-src (-> (dynamic-filter lim ndvi-src rain-src vcf-src)
-                        (dynamic-tap est-map))]
+        dynamic-src (->> (dynamic-filter lim ndvi-src rain-src vcf-src)
+                         (dynamic-tap est-map))]
     (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?period ?forma-val]
         (dynamic-src ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start
                      ?short-series ?long-series ?t-stat-series)

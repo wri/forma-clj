@@ -49,33 +49,33 @@ textual representation."
 ;; FORMA, broken down into pieces. We're going to have sixteen sample
 ;; timeseries, to test the business with the neighbors.
 
-(def dynamic-src [["1000" "32" 13 9 0 0 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                  ["1000" "32" 13 9 1 0 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                  ["1000" "32" 13 9 2 0 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                  ["1000" "32" 13 9 3 0 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                  ["1000" "32" 13 9 0 1 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                  ["1000" "32" 13 9 1 1 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                  ["1000" "32" 13 9 2 1 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                  ["1000" "32" 13 9 3 1 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                  ["1000" "32" 13 9 0 2 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                  ["1000" "32" 13 9 1 2 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                  ["1000" "32" 13 9 2 2 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                  ["1000" "32" 13 9 3 2 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                  ["1000" "32" 13 9 0 3 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                  ["1000" "32" 13 9 1 3 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                  ["1000" "32" 13 9 2 3 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                  ["1000" "32" 13 9 3 3 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]])
+(def dynamic-tuples [["1000" "32" 13 9 0 0 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
+                     ["1000" "32" 13 9 1 0 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
+                     ["1000" "32" 13 9 2 0 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
+                     ["1000" "32" 13 9 3 0 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
+                     ["1000" "32" 13 9 0 1 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
+                     ["1000" "32" 13 9 1 1 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
+                     ["1000" "32" 13 9 2 1 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
+                     ["1000" "32" 13 9 3 1 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
+                     ["1000" "32" 13 9 0 2 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
+                     ["1000" "32" 13 9 1 2 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
+                     ["1000" "32" 13 9 2 2 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
+                     ["1000" "32" 13 9 3 2 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
+                     ["1000" "32" 13 9 0 3 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
+                     ["1000" "32" 13 9 1 3 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
+                     ["1000" "32" 13 9 2 3 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
+                     ["1000" "32" 13 9 3 3 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]])
 
-(def fire-src [["1000" "32" 13 9 0 0 370 (io/fire-series [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
-               ["1000" "32" 13 9 1 0 370 (io/fire-series [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
-               ["1000" "32" 13 9 2 0 370 (io/fire-series [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
-               ["1000" "32" 13 9 3 0 370 (io/fire-series [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
-               ["1000" "32" 13 9 1 1 370 (io/fire-series [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
-               ["1000" "32" 13 9 2 1 370 (io/fire-series [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
-               ["1000" "32" 13 9 3 1 370 (io/fire-series [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
-               ["1000" "32" 13 9 2 2 370 (io/fire-series [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
-               ["1000" "32" 13 9 0 3 370 (io/fire-series [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
-               ["1000" "32" 13 9 3 3 370 (io/fire-series [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]])
+(def fire-tuples [["1000" "32" 13 9 0 0 370 (io/fire-series [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
+                  ["1000" "32" 13 9 1 0 370 (io/fire-series [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
+                  ["1000" "32" 13 9 2 0 370 (io/fire-series [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
+                  ["1000" "32" 13 9 3 0 370 (io/fire-series [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
+                  ["1000" "32" 13 9 1 1 370 (io/fire-series [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
+                  ["1000" "32" 13 9 2 1 370 (io/fire-series [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
+                  ["1000" "32" 13 9 3 1 370 (io/fire-series [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
+                  ["1000" "32" 13 9 2 2 370 (io/fire-series [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
+                  ["1000" "32" 13 9 0 3 370 (io/fire-series [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
+                  ["1000" "32" 13 9 3 3 370 (io/fire-series [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]])
 
 (def outer-src (let [no-fire-3 (io/forma-value nil 3.0 3.0 3.0)
                      no-fire-2 (io/forma-value nil 2.0 2.0 2.0)
@@ -133,7 +133,6 @@ textual representation."
                   ["1000" "32" 13 9 3 3 371  forma-2]
                   ["1000" "32" 13 9 3 3 372  forma-1]]))
 
-
 (let [est-map  {:est-start "2005-12-01"
                 :est-end "2011-04-01"
                 :t-res "32"
@@ -142,9 +141,12 @@ textual representation."
                 :vcf-limit 25
                 :long-block 15
                 :window 5}]
-  (fact (apply set (??- (forma-tap est-map :ndvi-src :rain-src :vcf-src :fire-src))) => (set outer-src)
-    (provided (dynamic-tap est-map :ndvi-src :rain-src :vcf-src) => dynamic-src
-              (fire-tap est-map :fire-src) => fire-src)))
+  (fact
+    (first
+     (??- (forma-tap est-map :n-src :r-src :v-src :f-src))) => (just outer-src :in-any-order)
+    (provided
+      (dynamic-tap est-map (dynamic-filter 25 :n-src :r-src :v-src)) => dynamic-tuples
+      (fire-tap est-map :f-src) => fire-tuples)))
 
 (def country-src [["1000" 13 9 0 0 1]
                   ["1000" 13 9 1 0 1]
@@ -173,32 +175,32 @@ textual representation."
 ;;       (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?period ?forma-val]
 ;;           (outer-src ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?period ?forma-val)))))
 
-(def ndvi-src [["ndvi" "1000" "32" 13 9 0 0 370 372 (io/int-struct [3 2 1])]])
-(def rain-src [["ndvi" "1000" "32" 13 9 0 0 370 372 (io/int-struct [3 2 1])]])
-(def fire-src [["ndvi" "1000" "32" 13 9 1199 866 370 372 (io/fire-series
-                                                          [(io/fire-tuple 0 0 0 0)
-                                                           (io/fire-tuple 1 2 1 0)
-                                                           (io/fire-tuple 1 1 1 1)])]])
+;; (def ndvi-src [["ndvi" "1000" "32" 13 9 0 0 370 372 (io/int-struct [3 2 1])]])
+;; (def rain-src [["ndvi" "1000" "32" 13 9 0 0 370 372 (io/int-struct [3 2 1])]])
+;; (def fire-src [["ndvi" "1000" "32" 13 9 1199 866 370 372 (io/fire-series
+;;                                                           [(io/fire-tuple 0 0 0 0)
+;;                                                            (io/fire-tuple 1 2 1 0)
+;;                                                            (io/fire-tuple 1 1 1 1)])]])
 
-(def new-fire-src
-  (let [est-map {:est-start "2000-11-01" :est-end "2001-01-01" :t-res "32"}]
-    (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start ?fire-series]
-        (fire-src _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?f-start _ ?f-series)
-        (adjust-fires est-map ?f-start ?f-series :> ?start ?fire-series))))
+;; (def new-fire-src
+;;   (let [est-map {:est-start "2000-11-01" :est-end "2001-01-01" :t-res "32"}]
+;;     (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start ?fire-series]
+;;         (fire-src _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?f-start _ ?f-series)
+;;         (adjust-fires est-map ?f-start ?f-series :> ?start ?fire-series))))
 
-(def dynamic-src
-  (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi-series ?precl-series]
-      (ndvi-src _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?n-start _ ?n-series)
-      (rain-src _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?r-start _ ?r-series)
-      (adjust ?r-start ?r-series ?n-start ?n-series :> ?start ?precl-series ?ndvi-series)))
+;; (def dynamic-src
+;;   (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi-series ?precl-series]
+;;       (ndvi-src _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?n-start _ ?n-series)
+;;       (rain-src _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?r-start _ ?r-series)
+;;       (adjust ?r-start ?r-series ?n-start ?n-series :> ?start ?precl-series ?ndvi-series)))
 
-(defn null-test []
-  (?<- (stdout)
-       [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?period ?forma-val]
-       (dynamic-src ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start ?n-series ?p-series)
-       (new-fire-src ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start !!f-series)
-       (forma-schema !!f-series ?n-series ?p-series ?p-series :> ?forma-series)
-       (p/struct-index ?start ?forma-series :> ?period ?forma-val)))
+;; (defn null-test []
+;;   (?<- (stdout)
+;;        [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?period ?forma-val]
+;;        (dynamic-src ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start ?n-series ?p-series)
+;;        (new-fire-src ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start !!f-series)
+;;        (forma-schema !!f-series ?n-series ?p-series ?p-series :> ?forma-series)
+;;        (p/struct-index ?start ?forma-series :> ?period ?forma-val)))
 
 ;; Tests for the process-neighbors defmapcatop.
 ;;
