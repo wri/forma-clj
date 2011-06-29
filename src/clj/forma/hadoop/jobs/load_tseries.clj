@@ -63,7 +63,6 @@
       (tilestring->hv ?tilestring :> ?tile-h ?tile-v)
       (tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line)))
 
-;; TODO: this needs to go.
 (def *missing-val* -9999)
 
 (defn -main

@@ -461,10 +461,6 @@ together each entry in the supplied sequence of `FormaValue`s."
   (count-vals [x]
     (count (.getDoubles x))))
 
-;;TODO: test and doc, for both of the following functions. Figure out
-;;some good place for these businesses. The IO stuff really needs to
-;;be something about schema.
-
 (defn struct-edges
   "Accepts a sequence of pairs of initial integer time period and
   Thrift timeseries objects (or sequences), and returns the maximum

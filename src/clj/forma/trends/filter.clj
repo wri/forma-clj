@@ -158,28 +158,28 @@
                        avg
                        val-coll)))
 
-;; TODO: This function works, but it's ugly.  Clean up. And put in
+;; TODODAN: This function works, but it's ugly.  Clean up. And put in
 ;; pre- and post-conditions.
 
 (defn make-reliable
-  "This function has two parts: (1) replace bad values at the ends with the
-  average of the reliable values in the target coll, `value-coll`. (2) smooth
-  over *bad* values, given by `bad-set`, which are determined based on the
-  reliability (or quality) collection, `quality-coll`.  The `good-set` parameter
-  is a set of passable values, presumably interchangeable.  If this assumption
-  is not true, then an adjustment will have to be made to this function."
+  "This function has two parts: (1) replace bad values at the ends
+  with the average of the reliable values in the target coll,
+  `value-coll`. (2) smooth over *bad* values, given by `bad-set`,
+  which are determined based on the reliability (or quality)
+  collection, `quality-coll`.  The `good-set` parameter is a set of
+  passable values, presumably interchangeable.  If this assumption is
+  not true, then an adjustment will have to be made to this function."
   [bad-set good-set quality-coll value-coll]
-  (if (empty? (filter bad-set quality-coll)) nil
-      (let [bad-end-set (bad-ends bad-set quality-coll)
-            new-qual (replace-index-set bad-end-set
-                                        (first good-set)
-                                        quality-coll)
-            new-vals (neutralize-ends bad-set
-                                      quality-coll
-                                      value-coll)
-            good-seq (positions (complement bad-set)
-                                new-qual)]
-        (vec (flatten
-              (vector (map (partial stretch-ts new-vals)
-                           (partition 2 1 good-seq))
-                      (nth new-vals (last good-seq))))))))
+  (when-not (empty? (filter bad-set quality-coll))
+    (let [bad-end-set (bad-ends bad-set quality-coll)
+          new-qual (replace-index-set bad-end-set
+                                      (first good-set)
+                                      quality-coll)
+          new-vals (neutralize-ends bad-set
+                                    quality-coll
+                                    value-coll)
+          good-seq (positions (complement bad-set)
+                              new-qual)]
+      (vec (flatten [(map (partial stretch-ts new-vals)
+                          (partition 2 1 good-seq))
+                     (nth new-vals (last good-seq))])))))
