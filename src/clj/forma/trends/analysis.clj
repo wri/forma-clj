@@ -51,7 +51,8 @@
           []
           coll))
 
-;; WHOOPBANG :: Collect the short-term drop associated with a time-series
+;; ## WHOOPBANG :: Collect the short-term drop associated with a
+;; ## time-series
 
 ;; The following is a routine, under the header WHOOPBANG (original name),
 ;; which collects the greatest short-term drop in a preconditioned and
@@ -62,8 +63,8 @@
 ;; was 15 in the original FORMA specification (3) the length of the
 ;; window that smooths the OLS coefficients, which was originally 5.
 
-;; TODO: check the values of reliability time-series data to make sure
-;; that the good- and bad-set values are correct in
+;; TODODAN: check the values of reliability time-series data to make
+;; sure that the good- and bad-set values are correct in
 ;; make-reliable. This need not be done for the first run, since it
 ;; wasn't done for the original FORMA application.  All we did was
 ;; deseasonalize the data, which is reflected below.  It would be a

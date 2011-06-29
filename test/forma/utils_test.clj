@@ -23,10 +23,10 @@ is a function, not a macro, and can evaluate its arguments."
   (nth-in [[1 2] [3 4]] [0]) => [1 2]
   (nth-in [[1 2] [3 4]] [0 1]) => 2)
 
-(facts "unzip test."
-  (unzip [0 1 2 3]) => [[0 2] [1 3]]
-  (unzip [1 2 3]) => (throws AssertionError)
-  (unzip []) => (throws AssertionError))
+(facts "unweave test."
+  (unweave [0 1 2 3]) => [[0 2] [1 3]]
+  (unweave [1 2 3]) => (throws AssertionError)
+  (unweave []) => (throws AssertionError))
 
 (facts "scaling test."
   (scale 2 [1 2 3]) => [2 4 6]

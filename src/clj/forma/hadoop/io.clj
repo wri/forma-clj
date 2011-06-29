@@ -6,6 +6,7 @@
 
 (ns forma.hadoop.io
   (:use cascalog.api
+        [clojure.contrib.def :only (defnk)]
         [clojure.string :only (join)]
         [forma.source.modis :only (valid-modis?)])
   (:require [cascalog.workflow :as w]
@@ -92,34 +93,41 @@
 ;; local fileystem, and Amazon S3 bucket paths; A path prefix of, respectively,
 ;; `hdfs://`, `file://`, and `s3n://` forces the proper choice.
 
-(defn template-tap [^Scheme scheme path-or-file pathstr]
+(defnk template-tap
+  [^Scheme scheme path-or-file pathstr :templatefields Fields/ALL]
   (TemplateTap. (w/hfs-tap scheme (w/path path-or-file))
-                pathstr))
+                pathstr
+                templatefields))
 
-(defn template-seqfile
+(defnk template-seqfile
   "Opens up a Cascading [TemplateTap](http://goo.gl/Vsnm5) that sinks
 tuples into the supplied directory, using the format specified by
 `pathstr`."
-  [path pathstr]
-  (template-tap (w/sequence-file Fields/ALL) path pathstr))
-
-;; TODO: Make more general.
-(defn forma-textline
-  [path pathstr]
-  (TemplateTap. (w/hfs-tap (w/text-line ["?text"])
-                           (w/path path))
+  [path pathstr :outfields Fields/ALL :templatefields nil]
+  (template-tap (w/sequence-file outfields)
+                path
                 pathstr
-                (w/fields ["?s-res" "?t-res" "?country" "?datestring"])))
+                :templatefields templatefields))
 
-(defn hfs-wholefile
+(defnk template-textline
+  "Opens up a Cascading [TemplateTap](http://goo.gl/Vsnm5) that sinks
+tuples into the supplied directory, using the format specified by
+`pathstr`."
+  [path pathstr :outfields Fields/ALL :templatefields nil]
+  (template-tap (w/sequence-file outfields)
+                path
+                pathstr
+                :templatefields templatefields))
+
+(defnk hfs-wholefile
   "Subquery to return distinct files in the supplied directory. Files
   will be returned as 2-tuples, formatted as `<filename, file>` The
   filename is a text object, while the entire, unchopped file is
   encoded as a Hadoop `BytesWritable` object."
-  [path]
-  (w/hfs-tap (whole-file Fields/ALL) path))
+  [path :outfields Fields/ALL]
+  (w/hfs-tap (whole-file outfields) path))
 
-(defn globhfs-wholefile
+(defnk globhfs-wholefile
   "Subquery to return distinct files in the supplied directory that
   match the supplied pattern. See [this link](http://goo.gl/uIEzu) for
   details on Hadoop's globbing pattern syntax.
@@ -128,19 +136,19 @@ tuples into the supplied directory, using the format specified by
   formatted as `<filename, file>` The filename is a text object, while
   the entire, unchopped file is encoded as a Hadoop `BytesWritable`
   object."
-  [pattern]
-  (GlobHfs. (whole-file Fields/ALL) pattern))
+  [pattern :outfields Fields/ALL]
+  (GlobHfs. (whole-file outfields) pattern))
 
-(defn globhfs-seqfile
+(defnk globhfs-seqfile
   "Identical tap to `globhfs-wholefile`, to be used with
   `SequenceFile`s instead of entire files."
-  [pattern]
-  (GlobHfs. (w/sequence-file Fields/ALL) pattern))
+  [pattern :outfields Fields/ALL]
+  (GlobHfs. (w/sequence-file outfields) pattern))
 
-(defn globhfs-textline
+(defnk globhfs-textline
   "Identical tap to `globhfs-wholefile`, to be used with text files."
-  [pattern]
-  (GlobHfs. (w/text-line ["line"] Fields/ALL) pattern))
+  [pattern :outfields Fields/ALL]
+  (GlobHfs. (w/text-line ["line"] outfields) pattern))
 
 ;; ## Backend Data Processing Queries
 ;;
@@ -316,7 +324,6 @@ tuples into the supplied directory, using the format specified by
   [fire short long t-stat]
   (FormaValue. (or fire (fire-tuple 0 0 0 0)) short long t-stat))
 
-;; TODO: use get methods for fire.
 (defn unpack-forma-val
   "Returns a persistent vector containing the `FireTuple`, short drop,
   long drop and t-stat fields of the supplied `FormaValue`."
@@ -325,9 +332,6 @@ tuples into the supplied directory, using the format specified by
    (.getShortDrop forma-val)
    (.getLongDrop forma-val)
    (.getTStat forma-val)])
-
-
-;; ## Neighbor Values
 
 (defn neighbor-value
   ([forma-val]
@@ -339,22 +343,40 @@ tuples into the supplied directory, using the format specified by
                           avg-long min-long
                           avg-stat min-stat)))
 
+(defn unpack-neighbor-val
+  [^FormaNeighborValue neighbor-val]
+  [(.getFireValue neighbor-val)
+   (.getNumNeighbors neighbor-val)
+   (.getAvgShortDrop neighbor-val)
+   (.getMinShortDrop neighbor-val)
+   (.getAvgLongDrop neighbor-val)
+   (.getMinLongDrop neighbor-val)
+   (.getAvgTStat neighbor-val)
+   (.getMinTStat neighbor-val)])
+
+;; ## Neighbor Values
+
 (defn merge-neighbor
+  "Merges the supplied instance of `FormaValue` into the existing
+  aggregate collection of `FormaValue`s represented by
+  `neighbor-val`. (`neighbor-val` must be an instance of
+  `FormaNeighborValue`."
   [neighbor-val forma-val]
   (let [[fire short long t] (unpack-forma-val forma-val)
-        ct (.getNumNeighbors neighbor-val)]
-    (FormaNeighborValue. (add-fires (.getFireValue neighbor-val) fire)
+        [n-fire ct short-mean short-min long-mean long-min t-mean t-min]
+        (unpack-neighbor-val neighbor-val)]
+    (FormaNeighborValue. (add-fires n-fire fire)
                          (inc ct)
-                         (u/weighted-mean (.getAvgShortDrop neighbor-val) ct short 1)
-                         (min short (.getMinShortDrop neighbor-val))
-                         (u/weighted-mean (.getAvgLongDrop neighbor-val) ct long 1)
-                         (min long (.getMinLongDrop neighbor-val))
-                         (u/weighted-mean (.getAvgTStat neighbor-val) ct t 1)
-                         (min t (.getMinTStat neighbor-val)))))
+                         (u/weighted-mean short-mean ct short 1)
+                         (min short-min short)
+                         (u/weighted-mean long-mean ct long 1)
+                         (min long-min long)
+                         (u/weighted-mean t-mean ct t 1)
+                         (min t-min t))))
 
 (defn combine-neighbors
-  "Combines a sequence of neighbors into the final average value that
-  Dan needs."
+  "Returns a `FormaNeighborValue` instances generated by merging
+together each entry in the supplied sequence of `FormaValue`s."
   [[x & more]]
   (if x
     (reduce merge-neighbor (neighbor-value x) more)
@@ -363,22 +385,18 @@ tuples into the supplied directory, using the format specified by
 (defn textify
   "Converts the supplied coordinates, `FormaValue` and
   `FormaNeighborValue` into a line of text suitable for use in STATA."
-  [mod-h mod-v sample line ^FormaValue val ^FormaNeighborValue neighbor-vals]
+  [mod-h mod-v sample line ^FormaValue val ^FormaNeighborValue neighbor-val]
   (let [[fire-val s-drop l-drop t-drop] (unpack-forma-val val)
+        [fire-sum ct short-mean short-min
+         long-mean long-min t-mean t-min] (unpack-neighbor-val neighbor-val)
         [k330 c50 ck fire] (extract-fields fire-val)
-        [k330-n c50-n ck-n fire-n] (extract-fields (.getFireValue neighbor-vals))]
+        [k330-n c50-n ck-n fire-n] (extract-fields fire-sum)]
     (join " "
           [mod-h mod-v sample line
            k330 c50 ck fire
            s-drop l-drop t-drop
            k330-n c50-n ck-n fire-n
-           (.getNumNeighbors neighbor-vals)
-           (.getAvgShortDrop neighbor-vals)
-           (.getMinShortDrop neighbor-vals)
-           (.getAvgLongDrop neighbor-vals)
-           (.getMinLongDrop neighbor-vals)
-           (.getAvgTStat neighbor-vals)
-           (.getMinTStat neighbor-vals)])))
+           ct short-mean short-min long-mean long-min t-mean t-min])))
 
 ;; ### Collections
 
@@ -424,6 +442,8 @@ tuples into the supplied directory, using the format specified by
           (= forma.schema.FormaValue (type v)) (forma-series xs)
           (integer? v) (int-struct xs)
           (float? v) (double-struct xs)))
+  (get-vals [x] x)
+  (count-vals [x] (count x))
   FireSeries
   (get-vals [x] (.getValues x))
   (count-vals [x]
@@ -441,43 +461,64 @@ tuples into the supplied directory, using the format specified by
   (count-vals [x]
     (count (.getDoubles x))))
 
-;;TODO: test and doc, for both of the following functions. Figure out
-;;some good place for these businesses. The IO stuff really needs to
-;;be something about schema.
+(defn struct-edges
+  "Accepts a sequence of pairs of initial integer time period and
+  Thrift timeseries objects (or sequences), and returns the maximum
+  start period and the minimum end period. For example:
+
+    (struct-edges [0 [1 2 3 4] 1 [2 3 4 5]]) => [1 4]"
+  [pair-seq]
+  {:pre [(even? (count pair-seq))]}
+  (reduce (fn [[lo hi] [x0 ct]]
+            [(max lo x0) (min hi ct)])
+          (for [[x0 seq] (partition 2 pair-seq)]
+            [x0 (+ x0 (count-vals seq))])))
+
+(defn trim-struct
+  "Trims a sequence with initial value indexed at x0 to fit within
+  bottom (inclusive) and top (exclusive). For example:
+
+    (trim-struct 0 2 0 [1 2 3]) => (to-struct [0 1 2])"
+  [bottom top x0 seq]
+  (->> (get-vals seq)
+       (drop (- bottom x0))
+       (drop-last (- (+ x0 (count-vals seq)) top))
+       (to-struct)))
 
 (defn adjust
-  "Appropriately truncates the incoming Thrift timeseries structs, and
-  outputs a new start and both truncated series."
+  "Appropriately truncates the incoming Thrift timeseries
+  structs (paired with the initial integer period), and outputs a new
+  start and both truncated series. For example:
+
+    (adjust 0 [1 2 3 4] 1 [2 3 4 5])
+    ;=> (1 (to-struct [2 3 4]) (to-struct [2 3 4]))"
   [& pairs]
-  (let [[starts seqs] (u/unzip pairs)
-        distances (for [[x0 seq] (partition 2 (interleave starts seqs))]
-                    (+ x0 (count-vals seq)))
-        drop-bottoms (map #(- (apply max starts) %) starts)
-        drop-tops    (map #(- % (apply min distances)) distances)]
-    (apply vector
-           (apply max starts)
-           (for [[db dt seq] (partition 3 (interleave drop-bottoms drop-tops seqs))]
-             (to-struct (->> (get-vals seq)
-                             (drop db)
-                             (drop-last dt)))))))
+  {:pre [(even? (count pairs))]}
+  (let [[bottom top] (struct-edges pairs)]
+    (cons bottom
+          (for [[x0 seq] (partition 2 pairs)]
+            (trim-struct bottom top x0 seq)))))
 
 (defn adjust-fires
   "Returns the section of fires data found appropriate based on the
   information in the estimation parameter map."
   [{:keys [est-start est-end t-res]} f-start f-series]
-  (let [[start end] (map (partial date/datetime->period "32") [est-start est-end])]
-    [start (->> (get-vals f-series)
-                (drop (- start f-start))
-                (drop-last (- (+ f-start (dec (count-vals f-series))) end))
-                (to-struct))]))
+  (let [[start end] (for [pd [est-start est-end]]
+                      (date/datetime->period "32" pd))]    
+    [start (trim-struct start (inc end) f-start f-series)]))
 
-;; TODO: Explain better.
 (defn forma-schema
   "Accepts a number of timeseries of equal length and starting
   position, and converts the first entry in each timeseries to a
   `FormaValue`, for all first values and on up the sequence. Series
-  must be supplied in the order specified by the arguments for
-  `forma.hadoop.io/forma-value`."
+  must be supplied as specified by the arguments for
+  `forma.hadoop.io/forma-value`. For example:
+
+    (forma-schema fire-series short-series long-series t-stat-series)
+
+  `fire-series` must be an instance of `FireSeries`. `short-series`
+  and `long-series` must be instances of `IntSeries` or
+  `DoubleSeries`."
   [& in-series]
   [(->> in-series
         (map #(if % (get-vals %) (repeat %)))

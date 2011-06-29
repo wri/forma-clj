@@ -20,11 +20,11 @@
   (apply thrush coll (for [k ks]
                        (fn [xs] (nth xs k)))))
 
-(defn unzip
+(defn unweave
   "Splits a sequence with an even number of entries into two sequences
   by pulling alternating entries. For example:
 
-    (unzip [0 1 2 3])
+    (unweave [0 1 2 3])
     ;=> [(0 2) (1 3)]"
   [coll]
   {:pre [(not (empty? coll)), (even? (count coll))]}

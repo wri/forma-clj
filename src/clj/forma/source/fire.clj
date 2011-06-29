@@ -138,6 +138,11 @@
         (p/add-fields start end :> ?t-start ?t-end)
         (running-fire-sum ?tseries :> ?ct-series))))
 
+(defn fire-query
+  [t-res start end chunk-path]
+  (->> (hfs-seqfile chunk-path)
+       (aggregate-fires t-res)
+       (fire-series t-res start end)))
 (defn -main
   "Path for running FORMA fires processing. See the forma-clj wiki for
 more details."
@@ -149,6 +154,4 @@ more details."
               (reproject-fires "1000"))))
   ([t-res start end chunk-path tseries-path]
      (?- (hfs-seqfile tseries-path)
-         (->> (hfs-seqfile chunk-path)
-              (aggregate-fires t-res)
-              (fire-series t-res start end)))))
+         (fire-query t-res start end chunk-path))))

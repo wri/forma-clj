@@ -4,8 +4,10 @@
             [forma.date-time :as date]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
+            [forma.hadoop.jobs.load-tseries :as tseries]
+            [forma.trends.analysis :as a]
             [forma.source.modis :as modis]
-            [forma.trends.analysis :as a])
+            [forma.source.fire :as fire])
   (:gen-class))
 
 (defn short-trend-shell
@@ -65,7 +67,8 @@
   "Accepts an est-map, and sources for ndvi and rain timeseries and
   vcf values split up by pixel."
   [est-map dynamic-src]
-  (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?est-start ?short-series ?long-series ?t-stat-series]
+  (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line
+       ?est-start ?short-series ?long-series ?t-stat-series]
       (dynamic-src ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi-series ?precl-series)
       (short-trend-shell est-map ?start ?ndvi-series :> ?est-start ?short-series)
       (long-trend-shell est-map ?start ?ndvi-series ?precl-series :> ?est-start ?long-series ?t-stat-series)))
@@ -90,10 +93,12 @@
 
 (defmapcatop [process-neighbors [num-neighbors]]
   [window]
-  (->> (for [[val neighbors] (w/neighbor-scan num-neighbors window) :when val]
-         [val (io/combine-neighbors (->> neighbors
-                                         (apply concat)
-                                         (filter (complement nil?))))])
+  (->> (for [[val neighbors] (w/neighbor-scan num-neighbors window)
+             :when val]
+         [val (->> neighbors
+                   (apply concat)
+                   (filter (complement nil?))
+                   (io/combine-neighbors))])
        (map-indexed cons)))
 
 ;; Here, we'll use an output tap that discards the s-res, t-res,
@@ -124,14 +129,21 @@
    :long-block 15
    :window 5})
 
+(defn forma-textline
+  [path pathstr]
+  (io/template-textline path pathstr
+                        :outfields ["?text"]
+                        :templatefields ["?s-res" "?t-res" "?country" "?datestring"]))
+
 ;; TODO: Rewrite this, so that we only need to give it a sequence of
 ;; countries (or tiles), and it'll generate the rest.
+
 (defn -main
-  [ndvi-series-path rain-series-path fire-path vcf-path country-path out-path]
-  (?- (io/forma-textline out-path "%s/%s-%s/%s/")
-      (forma-query forma-map
-                   (hfs-seqfile ndvi-series-path)
-                   (hfs-seqfile rain-series-path)
-                   (hfs-seqfile vcf-path)
-                   (hfs-seqfile country-path)
-                   (hfs-seqfile fire-path))))
+  [ndvi-path rain-path fire-path vcf-path country-path out-path]
+  (let [ndvi-src (tseries/tseries-query ndvi-path)
+        rain-src (tseries/tseries-query rain-path)
+        vcf-src (hfs-seqfile vcf-path)
+        country-src (hfs-seqfile country-path)
+        fire-src (hfs-seqfile fire-path)]
+    (?- (forma-textline out-path "%s/%s-%s/%s/")
+        (forma-query forma-map ndvi-src rain-src vcf-src country-src fire-src))))

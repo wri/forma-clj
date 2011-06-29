@@ -47,7 +47,6 @@
                  (r/rain-chunks m-res ascii-map chunk-size file-tap pix-tap)))))
 
 (defn static-chunker
-  "TODO: DOCS!"
   [m-res chunk-size tile-seq dataset agg ascii-path out-path]
   (with-fs-tmp [fs tmp-dir]
     (let [line-tap (hfs-textline ascii-path)
@@ -55,9 +54,11 @@
       (chunk-job out-path
                  (s/static-chunks m-res chunk-size dataset agg line-tap pix-tap)))))
 
-;; TODO: DOCUMENT. We should note that this is going to get bucketed
-;; at daily temporal resolution. The static datasets are going to get
-;; bucketed at `00`.
+;; Note that the preprocessing performed by `fire-chunker` is going to
+;; aggregate fires into daily buckets; we won't be able to get any
+;; other information. We should probably change this in future to
+;; retain as much information as possible.
+
 (defn fire-chunker
   "Preprocessing for fires data."
   [m-res pattern out-path]
@@ -66,10 +67,7 @@
                (f/reproject-fires m-res source))))
 
 (defn modis-main
-  "Example usage:
-
-   hadoop jar forma-standalone.jar forma.hadoop.jobs.preprocess
-          modis s3n://modisdata/MOD13A3/*/ s3n://redddata/ :IDN"
+  "See project wiki for example usage."
   [path output-path & tiles]
   (let [pattern (->> tiles
                      (map read-string)
@@ -82,7 +80,7 @@
                    output-path)))
 
 (defn rain-main
-  "TODO: Example usage."
+  "See project wiki for example usage."
   [path output-path & countries]
   (let [countries (map read-string countries)]
     (rain-chunker "1000"
@@ -91,9 +89,8 @@
                   path
                   output-path)))
 
-;; TODO: Abstract out this map read-string business.
 (defn static-main
-  "TODO: Example usage."
+  "See project wiki for example usage."
   [dataset ascii-path output-path & countries]
   (static-chunker "1000"
                   static/chunk-size
@@ -106,13 +103,14 @@
                   output-path))
 
 (defn fire-main
-  "TODO: Example usage."
+  "See project wiki for example usage."
   [pattern output-path]
   (fire-chunker "1000"
                 pattern
                 output-path))
 
-;;TODO: call read-string on the args.
+;;TODO: call read-string on the args. Abstract out from above
+;;functions.
 (defn -main
   "Wrapper to allow for various calls to chunking functions."
   [func-name & args]
