@@ -4,8 +4,10 @@
             [forma.date-time :as date]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
+            [forma.hadoop.jobs.load-tseries :as tseries]
+            [forma.trends.analysis :as a]
             [forma.source.modis :as modis]
-            [forma.trends.analysis :as a])
+            [forma.source.fire :as fire])
   (:gen-class))
 
 (defn short-trend-shell
@@ -137,11 +139,11 @@
 ;; countries (or tiles), and it'll generate the rest.
 
 (defn -main
-  [ndvi-series-path rain-series-path fire-path vcf-path country-path out-path]
-  (?- (io/forma-textline out-path "%s/%s-%s/%s/")
-      (forma-query forma-map
-                   (hfs-seqfile ndvi-series-path)
-                   (hfs-seqfile rain-series-path)
-                   (hfs-seqfile vcf-path)
-                   (hfs-seqfile country-path)
-                   (hfs-seqfile fire-path))))
+  [ndvi-path rain-path fire-path vcf-path country-path out-path]
+  (let [ndvi-src (tseries/tseries-query ndvi-path)
+        rain-src (tseries/tseries-query rain-path)
+        vcf-src (hfs-seqfile vcf-path)
+        country-src (hfs-seqfile country-path)
+        fire-src (hfs-seqfile fire-path)]
+    (?- (forma-textline out-path "%s/%s-%s/%s/")
+        (forma-query forma-map ndvi-src rain-src vcf-src country-src fire-src))))

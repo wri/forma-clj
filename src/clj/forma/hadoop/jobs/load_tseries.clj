@@ -65,12 +65,19 @@
 
 (def *missing-val* -9999)
 
+;; TODO: Process a pattern, here, as below. Can we grab rain and ndvi
+;; timeseries at the same time?
+
+(defn tseries-query
+  [in-path]
+  (-> (hfs-seqfile in-path)
+      (extract-tseries *missing-val*)
+      process-tseries))
+
 (defn -main
   [in-path output-path]
   (?- (hfs-seqfile output-path)
-      (-> (hfs-seqfile in-path)
-          (extract-tseries *missing-val*)
-          process-tseries)))
+      (tseries-query in-path)))
 
 ;; This is the old one, that allows for the pieces. We'll reinstitute
 ;; it when I'm sure that the pieces get processed properly... not sure
