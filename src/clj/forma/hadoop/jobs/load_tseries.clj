@@ -33,25 +33,25 @@
          (apply map tupleize)
          (map-indexed cons))))
 
-;; TODO: Make sure that this is really the right missing val. Probably not!
-(def
-  ^{:doc "Predicate macro aggregator that generates a timeseries, given
-  `?chunk`, `?temporal-resolution` and `?date`. Currently only
-  functions when `?chunk` is an instance of `forma.schema.DoubleArray`."}
-  form-tseries
+(defn form-tseries
+  "Returns a predicate macro aggregator that generates a timeseries,
+  given `?chunk`, `?temporal-resolution` and `?date`. Currently only
+  functions when `?chunk` is an instance of
+  `forma.schema.DoubleArray`."
+  [missing-val]
   (<- [?temporal-res ?date ?chunk :> ?pix-idx ?t-start ?t-end ?tseries]
       (datetime->period ?temporal-res ?date :> ?tperiod)
       (:sort ?tperiod)
-      (timeseries [-9999] ?tperiod ?chunk :> ?pix-idx ?t-start ?t-end ?tseries)))
+      (timeseries [missing-val] ?tperiod ?chunk :> ?pix-idx ?t-start ?t-end ?tseries)))
 
-;; TODO: Get count-vals working for int arrays
 (defn extract-tseries
-  [chunk-source]
-  (<- [?dataset ?s-res ?t-res ?tilestring ?chunk-size
-       ?chunkid ?pix-idx ?t-start ?t-end ?tseries]
-      (chunk-source ?dataset ?s-res ?t-res ?tilestring ?date ?chunkid ?chunk)
-      (io/count-vals ?chunk :> ?chunk-size)
-      (form-tseries ?t-res ?date ?chunk :> ?pix-idx ?t-start ?t-end ?tseries)))
+  [chunk-source missing-val]
+  (let [mk-tseries (form-tseries missing-val)]
+    (<- [?dataset ?s-res ?t-res ?tilestring ?chunk-size
+         ?chunkid ?pix-idx ?t-start ?t-end ?tseries]
+        (chunk-source ?dataset ?s-res ?t-res ?tilestring ?date ?chunkid ?chunk)
+        (io/count-vals ?chunk :> ?chunk-size)
+        (mk-tseries ?t-res ?date ?chunk :> ?pix-idx ?t-start ?t-end ?tseries))))
 
 (defn process-tseries
   "Given a source of timeseries, this subquery extracts the proper
@@ -63,11 +63,14 @@
       (tilestring->hv ?tilestring :> ?tile-h ?tile-v)
       (tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line)))
 
+;; TODO: this needs to go.
+(def *missing-val* -9999)
+
 (defn -main
   [in-path output-path]
   (?- (hfs-seqfile output-path)
       (-> (hfs-seqfile in-path)
-          extract-tseries
+          (extract-tseries *missing-val*)
           process-tseries)))
 
 ;; This is the old one, that allows for the pieces. We'll reinstitute
