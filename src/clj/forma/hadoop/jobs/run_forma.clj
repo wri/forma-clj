@@ -65,7 +65,8 @@
   "Accepts an est-map, and sources for ndvi and rain timeseries and
   vcf values split up by pixel."
   [est-map dynamic-src]
-  (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?est-start ?short-series ?long-series ?t-stat-series]
+  (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line
+       ?est-start ?short-series ?long-series ?t-stat-series]
       (dynamic-src ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi-series ?precl-series)
       (short-trend-shell est-map ?start ?ndvi-series :> ?est-start ?short-series)
       (long-trend-shell est-map ?start ?ndvi-series ?precl-series :> ?est-start ?long-series ?t-stat-series)))
@@ -90,10 +91,12 @@
 
 (defmapcatop [process-neighbors [num-neighbors]]
   [window]
-  (->> (for [[val neighbors] (w/neighbor-scan num-neighbors window) :when val]
-         [val (io/combine-neighbors (->> neighbors
-                                         (apply concat)
-                                         (filter (complement nil?))))])
+  (->> (for [[val neighbors] (w/neighbor-scan num-neighbors window)
+             :when val]
+         [val (->> neighbors
+                   (apply concat)
+                   (filter (complement nil?))
+                   (io/combine-neighbors))])
        (map-indexed cons)))
 
 ;; Here, we'll use an output tap that discards the s-res, t-res,

@@ -14,8 +14,6 @@
 (def neighbors [(forma-value nil 1 1 1)
                 (forma-value nil 2 2 2)])
 
-;.;. The biggest reward for a thing well done is to have done it. --
-;.;. Voltaire
 (fact
   "Tests that the combine neighbors function produces the proper
 textual representation."
