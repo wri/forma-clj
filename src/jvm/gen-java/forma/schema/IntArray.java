@@ -277,13 +277,13 @@ public class IntArray implements TBase<IntArray, IntArray._Fields>, java.io.Seri
         case 1: // INTS
           if (field.type == TType.LIST) {
             {
-              TList _list8 = iprot.readListBegin();
-              this.ints = new ArrayList<Integer>(_list8.size);
-              for (int _i9 = 0; _i9 < _list8.size; ++_i9)
+              TList _list4 = iprot.readListBegin();
+              this.ints = new ArrayList<Integer>(_list4.size);
+              for (int _i5 = 0; _i5 < _list4.size; ++_i5)
               {
-                int _elem10;
-                _elem10 = iprot.readI32();
-                this.ints.add(_elem10);
+                int _elem6;
+                _elem6 = iprot.readI32();
+                this.ints.add(_elem6);
               }
               iprot.readListEnd();
             }
@@ -310,9 +310,9 @@ public class IntArray implements TBase<IntArray, IntArray._Fields>, java.io.Seri
       oprot.writeFieldBegin(INTS_FIELD_DESC);
       {
         oprot.writeListBegin(new TList(TType.I32, this.ints.size()));
-        for (int _iter11 : this.ints)
+        for (int _iter7 : this.ints)
         {
-          oprot.writeI32(_iter11);
+          oprot.writeI32(_iter7);
         }
         oprot.writeListEnd();
       }

@@ -37,6 +37,16 @@ is a function, not a macro, and can evaluate its arguments."
   (running-sum [] 0 + [1 1 1]) => [1 2 3]
   (running-sum [] 0 + [3 2 1]) => [3 5 6])
 
+(facts "weighted-mean tests."
+  (weighted-mean 8 3 1 1) => 6.25
+  (weighted-mean 8 0 1 1) => 1
+
+  "Negative weights aren't acceptable."
+  (weighted-mean 8 -1 1 1) => (throws RuntimeException)
+
+  "Values and weights must come in pairs."
+  (weighted-mean 8 1 1) => (throws AssertionError))
+
 ;; ## IO Tests
 
 (def test-gzip (t/dev-path "/testdata/sample.txt.gz"))

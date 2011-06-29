@@ -277,13 +277,13 @@ public class DoubleArray implements TBase<DoubleArray, DoubleArray._Fields>, jav
         case 1: // DOUBLES
           if (field.type == TType.LIST) {
             {
-              TList _list4 = iprot.readListBegin();
-              this.doubles = new ArrayList<Double>(_list4.size);
-              for (int _i5 = 0; _i5 < _list4.size; ++_i5)
+              TList _list0 = iprot.readListBegin();
+              this.doubles = new ArrayList<Double>(_list0.size);
+              for (int _i1 = 0; _i1 < _list0.size; ++_i1)
               {
-                double _elem6;
-                _elem6 = iprot.readDouble();
-                this.doubles.add(_elem6);
+                double _elem2;
+                _elem2 = iprot.readDouble();
+                this.doubles.add(_elem2);
               }
               iprot.readListEnd();
             }
@@ -310,9 +310,9 @@ public class DoubleArray implements TBase<DoubleArray, DoubleArray._Fields>, jav
       oprot.writeFieldBegin(DOUBLES_FIELD_DESC);
       {
         oprot.writeListBegin(new TList(TType.DOUBLE, this.doubles.size()));
-        for (double _iter7 : this.doubles)
+        for (double _iter3 : this.doubles)
         {
-          oprot.writeDouble(_iter7);
+          oprot.writeDouble(_iter3);
         }
         oprot.writeListEnd();
       }

@@ -28,17 +28,17 @@ import org.apache.thrift.protocol.*;
 
 public class DataValue extends TUnion<DataValue, DataValue._Fields> {
   private static final TStruct STRUCT_DESC = new TStruct("DataValue");
-  private static final TField DOUBLES_FIELD_DESC = new TField("doubles", TType.STRUCT, (short)1);
+  private static final TField INT_VAL_FIELD_DESC = new TField("intVal", TType.I32, (short)1);
   private static final TField INTS_FIELD_DESC = new TField("ints", TType.STRUCT, (short)2);
-  private static final TField INT_VAL_FIELD_DESC = new TField("intVal", TType.I32, (short)3);
-  private static final TField DOUBLE_VAL_FIELD_DESC = new TField("doubleVal", TType.DOUBLE, (short)4);
+  private static final TField DOUBLE_VAL_FIELD_DESC = new TField("doubleVal", TType.DOUBLE, (short)3);
+  private static final TField DOUBLES_FIELD_DESC = new TField("doubles", TType.STRUCT, (short)4);
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements TFieldIdEnum {
-    DOUBLES((short)1, "doubles"),
+    INT_VAL((short)1, "intVal"),
     INTS((short)2, "ints"),
-    INT_VAL((short)3, "intVal"),
-    DOUBLE_VAL((short)4, "doubleVal");
+    DOUBLE_VAL((short)3, "doubleVal"),
+    DOUBLES((short)4, "doubles");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -53,14 +53,14 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
      */
     public static _Fields findByThriftId(int fieldId) {
       switch(fieldId) {
-        case 1: // DOUBLES
-          return DOUBLES;
+        case 1: // INT_VAL
+          return INT_VAL;
         case 2: // INTS
           return INTS;
-        case 3: // INT_VAL
-          return INT_VAL;
-        case 4: // DOUBLE_VAL
+        case 3: // DOUBLE_VAL
           return DOUBLE_VAL;
+        case 4: // DOUBLES
+          return DOUBLES;
         default:
           return null;
       }
@@ -103,14 +103,14 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
   public static final Map<_Fields, FieldMetaData> metaDataMap;
   static {
     Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.DOUBLES, new FieldMetaData("doubles", TFieldRequirementType.DEFAULT, 
-        new StructMetaData(TType.STRUCT, DoubleArray.class)));
-    tmpMap.put(_Fields.INTS, new FieldMetaData("ints", TFieldRequirementType.DEFAULT, 
-        new StructMetaData(TType.STRUCT, IntArray.class)));
     tmpMap.put(_Fields.INT_VAL, new FieldMetaData("intVal", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.I32)));
+    tmpMap.put(_Fields.INTS, new FieldMetaData("ints", TFieldRequirementType.DEFAULT, 
+        new StructMetaData(TType.STRUCT, IntArray.class)));
     tmpMap.put(_Fields.DOUBLE_VAL, new FieldMetaData("doubleVal", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.DOUBLE)));
+    tmpMap.put(_Fields.DOUBLES, new FieldMetaData("doubles", TFieldRequirementType.DEFAULT, 
+        new StructMetaData(TType.STRUCT, DoubleArray.class)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     FieldMetaData.addStructMetaDataMap(DataValue.class, metaDataMap);
   }
@@ -130,9 +130,9 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
     return new DataValue(this);
   }
 
-  public static DataValue doubles(DoubleArray value) {
+  public static DataValue intVal(int value) {
     DataValue x = new DataValue();
-    x.setDoubles(value);
+    x.setIntVal(value);
     return x;
   }
 
@@ -142,15 +142,15 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
     return x;
   }
 
-  public static DataValue intVal(int value) {
-    DataValue x = new DataValue();
-    x.setIntVal(value);
-    return x;
-  }
-
   public static DataValue doubleVal(double value) {
     DataValue x = new DataValue();
     x.setDoubleVal(value);
+    return x;
+  }
+
+  public static DataValue doubles(DoubleArray value) {
+    DataValue x = new DataValue();
+    x.setDoubles(value);
     return x;
   }
 
@@ -158,26 +158,26 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
   @Override
   protected void checkType(_Fields setField, Object value) throws ClassCastException {
     switch (setField) {
-      case DOUBLES:
-        if (value instanceof DoubleArray) {
-          break;
-        }
-        throw new ClassCastException("Was expecting value of type DoubleArray for field 'doubles', but got " + value.getClass().getSimpleName());
-      case INTS:
-        if (value instanceof IntArray) {
-          break;
-        }
-        throw new ClassCastException("Was expecting value of type IntArray for field 'ints', but got " + value.getClass().getSimpleName());
       case INT_VAL:
         if (value instanceof Integer) {
           break;
         }
         throw new ClassCastException("Was expecting value of type Integer for field 'intVal', but got " + value.getClass().getSimpleName());
+      case INTS:
+        if (value instanceof IntArray) {
+          break;
+        }
+        throw new ClassCastException("Was expecting value of type IntArray for field 'ints', but got " + value.getClass().getSimpleName());
       case DOUBLE_VAL:
         if (value instanceof Double) {
           break;
         }
         throw new ClassCastException("Was expecting value of type Double for field 'doubleVal', but got " + value.getClass().getSimpleName());
+      case DOUBLES:
+        if (value instanceof DoubleArray) {
+          break;
+        }
+        throw new ClassCastException("Was expecting value of type DoubleArray for field 'doubles', but got " + value.getClass().getSimpleName());
       default:
         throw new IllegalArgumentException("Unknown field id " + setField);
     }
@@ -188,12 +188,11 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
     _Fields setField = _Fields.findByThriftId(field.id);
     if (setField != null) {
       switch (setField) {
-        case DOUBLES:
-          if (field.type == DOUBLES_FIELD_DESC.type) {
-            DoubleArray doubles;
-            doubles = new DoubleArray();
-            doubles.read(iprot);
-            return doubles;
+        case INT_VAL:
+          if (field.type == INT_VAL_FIELD_DESC.type) {
+            Integer intVal;
+            intVal = iprot.readI32();
+            return intVal;
           } else {
             TProtocolUtil.skip(iprot, field.type);
             return null;
@@ -208,20 +207,21 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
             TProtocolUtil.skip(iprot, field.type);
             return null;
           }
-        case INT_VAL:
-          if (field.type == INT_VAL_FIELD_DESC.type) {
-            Integer intVal;
-            intVal = iprot.readI32();
-            return intVal;
-          } else {
-            TProtocolUtil.skip(iprot, field.type);
-            return null;
-          }
         case DOUBLE_VAL:
           if (field.type == DOUBLE_VAL_FIELD_DESC.type) {
             Double doubleVal;
             doubleVal = iprot.readDouble();
             return doubleVal;
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+            return null;
+          }
+        case DOUBLES:
+          if (field.type == DOUBLES_FIELD_DESC.type) {
+            DoubleArray doubles;
+            doubles = new DoubleArray();
+            doubles.read(iprot);
+            return doubles;
           } else {
             TProtocolUtil.skip(iprot, field.type);
             return null;
@@ -238,21 +238,21 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
   @Override
   protected void writeValue(TProtocol oprot) throws TException {
     switch (setField_) {
-      case DOUBLES:
-        DoubleArray doubles = (DoubleArray)value_;
-        doubles.write(oprot);
+      case INT_VAL:
+        Integer intVal = (Integer)value_;
+        oprot.writeI32(intVal);
         return;
       case INTS:
         IntArray ints = (IntArray)value_;
         ints.write(oprot);
         return;
-      case INT_VAL:
-        Integer intVal = (Integer)value_;
-        oprot.writeI32(intVal);
-        return;
       case DOUBLE_VAL:
         Double doubleVal = (Double)value_;
         oprot.writeDouble(doubleVal);
+        return;
+      case DOUBLES:
+        DoubleArray doubles = (DoubleArray)value_;
+        doubles.write(oprot);
         return;
       default:
         throw new IllegalStateException("Cannot write union with unknown field " + setField_);
@@ -262,14 +262,14 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
   @Override
   protected TField getFieldDesc(_Fields setField) {
     switch (setField) {
-      case DOUBLES:
-        return DOUBLES_FIELD_DESC;
-      case INTS:
-        return INTS_FIELD_DESC;
       case INT_VAL:
         return INT_VAL_FIELD_DESC;
+      case INTS:
+        return INTS_FIELD_DESC;
       case DOUBLE_VAL:
         return DOUBLE_VAL_FIELD_DESC;
+      case DOUBLES:
+        return DOUBLES_FIELD_DESC;
       default:
         throw new IllegalArgumentException("Unknown field id " + setField);
     }
@@ -290,17 +290,16 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
   }
 
 
-  public DoubleArray getDoubles() {
-    if (getSetField() == _Fields.DOUBLES) {
-      return (DoubleArray)getFieldValue();
+  public int getIntVal() {
+    if (getSetField() == _Fields.INT_VAL) {
+      return (Integer)getFieldValue();
     } else {
-      throw new RuntimeException("Cannot get field 'doubles' because union is currently set to " + getFieldDesc(getSetField()).name);
+      throw new RuntimeException("Cannot get field 'intVal' because union is currently set to " + getFieldDesc(getSetField()).name);
     }
   }
 
-  public void setDoubles(DoubleArray value) {
-    if (value == null) throw new NullPointerException();
-    setField_ = _Fields.DOUBLES;
+  public void setIntVal(int value) {
+    setField_ = _Fields.INT_VAL;
     value_ = value;
   }
 
@@ -318,19 +317,6 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
     value_ = value;
   }
 
-  public int getIntVal() {
-    if (getSetField() == _Fields.INT_VAL) {
-      return (Integer)getFieldValue();
-    } else {
-      throw new RuntimeException("Cannot get field 'intVal' because union is currently set to " + getFieldDesc(getSetField()).name);
-    }
-  }
-
-  public void setIntVal(int value) {
-    setField_ = _Fields.INT_VAL;
-    value_ = value;
-  }
-
   public double getDoubleVal() {
     if (getSetField() == _Fields.DOUBLE_VAL) {
       return (Double)getFieldValue();
@@ -341,6 +327,20 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
 
   public void setDoubleVal(double value) {
     setField_ = _Fields.DOUBLE_VAL;
+    value_ = value;
+  }
+
+  public DoubleArray getDoubles() {
+    if (getSetField() == _Fields.DOUBLES) {
+      return (DoubleArray)getFieldValue();
+    } else {
+      throw new RuntimeException("Cannot get field 'doubles' because union is currently set to " + getFieldDesc(getSetField()).name);
+    }
+  }
+
+  public void setDoubles(DoubleArray value) {
+    if (value == null) throw new NullPointerException();
+    setField_ = _Fields.DOUBLES;
     value_ = value;
   }
 

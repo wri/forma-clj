@@ -9,11 +9,11 @@
 
 (ns forma.source.rain
   (:use cascalog.api
-        [forma.hadoop.io :only (get-bytes)]
         [forma.source.modis :only (hv->tilestring chunk-dims)]
         [forma.reproject :only (wgs84-indexer
                                 dimensions-for-step)])
-  (:require [forma.utils :as u]
+  (:require [forma.hadoop.io :as io]
+            [forma.utils :as u]
             [forma.hadoop.predicate :as p]
             [clojure.string :as s])
   (:import  [java.io InputStream]))
@@ -82,7 +82,7 @@
 lazy sequence of 2-tuples, in the form of (month, data). Assumes that
 binary files are packaged as hadoop BytesWritable objects."}
   [stream]
-  (let [bytes (get-bytes stream)
+  (let [bytes (io/get-bytes stream)
         rainbuf-size (* 24 (floats-for-step 0.5))]
     (->> (u/input-stream bytes rainbuf-size)
          (rain-tuples step))))
@@ -121,7 +121,7 @@ binary files are packaged as hadoop BytesWritable objects."}
     (->> coll
          (partition row-length)
          (map-indexed (fn [idx xs]
-                        [idx (int-array xs)])))))
+                        [idx (io/to-struct xs)])))))
 
 (defn rain-values
   "Generates a cascalog subquery from the supplied WGS84 step size and
@@ -134,7 +134,7 @@ binary files are packaged as hadoop BytesWritable objects."}
         (source ?filename ?file)
         (unpack ?filename ?file :> ?date ?raindata)
         (to-rows [step] ?raindata :> ?row ?row-data)
-        (p/index ?row-data :> ?col ?val))))
+        (p/struct-index 0 ?row-data :> ?col ?val))))
 
 (defn resample-rain
   "Cascalog query that merges the `?row` `?col` and `?val` generated

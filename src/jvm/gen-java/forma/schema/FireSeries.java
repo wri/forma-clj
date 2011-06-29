@@ -26,8 +26,8 @@ import org.apache.thrift.meta_data.*;
 import org.apache.thrift.transport.*;
 import org.apache.thrift.protocol.*;
 
-public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.io.Serializable, Cloneable {
-  private static final TStruct STRUCT_DESC = new TStruct("TimeSeries");
+public class FireSeries implements TBase<FireSeries, FireSeries._Fields>, java.io.Serializable, Cloneable {
+  private static final TStruct STRUCT_DESC = new TStruct("FireSeries");
 
   private static final TField VALUES_FIELD_DESC = new TField("values", TType.LIST, (short)1);
 
@@ -100,13 +100,13 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
         new ListMetaData(TType.LIST, 
             new StructMetaData(TType.STRUCT, FireTuple.class))));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
-    FieldMetaData.addStructMetaDataMap(TimeSeries.class, metaDataMap);
+    FieldMetaData.addStructMetaDataMap(FireSeries.class, metaDataMap);
   }
 
-  public TimeSeries() {
+  public FireSeries() {
   }
 
-  public TimeSeries(
+  public FireSeries(
     List<FireTuple> values)
   {
     this();
@@ -116,7 +116,7 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
   /**
    * Performs a deep copy on <i>other</i>.
    */
-  public TimeSeries(TimeSeries other) {
+  public FireSeries(FireSeries other) {
     if (other.isSetValues()) {
       List<FireTuple> __this__values = new ArrayList<FireTuple>();
       for (FireTuple other_element : other.values) {
@@ -126,8 +126,8 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
     }
   }
 
-  public TimeSeries deepCopy() {
-    return new TimeSeries(this);
+  public FireSeries deepCopy() {
+    return new FireSeries(this);
   }
 
   @Override
@@ -154,7 +154,7 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
     return this.values;
   }
 
-  public TimeSeries setValues(List<FireTuple> values) {
+  public FireSeries setValues(List<FireTuple> values) {
     this.values = values;
     return this;
   }
@@ -213,12 +213,12 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
   public boolean equals(Object that) {
     if (that == null)
       return false;
-    if (that instanceof TimeSeries)
-      return this.equals((TimeSeries)that);
+    if (that instanceof FireSeries)
+      return this.equals((FireSeries)that);
     return false;
   }
 
-  public boolean equals(TimeSeries that) {
+  public boolean equals(FireSeries that) {
     if (that == null)
       return false;
 
@@ -239,13 +239,13 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
     return 0;
   }
 
-  public int compareTo(TimeSeries other) {
+  public int compareTo(FireSeries other) {
     if (!getClass().equals(other.getClass())) {
       return getClass().getName().compareTo(other.getClass().getName());
     }
 
     int lastComparison = 0;
-    TimeSeries typedOther = (TimeSeries)other;
+    FireSeries typedOther = (FireSeries)other;
 
     lastComparison = Boolean.valueOf(isSetValues()).compareTo(typedOther.isSetValues());
     if (lastComparison != 0) {
@@ -277,14 +277,14 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
         case 1: // VALUES
           if (field.type == TType.LIST) {
             {
-              TList _list0 = iprot.readListBegin();
-              this.values = new ArrayList<FireTuple>(_list0.size);
-              for (int _i1 = 0; _i1 < _list0.size; ++_i1)
+              TList _list8 = iprot.readListBegin();
+              this.values = new ArrayList<FireTuple>(_list8.size);
+              for (int _i9 = 0; _i9 < _list8.size; ++_i9)
               {
-                FireTuple _elem2;
-                _elem2 = new FireTuple();
-                _elem2.read(iprot);
-                this.values.add(_elem2);
+                FireTuple _elem10;
+                _elem10 = new FireTuple();
+                _elem10.read(iprot);
+                this.values.add(_elem10);
               }
               iprot.readListEnd();
             }
@@ -311,9 +311,9 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
       oprot.writeFieldBegin(VALUES_FIELD_DESC);
       {
         oprot.writeListBegin(new TList(TType.STRUCT, this.values.size()));
-        for (FireTuple _iter3 : this.values)
+        for (FireTuple _iter11 : this.values)
         {
-          _iter3.write(oprot);
+          _iter11.write(oprot);
         }
         oprot.writeListEnd();
       }
@@ -325,7 +325,7 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("TimeSeries(");
+    StringBuilder sb = new StringBuilder("FireSeries(");
     boolean first = true;
 
     sb.append("values:");

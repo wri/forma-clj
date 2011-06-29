@@ -47,6 +47,21 @@
                  [acc init]
                  tseries)))
 
+(defn weighted-mean
+  "Accepts a number of `<val, weight>` pairs, and returns the mean of
+  all values with corresponding weights applied. For example:
+
+    (weighted-avg 8 3 1 1) => 6.25"
+  [& val-weight-pairs]
+  {:pre [(even? (count val-weight-pairs))]}
+  (float (->> (for [[x weight] (partition 2 val-weight-pairs)]
+                (if  (>= weight 0)
+                  [(* x weight) weight]
+                  (throw (IllegalArgumentException.
+                          "All weights must be positive."))))
+              (reduce (partial map +))
+              (apply /))))
+
 ;; ## IO Utils
 
 (defn input-stream

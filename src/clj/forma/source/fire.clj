@@ -22,7 +22,7 @@
 ;; `Temp > 330 Kelvin`, `Confidence > 50`, or both at once. We
 ;; abstract this complication away by wrapping up each of these into a
 ;; compound value, represented as a `FireTuple` thrift object. We wrap
-;; up collections of `FireTuple` objects in a `TimeSeries` thrift
+;; up collections of `FireTuple` objects in a `FireSeries` thrift
 ;; object.
 
 ;; ### Fire Predicates

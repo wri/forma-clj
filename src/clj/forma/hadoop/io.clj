@@ -6,13 +6,15 @@
 
 (ns forma.hadoop.io
   (:use cascalog.api
-        [forma.date-time :only (jobtag)]
         [clojure.string :only (join)]
         [forma.source.modis :only (valid-modis?)])
-  (:require [cascalog.workflow :as w])
+  (:require [cascalog.workflow :as w]
+            [forma.utils :as u]
+            [forma.date-time :as date])
   (:import [forma WholeFile]
-           [forma.schema DoubleArray IntArray FireTuple
-            TimeSeries FormaValue FormaSeries]
+           [forma.schema DoubleArray IntArray
+            FireTuple FireSeries FormaValue FormaSeries
+            FormaNeighborValue]
            [java.util ArrayList]
            [cascading.tuple Fields]
            [cascading.scheme Scheme]
@@ -236,7 +238,7 @@ tuples into the supplied directory, using the format specified by
   ([out-dir]
      (chunk-tap out-dir "%s/%s-%s/%s/"))
   ([out-dir pattern]
-     (template-seqfile out-dir (str pattern (jobtag) "/")))
+     (template-seqfile out-dir (str pattern (date/jobtag) "/")))
   ([basepath datasets resolutions]
      (chunk-tap basepath datasets resolutions * *))
   ([basepath datasets resolutions tiles]
@@ -294,9 +296,9 @@ tuples into the supplied directory, using the format specified by
   `bothPreds` and `count` fields of the supplied `FireTuple` thrift
   object."
   [firetuple]
-  [(.temp330 firetuple)
-   (.conf50 firetuple)
-   (.bothPreds firetuple)
+  [(.getTemp330 firetuple)
+   (.getConf50 firetuple)
+   (.getBothPreds firetuple)
    (.count firetuple)])
 
 (defn add-fires
@@ -312,12 +314,9 @@ tuples into the supplied directory, using the format specified by
 
 (defn forma-value
   [fire short long t-stat]
-  (doto (FormaValue.)
-    (.setFireValue (or fire (fire-tuple 0 0 0 0)))
-    (.setShortDrop short)
-    (.setLongDrop long)
-    (.setTStat t-stat)))
+  (FormaValue. (or fire (fire-tuple 0 0 0 0)) short long t-stat))
 
+;; TODO: use get methods for fire.
 (defn unpack-forma-val
   "Returns a persistent vector containing the `FireTuple`, short drop,
   long drop and t-stat fields of the supplied `FormaValue`."
@@ -326,6 +325,60 @@ tuples into the supplied directory, using the format specified by
    (.getShortDrop forma-val)
    (.getLongDrop forma-val)
    (.getTStat forma-val)])
+
+
+;; ## Neighbor Values
+
+(defn neighbor-value
+  ([forma-val]
+     (let [[fire short long t] (unpack-forma-val forma-val)]
+       (neighbor-value fire 1 short short long long t t)))
+  ([fire neighbors avg-short min-short avg-long min-long avg-stat min-stat]
+     (FormaNeighborValue. fire neighbors
+                          avg-short min-short
+                          avg-long min-long
+                          avg-stat min-stat)))
+
+(defn merge-neighbor
+  [neighbor-val forma-val]
+  (let [[fire short long t] (unpack-forma-val forma-val)
+        ct (.getNumNeighbors neighbor-val)]
+    (FormaNeighborValue. (add-fires (.getFireValue neighbor-val) fire)
+                         (inc ct)
+                         (u/weighted-mean (.getAvgShortDrop neighbor-val) ct short 1)
+                         (min short (.getMinShortDrop neighbor-val))
+                         (u/weighted-mean (.getAvgLongDrop neighbor-val) ct long 1)
+                         (min long (.getMinLongDrop neighbor-val))
+                         (u/weighted-mean (.getAvgTStat neighbor-val) ct t 1)
+                         (min t (.getMinTStat neighbor-val)))))
+
+(defn combine-neighbors
+  "Combines a sequence of neighbors into the final average value that
+  Dan needs."
+  [[x & more]]
+  (if x
+    (reduce merge-neighbor (neighbor-value x) more)
+    (neighbor-value (fire-tuple 0 0 0 0) 0 0 0 0 0 0 0)))
+
+(defn textify
+  "Converts the supplied coordinates, `FormaValue` and
+  `FormaNeighborValue` into a line of text suitable for use in STATA."
+  [mod-h mod-v sample line ^FormaValue val ^FormaNeighborValue neighbor-vals]
+  (let [[fire-val s-drop l-drop t-drop] (unpack-forma-val val)
+        [k330 c50 ck fire] (extract-fields fire-val)
+        [k330-n c50-n ck-n fire-n] (extract-fields (.getFireValue neighbor-vals))]
+    (join " "
+          [mod-h mod-v sample line
+           k330 c50 ck fire
+           s-drop l-drop t-drop
+           k330-n c50-n ck-n fire-n
+           (.getNumNeighbors neighbor-vals)
+           (.getAvgShortDrop neighbor-vals)
+           (.getMinShortDrop neighbor-vals)
+           (.getAvgLongDrop neighbor-vals)
+           (.getMinLongDrop neighbor-vals)
+           (.getAvgTStat neighbor-vals)
+           (.getMinTStat neighbor-vals)])))
 
 ;; ### Collections
 
@@ -346,10 +399,10 @@ tuples into the supplied directory, using the format specified by
       (.setDoubles doubles))))
 
 (defn fire-series
-  "Creates a `TimeSeries` object from the supplied sequence of
+  "Creates a `FireSeries` object from the supplied sequence of
   `FireTuple` objects."
   [xs]
-  (doto (TimeSeries.)
+  (doto (FireSeries.)
     (.setValues (ArrayList. xs))))
 
 (defn forma-series
@@ -371,7 +424,7 @@ tuples into the supplied directory, using the format specified by
           (= forma.schema.FormaValue (type v)) (forma-series xs)
           (integer? v) (int-struct xs)
           (float? v) (double-struct xs)))
-  TimeSeries
+  FireSeries
   (get-vals [x] (.getValues x))
   (count-vals [x]
     (count (.getValues x)))
@@ -387,3 +440,46 @@ tuples into the supplied directory, using the format specified by
   (get-vals [x] (.getDoubles x))
   (count-vals [x]
     (count (.getDoubles x))))
+
+;;TODO: test and doc, for both of the following functions. Figure out
+;;some good place for these businesses. The IO stuff really needs to
+;;be something about schema.
+
+(defn adjust
+  "Appropriately truncates the incoming Thrift timeseries structs, and
+  outputs a new start and both truncated series."
+  [& pairs]
+  (let [[starts seqs] (u/unzip pairs)
+        distances (for [[x0 seq] (partition 2 (interleave starts seqs))]
+                    (+ x0 (count-vals seq)))
+        drop-bottoms (map #(- (apply max starts) %) starts)
+        drop-tops    (map #(- % (apply min distances)) distances)]
+    (apply vector
+           (apply max starts)
+           (for [[db dt seq] (partition 3 (interleave drop-bottoms drop-tops seqs))]
+             (to-struct (->> (get-vals seq)
+                             (drop db)
+                             (drop-last dt)))))))
+
+(defn adjust-fires
+  "Returns the section of fires data found appropriate based on the
+  information in the estimation parameter map."
+  [{:keys [est-start est-end t-res]} f-start f-series]
+  (let [[start end] (map (partial date/datetime->period "32") [est-start est-end])]
+    [start (->> (get-vals f-series)
+                (drop (- start f-start))
+                (drop-last (- (+ f-start (dec (count-vals f-series))) end))
+                (to-struct))]))
+
+;; TODO: Explain better.
+(defn forma-schema
+  "Accepts a number of timeseries of equal length and starting
+  position, and converts the first entry in each timeseries to a
+  `FormaValue`, for all first values and on up the sequence. Series
+  must be supplied in the order specified by the arguments for
+  `forma.hadoop.io/forma-value`."
+  [& in-series]
+  [(->> in-series
+        (map #(if % (get-vals %) (repeat %)))
+        (apply map forma-value)
+        (to-struct))])
