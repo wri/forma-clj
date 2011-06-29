@@ -442,6 +442,8 @@ together each entry in the supplied sequence of `FormaValue`s."
           (= forma.schema.FormaValue (type v)) (forma-series xs)
           (integer? v) (int-struct xs)
           (float? v) (double-struct xs)))
+  (get-vals [x] x)
+  (count-vals [x] (count x))
   FireSeries
   (get-vals [x] (.getValues x))
   (count-vals [x]
@@ -463,34 +465,51 @@ together each entry in the supplied sequence of `FormaValue`s."
 ;;some good place for these businesses. The IO stuff really needs to
 ;;be something about schema.
 
-;; TODO: This bad boy needs a serious overhaul. This whole partition
-;; shit can be redone.
+(defn struct-edges
+  "Accepts a sequence of pairs of initial integer time period and
+  Thrift timeseries objects (or sequences), and returns the maximum
+  start period and the minimum end period. For example:
+
+    (struct-edges [0 [1 2 3 4] 1 [2 3 4 5]]) => [1 4]"
+  [pair-seq]
+  {:pre [(even? (count pair-seq))]}
+  (reduce (fn [[lo hi] [x0 ct]]
+            [(max lo x0) (min hi ct)])
+          (for [[x0 seq] (partition 2 pair-seq)]
+            [x0 (+ x0 (count-vals seq))])))
+
+(defn trim-struct
+  "Trims a sequence with initial value indexed at x0 to fit within
+  bottom (inclusive) and top (exclusive). For example:
+
+    (trim-struct 0 2 0 [1 2 3]) => (to-struct [0 1 2])"
+  [bottom top x0 seq]
+  (->> (get-vals seq)
+       (drop (- bottom x0))
+       (drop-last (- (+ x0 (count-vals seq)) top))
+       (to-struct)))
+
 (defn adjust
-  "Appropriately truncates the incoming Thrift timeseries structs, and
-  outputs a new start and both truncated series."
+  "Appropriately truncates the incoming Thrift timeseries
+  structs (paired with the initial integer period), and outputs a new
+  start and both truncated series. For example:
+
+    (adjust 0 [1 2 3 4] 1 [2 3 4 5])
+    ;=> (1 (to-struct [2 3 4]) (to-struct [2 3 4]))"
   [& pairs]
-  (let [[starts seqs] (u/unweave pairs)
-        distances (for [[x0 seq] (partition 2 pairs)]
-                    (+ x0 (count-vals seq)))
-        drop-bottoms (map #(- (apply max starts) %) starts)
-        drop-tops    (map #(- % (apply min distances)) distances)]
-    (apply vector
-           (apply max starts)
-           (for [[db dt seq] (map vector drop-bottoms drop-tops seqs)]
-             (to-struct (->> (get-vals seq)
-                             (drop db)
-                             (drop-last dt)))))))
+  {:pre [(even? (count pairs))]}
+  (let [[bottom top] (struct-edges pairs)]
+    (cons bottom
+          (for [[x0 seq] (partition 2 pairs)]
+            (trim-struct bottom top x0 seq)))))
 
 (defn adjust-fires
   "Returns the section of fires data found appropriate based on the
   information in the estimation parameter map."
   [{:keys [est-start est-end t-res]} f-start f-series]
   (let [[start end] (for [pd [est-start est-end]]
-                      (date/datetime->period "32" pd))]
-    [start (->> (get-vals f-series)
-                (drop (- start f-start))
-                (drop-last (- (+ f-start (dec (count-vals f-series))) end))
-                (to-struct))]))
+                      (date/datetime->period "32" pd))]    
+    [start (trim-struct start (inc end) f-start f-series)]))
 
 (defn forma-schema
   "Accepts a number of timeseries of equal length and starting
