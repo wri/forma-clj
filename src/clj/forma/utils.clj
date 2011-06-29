@@ -20,6 +20,16 @@
   (apply thrush coll (for [k ks]
                        (fn [xs] (nth xs k)))))
 
+(defn unzip
+  "Splits a sequence with an even number of entries into two sequences
+  by pulling alternating entries. For example:
+
+    (unzip [0 1 2 3])
+    ;=> [(0 2) (1 3)]"
+  [coll]
+  {:pre [(not (empty? coll)), (even? (count coll))]}
+  [(take-nth 2 coll) (take-nth 2 (rest coll))])
+
 (defn scale
   "Returns a collection obtained by scaling each number in `coll` by
   the supplied number `fact`."
@@ -36,6 +46,21 @@
                      [(conj coll last) last]))
                  [acc init]
                  tseries)))
+
+(defn weighted-mean
+  "Accepts a number of `<val, weight>` pairs, and returns the mean of
+  all values with corresponding weights applied. For example:
+
+    (weighted-avg 8 3 1 1) => 6.25"
+  [& val-weight-pairs]
+  {:pre [(even? (count val-weight-pairs))]}
+  (float (->> (for [[x weight] (partition 2 val-weight-pairs)]
+                (if  (>= weight 0)
+                  [(* x weight) weight]
+                  (throw (IllegalArgumentException.
+                          "All weights must be positive."))))
+              (reduce (partial map +))
+              (apply /))))
 
 ;; ## IO Utils
 

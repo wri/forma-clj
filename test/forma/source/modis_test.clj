@@ -56,7 +56,15 @@
   (tile-position "1000" 24000 2 1231) => [31 41]
   (tile-position "500" 24000 2 1231) => [1231 20]
   (tile-position "500" 24000 -2 1) => (throws AssertionError)
-  (tile-position "123" 24000 2 1) => (throws NullPointerException))
+  (tile-position "123" 24000 2 1) => (throws NullPointerException)
+
+  "Fully defined cell dimension version."
+  (tile-position 10 10 0 0 1) => [1 0]
+  (tile-position 10 10 0 0 99) => [9 9]
+  (tile-position 10 10 2 1 0) => [20 10]
+
+  "can't have non-positive width or height for window."
+  (tile-position -1 1 2 1 10) => (throws AssertionError))
 
 (fact "testing the sinusoidal-xy conversions. These coords are
 somewhere in Indonesia."

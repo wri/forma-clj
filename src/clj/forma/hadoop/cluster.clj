@@ -7,8 +7,7 @@
             [pallet.resource.remote-directory :as rd]
             [pallet.resource.directory :as d]
             [pallet.resource.package :as package])
-  (:import [forma FloatsSerialization IntsSerialization]
-           [backtype.hadoop ThriftSerialization]
+  (:import [backtype.hadoop ThriftSerialization]
            [cascading.tuple.hadoop BytesSerialization TupleSerialization]
            [org.apache.hadoop.io.serializer WritableSerialization JavaSerialization]))
 
@@ -32,8 +31,7 @@
 (def native-path "/home/hadoop/native")
 
 (def serializers
-  (join "," (for [cls [ThriftSerialization FloatsSerialization
-                       IntsSerialization BytesSerialization
+  (join "," (for [cls [ThriftSerialization BytesSerialization
                        TupleSerialization WritableSerialization
                        JavaSerialization]]
               (.getName cls))))

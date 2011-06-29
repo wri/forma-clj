@@ -115,7 +115,7 @@ public class FormaValue implements TBase<FormaValue, FormaValue._Fields>, java.i
   public static final Map<_Fields, FieldMetaData> metaDataMap;
   static {
     Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.FIRE_VALUE, new FieldMetaData("fireValue", TFieldRequirementType.OPTIONAL, 
+    tmpMap.put(_Fields.FIRE_VALUE, new FieldMetaData("fireValue", TFieldRequirementType.DEFAULT, 
         new StructMetaData(TType.STRUCT, FireTuple.class)));
     tmpMap.put(_Fields.SHORT_DROP, new FieldMetaData("shortDrop", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.DOUBLE)));
@@ -131,11 +131,13 @@ public class FormaValue implements TBase<FormaValue, FormaValue._Fields>, java.i
   }
 
   public FormaValue(
+    FireTuple fireValue,
     double shortDrop,
     double longDrop,
     double tStat)
   {
     this();
+    this.fireValue = fireValue;
     this.shortDrop = shortDrop;
     setShortDropIsSet(true);
     this.longDrop = longDrop;
@@ -510,11 +512,9 @@ public class FormaValue implements TBase<FormaValue, FormaValue._Fields>, java.i
 
     oprot.writeStructBegin(STRUCT_DESC);
     if (this.fireValue != null) {
-      if (isSetFireValue()) {
-        oprot.writeFieldBegin(FIRE_VALUE_FIELD_DESC);
-        this.fireValue.write(oprot);
-        oprot.writeFieldEnd();
-      }
+      oprot.writeFieldBegin(FIRE_VALUE_FIELD_DESC);
+      this.fireValue.write(oprot);
+      oprot.writeFieldEnd();
     }
     oprot.writeFieldBegin(SHORT_DROP_FIELD_DESC);
     oprot.writeDouble(this.shortDrop);
@@ -534,15 +534,13 @@ public class FormaValue implements TBase<FormaValue, FormaValue._Fields>, java.i
     StringBuilder sb = new StringBuilder("FormaValue(");
     boolean first = true;
 
-    if (isSetFireValue()) {
-      sb.append("fireValue:");
-      if (this.fireValue == null) {
-        sb.append("null");
-      } else {
-        sb.append(this.fireValue);
-      }
-      first = false;
+    sb.append("fireValue:");
+    if (this.fireValue == null) {
+      sb.append("null");
+    } else {
+      sb.append(this.fireValue);
     }
+    first = false;
     if (!first) sb.append(", ");
     sb.append("shortDrop:");
     sb.append(this.shortDrop);

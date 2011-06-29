@@ -101,14 +101,26 @@ referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
              (partial apply str))
        (partition 3 tilestr)))
 
-;; TODO: Modify this bad boy to take in row, column, etc.
 (defn tile-position
-  "For a given MODIS chunk and index within that chunk, returns
-  [sample, line] within the MODIS tile." 
-  [m-res chunk-size chunk-row index]
-  (reverse
-   (idx->rowcol (pixels-at-res m-res)
-                (+ index (* chunk-row chunk-size)))))
+  "General version accepts a window's dimensions and position and a
+pixel index within that window, and returns the global sample and
+line. For example:
+
+    (tile-position 10 10 2 1 0) => [20 10]
+
+  Special-case version accepts a MODIS resolution, a chunk-size, and a
+  pixel's index within that chunk, and returns the tile sample and
+  line. For example:
+
+    (tile-position \"1000\" 24000 2 1231) => [31 41]"
+  ([m-res chunk-size chunk-row idx]
+     (let [[w h] (chunk-dims m-res chunk-size)]
+       (tile-position w h 0 chunk-row idx)))
+  ([win-width win-height win-col win-row idx]
+     {:pre [(not (or (neg? win-col) (neg? win-row)))]}
+     (let [[row col] (idx->rowcol win-height win-width idx)]
+       [(+ col (* win-width win-col))
+        (+ row (* win-height win-row))])))
 
 ;; ### Spherical Sinusoidal Projection
 ;;

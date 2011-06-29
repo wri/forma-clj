@@ -10,6 +10,6 @@
     <value>6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV</value>
   </property>
   <property>
-    <name>io.serializations</name>                <value>backtype.hadoop.ThriftSerialization,forma.FloatsSerialization,forma.IntsSerialization,cascading.tuple.hadoop.BytesSerialization,cascading.tuple.hadoop.TupleSerialization,org.apache.hadoop.io.serializer.WritableSerialization,org.apache.hadoop.io.serializer.JavaSerialization</value>
+    <name>io.serializations</name>                <value>backtype.hadoop.ThriftSerialization,cascading.tuple.hadoop.BytesSerialization,cascading.tuple.hadoop.TupleSerialization,org.apache.hadoop.io.serializer.WritableSerialization,org.apache.hadoop.io.serializer.JavaSerialization</value>
   </property>
 </configuration>

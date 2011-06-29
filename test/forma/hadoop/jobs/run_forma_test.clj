@@ -7,17 +7,6 @@
             [cascalog.ops :as c])
   (:import [forma.schema FormaNeighborValue]))
 
-(def neighbors [(io/forma-value nil 1 1 1)
-                (io/forma-value nil 2 2 2)])
-
-(fact
-  "Tests that the combine neighbors function produces the proper
-textual representation."
-  (textify 1 1 1 1
-           (first neighbors)
-           (combine-neighbors neighbors)) =>
-  "1 1 1 1 0 0 0 0 1.0 1.0 1.0 0 0 0 0 2 1.5 1.0 1.5 1.0 1.5 1.0")
-
 (def some-map
   {:est-start "2005-12-01"
    :est-end "2011-04-01"
@@ -36,15 +25,6 @@ textual representation."
                        (hfs-seqfile "/Users/sritchie/Desktop/ndviseries1000/")
                        (hfs-seqfile "/Users/sritchie/Desktop/ndviseries1000/"))
           (c/first-n 10))))
-
-(fact
-  "Checks that neighbors are being combined properly."
-  (let [test-seq [(io/forma-value nil 1 1 1) (io/forma-value nil 2 2 2 )]]
-    (combine-neighbors test-seq) => (FormaNeighborValue. (io/fire-tuple 0 0 0 0)
-                                                         2
-                                                         1.5 1.0
-                                                         1.5 1.0
-                                                         1.5 1.0)))
 
 ;; FORMA, broken down into pieces. We're going to have sixteen sample
 ;; timeseries, to test the business with the neighbors.
@@ -148,27 +128,15 @@ textual representation."
       (dynamic-tap est-map (dynamic-filter 25 :n-src :r-src :v-src)) => dynamic-tuples
       (fire-tap est-map :f-src) => fire-tuples)))
 
-(def country-src [["1000" 13 9 0 0 1]
-                  ["1000" 13 9 1 0 1]
-                  ["1000" 13 9 2 0 1]
-                  ["1000" 13 9 3 0 1]
-                  ["1000" 13 9 0 1 1]
-                  ["1000" 13 9 1 1 1]
-                  ["1000" 13 9 2 1 1]
-                  ["1000" 13 9 3 1 1]
-                  ["1000" 13 9 0 2 1]
-                  ["1000" 13 9 1 2 1]
-                  ["1000" 13 9 2 2 1]
-                  ["1000" 13 9 3 2 1]
-                  ["1000" 13 9 0 3 1]
-                  ["1000" 13 9 1 3 1]
-                  ["1000" 13 9 2 3 1]
-                  ["1000" 13 9 3 3 1]])
+(def country-src
+  (vec (for [sample (range 4)
+             line (range 4)]
+         ["1000" 13 9 sample line 1])))
 
 ;; TODO: Assign a proper return value to this test.
 ;;
 ;; (let [est-map {:neighbors 1 :window-dims [4 4]}]
-;;   (fact (apply set (?- (stdout) (forma-query est-map :ndvi-src :rain-src :vcf-src :country-src :fire-src))) => 2
+;;   (fact (apply set (??- (forma-query est-map :ndvi-src :rain-src :vcf-src :country-src :fire-src))) => 2
 ;;     (provided
 ;;       (static-tap :country-src) => country-src
 ;;       (forma-tap est-map :ndvi-src :rain-src :vcf-src :fire-src) =>
