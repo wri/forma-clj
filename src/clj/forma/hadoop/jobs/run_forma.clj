@@ -129,6 +129,12 @@
 
 ;; TODO: Rewrite this, so that we only need to give it a sequence of
 ;; countries (or tiles), and it'll generate the rest.
+(defn forma-textline
+  [path pathstr]
+  (io/template-textline path pathstr
+                        :outfields ["?text"]
+                        :templatefields ["?s-res" "?t-res" "?country" "?datestring"]))
+
 (defn -main
   [ndvi-series-path rain-series-path fire-path vcf-path country-path out-path]
   (?- (io/forma-textline out-path "%s/%s-%s/%s/")

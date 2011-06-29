@@ -6,6 +6,7 @@
 
 (ns forma.hadoop.io
   (:use cascalog.api
+        [clojure.contrib.def :only (defnk)]
         [clojure.string :only (join)]
         [forma.source.modis :only (valid-modis?)])
   (:require [cascalog.workflow :as w]
@@ -92,34 +93,41 @@
 ;; local fileystem, and Amazon S3 bucket paths; A path prefix of, respectively,
 ;; `hdfs://`, `file://`, and `s3n://` forces the proper choice.
 
-(defn template-tap [^Scheme scheme path-or-file pathstr]
+(defnk template-tap
+  [^Scheme scheme path-or-file pathstr :templatefields Fields/ALL]
   (TemplateTap. (w/hfs-tap scheme (w/path path-or-file))
-                pathstr))
+                pathstr
+                templatefields))
 
-(defn template-seqfile
+(defnk template-seqfile
   "Opens up a Cascading [TemplateTap](http://goo.gl/Vsnm5) that sinks
 tuples into the supplied directory, using the format specified by
 `pathstr`."
-  [path pathstr]
-  (template-tap (w/sequence-file Fields/ALL) path pathstr))
-
-;; TODO: Make more general.
-(defn forma-textline
-  [path pathstr]
-  (TemplateTap. (w/hfs-tap (w/text-line ["?text"])
-                           (w/path path))
+  [path pathstr :outfields Fields/ALL :templatefields nil]
+  (template-tap (w/sequence-file outfields)
+                path
                 pathstr
-                (w/fields ["?s-res" "?t-res" "?country" "?datestring"])))
+                :templatefields templatefields))
 
-(defn hfs-wholefile
+(defnk template-textline
+  "Opens up a Cascading [TemplateTap](http://goo.gl/Vsnm5) that sinks
+tuples into the supplied directory, using the format specified by
+`pathstr`."
+  [path pathstr :outfields Fields/ALL :templatefields nil]
+  (template-tap (w/sequence-file outfields)
+                path
+                pathstr
+                :templatefields templatefields))
+
+(defnk hfs-wholefile
   "Subquery to return distinct files in the supplied directory. Files
   will be returned as 2-tuples, formatted as `<filename, file>` The
   filename is a text object, while the entire, unchopped file is
   encoded as a Hadoop `BytesWritable` object."
-  [path]
-  (w/hfs-tap (whole-file Fields/ALL) path))
+  [path :outfields Fields/ALL]
+  (w/hfs-tap (whole-file outfields) path))
 
-(defn globhfs-wholefile
+(defnk globhfs-wholefile
   "Subquery to return distinct files in the supplied directory that
   match the supplied pattern. See [this link](http://goo.gl/uIEzu) for
   details on Hadoop's globbing pattern syntax.
@@ -128,19 +136,19 @@ tuples into the supplied directory, using the format specified by
   formatted as `<filename, file>` The filename is a text object, while
   the entire, unchopped file is encoded as a Hadoop `BytesWritable`
   object."
-  [pattern]
-  (GlobHfs. (whole-file Fields/ALL) pattern))
+  [pattern :outfields Fields/ALL]
+  (GlobHfs. (whole-file outfields) pattern))
 
-(defn globhfs-seqfile
+(defnk globhfs-seqfile
   "Identical tap to `globhfs-wholefile`, to be used with
   `SequenceFile`s instead of entire files."
-  [pattern]
-  (GlobHfs. (w/sequence-file Fields/ALL) pattern))
+  [pattern :outfields Fields/ALL]
+  (GlobHfs. (w/sequence-file outfields) pattern))
 
-(defn globhfs-textline
+(defnk globhfs-textline
   "Identical tap to `globhfs-wholefile`, to be used with text files."
-  [pattern]
-  (GlobHfs. (w/text-line ["line"] Fields/ALL) pattern))
+  [pattern :outfields Fields/ALL]
+  (GlobHfs. (w/text-line ["line"] outfields) pattern))
 
 ;; ## Backend Data Processing Queries
 ;;
