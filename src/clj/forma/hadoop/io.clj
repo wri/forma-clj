@@ -445,18 +445,20 @@ tuples into the supplied directory, using the format specified by
 ;;some good place for these businesses. The IO stuff really needs to
 ;;be something about schema.
 
+;; TODO: This bad boy needs a serious overhaul. This whole partition
+;; shit can be redone.
 (defn adjust
   "Appropriately truncates the incoming Thrift timeseries structs, and
   outputs a new start and both truncated series."
   [& pairs]
-  (let [[starts seqs] (u/unzip pairs)
-        distances (for [[x0 seq] (partition 2 (interleave starts seqs))]
+  (let [[starts seqs] (u/unweave pairs)
+        distances (for [[x0 seq] (partition 2 pairs)]
                     (+ x0 (count-vals seq)))
         drop-bottoms (map #(- (apply max starts) %) starts)
         drop-tops    (map #(- % (apply min distances)) distances)]
     (apply vector
            (apply max starts)
-           (for [[db dt seq] (partition 3 (interleave drop-bottoms drop-tops seqs))]
+           (for [[db dt seq] (map vector drop-bottoms drop-tops seqs)]
              (to-struct (->> (get-vals seq)
                              (drop db)
                              (drop-last dt)))))))
@@ -465,19 +467,25 @@ tuples into the supplied directory, using the format specified by
   "Returns the section of fires data found appropriate based on the
   information in the estimation parameter map."
   [{:keys [est-start est-end t-res]} f-start f-series]
-  (let [[start end] (map (partial date/datetime->period "32") [est-start est-end])]
+  (let [[start end] (for [pd [est-start est-end]]
+                      (date/datetime->period "32" pd))]
     [start (->> (get-vals f-series)
                 (drop (- start f-start))
                 (drop-last (- (+ f-start (dec (count-vals f-series))) end))
                 (to-struct))]))
 
-;; TODO: Explain better.
 (defn forma-schema
   "Accepts a number of timeseries of equal length and starting
   position, and converts the first entry in each timeseries to a
   `FormaValue`, for all first values and on up the sequence. Series
-  must be supplied in the order specified by the arguments for
-  `forma.hadoop.io/forma-value`."
+  must be supplied as specified by the arguments for
+  `forma.hadoop.io/forma-value`. For example:
+
+    (forma-schema fire-series short-series long-series t-stat-series)
+
+  `fire-series` must be an instance of `FireSeries`. `short-series`
+  and `long-series` must be instances of `IntSeries` or
+  `DoubleSeries`."
   [& in-series]
   [(->> in-series
         (map #(if % (get-vals %) (repeat %)))
