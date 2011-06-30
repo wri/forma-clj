@@ -115,6 +115,7 @@
       (p/mangle #"," ?line :> ?country-s ?admin-s)
       (integerize ?country-s ?admin-s :> ?country ?admin)))
 
+
 (defn country-tap
   "TODO: Very similar to extract-tseries, and almost identical to static-tap. Consolidate."
   [gadm-src convert-src]
@@ -161,7 +162,7 @@
 (def *gadm-path* "s3n://redddata/gadm/1000-00/*/*/")
 
 ;; TODO: Put it there!
-(def *convert-path* "s3n://modisfiles/static/conversion.csv")
+(def *convert-path* "s3n://modisfiles/ascii/admin-map.csv")
 
 (def forma-map
   {:est-start "2005-12-01"
@@ -173,8 +174,13 @@
    :long-block 15
    :window 5})
 
+;; TODO: Adjust fires data to provides timeseries form
+
 ;; TODO: Rewrite this, so that we only need to give it a sequence of
 ;; countries (or tiles), and it'll generate the rest.
+
+;; $ hadoop jar forma-standalone.jar forma.source.fire "32" "2000-11-01" "2011-04-01" "s3n://redddata/fire/1000-01/*/" "/timeseries/fire/"
+
 (defn -main
   [out-path]
   (let [ndvi-src (tseries/tseries-query *ndvi-path*)
@@ -182,6 +188,6 @@
         vcf-src *vcf-tap*
         country-src (country-tap (hfs-seqfile *gadm-path*)
                                  (hfs-textline *convert-path*))
-        fire-src (hfs-seqfile *fire-path*)]
+        fire-src (fire/fire-query "32" "2000-11-01" "2011-04-01" *fire-path*)]
     (?- (forma-textline out-path "%s/%s-%s/%s/")
         (forma-query forma-map ndvi-src rain-src vcf-src country-src fire-src))))

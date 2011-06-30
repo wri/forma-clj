@@ -9,13 +9,8 @@
 ;; ### EC2 Environment
 
 (def remote-env
-  (let [default-image  {:image
-                        {:os-family :ubuntu
-                         :os-64-bit true}}]
-    {:tags (zipmap [:hadoop :namenode :jobtracker :slavenode]
-                   (repeat default-image))
-     :algorithms {:lift-fn pallet.core/parallel-lift
-                  :converge-fn pallet.core/parallel-adjust-node-counts}}))
+  {:algorithms {:lift-fn pallet.core/parallel-lift
+                :converge-fn pallet.core/parallel-adjust-node-counts}})
 
 (def ec2-service (compute/service :aws))
 

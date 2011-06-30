@@ -69,14 +69,13 @@
   [nodecount]
   (let [lib-path (str fw-path "/usr/lib")]
     (cluster-spec :private
-                  {:jobtracker (node-group [:jobtracker :namenode])
-                   :slaves (slave-group nodecount)}
+                  {
+                   :jobtracker (node-group [:jobtracker :namenode])
+                   :slaves     (slave-group nodecount)
+                   }
                   :base-machine-spec {
-                                      :hardware-id "cc1.4xlarge"
-                                      :image-id "us-east-1/ami-321eed5b"
-                                      :os-family :ubuntu
-                                      :os-version-matches "10.10"
-                                      :os-64-bit true
+                                      :hardware-id "m2.4xlarge"
+                                      :image-id "us-east-1/ami-08f40561"
                                       :spot-price (float 1.50)
                                       }
                   :base-props {:hadoop-env {:JAVA_LIBRARY_PATH native-path
@@ -88,9 +87,10 @@
                                            :fs.s3n.awsAccessKeyId "AKIAJ56QWQ45GBJELGQA"
                                            :fs.s3n.awsSecretAccessKey "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"}
                                :mapred-site {:mapred.task.timeout 300000
-                                             :mapred.reduce.tasks (int (* 1.5 22 nodecount))
-                                             :mapred.tasktracker.map.tasks.maximum 22
-                                             :mapred.tasktracker.reduce.tasks.maximum 22
+                                             :mapred.compress.map.output true
+                                             :mapred.reduce.tasks (int (* 1.3 40 nodecount))
+                                             :mapred.tasktracker.map.tasks.maximum 30
+                                             :mapred.tasktracker.reduce.tasks.maximum 30
                                              :mapred.child.java.opts (str "-Djava.library.path=" native-path " -Xms1024m -Xmx1024m")
                                              :mapred.child.env (str "LD_LIBRARY_PATH=" lib-path)}})))
 

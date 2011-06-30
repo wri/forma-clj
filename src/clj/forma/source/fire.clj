@@ -143,6 +143,7 @@
   (->> (hfs-seqfile chunk-path)
        (aggregate-fires t-res)
        (fire-series t-res start end)))
+
 (defn -main
   "Path for running FORMA fires processing. See the forma-clj wiki for
 more details."
