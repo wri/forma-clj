@@ -104,18 +104,40 @@
 
 ;; Here, we'll use an output tap that discards the s-res, t-res,
 ;; country and period fields, and writes the rest to disk.
+
+;; TODO:
+
+(defn integerize [& strings]
+  (map #(Integer. %) strings))
+
+(def line->nums
+  (<- [?line :> ?country ?admin]
+      (p/mangle #"," ?line :> ?country-s ?admin-s)
+      (integerize ?country-s ?admin-s :> ?country ?admin)))
+
+(defn country-tap
+  "TODO: Very similar to extract-tseries, and almost identical to static-tap. Consolidate."
+  [gadm-src convert-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?country]
+      (gadm-src _ ?s-res _ ?tilestring ?chunkid ?chunk)
+      (convert-src ?line)
+      (line->nums ?line :> ?country ?admin)
+      (io/count-vals ?chunk :> ?chunk-size)
+      (p/struct-index 0 ?chunk :> ?pix-idx ?admin)
+      (modis/tilestring->hv ?tilestring :> ?mod-h ?mod-v)
+      (modis/tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line)))
+
 (defn forma-query
   "final query that walks the neighbors and spits out the values."
   [est-map ndvi-src rain-src vcf-src country-src fire-src]
   (let [{:keys [neighbors window-dims]} est-map
         [rows cols] window-dims
-        country-pixels (static-tap country-src)
         src (-> (forma-tap est-map ndvi-src rain-src vcf-src fire-src)
                 (p/sparse-windower ["?sample" "?line"] window-dims "?forma-val" nil))]
     (<- [?s-res ?t-res ?country ?datestring ?text]
         (date/period->datetime ?t-res ?period :> ?datestring)
         (src ?s-res ?t-res ?mod-h ?mod-v ?win-col ?win-row ?period ?window)
-        (country-pixels ?s-res ?mod-h ?mod-v ?sample ?line ?country)
+        (country-src ?s-res ?mod-h ?mod-v ?sample ?line ?country)
         (process-neighbors [neighbors] ?window :> ?win-idx ?val ?neighbor-vals)
         (modis/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)
         (io/textify ?mod-h ?mod-v ?sample ?line ?val ?neighbor-vals :> ?text))))
@@ -136,7 +158,10 @@
                              (for [[th tv] (vec (tile-set :IDN :MYS))]
                                (format "%03d%03d" th tv))))
 
-(def *country-path* "s3n://redddata/gadm/1000-00/*/*/")
+(def *gadm-path* "s3n://redddata/gadm/1000-00/*/*/")
+
+;; TODO: Put it there!
+(def *convert-path* "s3n://modisfiles/static/conversion.csv")
 
 (def forma-map
   {:est-start "2005-12-01"
@@ -155,7 +180,8 @@
   (let [ndvi-src (tseries/tseries-query *ndvi-path*)
         rain-src (tseries/tseries-query *rain-path*)
         vcf-src *vcf-tap*
-        country-src (hfs-seqfile *country-path*)
+        country-src (country-tap (hfs-seqfile *gadm-path*)
+                                 (hfs-textline *convert-path*))
         fire-src (hfs-seqfile *fire-path*)]
     (?- (forma-textline out-path "%s/%s-%s/%s/")
         (forma-query forma-map ndvi-src rain-src vcf-src country-src fire-src))))
