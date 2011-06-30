@@ -51,14 +51,14 @@
   metadata, as of 2/05/2011, so this ends up being the best
   solution."}
   modis-subsets
-  {:evi "monthly EVI"
+  {:evi "EVI"
    :qual "VI Quality"
    :red "red reflectance"
    :mir "MIR reflectance"
    :nir "NIR reflectance"
    :azi "azimuth"
    :blue "blue reflectance"
-   :reli "monthly pixel"
+   :reli "pixel"
    :viewz "view zenith"
    :ndvi "NDVI"
    :sunz "sun zenith"})

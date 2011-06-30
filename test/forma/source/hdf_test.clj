@@ -29,7 +29,7 @@ inside the HDF file located at `hdf-path`."
 will return a sequence of subdataset names corresponding to the
 supplied keys (in order)."
     (test-keys #{:ndvi :evi}) => #(= (count %) 2)
-    (test-keys [:ndvi :evi]) => #(= (count %) 2)
+    (test-keys [:ndvi :evi]) =>  #(= (count %) 2)
 
     "If a key is missing, the generated function throws an assertion
 error."

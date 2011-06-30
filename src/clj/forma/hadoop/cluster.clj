@@ -36,6 +36,17 @@
                        JavaSerialization]]
               (.getName cls))))
 
+(def tokens
+  (join "," [
+             "130=forma.schema.IntArray"
+             "131=forma.schema.DoubleArray"
+             "132=forma.schema.FireTuple"
+             "133=forma.schema.FireSeries"
+             "134=forma.schema.FormaValue"
+             "135=forma.schema.FormaNeighborValue"
+             "136=forma.schema.FormaSeries"
+             ]))
+
 (def-phase-fn config-redd
   "This phase installs the two files that we need to make redd run
   with gdal! We also change the permissions on `/mnt` to allow for
@@ -73,6 +84,7 @@
                                :hdfs-site {:dfs.data.dir "/mnt/dfs/data"
                                            :dfs.name.dir "/mnt/dfs/name"}
                                :core-site {:io.serializations serializers
+                                           :cascading.serialization.tokens tokens
                                            :fs.s3n.awsAccessKeyId "AKIAJ56QWQ45GBJELGQA"
                                            :fs.s3n.awsSecretAccessKey "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"}
                                :mapred-site {:mapred.task.timeout 300000

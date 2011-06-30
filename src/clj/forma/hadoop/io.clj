@@ -224,9 +224,9 @@ tuples into the supplied directory, using the format specified by
   (let [globber (fn [arg]
                   (if (= * arg)
                     "*/"
-                    (format "{%s}/" (join ","
-                                          (if (coll? arg) arg
-                                              [arg]))))) ]
+                    (format "{%s}/"
+                            (->> (if (coll? arg) arg [arg])
+                                 (join ","))))) ]
     (->> pieces
          (map globber)
          (apply str basepath))))

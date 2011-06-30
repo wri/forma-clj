@@ -37,12 +37,34 @@ union DataValue {
   4: DoubleArray doubles  
 }
 
+struct ModisPixelLocation {
+  1: string resolution;
+  2: i32 tileH;
+  3: i32 tileV;
+  4: i32 sample;
+  5: i32 line;
+}
+
+struct ModisChunkLocation {
+  1: string resolution;
+  2: i32 chunkID;
+  3: i32 chunkSize;
+}
+
+union LocationPropertyValue {
+  1: ModisPixelLocation pixelLocation;
+  2: ModisChunkLocation chunkLocation;
+}
+
+struct LocationProperty {
+  1: LocationPropertyValue property;
+}
+
 struct DataChunk {
   1: string dataset;
-  2: string spatialRes;
-  3: string temporalRes = "00";
+  3: string temporalRes;
   4: string tileString;
-  5: i32 chunkID;
+  5: LocationProperty locationProperty;
   6: DataValue chunkValue;
   7: optional string date;
 }

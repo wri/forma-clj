@@ -1,5 +1,6 @@
 (ns forma.hadoop.jobs.run-forma
-  (:use cascalog.api)
+  (:use cascalog.api
+        [forma.source.tilesets :only (tile-set)])
   (:require [forma.matrix.walk :as w]
             [forma.date-time :as date]
             [forma.hadoop.io :as io]
@@ -119,6 +120,24 @@
         (modis/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)
         (io/textify ?mod-h ?mod-v ?sample ?line ?val ?neighbor-vals :> ?text))))
 
+(defn forma-textline
+  [path pathstr]
+  (io/template-textline path pathstr
+                        :outfields ["?text"]
+                        :templatefields ["?s-res" "?t-res" "?country" "?datestring"]))
+
+;; Hardcoded in, for the big run.
+(def *ndvi-path* "s3n://redddata/ndvi/1000-32/*/*/")
+(def *rain-path* "s3n://redddata/precl/1000-32/*/*/")
+(def *fire-path* "s3n://redddata/fire/1000-01/*/")
+(def *vcf-tap* (io/chunk-tap "s3n://redddata/"
+                             ["vcf"]
+                             ["1000-32"]
+                             (for [[th tv] (vec (tile-set :IDN :MYS))]
+                               (format "%03d%03d" th tv))))
+
+(def *country-path* "s3n://redddata/gadm/1000-00/*/*/")
+
 (def forma-map
   {:est-start "2005-12-01"
    :est-end "2011-04-01"
@@ -129,21 +148,14 @@
    :long-block 15
    :window 5})
 
-(defn forma-textline
-  [path pathstr]
-  (io/template-textline path pathstr
-                        :outfields ["?text"]
-                        :templatefields ["?s-res" "?t-res" "?country" "?datestring"]))
-
 ;; TODO: Rewrite this, so that we only need to give it a sequence of
 ;; countries (or tiles), and it'll generate the rest.
-
 (defn -main
-  [ndvi-path rain-path fire-path vcf-path country-path out-path]
-  (let [ndvi-src (tseries/tseries-query ndvi-path)
-        rain-src (tseries/tseries-query rain-path)
-        vcf-src (hfs-seqfile vcf-path)
-        country-src (hfs-seqfile country-path)
-        fire-src (hfs-seqfile fire-path)]
+  [out-path]
+  (let [ndvi-src (tseries/tseries-query *ndvi-path*)
+        rain-src (tseries/tseries-query *rain-path*)
+        vcf-src *vcf-tap*
+        country-src (hfs-seqfile *country-path*)
+        fire-src (hfs-seqfile *fire-path*)]
     (?- (forma-textline out-path "%s/%s-%s/%s/")
         (forma-query forma-map ndvi-src rain-src vcf-src country-src fire-src))))
