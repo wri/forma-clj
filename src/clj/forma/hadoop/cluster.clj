@@ -72,12 +72,12 @@
                   {:jobtracker (node-group [:jobtracker :namenode])
                    :slaves (slave-group nodecount)}
                   :base-machine-spec {
-                                      ;; :hardware-id "cc1.4xlarge"
-                                      ;; :image-id "us-east-1/ami-321eed5b"
+                                      :hardware-id "cc1.4xlarge"
+                                      :image-id "us-east-1/ami-321eed5b"
                                       :os-family :ubuntu
                                       :os-version-matches "10.10"
                                       :os-64-bit true
-                                      :fastest true
+                                      :spot-price (float 1.50)
                                       }
                   :base-props {:hadoop-env {:JAVA_LIBRARY_PATH native-path
                                             :LD_LIBRARY_PATH lib-path}
@@ -88,9 +88,9 @@
                                            :fs.s3n.awsAccessKeyId "AKIAJ56QWQ45GBJELGQA"
                                            :fs.s3n.awsSecretAccessKey "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"}
                                :mapred-site {:mapred.task.timeout 300000
-                                             :mapred.reduce.tasks (int (* 1.5 15 nodecount))
-                                             :mapred.tasktracker.map.tasks.maximum 15
-                                             :mapred.tasktracker.reduce.tasks.maximum 15
+                                             :mapred.reduce.tasks (int (* 1.5 22 nodecount))
+                                             :mapred.tasktracker.map.tasks.maximum 22
+                                             :mapred.tasktracker.reduce.tasks.maximum 22
                                              :mapred.child.java.opts (str "-Djava.library.path=" native-path " -Xms1024m -Xmx1024m")
                                              :mapred.child.env (str "LD_LIBRARY_PATH=" lib-path)}})))
 
