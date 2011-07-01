@@ -97,7 +97,7 @@
   [^Scheme scheme path-or-file pathstr :templatefields Fields/ALL]
   (TemplateTap. (w/hfs-tap scheme (w/path path-or-file))
                 pathstr
-                templatefields))
+                (w/fields templatefields)))
 
 (defnk template-seqfile
   "Opens up a Cascading [TemplateTap](http://goo.gl/Vsnm5) that sinks
@@ -216,20 +216,18 @@ tuples into the supplied directory, using the format specified by
 
     Example Usage:
     (globstring \"s3n://bucket/\" [\"ndvi\" \"evi\"] [\"1000-32\"] *)
-    ;=> \"s3://bucket/{ndvi,evi}/{1000-32}/*/\"
+    ;=> \"s3://bucket/{ndvi,evi}/{1000-32}/*\"
 
     (globstring \"s3n://bucket/\" * * [\"008006\" \"033011\"])
-    ;=> \"s3://bucket/*/*/{008006,033011}/\""
+    ;=> \"s3://bucket/*/*/{008006,033011}\""
   [basepath & pieces]
-  (let [globber (fn [arg]
-                  (if (= * arg)
-                    "*/"
-                    (format "{%s}/"
-                            (->> (if (coll? arg) arg [arg])
-                                 (join ","))))) ]
-    (->> pieces
-         (map globber)
-         (apply str basepath))))
+  (->> pieces
+       (map (fn [x]
+              (cond (= * x) "*"
+                    (coll? x) (format "{%s}" (join "," x))
+                    :else x)))
+       (join "/")
+       (apply str basepath)))
 
 (defn chunk-tap
   "Generalized source and sink for the chunk tuples stored and
@@ -252,9 +250,9 @@ tuples into the supplied directory, using the format specified by
   ([basepath datasets resolutions tiles]
      (chunk-tap basepath datasets resolutions tiles *))
   ([basepath datasets resolutions tiles batches]
-     (globhfs-seqfile (globstring basepath datasets
-                                  resolutions
-                                  tiles batches))))
+     (globhfs-seqfile (str (globstring basepath datasets
+                                       resolutions
+                                       tiles batches *)))))
 
 ;; ## BytesWritable Interaction
 ;;

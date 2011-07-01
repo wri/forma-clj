@@ -73,14 +73,14 @@
         tupleize (fn [idx arr]
                    [(inc idx) (big-floats arr)])]
     (->> stream
-         (u/partition-stream n stream)
+         (u/partition-stream n)
          (take-nth 2)
          (map-indexed tupleize))))
 
 (defmapcatop [unpack-rain [step]]
-  ^{:doc "Unpacks a PREC/L binary file for a given year, and returns a
-lazy sequence of 2-tuples, in the form of (month, data). Assumes that
-binary files are packaged as hadoop BytesWritable objects."}
+  "Unpacks a PREC/L binary file for a given year, and returns a lazy
+  sequence of 2-tuples, in the form of (month, data). Assumes that
+  binary files are packaged as hadoop BytesWritable objects."
   [stream]
   (let [bytes (io/get-bytes stream)
         rainbuf-size (* 24 (floats-for-step 0.5))]
@@ -111,11 +111,10 @@ binary files are packaged as hadoop BytesWritable objects."}
 
 ;; TODO: Merge into hadoop.predicate. We want to generalize that
 ;; pattern of taking a 2d array and cutting it up into pixels.
-(defmapcatop
-  ^{:doc "Converts a month's worth of PRECL data, stored in a vector,
+(defmapcatop [to-rows [step]]
+  "Converts a month's worth of PRECL data, stored in a vector,
   into single rows of data, based on the supplied step size. `to-rows`
-  outputs 2-tuples of the form `[row-idx, row-array]`."}
-  [to-rows [step]]
+  outputs 2-tuples of the form `[row-idx, row-array]`."
   [coll]
   (let [[row-length] (dimensions-for-step step)]
     (->> coll

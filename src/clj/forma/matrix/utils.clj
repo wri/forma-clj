@@ -52,7 +52,7 @@ supplied collection returns true when compared to `compare-val` by
 (defn coll-avg
   "Returns the average value of the supplied collection of numbers."
   [coll]
-  {:pre [(coll? coll), (not (empty? coll))]}
+  {:pre [(not (empty? coll))]}
   (float (/ (reduce + coll) (count coll))))
 
 (defn revolve

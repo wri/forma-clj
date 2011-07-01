@@ -102,31 +102,28 @@
                    (io/combine-neighbors))])
        (map-indexed cons)))
 
-;; Here, we'll use an output tap that discards the s-res, t-res,
-;; country and period fields, and writes the rest to disk.
-
-;; TODO:
 
 (defn integerize [& strings]
   (map #(Integer. %) strings))
 
-(def line->nums
-  (<- [?line :> ?country ?admin]
+(defn line->nums [convert-src]
+  (<- [?country ?admin]
+      (convert-src ?line)
       (p/mangle #"," ?line :> ?country-s ?admin-s)
       (integerize ?country-s ?admin-s :> ?country ?admin)))
 
-
 (defn country-tap
-  "TODO: Very similar to extract-tseries, and almost identical to static-tap. Consolidate."
+  "TODO: Very similar to extract-tseries, and almost identical to
+  static-tap. Consolidate."
   [gadm-src convert-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?country]
-      (gadm-src _ ?s-res _ ?tilestring ?chunkid ?chunk)
-      (convert-src ?line)
-      (line->nums ?line :> ?country ?admin)
-      (io/count-vals ?chunk :> ?chunk-size)
-      (p/struct-index 0 ?chunk :> ?pix-idx ?admin)
-      (modis/tilestring->hv ?tilestring :> ?mod-h ?mod-v)
-      (modis/tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line)))
+  (let [converter (line->nums convert-src)]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?country]
+        (gadm-src _ ?s-res _ ?tilestring ?chunkid ?chunk)
+        (converter ?country ?admin)
+        (io/count-vals ?chunk :> ?chunk-size)
+        (p/struct-index 0 ?chunk :> ?pix-idx ?admin)
+        (modis/tilestring->hv ?tilestring :> ?mod-h ?mod-v)
+        (modis/tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line))))
 
 (defn forma-query
   "final query that walks the neighbors and spits out the values."
@@ -153,15 +150,14 @@
 (def *ndvi-path* "s3n://redddata/ndvi/1000-32/*/*/")
 (def *rain-path* "s3n://redddata/precl/1000-32/*/*/")
 (def *fire-path* "s3n://redddata/fire/1000-01/*/")
-(def *vcf-tap* (io/chunk-tap "s3n://redddata/"
-                             ["vcf"]
-                             ["1000-32"]
-                             (for [[th tv] (vec (tile-set :IDN :MYS))]
-                               (format "%03d%03d" th tv))))
+(def *vcf-tap*
+  (io/chunk-tap "s3n://redddata/"
+                "gadm"
+                "1000-00"
+                (for [[th tv] (vec (tile-set :IDN :MYS))]
+                  (format "%03d%03d" th tv))))
 
 (def *gadm-path* "s3n://redddata/gadm/1000-00/*/*/")
-
-;; TODO: Put it there!
 (def *convert-path* "s3n://modisfiles/ascii/admin-map.csv")
 
 (def forma-map
@@ -174,13 +170,13 @@
    :long-block 15
    :window 5})
 
-;; TODO: Adjust fires data to provides timeseries form
-
 ;; TODO: Rewrite this, so that we only need to give it a sequence of
 ;; countries (or tiles), and it'll generate the rest.
 
-;; $ hadoop jar forma-standalone.jar forma.source.fire "32" "2000-11-01" "2011-04-01" "s3n://redddata/fire/1000-01/*/" "/timeseries/fire/"
+;; TODO: Outputting to this doesn't help. We need to do a separate job
+;; with one reducer.
 
+;; (forma-textline out-path "%s-%s/%s/%s/")
 (defn -main
   [out-path]
   (let [ndvi-src (tseries/tseries-query *ndvi-path*)
@@ -189,5 +185,5 @@
         country-src (country-tap (hfs-seqfile *gadm-path*)
                                  (hfs-textline *convert-path*))
         fire-src (fire/fire-query "32" "2000-11-01" "2011-04-01" *fire-path*)]
-    (?- (forma-textline out-path "%s/%s-%s/%s/")
+    (?- (hfs-seqfile out-path)
         (forma-query forma-map ndvi-src rain-src vcf-src country-src fire-src))))

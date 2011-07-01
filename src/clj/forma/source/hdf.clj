@@ -147,12 +147,12 @@
 ;; datasets back.
 
 (defmapcatop [unpack-modis [to-keep]]
-  {:stateful true}
-  ^{:doc "Stateful approach to unpacking HDF files. Registers all
-gdal formats, Creates a temp directory, then saves the byte array to
+  "Stateful approach to unpacking HDF files. Registers all gdal
+formats, Creates a temp directory, then saves the byte array to
 disk. This byte array is processed with gdal. On teardown, the temp
 directory is destroyed. Function returns the decompressed MODIS file
-as a 1-tuple."}
+as a 1-tuple."
+  {:stateful true}
   ([] (temp-dir "hdf"))
   ([tdir stream]
      (let [bytes (get-bytes stream)
@@ -171,10 +171,10 @@ as a 1-tuple."}
 ;;number of datasets processed.
 
 (defmapcatop [raster-chunks [chunk-size]]  
-  ^{:doc "Unpacks the data inside of a MODIS band and partitions it
+  "Unpacks the data inside of a MODIS band and partitions it
   into chunks sized according to the supplied value. Specifically,
   returns a lazy sequence of 2-tuples of the form `[chunk-index,
-  forma.schema.IntArray]`."}
+  forma.schema.IntArray]`."
   [^Dataset data]
   (let [^Band band (.GetRasterBand data 1)
         width (.GetXSize band)
@@ -194,8 +194,8 @@ as a 1-tuple."}
 ;; MODIS-specific facilities for making this happen.
 
 (defmapop [meta-values [meta-keys]]
-  ^{:doc "Returns metadata values for a given unpacked MODIS Dataset,
-  corresponding to the supplied seq of keys."}
+  "Returns metadata values for a given unpacked MODIS Dataset,
+  corresponding to the supplied seq of keys."
   [dataset]
   (map (metadata dataset) meta-keys))
 

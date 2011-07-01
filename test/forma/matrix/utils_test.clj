@@ -35,7 +35,6 @@ function, as per the documentation."
 
 (facts "coll-avg testing."
   (coll-avg [1 2 3 4]) => 2.5
-  (coll-avg 1) => (throws AssertionError)
   (coll-avg []) => (throws AssertionError))
 
 (facts "revolve tests."

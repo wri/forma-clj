@@ -55,10 +55,9 @@
       (p/bi-filtered-count [330 50] ?conf ?kelvin :> ?both-preds)
       (io/fire-tuple ?temp-330 ?conf-50 ?both-preds ?count :> ?tuple)))
 
-(defaggregateop
-  ^{:doc " Aggregates a number of firetuples by adding up the values
-  of each `FireTuple` property."}
-  merge-firetuples
+(defaggregateop merge-firetuples
+  " Aggregates a number of firetuples by adding up the values
+  of each `FireTuple` property."
   ([] [0 0 0 0])
   ([state tuple] (map + state (io/extract-fields tuple)))
   ([state] [(apply io/fire-tuple state)]))

@@ -6,8 +6,8 @@
 (tabular
  (fact "Globstring test."
    (apply globstring "s3n://bucket/" ?args) => (str "s3n://bucket/" ?result))
- ?args                     ?result
- [* * ["008006" "033011"]] "*/*/{008006,033011}/")
+ ?args                        ?result
+ [* "hi" ["008006" "033011"]] "*/hi/{008006,033011}")
 
 
 ;; ## Various schema tests

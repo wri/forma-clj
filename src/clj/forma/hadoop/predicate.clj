@@ -22,6 +22,9 @@
 
 ;; ### Generators
 
+;; TODO: write a macro that generalizes this business. We can take
+;; bindings like doseq and get it DONE.
+
 (defn lazy-generator
   "Returns a cascalog generator on the supplied sequence of
   tuples. `lazy-generator` serializes each item in the lazy sequence
@@ -52,11 +55,13 @@ I recommend wrapping queries that use this tap with
   located at `tmp-dir`. See `forma.hadoop.predicate/lazy-generator`
   for usage advice."
   [tmp-path res tileseq]
-  (lazy-generator tmp-path
-                  (for [[h v] tileseq
-                        s (range (pixels-at-res res))
-                        l (range (pixels-at-res res))]
-                    [h v s l])))
+  (let [tap (hfs-seqfile tmp-path)]
+    (with-open [collector (.openForWrite tap (JobConf.))]
+      (doseq [[h v] tileseq
+              s (range (pixels-at-res res))
+              l (range (pixels-at-res res))]
+        (.add collector (Util/coerceToTuple [h v s l]))))
+    tap))
 
 ;; ### Operations
 
@@ -67,9 +72,8 @@ I recommend wrapping queries that use this tap with
   [& fields]
   (vec fields))
 
-(defmapop
-  ^{:doc "Splits textlines using the supplied regex."}
-  [mangle [re]]
+(defmapop [mangle [re]]
+  "Splits textlines using the supplied regex."
   [line]
   (s/split line re))
 
@@ -88,27 +92,25 @@ I recommend wrapping queries that use this tap with
                               (s/split line #" "))]
     [idx (io/int-struct row-vals)]))
 
-(defmapop
-  ^{:doc "Converts nested clojure vectors into an array of the
+(defmapop [window->array [type]]
+  "Converts nested clojure vectors into an array of the
   supplied type. For example:
 
     (window->array [Integer/TYPE] ?chunk :> ?int-chunk)
 
-  flattens the chunk and returns an integer array."}
-  [window->array [type]]
+  flattens the chunk and returns an integer array."
   [window]
   [(into-array type (flatten window))])
 
-(defmapop
-  ^{:doc "Converts a window of nested clojure vectors into an Thrift
+(defmapop [window->struct [type]]
+  "Converts a window of nested clojure vectors into an Thrift
   struct object designed to hold numbers of the supplied
   type. Supported types are `:int` and `:double`. For example:
 
     (window->struct [:int] ?chunk :> ?int-chunk)
 
   flattens the chunk and returns an instance of
-  `forma.schema.IntArray`."}
-  [window->struct [type]]
+  `forma.schema.IntArray`."
   [window]
   (let [wrap (case type
                    :double io/double-struct
@@ -117,21 +119,19 @@ I recommend wrapping queries that use this tap with
 
 ;; #### Defmapcatops
 
-(defmapcatop
-  ^{:doc "splits a sequence of values into nested 2-tuples formatted
-  as `<idx, val>`. Indexing is zero based."}
-  index
+(defmapcatop index
+  "splits a sequence of values into nested 2-tuples formatted
+  as `<idx, val>`. Indexing is zero based."
   [xs]
   (map-indexed vector xs))
 
 ;; #### Aggregators
 
-(defbufferop
-  ^{:doc "Receives 2-tuple pairs of the form `<idx, val>`, inserts each
+(defbufferop [sparse-expansion [start length missing-val]]
+  "Receives 2-tuple pairs of the form `<idx, val>`, inserts each
   `val` into a sparse vector at the corresponding `idx`. The `idx` of
   the first tuple will be treated as the zero value. The first tuple
-  will `missing-val` will be substituted for any missing value."}
-  [sparse-expansion [start length missing-val]]
+  will `missing-val` will be substituted for any missing value."
   [tuples]
   [[(sparse-expander missing-val
                      tuples

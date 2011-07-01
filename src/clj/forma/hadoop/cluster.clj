@@ -97,16 +97,17 @@
 (defn create-cluster
   [node-count]
   (let [cluster (forma-cluster node-count)]
-    (do (boot-cluster cluster
+    (do
+      #_(boot-cluster cluster
                       :compute env/ec2-service
                       :environment env/remote-env)
-        (lift-cluster cluster
-                      :phase config-redd
-                      :compute env/ec2-service
-                      :environment env/remote-env)
-        (start-cluster cluster
-                       :compute env/ec2-service
-                       :environment env/remote-env))))
+      (lift-cluster cluster
+                    :phase config-redd
+                    :compute env/ec2-service
+                    :environment env/remote-env)
+      (start-cluster cluster
+                     :compute env/ec2-service
+                     :environment env/remote-env))))
 
 (defn destroy-cluster []
   (kill-cluster (forma-cluster 0)
