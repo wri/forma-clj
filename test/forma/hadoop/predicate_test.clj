@@ -20,9 +20,9 @@
 
 (cascalog.io/with-fs-tmp [_ tmp]
   (tabular
-   (fact "Tests of generation off of a series of sequences, be they
+   (fact?- "Tests of generation off of a series of sequences, be they
    data structure or lazy."
-     (fact?- ?seq (lazy-generator tmp ?seq)))
+           ?seq (lazy-generator tmp ?seq))
    ?seq
    [[10] [2] [4] [3]]
    [[1 2] [4 3]]
@@ -69,7 +69,8 @@
    [1 1 1 2 [[5 6 7 8 9] [5 6 7 8 9]]]])
 
 (tabular
- (fact?- ?res (sparse-windower pixel-tap ?dims ?sizes "?v" 0))
+ (fact?- "test of sparse-windower capability."
+         ?res (sparse-windower pixel-tap ?dims ?sizes "?v" 0))
  ?dims       ?sizes ?res
  ["?s"]      5      line-set
  ["?s" "?l"] 5      square-set

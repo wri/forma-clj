@@ -41,31 +41,42 @@ operations."
 
 ;; ## Cascalog Helpers
 
-(defmacro fact?- [& bindings]
-  `(let [[[specs#] [out-tuples#]] (process?- ~@bindings)]
-     (fact out-tuples# => (just specs# :in-any-order))))
+;; ### Midje Testing
+
+(defn- reformat
+  "deal with the fact that the first item might be a logging level
+  keyword. If so, just keep it."
+  [[one & more :as bindings]]
+  (let [[kwd bindings] (if (keyword? one)
+                         [one more]
+                         [nil bindings])
+        bindings (remove string? bindings)]
+    (if kwd
+      (cons kwd bindings)
+      bindings)))
+
+(defmacro fact?-
+  "TODO: Docs. Talk about keyword support."
+  [& bindings]
+  `(doseq [[spec# tuples#] (->> (process?- ~@(reformat bindings))
+                                (apply map vector))]
+     (fact tuples# => (just spec# :in-any-order))))
 
 (defmacro fact?<-
   "TODO: Docs. Talk about how we support only one, for now."
   [& args]
   (let [[begin body] (if (keyword? (first args))
-                       (split-at 2 args)
-                       (split-at 1 args))]
+                             (split-at 2 args)
+                             (split-at 1 args))]
     `(fact?- ~@begin (<- ~@body))))
+
+;; Helper Functions
 
 (defn to-stdout
   "Prints all tuples produced by the supplied generator to the output
   stream."
   [gen]
   (?- (stdout) gen))
-
-(defn sequify
-  "Returns a sequence containing the tuples produced by the supplied generator."
-  [gen & [num-fields]]
-  (let [fields (if num-fields
-                 (v/gen-nullable-vars num-fields)
-                 (get-out-fields gen))]
-    (??<- fields (gen :>> fields))))
 
 (defbufferop tuples->string
   "Returns a string representation of the tuples input to this
