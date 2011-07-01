@@ -17,8 +17,8 @@
 
 (def chunk-size 24000)
 
-(def
-  ^{:doc "These are the static datasets, described briefly below. Each dataset must be formatted as:
+(def ^{:doc "These are the static datasets, described briefly
+  below. Each dataset must be formatted as:
 
     {:corner [lon, lat]
      :travel [lon-dir, lat-dir]
