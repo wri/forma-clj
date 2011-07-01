@@ -7,9 +7,6 @@
 ;; Generates combinations of `mod-h`, `mod-v`, `sample` and `line` for
 ;; use in buffers.
 
-;; TODO: WRITE A TEST for pixel-generator, and for lazy generator,
-;; using cascalog queries. Run cake lazytest in the background.
-
 (def pixel-tap
   (let [pix (for [sample (range 10)
                   line   (range 10)
@@ -21,18 +18,15 @@
 (fact "swap-syms test."
   (swap-syms pixel-tap ["?mh" "?s"] ["?a" "?b"]) => ["?a" "?mv" "?b" "?l" "?v"])
 
-(tabular
- (fact "Tests of generation off of a series of sequences, be they data
- structure or lazy."
-   (cascalog.io/with-fs-tmp [_ tmp]
-     (let [tuple (first ?seq)
-           n-fields (count (first ?seq))]
-       (-> (lazy-generator tmp ?seq)
-           (sequify n-fields))) => (just ?seq :in-any-order)))
- ?seq
- [[1] [2] [4] [3]]
- [[1 2] [4 3]]
- (for [x (range 3), y (range 3)] [x y]))
+(cascalog.io/with-fs-tmp [_ tmp]
+  (tabular
+   (fact "Tests of generation off of a series of sequences, be they
+   data structure or lazy."
+     (fact?- ?seq (lazy-generator tmp ?seq)))
+   ?seq
+   [[10] [2] [4] [3]]
+   [[1 2] [4 3]]
+   (for [x (range 3), y (range 3)] [x y])))
 
 (def line-set
   [[1 1 1 6 [5 6 7 8 9]]
@@ -75,9 +69,7 @@
    [1 1 1 2 [[5 6 7 8 9] [5 6 7 8 9]]]])
 
 (tabular
- (fact "Tests of sparse-windower for a few combinations of aggregation dimension."
-   (let [[result] (??- (sparse-windower pixel-tap ?dims ?sizes "?v" 0))]
-     result => (just ?res :in-any-order)))
+ (fact?- ?res (sparse-windower pixel-tap ?dims ?sizes "?v" 0))
  ?dims       ?sizes ?res
  ["?s"]      5      line-set
  ["?s" "?l"] 5      square-set

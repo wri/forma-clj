@@ -9,7 +9,7 @@
   (:require [forma.hadoop.io :as io])
   (:gen-class))
 
-(defbufferop [timeseries [missing-val]] [tuples]
+(defbufferop [timeseries [missing-val]]
   "Takes in a number of `<t-period, modis-chunk>` tuples,
   sorted by time period, and transposes these into (n = chunk-size)
   4-tuples, formatted as <pixel-idx, t-start, t-end, t-series>, where
@@ -20,6 +20,7 @@
   order. `modis-chunk` tuple fields must be vectors or instances of
   `forma.schema.DoubleArray` or `forma.schema.IntArray`, as dictated
   by the Thriftable interface in `forma.hadoop.io`."
+  [tuples]
   (let [[periods [val]] (apply map vector tuples)
         [fp lp] ((juxt first peek) periods)
         missing-struct (io/to-struct (repeat (io/count-vals val) missing-val))

@@ -1,7 +1,8 @@
 (ns forma.hadoop.jobs.run-forma-test
   (:use forma.hadoop.jobs.run-forma
         cascalog.api
-        midje.sweet)
+        midje.sweet
+        [cascalog.testing :only (test?-)])
   (:require [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
             [cascalog.ops :as c])
@@ -111,19 +112,19 @@
                   ["1000" "32" 13 9 2 3 372  no-fire-1]
                   ["1000" "32" 13 9 3 3 370  forma-3]
                   ["1000" "32" 13 9 3 3 371  forma-2]
-                  ["1000" "32" 13 9 3 3 372  forma-1]]))
+                  ["1000" "32" 13 9 3 3 372  forma-1]
+                  ]))
 
-(let [est-map  {:est-start "2005-12-01"
-                :est-end "2011-04-01"
-                :t-res "32"
-                :neighbors 1
-                :window-dims [600 600]
-                :vcf-limit 25
-                :long-block 15
-                :window 5}]
-  (fact
-    (first
-     (??- (forma-tap est-map :n-src :r-src :v-src :f-src))) => (just outer-src :in-any-order)
+(fact "Test of the entire FORMA process."
+  (let [est-map  {:est-start "2005-12-01"
+                  :est-end "2011-04-01"
+                  :t-res "32"
+                  :neighbors 1
+                  :window-dims [600 600]
+                  :vcf-limit 25
+                  :long-block 15
+                  :window 5}]
+    (test?- outer-src (forma-tap est-map :n-src :r-src :v-src :f-src)) => true
     (provided
       (dynamic-tap est-map (dynamic-filter 25 :n-src :r-src :v-src)) => dynamic-tuples
       (fire-tap est-map :f-src) => fire-tuples)))
@@ -133,15 +134,14 @@
              line (range 4)]
          ["1000" 13 9 sample line 1])))
 
-;; TODO: Assign a proper return value to this test.
-;;
 ;; (let [est-map {:neighbors 1 :window-dims [4 4]}]
-;;   (fact (apply set (??- (forma-query est-map :ndvi-src :rain-src :vcf-src :country-src :fire-src))) => 2
+;;   (test?- [[2]] (forma-query est-map :ndvi-src :rain-src
+;;                 :vcf-src :country-src :fire-src) => true
 ;;     (provided
 ;;       (static-tap :country-src) => country-src
 ;;       (forma-tap est-map :ndvi-src :rain-src :vcf-src :fire-src) =>
 ;;       (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?period ?forma-val]
-;;           (outer-src ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?period ?forma-val)))))
+;;           (outer-src ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?period ?forma-val))))
 
 ;; (def ndvi-src [["ndvi" "1000" "32" 13 9 0 0 370 372 (io/int-struct [3 2 1])]])
 ;; (def rain-src [["ndvi" "1000" "32" 13 9 0 0 370 372 (io/int-struct [3 2 1])]])
@@ -226,4 +226,3 @@
 ;;       (adjust ?r-start ?r-series ?n-start ?n-series :> ?start ?precl-series ?ndvi-series)
 ;;       (io/count-vals ?precl-series :> ?precl-count)
 ;;       (io/count-vals ?ndvi-series :> ?ndvi-count)))
-

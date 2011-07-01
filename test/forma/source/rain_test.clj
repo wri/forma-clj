@@ -36,10 +36,10 @@
 ;; Note that this only works when the file at hdf-path has a spatial
 ;; resolution of 1000m; otherwise, the relationship between chunk-size
 ;; and total chunks becomes off."
-;;   (let [ascii-map (:precl static-datasets)
-;;         file-tap (io/hfs-wholefile precl-path)
-;;         subquery (rain-chunks "1000" ascii-map 24000 file-tap pix-tap)
-;;         [[chunk-count]] (??<- [?count]
-;;                               (subquery ?dataset ?s-res ?t-res ?tstring ?date ?chunkid ?chunk)
-;;                               (c/count ?count))]
-;;     chunk-count => 60))
+;;
+;; (let [ascii-map (:precl static-datasets)
+;;       file-tap (io/hfs-wholefile precl-path)
+;;       subquery (rain-chunks "1000" ascii-map 24000 file-tap pix-tap)]
+;;   (fact?<- [[60]] [?count]
+;;            (subquery ?dataset ?s-res ?t-res ?tstring ?date ?chunkid ?chunk)
+;;            (c/count ?count)))

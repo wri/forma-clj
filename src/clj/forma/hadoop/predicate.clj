@@ -42,11 +42,12 @@ I recommend wrapping queries that use this tap with
            ...)))"
   [tmp-path lazy-seq]
   {:pre [(coll? (first lazy-seq))]}
-  (let [tap (hfs-seqfile tmp-path)]
+  (let [tap (hfs-seqfile tmp-path)
+        n-fields (count (first lazy-seq))]
     (with-open [collector (.openForWrite tap (JobConf.))]
       (doseq [item lazy-seq]
         (.add collector (Util/coerceToTuple item))))
-    tap))
+    (name-vars tap (v/gen-non-nullable-vars n-fields))))
 
 (defn pixel-generator
   "Returns a cascalog generator that produces every pixel combination
@@ -61,7 +62,7 @@ I recommend wrapping queries that use this tap with
               s (range (pixels-at-res res))
               l (range (pixels-at-res res))]
         (.add collector (Util/coerceToTuple [h v s l]))))
-    tap))
+    (name-vars tap (v/gen-non-nullable-vars 4))))
 
 ;; ### Operations
 

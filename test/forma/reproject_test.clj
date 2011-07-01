@@ -18,7 +18,7 @@ direction, then half-stepping to the centroid."
 
 (facts "Tests on constrain."
   (constrain 10 0 11) => 1
-
+  
   "Specific tests on lat and lon constraints."
   (constrain-lat -92) => 88
   (constrain-lat 4.2) => (roughly 4.2)

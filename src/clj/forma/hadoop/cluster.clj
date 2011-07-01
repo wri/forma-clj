@@ -74,9 +74,9 @@
                    :slaves     (slave-group nodecount)
                    }
                   :base-machine-spec {
-                                      :hardware-id "m2.4xlarge"
+                                      :hardware-id "m2.2xlarge"
                                       :image-id "us-east-1/ami-08f40561"
-                                      :spot-price (float 1.50)
+                                      :spot-price (float 0.80)
                                       }
                   :base-props {:hadoop-env {:JAVA_LIBRARY_PATH native-path
                                             :LD_LIBRARY_PATH lib-path}
@@ -88,9 +88,9 @@
                                            :fs.s3n.awsSecretAccessKey "6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV"}
                                :mapred-site {:mapred.task.timeout 300000
                                              :mapred.compress.map.output true
-                                             :mapred.reduce.tasks (int (* 1.3 40 nodecount))
-                                             :mapred.tasktracker.map.tasks.maximum 30
-                                             :mapred.tasktracker.reduce.tasks.maximum 30
+                                             :mapred.reduce.tasks (int (* 1.3 32 nodecount))
+                                             :mapred.tasktracker.map.tasks.maximum 32
+                                             :mapred.tasktracker.reduce.tasks.maximum 32
                                              :mapred.child.java.opts (str "-Djava.library.path=" native-path " -Xms1024m -Xmx1024m")
                                              :mapred.child.env (str "LD_LIBRARY_PATH=" lib-path)}})))
 
@@ -98,9 +98,9 @@
   [node-count]
   (let [cluster (forma-cluster node-count)]
     (do
-      #_(boot-cluster cluster
-                      :compute env/ec2-service
-                      :environment env/remote-env)
+      (boot-cluster cluster
+                    :compute env/ec2-service
+                    :environment env/remote-env)
       (lift-cluster cluster
                     :phase config-redd
                     :compute env/ec2-service

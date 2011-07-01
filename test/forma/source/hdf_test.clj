@@ -1,13 +1,13 @@
 (ns forma.source.hdf-test
   (:use [forma.source.hdf] :reload)
   (:use cascalog.api
+        forma.testing
         midje.sweet)
   (:require [forma.hadoop.io :as io]
-            [cascalog.ops :as c]
-            [forma.testing :as t]))
+            [cascalog.ops :as c]))
 
 (def hdf-path
-  (t/dev-path "/testdata/MOD13A3/MOD13A3.A2000032.h03v11.005.2006271174459.hdf"))
+  (dev-path "/testdata/MOD13A3/MOD13A3.A2000032.h03v11.005.2006271174459.hdf"))
 
 (fact "metadata test."
   (let [meta (with-gdal-open [dataset hdf-path]
@@ -29,7 +29,7 @@ inside the HDF file located at `hdf-path`."
 will return a sequence of subdataset names corresponding to the
 supplied keys (in order)."
     (test-keys #{:ndvi :evi}) => #(= (count %) 2)
-    (test-keys [:ndvi :evi]) =>  #(= (count %) 2)
+    (test-keys [:ndvi :evi])  => #(= (count %) 2)
 
     "If a key is missing, the generated function throws an assertion
 error."
@@ -39,32 +39,30 @@ error."
  (fact "Test that our cascalog queries are returning the proper
  subdatasets."
    (let [src (io/hfs-wholefile hdf-path)
-         [datasets n] ((juxt identity count) ?dataset-seq)
-         [[count]] (??<- [?count]
-                         (src ?filename ?hdf)
-                         (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
-                         (c/count ?count))]
-     count => ?result))
+         [datasets n] ((juxt identity count) ?dataset-seq)]
+     (fact?<- ?result [?count]
+              (src ?filename ?hdf)
+              (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
+              (c/count ?count))))
  ?dataset-seq      ?result
- [:ndvi :evi]      2
- [:evi :reli :mir] 3)
+ [:ndvi :evi]      [[2]]
+ [:evi :reli :mir] [[3]])
 
 (tabular
  (fact "Test ensuring that raster-chunks can be serialized, and that
  they produce the proper number of chunks for the supplied
  chunk-size. (By pushing raster-chunks down into a subquery, we force
  serialization of tuples before they're utilized inside of the final
- `??<-` query.)"
+ `fact?<-` query.)"
    (let [src (io/hfs-wholefile hdf-path)
          chunk-size ?c-size
          subquery (<- [?dataset ?chunkid ?chunk]
                       (src ?filename ?hdf)
                       (unpack-modis [[:ndvi]] ?hdf :> ?dataset ?freetile)
-                      (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk))
-         [results] (??<- [?count]
-                         (subquery ?dataset ?chunkid ?chunk)
-                         (c/count ?count))]
-     results => [?num-chunks]))
+                      (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk))]
+     (fact?<- [[?num-chunks]] [?count]
+              (subquery ?dataset ?chunkid ?chunk)
+              (c/count ?count))))
  ?c-size ?num-chunks
  24000   60
  48000   30
@@ -73,12 +71,12 @@ error."
 (tabular
  (fact "Check on the proper unpacking of the HDF file metadata map."
    (let [src (io/hfs-wholefile hdf-path)
-         [ks xs] ((juxt keys vals) ?meta-map)
-         [results] (??<- [?productname ?tileid ?date]
-                         (src ?filename ?hdf)
-                         (unpack-modis [[:ndvi]] ?hdf :> ?dataset ?freetile)
-                         (meta-values [ks] ?freetile :> ?productname ?tileid ?date))]
-     results => xs))
+         [ks xs] ((juxt keys vals) ?meta-map)]
+     (fact?<- [xs]
+              [?productname ?tileid ?date]
+              (src ?filename ?hdf)
+              (unpack-modis [[:ndvi]] ?hdf :> ?dataset ?freetile)
+              (meta-values [ks] ?freetile :> ?productname ?tileid ?date))))
  ?meta-map
  {"RANGEBEGINNINGDATE" "2000-02-01"
   "SHORTNAME"          "MOD13A3"
@@ -106,8 +104,7 @@ Note that this only works when the file at hdf-path has a spatial
 resolution of 1000m; otherwise, the relationship between chunk-size
 and total chunks becomes off."
   (let [subquery (->> (io/hfs-wholefile hdf-path)
-                      (modis-chunks [:ndvi] 24000))
-        [[chunk-count]] (??<- [?count]
-                              (subquery ?dataset ?s-res ?t-res ?tstring ?date ?chunkid ?chunk)
-                              (c/count ?count))]
-    chunk-count => 60))
+                      (modis-chunks [:ndvi] 24000))]
+    (fact?<- [[60]] [?count]
+             (subquery ?dataset ?s-res ?t-res ?tstring ?date ?chunkid ?chunk)
+             (c/count ?count))))

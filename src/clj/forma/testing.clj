@@ -1,7 +1,9 @@
 (ns forma.testing
   "This namespace contains functions that assist in various testing
 operations."
-  (:use cascalog.api)
+  (:use cascalog.api
+        midje.sweet
+        [cascalog.testing :only (process?-)])
   (:require [cascalog.vars :as v]))
 
 ;; ## Directory Management
@@ -38,6 +40,18 @@ operations."
                         sub-path))))
 
 ;; ## Cascalog Helpers
+
+(defmacro fact?- [& bindings]
+  `(let [[[specs#] [out-tuples#]] (process?- ~@bindings)]
+     (fact out-tuples# => (just specs# :in-any-order))))
+
+(defmacro fact?<-
+  "TODO: Docs. Talk about how we support only one, for now."
+  [& args]
+  (let [[begin body] (if (keyword? (first args))
+                       (split-at 2 args)
+                       (split-at 1 args))]
+    `(fact?- ~@begin (<- ~@body))))
 
 (defn to-stdout
   "Prints all tuples produced by the supplied generator to the output
