@@ -55,12 +55,13 @@ operations."
       (cons kwd bindings)
       bindings)))
 
-(defmacro fact?-
+(defn fact?-
   "TODO: Docs. Talk about keyword support."
   [& bindings]
-  `(doseq [[spec# tuples#] (->> (process?- ~@(reformat bindings))
-                                (apply map vector))]
-     (fact tuples# => (just spec# :in-any-order))))
+  (doseq [[spec tuples] (->> (reformat bindings)
+                             (apply process?-)
+                             (apply map vector))]
+    (fact tuples => (just spec :in-any-order))))
 
 (defmacro fact?<-
   "TODO: Docs. Talk about how we support only one, for now."
