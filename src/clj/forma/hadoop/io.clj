@@ -94,30 +94,35 @@
 ;; `hdfs://`, `file://`, and `s3n://` forces the proper choice.
 
 (defnk template-tap
-  [^Scheme scheme path-or-file pathstr :templatefields Fields/ALL]
-  (TemplateTap. (w/hfs-tap scheme (w/path path-or-file))
-                pathstr
-                (w/fields templatefields)))
+  [^Scheme scheme path-or-file pathstr :templatefields Fields/ALL :sink-parts nil]
+  (let [scheme (if sink-parts
+                 (doto scheme (.setNumSinkParts sink-parts))
+                 scheme)]
+    (TemplateTap. (w/hfs-tap scheme (w/path path-or-file))
+                  pathstr
+                  (w/fields templatefields))))
 
 (defnk template-seqfile
   "Opens up a Cascading [TemplateTap](http://goo.gl/Vsnm5) that sinks
 tuples into the supplied directory, using the format specified by
 `pathstr`."
-  [path pathstr :outfields Fields/ALL :templatefields nil]
+  [path pathstr :outfields Fields/ALL :templatefields nil :sink-parts nil]
   (template-tap (w/sequence-file outfields)
                 path
                 pathstr
-                :templatefields templatefields))
+                :templatefields templatefields
+                :sink-parts sink-parts))
 
 (defnk template-textline
   "Opens up a Cascading [TemplateTap](http://goo.gl/Vsnm5) that sinks
 tuples into the supplied directory, using the format specified by
 `pathstr`."
-  [path pathstr :outfields Fields/ALL :templatefields nil]
-  (template-tap (w/sequence-file outfields)
+  [path pathstr :outfields Fields/ALL :templatefields nil :sink-parts nil]
+  (template-tap (w/text-line ["line"] outfields)
                 path
                 pathstr
-                :templatefields templatefields))
+                :templatefields templatefields
+                :sink-parts sink-parts))
 
 (defnk hfs-wholefile
   "Subquery to return distinct files in the supplied directory. Files

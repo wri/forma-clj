@@ -144,7 +144,8 @@
   [path pathstr]
   (io/template-textline path pathstr
                         :outfields ["?text"]
-                        :templatefields ["?s-res" "?t-res" "?country" "?datestring"]))
+                        :templatefields ["?s-res" "?t-res" "?country" "?datestring"]
+                        :sink-parts 1))
 
 ;; Hardcoded in, for the big run.
 (def *ndvi-path* "s3n://redddata/ndvi/1000-32/*/*/")
@@ -178,12 +179,16 @@
 
 ;; (forma-textline out-path "%s-%s/%s/%s/")
 (defn -main
-  [out-path]
-  (let [ndvi-src (tseries/tseries-query *ndvi-path*)
-        rain-src (tseries/tseries-query *rain-path*)
-        vcf-src *vcf-tap*
-        country-src (country-tap (hfs-seqfile *gadm-path*)
-                                 (hfs-textline *convert-path*))
-        fire-src (fire/fire-query "32" "2000-11-01" "2011-04-01" *fire-path*)]
-    (?- (hfs-seqfile out-path)
-        (forma-query forma-map ndvi-src rain-src vcf-src country-src fire-src))))
+  ([] (let [src (hfs-seqfile "s3n://formares/results/")]
+        (?<- (forma-textline "s3n://formares/stata/" "%s-%s/%s/%s/")
+             [?s-res ?t-res ?country ?datestring ?text]
+             (src ?s-res ?t-res ?country ?datestring ?text))))
+  ([out-path]
+     (let [ndvi-src (tseries/tseries-query *ndvi-path*)
+           rain-src (tseries/tseries-query *rain-path*)
+           vcf-src *vcf-tap*
+           country-src (country-tap (hfs-seqfile *gadm-path*)
+                                    (hfs-textline *convert-path*))
+           fire-src (fire/fire-query "32" "2000-11-01" "2011-04-01" *fire-path*)]
+       (?- (hfs-seqfile out-path)
+           (forma-query forma-map ndvi-src rain-src vcf-src country-src fire-src)))))
