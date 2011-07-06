@@ -62,11 +62,11 @@ struct LocationProperty {
 
 struct DataChunk {
   1: string dataset;
-  3: string temporalRes;
-  4: string tileString;
-  5: LocationProperty locationProperty;
-  6: DataValue chunkValue;
-  7: optional string date;
+  2: string temporalRes;
+  3: string tileString;
+  4: LocationProperty locationProperty;
+  5: DataValue chunkValue;
+  6: optional string date;
 }
 
 struct FormaNeighborValue {

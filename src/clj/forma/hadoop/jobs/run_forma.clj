@@ -8,7 +8,8 @@
             [forma.hadoop.jobs.load-tseries :as tseries]
             [forma.trends.analysis :as a]
             [forma.source.modis :as modis]
-            [forma.source.fire :as fire])
+            [forma.source.fire :as fire]
+            [forma.source.static :as static])
   (:gen-class))
 
 (defn short-trend-shell
@@ -41,22 +42,12 @@
       (fire-src _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?f-start _ ?f-series)
       (io/adjust-fires est-map ?f-start ?f-series :> ?start ?fire-series)))
 
-(defn static-tap
-  "TODO: Very similar to extract-tseries. Consolidate."
-  [static-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?val]
-      (static-src _ ?s-res _ ?tilestring ?chunkid ?chunk)
-      (io/count-vals ?chunk :> ?chunk-size)
-      (p/struct-index 0 ?chunk :> ?pix-idx ?val)
-      (modis/tilestring->hv ?tilestring :> ?mod-h ?mod-v)
-      (modis/tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line)))
-
 (defn dynamic-filter
   "Returns a new generator of ndvi and rain timeseries obtained by
   filtering out all pixels with VCF less than the supplied
   `vcf-limit`."
   [vcf-limit ndvi-src rain-src vcf-src]
-  (let [vcf-pixels (static-tap vcf-src)]
+  (let [vcf-pixels (static/static-tap vcf-src)]
     (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi-series ?precl-series]
         (ndvi-src _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?n-start _ ?n-series)
         (rain-src _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?r-start _ ?r-series)

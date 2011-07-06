@@ -5,6 +5,7 @@
         [forma.reproject :only (wgs84-indexer
                                 modis-indexer)])
   (:require [cascalog.ops :as c]
+            [forma.hadoop.io :as io]
             [forma.source.modis :as m]
             [forma.hadoop.predicate :as p]
             [clojure.contrib.duck-streams :as duck]))
@@ -101,3 +102,15 @@
     (<- [?dataset ?spatial-res ?t-res ?tilestring ?chunkid ?chunk]
         (window-src ?dataset ?spatial-res ?t-res ?tilestring  _ ?chunkid ?window)
         (p/window->struct [:int] ?window :> ?chunk))))
+
+;; TODO: Think about dependencies with run-forma, fix this shit!
+;; Consolidate with the new rain extraction.
+(defn static-tap
+  "TODO: Very similar to extract-tseries. Consolidate."
+  [static-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?val]
+      (static-src _ ?s-res _ ?tilestring ?chunkid ?chunk)
+      (io/count-vals ?chunk :> ?chunk-size)
+      (p/struct-index 0 ?chunk :> ?pix-idx ?val)
+      (m/tilestring->hv ?tilestring :> ?mod-h ?mod-v)
+      (m/tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line)))

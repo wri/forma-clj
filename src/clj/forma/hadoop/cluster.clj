@@ -74,10 +74,10 @@
                    :slaves     (slave-group nodecount)
                    }
                   :base-machine-spec {
-                                      :hardware-id "m1.large"
-                                      ;; :hardware-id "m2.4xlarge"
+                                      ;; :hardware-id "m1.large"
+                                      :hardware-id "m2.2xlarge"
                                       :image-id "us-east-1/ami-08f40561"
-                                      :spot-price (float 1.50)
+                                      :spot-price (float 0.80)
                                       }
                   :base-props {:hadoop-env {:JAVA_LIBRARY_PATH native-path
                                             :LD_LIBRARY_PATH lib-path}
@@ -91,8 +91,8 @@
                                              :mapred.task.timeout 300000
                                              :mapred.compress.map.output true
                                              :mapred.reduce.tasks (int (* 1.4 6 nodecount))
-                                             :mapred.tasktracker.map.tasks.maximum 6
-                                             :mapred.tasktracker.reduce.tasks.maximum 6
+                                             :mapred.tasktracker.map.tasks.maximum 20
+                                             :mapred.tasktracker.reduce.tasks.maximum 20
                                              :mapred.child.java.opts (str "-Djava.library.path=" native-path " -Xms1024m -Xmx1024m")
                                              :mapred.child.env (str "LD_LIBRARY_PATH=" lib-path)}})))
 

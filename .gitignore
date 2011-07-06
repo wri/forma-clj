@@ -9,3 +9,6 @@ docs
 autodoc
 .#*
 *#*
+.classpath
+.settings/
+.project

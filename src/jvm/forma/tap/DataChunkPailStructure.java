@@ -9,7 +9,7 @@ public class DataChunkPailStructure extends ThriftPailStructure<DataChunk> {
         return new DataChunk();
     }
 
-    public Class getType() {
+    public Class<DataChunk> getType() {
         return DataChunk.class;
     }
 }
