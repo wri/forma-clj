@@ -43,6 +43,26 @@ operations."
 
 ;; ### Midje Testing
 
+(defn partition-with
+  "TODO: FInish docs.
+
+Applies f to each value in coll, splitting it each time f returns
+   a new value.  Returns a lazy seq of partitions."
+  [pred coll]
+  (lazy-seq
+   (when-let [s (seq coll)]
+     (let [fst (first s)
+           else (first (drop-while (complement pred) (rest s)))
+           run (cons fst (take-while (complement pred) (rest s)))]
+       (cons (if else (concat run [else]) run)
+             (partition-with pred (drop (inc (count run)) s)))))))
+
+(partition-with provided? [1 2 3])
+(partition-with provided?
+                '("face" "jake" "cake" (provided (ace .a.) => 1)
+                  "hell" "jognn" (provided (ace .a.) => 2)
+                  ))
+
 (defn  first-elem?  [elem x]
   (and (coll? x)
        (#{elem} (first x))))
@@ -54,14 +74,15 @@ operations."
   "deal with the fact that the first item might be a logging level
   keyword. If so, just keep it."
   [[k & more :as bindings]]
+  
   (let [[kwd bindings] (if (keyword? k)
                          [k more]
                          [nil bindings])
-        [pre bindings] (->> bindings
-                            (remove string?)
-                            ((juxt filter remove) #(or (background? %)
-                                                       (provided? %))))]
-    [kwd bindings pre]))
+        [bg bindings] (->> bindings
+                           (remove string?)
+                           ((juxt filter remove) background?))
+        bindings (partition-with provided? bindings)]
+    [kwd bg bindings]))
 
 (defn process-results
   [spec query ll]
@@ -73,16 +94,23 @@ operations."
 ;; TODO: Talk to midje about supporting facts inside of do blocks.
 (defn- build-fact?-
   [bindings factor]
-  (let [[kwd bind prereqs] (reformat bindings)]  
+  (let [[kwd bg bind] (reformat bindings)]  
+    (println kwd ", " bg ", " bind)
     `(do
-       ~@(for [[spec query] (partition 2 bind)]
-           `(~factor
-             (process-results ~spec ~query ~kwd) => (just ~spec :in-any-order)
-             ~@prereqs)))))
+       ~@(for [bundle bind :let [pre (if (provided? (last bundle))
+                                       [(last bundle)]
+                                       [])]]
+           `(do ~@(for [[spec query] (partition 2 bundle)]
+                    `(~factor
+                      (process-results ~spec ~query ~kwd) => (just ~spec :in-any-order)
+                      ~@pre
+                      ~@bg)))))))
+
 
 (defn- build-fact?<-
   [args factor]
-  (let [[kwd [res & body] prereqs] (reformat args)
+  (let [[kwd [res & body] prereqs] (->> args
+                                        (remove string?))
         begin (if kwd [kwd res] [res])]
     `(~factor ~@begin (<- ~@body) ~@prereqs)))
 

@@ -12,8 +12,7 @@ this out of cake or lein, so I've hardcoded it into
 directory moves."
   (-> (dev-path) io/file .exists) => true?)
 
-(facts "tuples->string testing"
-  (fact?<- [["(1)(2)(3)"]] [?str] ([1 2 3] ?a) (tuples->string ?a :> ?str)))
+;; (fact?<- [["(1)(2)(3)"]] [?str] ([1 2 3] ?a) (tuples->string ?a :> ?str))
 
 ;; Tests for cascalog midje stuff.
 (defn plis [x y] [[3]])
