@@ -43,13 +43,12 @@ operations."
 
 ;; ### Midje Testing
 
-(def prereq-keywords
-  #{'provided
-    'against-background})
+(defn  first-elem?  [elem x]
+  (and (coll? x)
+       (#{elem} (first x))))
 
-(defn  prereq?  [x]
-  (or (not (coll? x))
-      ((complement prereq-keywords) (first x))))
+(def background? (partial first-elem? 'against-background))
+(def provided? (partial first-elem? 'provided))
 
 (defn- reformat
   "deal with the fact that the first item might be a logging level
@@ -60,7 +59,8 @@ operations."
                          [nil bindings])
         [pre bindings] (->> bindings
                             (remove string?)
-                            ((juxt remove filter) prereq?))]
+                            ((juxt filter remove) #(or (background? %)
+                                                       (provided? %))))]
     [kwd bindings pre]))
 
 (defn process-results
