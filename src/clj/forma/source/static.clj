@@ -68,8 +68,9 @@
   is higher than the supplied MODIS resolution; more than one value is
   guaranteed to exist for every MODIS pixel. `agg` (`c/sum` or `c/max`
   are supported, currently) determines the way in which multiple
-  values are combined."  [m-res dataset line-tap agg] {:pre [(or (=
-  agg c/sum) (= agg c/max))]}
+  values are combined."
+  [m-res dataset line-tap agg]
+  {:pre [(or (= agg c/sum) (= agg c/max))]}
   (let [ascii-info (static-datasets (keyword dataset))]
     (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?outval]
         (line-tap ?textline)
@@ -103,7 +104,7 @@
         (window-src ?dataset ?spatial-res ?t-res ?tilestring  _ ?chunkid ?window)
         (p/window->struct [:int] ?window :> ?chunk))))
 
-;; TODO: Think about dependencies with run-forma, fix this shit!
+;; TODOSAM: Think about dependencies with run-forma, fix this shit!
 ;; Consolidate with the new rain extraction.
 (defn static-tap
   "TODO: Very similar to extract-tseries. Consolidate."

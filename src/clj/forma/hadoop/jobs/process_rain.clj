@@ -1,9 +1,7 @@
 (ns forma.hadoop.jobs.process-rain
   (:use cascalog.api
-        [forma.source.tilesets :only (tile-set)]
-        [forma.utils :only (weighted-mean)])
+        [forma.source.tilesets :only (tile-set)])
   (:require [cascalog.ops :as c]
-            [forma.date-time :as date]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
             [forma.source.modis :as m]
@@ -23,22 +21,15 @@
       (m/tilestring->hv ?tilestring :> ?mod-h ?mod-v)
       (m/tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line)))
 
-(defbufferop weighted-avg [tuples]
-  [(apply weighted-mean (flatten tuples))])
-
 (defn run-rain
   [gadm-src rain-src]
   (let [gadm-src (static/static-tap gadm-src)
-        rain-src (rain-tap rain-src)
-        join (<- [?gadm ?mod-h ?mod-v ?sample ?line ?date ?count ?avg-rain]
-                 (gadm-src _ ?mod-h ?mod-v ?sample ?line ?gadm)
-                 (rain-src ?mod-h ?mod-v ?sample ?line ?date ?rain)
-                 (c/count ?count)
-                 (c/avg ?rain :> ?avg-rain))]
-    (<- [?gadm ?date ?weighted-avg]
-        (join ?gadm ?mod-h ?mod-v ?sample ?line ?date ?count ?avg-rain)
-        (weighted-avg ?avg-rain ?count :> ?weighted-avg))))
+        rain-src (rain-tap rain-src)]
+    (<- [?gadm ?date ?avg-rain]
+        (gadm-src _ ?mod-h ?mod-v ?sample ?line ?gadm)
+        (rain-src ?mod-h ?mod-v ?sample ?line ?date ?rain)
+        (c/avg ?rain :> ?avg-rain))))
 
 (defn -main [path]
-  (?- (io/myhfs-textline path)
+  (?- (hfs-textline path)
       (run-rain gadm-tap precl-tap)))

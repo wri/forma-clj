@@ -124,16 +124,6 @@ tuples into the supplied directory, using the format specified by
                 :templatefields templatefields
                 :sink-parts sink-parts))
 
-;; TODO: FIX THIS
-(defnk myhfs-textline
-  "Opens up a Cascading [TemplateTap](http://goo.gl/Vsnm5) that sinks
-tuples into the supplied directory, using the format specified by
-`pathstr`."
-  [path :outfields Fields/ALL]
-  (w/hfs-tap (doto (w/text-line ["line"] outfields)
-               (.setNumSinkParts 1))
-             path))
-
 (defnk hfs-wholefile
   "Subquery to return distinct files in the supplied directory. Files
   will be returned as 2-tuples, formatted as `<filename, file>` The

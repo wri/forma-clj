@@ -1,8 +1,8 @@
 (ns forma.hadoop.jobs.run-forma-test
   (:use forma.hadoop.jobs.run-forma
         cascalog.api
-        midje.sweet
-        [cascalog.testing :only (test?-)])
+        forma.testing
+        midje.sweet)
   (:require [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
             [cascalog.ops :as c])
@@ -115,19 +115,18 @@
                   ["1000" "32" 13 9 3 3 372  forma-1]
                   ]))
 
-(fact "Test of the entire FORMA process."
-  (let [est-map  {:est-start "2005-12-01"
-                  :est-end "2011-04-01"
-                  :t-res "32"
-                  :neighbors 1
-                  :window-dims [600 600]
-                  :vcf-limit 25
-                  :long-block 15
-                  :window 5}]
-    (test?- outer-src (forma-tap est-map :n-src :r-src :v-src :f-src)) => true
-    (provided
-      (dynamic-tap est-map (dynamic-filter 25 :n-src :r-src :v-src)) => dynamic-tuples
-      (fire-tap est-map :f-src) => fire-tuples)))
+(let [est-map  {:est-start "2005-12-01"
+                :est-end "2011-04-01"
+                :t-res "32"
+                :neighbors 1
+                :window-dims [600 600]
+                :vcf-limit 25
+                :long-block 15
+                :window 5}]
+  (fact?- outer-src (forma-tap est-map :n-src :r-src :v-src :f-src)
+          (provided
+            (dynamic-tap est-map (dynamic-filter 25 :n-src :r-src :v-src)) => dynamic-tuples
+            (fire-tap est-map :f-src) => fire-tuples)))
 
 (def country-src
   (vec (for [sample (range 4)

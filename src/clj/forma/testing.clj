@@ -43,33 +43,54 @@ operations."
 
 ;; ### Midje Testing
 
+(def prereq-keywords
+  #{'provided
+    'against-background})
+
+(defn  prereq?  [x]
+  (or (not (coll? x))
+      ((complement prereq-keywords) (first x))))
+
 (defn- reformat
   "deal with the fact that the first item might be a logging level
   keyword. If so, just keep it."
-  [[one & more :as bindings]]
-  (let [[kwd bindings] (if (keyword? one)
-                         [one more]
+  [[k & more :as bindings]]
+  (let [[kwd bindings] (if (keyword? k)
+                         [k more]
                          [nil bindings])
-        bindings (remove string? bindings)]
-    (if kwd
-      (cons kwd bindings)
-      bindings)))
+        [pre bindings] (->> bindings
+                            (remove string?)
+                            ((juxt remove filter) prereq?))]
+    [kwd bindings pre]))
 
-(defn fact?-
-  "TODO: Docs. Talk about keyword support."
-  [& bindings]
-  (doseq [[spec tuples] (->> (reformat bindings)
-                             (apply process?-)
-                             (apply map vector))]
-    (fact tuples => (just spec :in-any-order))))
+(defn process-results
+  [spec query ll]
+  (let [ret (if ll
+              (process?- ll spec query)
+              (process?- spec query))]
+    (first (second ret))))
 
-(defmacro fact?<-
-  "TODO: Docs. Talk about how we support only one, for now."
-  [& args]
-  (let [[begin body] (if (keyword? (first args))
-                             (split-at 2 args)
-                             (split-at 1 args))]
-    `(fact?- ~@begin (<- ~@body))))
+;; TODO: Talk to midje about supporting facts inside of do blocks.
+(defn- build-fact?-
+  [bindings factor]
+  (let [[kwd bind prereqs] (reformat bindings)]  
+    `(do
+       ~@(for [[spec query] (partition 2 bind)]
+           `(~factor
+             (process-results ~spec ~query ~kwd) => (just ~spec :in-any-order)
+             ~@prereqs)))))
+
+(defn- build-fact?<-
+  [args factor]
+  (let [[kwd [res & body] prereqs] (reformat args)
+        begin (if kwd [kwd res] [res])]
+    `(~factor ~@begin (<- ~@body) ~@prereqs)))
+
+(defmacro fact?- [& bindings] (build-fact?- bindings `fact))
+(defmacro fact?<- [& args] (build-fact?<- args `fact?-))
+
+(defmacro future-fact?- [& bindings] (build-fact?- bindings `future-fact))
+(defmacro future-fact?<- [& args] (build-fact?<- args `future-fact?-))
 
 ;; Helper Functions
 
