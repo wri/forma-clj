@@ -29,10 +29,10 @@ import org.apache.thrift.protocol.*;
 public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.Serializable, Cloneable {
   private static final TStruct STRUCT_DESC = new TStruct("FireTuple");
 
-  private static final TField TEMP330_FIELD_DESC = new TField("temp330", TType.I32, (short)2);
-  private static final TField CONF50_FIELD_DESC = new TField("conf50", TType.I32, (short)3);
-  private static final TField BOTH_PREDS_FIELD_DESC = new TField("bothPreds", TType.I32, (short)4);
-  private static final TField COUNT_FIELD_DESC = new TField("count", TType.I32, (short)5);
+  private static final TField TEMP330_FIELD_DESC = new TField("temp330", TType.I32, (short)1);
+  private static final TField CONF50_FIELD_DESC = new TField("conf50", TType.I32, (short)2);
+  private static final TField BOTH_PREDS_FIELD_DESC = new TField("bothPreds", TType.I32, (short)3);
+  private static final TField COUNT_FIELD_DESC = new TField("count", TType.I32, (short)4);
 
   public int temp330;
   public int conf50;
@@ -41,10 +41,10 @@ public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.S
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements TFieldIdEnum {
-    TEMP330((short)2, "temp330"),
-    CONF50((short)3, "conf50"),
-    BOTH_PREDS((short)4, "bothPreds"),
-    COUNT((short)5, "count");
+    TEMP330((short)1, "temp330"),
+    CONF50((short)2, "conf50"),
+    BOTH_PREDS((short)3, "bothPreds"),
+    COUNT((short)4, "count");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -59,13 +59,13 @@ public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.S
      */
     public static _Fields findByThriftId(int fieldId) {
       switch(fieldId) {
-        case 2: // TEMP330
+        case 1: // TEMP330
           return TEMP330;
-        case 3: // CONF50
+        case 2: // CONF50
           return CONF50;
-        case 4: // BOTH_PREDS
+        case 3: // BOTH_PREDS
           return BOTH_PREDS;
-        case 5: // COUNT
+        case 4: // COUNT
           return COUNT;
         default:
           return null;
@@ -464,7 +464,7 @@ public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.S
         break;
       }
       switch (field.id) {
-        case 2: // TEMP330
+        case 1: // TEMP330
           if (field.type == TType.I32) {
             this.temp330 = iprot.readI32();
             setTemp330IsSet(true);
@@ -472,7 +472,7 @@ public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.S
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case 3: // CONF50
+        case 2: // CONF50
           if (field.type == TType.I32) {
             this.conf50 = iprot.readI32();
             setConf50IsSet(true);
@@ -480,7 +480,7 @@ public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.S
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case 4: // BOTH_PREDS
+        case 3: // BOTH_PREDS
           if (field.type == TType.I32) {
             this.bothPreds = iprot.readI32();
             setBothPredsIsSet(true);
@@ -488,7 +488,7 @@ public class FireTuple implements TBase<FireTuple, FireTuple._Fields>, java.io.S
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case 5: // COUNT
+        case 4: // COUNT
           if (field.type == TType.I32) {
             this.count = iprot.readI32();
             setCountIsSet(true);

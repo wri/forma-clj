@@ -9,10 +9,10 @@ struct IntArray {
 }
 
 struct FireTuple {
-  2: i32 temp330,
-  3: i32 conf50,
-  4: i32 bothPreds,
-  5: i32 count
+  1: i32 temp330,
+  2: i32 conf50,
+  3: i32 bothPreds,
+  4: i32 count
 }
 
 struct FireSeries {
@@ -62,11 +62,10 @@ struct LocationProperty {
 
 struct DataChunk {
   1: string dataset;
-  2: string temporalRes;
-  3: string tileString;
-  4: LocationProperty locationProperty;
-  5: DataValue chunkValue;
-  6: optional string date;
+  2: LocationProperty locationProperty;
+  3: DataValue chunkValue;
+  4: string temporalRes;
+  5: optional string date;
 }
 
 struct FormaNeighborValue {

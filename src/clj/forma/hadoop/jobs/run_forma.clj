@@ -136,7 +136,7 @@
   (io/template-textline path pathstr
                         :outfields ["?text"]
                         :templatefields ["?s-res" "?t-res" "?country" "?datestring"]
-                        :sink-parts 1))
+                        :sink-parts 3))
 
 ;; Hardcoded in, for the big run.
 (def *ndvi-path* "s3n://redddata/ndvi/1000-32/*/*/")

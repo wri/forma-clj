@@ -30,27 +30,24 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
   private static final TStruct STRUCT_DESC = new TStruct("DataChunk");
 
   private static final TField DATASET_FIELD_DESC = new TField("dataset", TType.STRING, (short)1);
-  private static final TField TEMPORAL_RES_FIELD_DESC = new TField("temporalRes", TType.STRING, (short)3);
-  private static final TField TILE_STRING_FIELD_DESC = new TField("tileString", TType.STRING, (short)4);
-  private static final TField LOCATION_PROPERTY_FIELD_DESC = new TField("locationProperty", TType.STRUCT, (short)5);
-  private static final TField CHUNK_VALUE_FIELD_DESC = new TField("chunkValue", TType.STRUCT, (short)6);
-  private static final TField DATE_FIELD_DESC = new TField("date", TType.STRING, (short)7);
+  private static final TField LOCATION_PROPERTY_FIELD_DESC = new TField("locationProperty", TType.STRUCT, (short)2);
+  private static final TField CHUNK_VALUE_FIELD_DESC = new TField("chunkValue", TType.STRUCT, (short)3);
+  private static final TField TEMPORAL_RES_FIELD_DESC = new TField("temporalRes", TType.STRING, (short)4);
+  private static final TField DATE_FIELD_DESC = new TField("date", TType.STRING, (short)5);
 
   public String dataset;
-  public String temporalRes;
-  public String tileString;
   public LocationProperty locationProperty;
   public DataValue chunkValue;
+  public String temporalRes;
   public String date;
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements TFieldIdEnum {
     DATASET((short)1, "dataset"),
-    TEMPORAL_RES((short)3, "temporalRes"),
-    TILE_STRING((short)4, "tileString"),
-    LOCATION_PROPERTY((short)5, "locationProperty"),
-    CHUNK_VALUE((short)6, "chunkValue"),
-    DATE((short)7, "date");
+    LOCATION_PROPERTY((short)2, "locationProperty"),
+    CHUNK_VALUE((short)3, "chunkValue"),
+    TEMPORAL_RES((short)4, "temporalRes"),
+    DATE((short)5, "date");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -67,15 +64,13 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
       switch(fieldId) {
         case 1: // DATASET
           return DATASET;
-        case 3: // TEMPORAL_RES
-          return TEMPORAL_RES;
-        case 4: // TILE_STRING
-          return TILE_STRING;
-        case 5: // LOCATION_PROPERTY
+        case 2: // LOCATION_PROPERTY
           return LOCATION_PROPERTY;
-        case 6: // CHUNK_VALUE
+        case 3: // CHUNK_VALUE
           return CHUNK_VALUE;
-        case 7: // DATE
+        case 4: // TEMPORAL_RES
+          return TEMPORAL_RES;
+        case 5: // DATE
           return DATE;
         default:
           return null;
@@ -123,14 +118,12 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
     Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
     tmpMap.put(_Fields.DATASET, new FieldMetaData("dataset", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.STRING)));
-    tmpMap.put(_Fields.TEMPORAL_RES, new FieldMetaData("temporalRes", TFieldRequirementType.DEFAULT, 
-        new FieldValueMetaData(TType.STRING)));
-    tmpMap.put(_Fields.TILE_STRING, new FieldMetaData("tileString", TFieldRequirementType.DEFAULT, 
-        new FieldValueMetaData(TType.STRING)));
     tmpMap.put(_Fields.LOCATION_PROPERTY, new FieldMetaData("locationProperty", TFieldRequirementType.DEFAULT, 
         new StructMetaData(TType.STRUCT, LocationProperty.class)));
     tmpMap.put(_Fields.CHUNK_VALUE, new FieldMetaData("chunkValue", TFieldRequirementType.DEFAULT, 
         new StructMetaData(TType.STRUCT, DataValue.class)));
+    tmpMap.put(_Fields.TEMPORAL_RES, new FieldMetaData("temporalRes", TFieldRequirementType.DEFAULT, 
+        new FieldValueMetaData(TType.STRING)));
     tmpMap.put(_Fields.DATE, new FieldMetaData("date", TFieldRequirementType.OPTIONAL, 
         new FieldValueMetaData(TType.STRING)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
@@ -142,17 +135,15 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
 
   public DataChunk(
     String dataset,
-    String temporalRes,
-    String tileString,
     LocationProperty locationProperty,
-    DataValue chunkValue)
+    DataValue chunkValue,
+    String temporalRes)
   {
     this();
     this.dataset = dataset;
-    this.temporalRes = temporalRes;
-    this.tileString = tileString;
     this.locationProperty = locationProperty;
     this.chunkValue = chunkValue;
+    this.temporalRes = temporalRes;
   }
 
   /**
@@ -162,17 +153,14 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
     if (other.isSetDataset()) {
       this.dataset = other.dataset;
     }
-    if (other.isSetTemporalRes()) {
-      this.temporalRes = other.temporalRes;
-    }
-    if (other.isSetTileString()) {
-      this.tileString = other.tileString;
-    }
     if (other.isSetLocationProperty()) {
       this.locationProperty = new LocationProperty(other.locationProperty);
     }
     if (other.isSetChunkValue()) {
       this.chunkValue = new DataValue(other.chunkValue);
+    }
+    if (other.isSetTemporalRes()) {
+      this.temporalRes = other.temporalRes;
     }
     if (other.isSetDate()) {
       this.date = other.date;
@@ -186,10 +174,9 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
   @Override
   public void clear() {
     this.dataset = null;
-    this.temporalRes = null;
-    this.tileString = null;
     this.locationProperty = null;
     this.chunkValue = null;
+    this.temporalRes = null;
     this.date = null;
   }
 
@@ -214,54 +201,6 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
   public void setDatasetIsSet(boolean value) {
     if (!value) {
       this.dataset = null;
-    }
-  }
-
-  public String getTemporalRes() {
-    return this.temporalRes;
-  }
-
-  public DataChunk setTemporalRes(String temporalRes) {
-    this.temporalRes = temporalRes;
-    return this;
-  }
-
-  public void unsetTemporalRes() {
-    this.temporalRes = null;
-  }
-
-  /** Returns true if field temporalRes is set (has been asigned a value) and false otherwise */
-  public boolean isSetTemporalRes() {
-    return this.temporalRes != null;
-  }
-
-  public void setTemporalResIsSet(boolean value) {
-    if (!value) {
-      this.temporalRes = null;
-    }
-  }
-
-  public String getTileString() {
-    return this.tileString;
-  }
-
-  public DataChunk setTileString(String tileString) {
-    this.tileString = tileString;
-    return this;
-  }
-
-  public void unsetTileString() {
-    this.tileString = null;
-  }
-
-  /** Returns true if field tileString is set (has been asigned a value) and false otherwise */
-  public boolean isSetTileString() {
-    return this.tileString != null;
-  }
-
-  public void setTileStringIsSet(boolean value) {
-    if (!value) {
-      this.tileString = null;
     }
   }
 
@@ -313,6 +252,30 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
     }
   }
 
+  public String getTemporalRes() {
+    return this.temporalRes;
+  }
+
+  public DataChunk setTemporalRes(String temporalRes) {
+    this.temporalRes = temporalRes;
+    return this;
+  }
+
+  public void unsetTemporalRes() {
+    this.temporalRes = null;
+  }
+
+  /** Returns true if field temporalRes is set (has been asigned a value) and false otherwise */
+  public boolean isSetTemporalRes() {
+    return this.temporalRes != null;
+  }
+
+  public void setTemporalResIsSet(boolean value) {
+    if (!value) {
+      this.temporalRes = null;
+    }
+  }
+
   public String getDate() {
     return this.date;
   }
@@ -347,22 +310,6 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
       }
       break;
 
-    case TEMPORAL_RES:
-      if (value == null) {
-        unsetTemporalRes();
-      } else {
-        setTemporalRes((String)value);
-      }
-      break;
-
-    case TILE_STRING:
-      if (value == null) {
-        unsetTileString();
-      } else {
-        setTileString((String)value);
-      }
-      break;
-
     case LOCATION_PROPERTY:
       if (value == null) {
         unsetLocationProperty();
@@ -376,6 +323,14 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
         unsetChunkValue();
       } else {
         setChunkValue((DataValue)value);
+      }
+      break;
+
+    case TEMPORAL_RES:
+      if (value == null) {
+        unsetTemporalRes();
+      } else {
+        setTemporalRes((String)value);
       }
       break;
 
@@ -395,17 +350,14 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
     case DATASET:
       return getDataset();
 
-    case TEMPORAL_RES:
-      return getTemporalRes();
-
-    case TILE_STRING:
-      return getTileString();
-
     case LOCATION_PROPERTY:
       return getLocationProperty();
 
     case CHUNK_VALUE:
       return getChunkValue();
+
+    case TEMPORAL_RES:
+      return getTemporalRes();
 
     case DATE:
       return getDate();
@@ -423,14 +375,12 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
     switch (field) {
     case DATASET:
       return isSetDataset();
-    case TEMPORAL_RES:
-      return isSetTemporalRes();
-    case TILE_STRING:
-      return isSetTileString();
     case LOCATION_PROPERTY:
       return isSetLocationProperty();
     case CHUNK_VALUE:
       return isSetChunkValue();
+    case TEMPORAL_RES:
+      return isSetTemporalRes();
     case DATE:
       return isSetDate();
     }
@@ -459,24 +409,6 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
         return false;
     }
 
-    boolean this_present_temporalRes = true && this.isSetTemporalRes();
-    boolean that_present_temporalRes = true && that.isSetTemporalRes();
-    if (this_present_temporalRes || that_present_temporalRes) {
-      if (!(this_present_temporalRes && that_present_temporalRes))
-        return false;
-      if (!this.temporalRes.equals(that.temporalRes))
-        return false;
-    }
-
-    boolean this_present_tileString = true && this.isSetTileString();
-    boolean that_present_tileString = true && that.isSetTileString();
-    if (this_present_tileString || that_present_tileString) {
-      if (!(this_present_tileString && that_present_tileString))
-        return false;
-      if (!this.tileString.equals(that.tileString))
-        return false;
-    }
-
     boolean this_present_locationProperty = true && this.isSetLocationProperty();
     boolean that_present_locationProperty = true && that.isSetLocationProperty();
     if (this_present_locationProperty || that_present_locationProperty) {
@@ -492,6 +424,15 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
       if (!(this_present_chunkValue && that_present_chunkValue))
         return false;
       if (!this.chunkValue.equals(that.chunkValue))
+        return false;
+    }
+
+    boolean this_present_temporalRes = true && this.isSetTemporalRes();
+    boolean that_present_temporalRes = true && that.isSetTemporalRes();
+    if (this_present_temporalRes || that_present_temporalRes) {
+      if (!(this_present_temporalRes && that_present_temporalRes))
+        return false;
+      if (!this.temporalRes.equals(that.temporalRes))
         return false;
     }
 
@@ -530,26 +471,6 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
         return lastComparison;
       }
     }
-    lastComparison = Boolean.valueOf(isSetTemporalRes()).compareTo(typedOther.isSetTemporalRes());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    if (isSetTemporalRes()) {
-      lastComparison = TBaseHelper.compareTo(this.temporalRes, typedOther.temporalRes);
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-    }
-    lastComparison = Boolean.valueOf(isSetTileString()).compareTo(typedOther.isSetTileString());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    if (isSetTileString()) {
-      lastComparison = TBaseHelper.compareTo(this.tileString, typedOther.tileString);
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-    }
     lastComparison = Boolean.valueOf(isSetLocationProperty()).compareTo(typedOther.isSetLocationProperty());
     if (lastComparison != 0) {
       return lastComparison;
@@ -566,6 +487,16 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
     }
     if (isSetChunkValue()) {
       lastComparison = TBaseHelper.compareTo(this.chunkValue, typedOther.chunkValue);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetTemporalRes()).compareTo(typedOther.isSetTemporalRes());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetTemporalRes()) {
+      lastComparison = TBaseHelper.compareTo(this.temporalRes, typedOther.temporalRes);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -604,21 +535,7 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case 3: // TEMPORAL_RES
-          if (field.type == TType.STRING) {
-            this.temporalRes = iprot.readString();
-          } else { 
-            TProtocolUtil.skip(iprot, field.type);
-          }
-          break;
-        case 4: // TILE_STRING
-          if (field.type == TType.STRING) {
-            this.tileString = iprot.readString();
-          } else { 
-            TProtocolUtil.skip(iprot, field.type);
-          }
-          break;
-        case 5: // LOCATION_PROPERTY
+        case 2: // LOCATION_PROPERTY
           if (field.type == TType.STRUCT) {
             this.locationProperty = new LocationProperty();
             this.locationProperty.read(iprot);
@@ -626,7 +543,7 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case 6: // CHUNK_VALUE
+        case 3: // CHUNK_VALUE
           if (field.type == TType.STRUCT) {
             this.chunkValue = new DataValue();
             this.chunkValue.read(iprot);
@@ -634,7 +551,14 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case 7: // DATE
+        case 4: // TEMPORAL_RES
+          if (field.type == TType.STRING) {
+            this.temporalRes = iprot.readString();
+          } else { 
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 5: // DATE
           if (field.type == TType.STRING) {
             this.date = iprot.readString();
           } else { 
@@ -661,16 +585,6 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
       oprot.writeString(this.dataset);
       oprot.writeFieldEnd();
     }
-    if (this.temporalRes != null) {
-      oprot.writeFieldBegin(TEMPORAL_RES_FIELD_DESC);
-      oprot.writeString(this.temporalRes);
-      oprot.writeFieldEnd();
-    }
-    if (this.tileString != null) {
-      oprot.writeFieldBegin(TILE_STRING_FIELD_DESC);
-      oprot.writeString(this.tileString);
-      oprot.writeFieldEnd();
-    }
     if (this.locationProperty != null) {
       oprot.writeFieldBegin(LOCATION_PROPERTY_FIELD_DESC);
       this.locationProperty.write(oprot);
@@ -679,6 +593,11 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
     if (this.chunkValue != null) {
       oprot.writeFieldBegin(CHUNK_VALUE_FIELD_DESC);
       this.chunkValue.write(oprot);
+      oprot.writeFieldEnd();
+    }
+    if (this.temporalRes != null) {
+      oprot.writeFieldBegin(TEMPORAL_RES_FIELD_DESC);
+      oprot.writeString(this.temporalRes);
       oprot.writeFieldEnd();
     }
     if (this.date != null) {
@@ -705,22 +624,6 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
     }
     first = false;
     if (!first) sb.append(", ");
-    sb.append("temporalRes:");
-    if (this.temporalRes == null) {
-      sb.append("null");
-    } else {
-      sb.append(this.temporalRes);
-    }
-    first = false;
-    if (!first) sb.append(", ");
-    sb.append("tileString:");
-    if (this.tileString == null) {
-      sb.append("null");
-    } else {
-      sb.append(this.tileString);
-    }
-    first = false;
-    if (!first) sb.append(", ");
     sb.append("locationProperty:");
     if (this.locationProperty == null) {
       sb.append("null");
@@ -734,6 +637,14 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
       sb.append("null");
     } else {
       sb.append(this.chunkValue);
+    }
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("temporalRes:");
+    if (this.temporalRes == null) {
+      sb.append("null");
+    } else {
+      sb.append(this.temporalRes);
     }
     first = false;
     if (isSetDate()) {

@@ -74,8 +74,8 @@
                    :slaves     (slave-group nodecount)
                    }
                   :base-machine-spec {
-                                      ;; :hardware-id "m1.large"
-                                      :hardware-id "m2.2xlarge"
+                                      :hardware-id "m1.large"
+                                      ;; :hardware-id "m2.2xlarge"
                                       :image-id "us-east-1/ami-08f40561"
                                       :spot-price (float 0.80)
                                       }
@@ -88,11 +88,11 @@
                                            :fs.s3n.awsAccessKeyId "AKIAJ56QWQ45GBJELGQA"
                                            :fs.s3n.awsSecretAccessKey "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"}
                                :mapred-site {:mapred.local.dir "/mnt/hadoop/mapred/local"
-                                             :mapred.task.timeout 300000
+                                             :mapred.task.timeout 10000000
                                              :mapred.compress.map.output true
-                                             :mapred.reduce.tasks (int (* 1.4 6 nodecount))
-                                             :mapred.tasktracker.map.tasks.maximum 20
-                                             :mapred.tasktracker.reduce.tasks.maximum 20
+                                             :mapred.reduce.tasks (int (* 1.4 5 nodecount))
+                                             :mapred.tasktracker.map.tasks.maximum 5
+                                             :mapred.tasktracker.reduce.tasks.maximum 5
                                              :mapred.child.java.opts (str "-Djava.library.path=" native-path " -Xms1024m -Xmx1024m")
                                              :mapred.child.env (str "LD_LIBRARY_PATH=" lib-path)}})))
 
