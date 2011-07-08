@@ -76,7 +76,7 @@ directory moves."
           (bang .a. .b.) => [[12 15]]
           (bang .d. .e.) => [[10 15]]))
 
-(fact?<- :info "the provided and background clauses work at the end of
+(fact?<- "the provided and background clauses work at the end of
           fact?<- as well."
          [[10]]
          [?a]

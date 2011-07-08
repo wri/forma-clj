@@ -13,20 +13,18 @@
 
 (fact (floats-for-step 0.5) => 1036800)
 
-;; TODO: Finish.
-(fact "big-floats test.")
-(fact "rain-tuples test.")
-(fact "unpack-rain test.")
+(future-fact "big-floats test.")
+(future-fact "rain-tuples test.")
+(future-fact "unpack-rain test.")
 
 (facts "to-datestring tests."
   (to-datestring "precl.2002.gri0.5m" 12) => "2002-12-01"
   (to-datestring "precl.YYYY.gri0.5m" 12) => (throws AssertionError))
 
-;; TODO: Finish.
-(fact "to-rows test.")
-(fact "rain-values test.")
-(fact "resample-rain test.")
-(fact "rain-chunks test.")
+(future-fact "to-rows test.")
+(future-fact "rain-values test.")
+(future-fact "resample-rain test.")
+(future-fact "rain-chunks test.")
 
 ;; TODO: Mod for rain. Used to be for MODIS.
 ;;
@@ -41,6 +39,6 @@
 ;; (let [ascii-map (:precl static-datasets)
 ;;       file-tap (io/hfs-wholefile precl-path)
 ;;       subquery (rain-chunks "1000" ascii-map 24000 file-tap pix-tap)]
-;;   (fact?<- [[60]] [?count]
+;;   (future-fact?<- [[60]] [?count]
 ;;            (subquery ?dataset ?s-res ?t-res ?tstring ?date ?chunkid ?chunk)
 ;;            (c/count ?count)))
