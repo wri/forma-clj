@@ -30,9 +30,11 @@
                      [clojure-source "1.2.0"]
                      [marginalia "0.6.0"]
                      [cake-marginalia "0.6.0"]
-                     [midje "1.2-alpha3"]]
+                     [midje "1.2-alpha3"]
+                     [midje-cascalog "0.1.0-SNAPSHOT"]]
   :tasks [cake-marginalia.tasks]
-  :aot [forma.hadoop.jobs.preprocess
+  :aot [
+        forma.hadoop.jobs.preprocess
         forma.hadoop.jobs.load-tseries
         forma.hadoop.jobs.run-forma
         forma.hadoop.jobs.process-rain

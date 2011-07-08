@@ -1,9 +1,8 @@
 (ns forma.hadoop.predicate-test
   (:use [forma.hadoop.predicate] :reload)
   (:use forma.testing
-        forma.midje
         cascalog.api
-        midje.sweet))
+        [midje sweet cascalog]))
 
 ;; Generates combinations of `mod-h`, `mod-v`, `sample` and `line` for
 ;; use in buffers.

@@ -2,8 +2,7 @@
   (:use [forma.source.hdf] :reload)
   (:use cascalog.api
         forma.testing
-        forma.midje
-        midje.sweet)
+        [midje sweet cascalog])
   (:require [forma.hadoop.io :as io]
             [cascalog.ops :as c]))
 
