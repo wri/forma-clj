@@ -3,7 +3,8 @@
 operations."
   (:use cascalog.api
         midje.sweet
-        [cascalog.testing :only (process?-)])
+        [cascalog.testing :only (process?-)]
+        [clojure.contrib.seq-utils :only (positions)])
   (:require [cascalog.vars :as v]))
 
 ;; ## Directory Management
@@ -44,43 +45,37 @@ operations."
 ;; ### Midje Testing
 
 (defn partition-with
-  "TODO: FInish docs.
-
-Applies f to each value in coll, splitting it each time f returns
-   a new value.  Returns a lazy seq of partitions."
   [pred coll]
-  (lazy-seq
-   (when-let [s (seq coll)]
-     (let [fst (first s)
-           else (first (drop-while (complement pred) (rest s)))
-           run (cons fst (take-while (complement pred) (rest s)))]
-       (cons (if else (concat run [else]) run)
-             (partition-with pred (drop (inc (count run)) s)))))))
+  (loop [ret [], left coll, [pos & more] (positions pred coll)]
+    (if-not pos
+      (if (empty? left) ret (conj ret left))
+      (recur (conj ret (take (inc pos) left))
+             (drop (inc pos) left)
+             more))))
 
-(partition-with provided? [1 2 3])
-(partition-with provided?
-                '("face" "jake" "cake" (provided (ace .a.) => 1)
-                  "hell" "jognn" (provided (ace .a.) => 2)
-                  ))
+(def split-by (juxt filter remove))
 
-(defn  first-elem?  [elem x]
-  (and (coll? x)
-       (#{elem} (first x))))
+(defn first-elem?  [elem x]
+  (when (coll? x) (#{elem} (first x))))
 
 (def background? (partial first-elem? 'against-background))
 (def provided? (partial first-elem? 'provided))
+
+(defn extract-prereqs [coll]
+  (split-by #(or (background? %)
+                 (provided? %))
+            coll))
 
 (defn- reformat
   "deal with the fact that the first item might be a logging level
   keyword. If so, just keep it."
   [[k & more :as bindings]]
-  
   (let [[kwd bindings] (if (keyword? k)
                          [k more]
                          [nil bindings])
         [bg bindings] (->> bindings
                            (remove string?)
-                           ((juxt filter remove) background?))
+                           (split-by background?))
         bindings (partition-with provided? bindings)]
     [kwd bg bindings]))
 
@@ -91,28 +86,31 @@ Applies f to each value in coll, splitting it each time f returns
               (process?- spec query))]
     (first (second ret))))
 
-;; TODO: Talk to midje about supporting facts inside of do blocks.
+(defn- inner-body
+  [bundle kwd]
+  (->> (for [[spec query] (partition-all 2 bundle)]
+           (if (provided? spec)
+             `[~spec]
+             `((process-results ~spec ~query ~kwd) => (just ~spec :in-any-order))))
+       (apply concat)))
+
 (defn- build-fact?-
   [bindings factor]
-  (let [[kwd bg bind] (reformat bindings)]  
-    (println kwd ", " bg ", " bind)
-    `(do
-       ~@(for [bundle bind :let [pre (if (provided? (last bundle))
-                                       [(last bundle)]
-                                       [])]]
-           `(do ~@(for [[spec query] (partition 2 bundle)]
-                    `(~factor
-                      (process-results ~spec ~query ~kwd) => (just ~spec :in-any-order)
-                      ~@pre
-                      ~@bg)))))))
-
+  (let [crunch (fn [coll x] (concat (apply concat coll) x))
+        [kwd bg bind] (reformat bindings)]  
+    `(~factor
+      ~@(-> (for [bundle bind]
+              (inner-body bundle kwd))
+            (crunch bg)))))
 
 (defn- build-fact?<-
   [args factor]
-  (let [[kwd [res & body] prereqs] (->> args
-                                        (remove string?))
-        begin (if kwd [kwd res] [res])]
-    `(~factor ~@begin (<- ~@body) ~@prereqs)))
+  (let [[ll :as args] (remove string? args)
+        [begin args] (if (keyword? ll)
+                       (split-at 2 args)
+                       (split-at 1 args))
+        [reqs body] (extract-prereqs args)]
+    `(~factor ~@begin (<- ~@body) ~@reqs)))
 
 (defmacro fact?- [& bindings] (build-fact?- bindings `fact))
 (defmacro fact?<- [& args] (build-fact?<- args `fact?-))
