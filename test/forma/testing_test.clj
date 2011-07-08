@@ -12,61 +12,72 @@ this out of cake or lein, so I've hardcoded it into
 directory moves."
   (-> (dev-path) io/file .exists) => true?)
 
-(facts "tuples->string testing"
-  (fact?<- [["(1)(2)(3)"]] [?str] ([1 2 3] ?a) (tuples->string ?a :> ?str)))
+(fact?<- "tuples->string testing."
+         [["(1)(2)(3)"]] [?str] ([1 2 3] ?a) (tuples->string ?a :> ?str))
 
 ;; Tests for cascalog midje stuff.
-(defn plis [x y] [[3]])
-(defn plas [x y] [[3 5]])
+(defn whoop [x] [[x]])
+(defn bang [x y] [[x y]])
 
-(defn my-query [x y]
-  (let [z (plis x y)
-        y (plas x y)]
+(defn my-query [x y z]
+  (let [foo (whoop x)
+        bar (bang y z)]
     (<- [?a ?b]
-        (z ?a)
-        (y ?a ?b))))
+        (foo ?a)
+        (bar ?a ?b))))
 
-(defn a-query [x]
-  (<- [?a] (x ?a)))
+(defn a-query [x] (<- [?a] (x ?a)))
 
-(fact (plis :a :b) => 10
-  (provided (plis :a :b) => 10)
-  (against-background (plis :a :b) => 2))
+(fact (whoop :a) => 10
+  (provided (whoop :a) => 10)
+  (against-background (whoop :a) => 2))
 
-(against-background [(plis :a :b) => 10]
-  (fact (plis :a :b) => 10))
+(against-background [(whoop :a) => 10]
+  (fact (whoop :a) => 10))
 
+;; Similar to clojure.test's "are".
 (tabular
  (fact?- ?res (apply ?func ?args))
  ?res    ?func    ?args
- [[3 5]] my-query [1 2]
+ [[3 5]] my-query [3 3 5]
  [[1]]   a-query  [[[1]]])
 
-(def result-seq [[3 5]])
-(def some-seq [[10]])
+(let [some-seq [[10]]]
+  (fact?<- some-seq
+           [?a]
+           ((whoop :a) ?a)
+           (provided (whoop :a) => [[10]])))
 
-(fact?<- some-seq
-         [?a]
-         ((plis :a :b) ?a))
+(let [result-seq [[3 5]]]
+  "Showing that we can draw from the background."
+  (fact?- result-seq (my-query .a. .a. .b.)
+          [[3 10]] (my-query .a. .a. .c.)
+          (against-background
+            (whoop .a.) => [[3]]
+            (bang .a. .b.) => [[3 5]]
+            (bang .a. .c.) => [[3 10]])))
 
-(fact?- result-seq (my-query .a. .b.)
-        result-seq (my-query .a. .c.)
+(fact?- "the first query pulls from the stuff defined in
+ against-background down below."
+        
+        [[12 15]] (my-query .a. .a. .b.)
+
+        "The provided block applies to this query..."
+        [[100 2]] (my-query .a. .a. .b.)
+        (provided (whoop .a.) => [[100]]
+                  (bang .a. .b.) => [[100 2]])
+
+        "And, again, drawing from the background."
+        [] (my-query .a. .d. .e.)
+
         (against-background
-          (plis .a. .b.) => [[3]]
-          (plis .a. .c.) => [[3]]
-          (plas .a. .b.) => [[3 5]]
-          (plas .a. .c.) => [[3 5]]))
+          (whoop .a.) => [[12]]
+          (bang .a. .b.) => [[12 15]]
+          (bang .d. .e.) => [[10 15]]))
 
-(fact?- [[3 5]] (my-query .a. .b.)
-        [[10 15]] (my-query .d. .e.)
-        (against-background
-          (plis .a. .b.) => [[3]]
-          (plas .a. .b.) => [[3 5]]
-
-          (plis .d. .e.) => [[10]]
-          (plas .d. .e.) => [[10 15]]))
-
-(fact?<- [[10]]
+(fact?<- "the provided and background clauses work at the end of
+          fact?<- as well."
+         [[10]]
          [?a]
-         ((plis :a :b) ?a)
-         (provided (plis :a :b) => [[10]]))
+         ((whoop) ?a)
+         (provided (whoop) => [[10]]))

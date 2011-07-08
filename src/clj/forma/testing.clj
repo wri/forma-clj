@@ -3,7 +3,8 @@
 operations."
   (:use cascalog.api
         midje.sweet
-        [cascalog.testing :only (process?-)])
+        [cascalog.testing :only (process?-)]
+        [clojure.contrib.seq-utils :only (positions)])
   (:require [cascalog.vars :as v]))
 
 ;; ## Directory Management
@@ -43,12 +44,27 @@ operations."
 
 ;; ### Midje Testing
 
-(defn  first-elem?  [elem x]
-  (and (coll? x)
-       (#{elem} (first x))))
+(defn partition-with
+  [pred coll]
+  (loop [ret [], left coll, [pos & more] (positions pred coll)]
+    (if-not pos
+      (if (empty? left) ret (conj ret left))
+      (recur (conj ret (take (inc pos) left))
+             (drop (inc pos) left)
+             more))))
+
+(def split-by (juxt filter remove))
+
+(defn first-elem?  [elem x]
+  (when (coll? x) (#{elem} (first x))))
 
 (def background? (partial first-elem? 'against-background))
 (def provided? (partial first-elem? 'provided))
+
+(defn extract-prereqs [coll]
+  (split-by #(or (background? %)
+                 (provided? %))
+            coll))
 
 (defn- reformat
   "deal with the fact that the first item might be a logging level
@@ -57,11 +73,11 @@ operations."
   (let [[kwd bindings] (if (keyword? k)
                          [k more]
                          [nil bindings])
-        [pre bindings] (->> bindings
-                            (remove string?)
-                            ((juxt filter remove) #(or (background? %)
-                                                       (provided? %))))]
-    [kwd bindings pre]))
+        [bg bindings] (->> bindings
+                           (remove string?)
+                           (split-by background?))
+        bindings (partition-with provided? bindings)]
+    [kwd bg bindings]))
 
 (defn process-results
   [spec query ll]
@@ -70,21 +86,31 @@ operations."
               (process?- spec query))]
     (first (second ret))))
 
-;; TODO: Talk to midje about supporting facts inside of do blocks.
+(defn- inner-body
+  [bundle kwd]
+  (->> (for [[spec query] (partition-all 2 bundle)]
+           (if (provided? spec)
+             `[~spec]
+             `((process-results ~spec ~query ~kwd) => (just ~spec :in-any-order))))
+       (apply concat)))
+
 (defn- build-fact?-
   [bindings factor]
-  (let [[kwd bind prereqs] (reformat bindings)]  
-    `(do
-       ~@(for [[spec query] (partition 2 bind)]
-           `(~factor
-             (process-results ~spec ~query ~kwd) => (just ~spec :in-any-order)
-             ~@prereqs)))))
+  (let [crunch (fn [coll x] (concat (apply concat coll) x))
+        [kwd bg bind] (reformat bindings)]  
+    `(~factor
+      ~@(-> (for [bundle bind]
+              (inner-body bundle kwd))
+            (crunch bg)))))
 
 (defn- build-fact?<-
   [args factor]
-  (let [[kwd [res & body] prereqs] (reformat args)
-        begin (if kwd [kwd res] [res])]
-    `(~factor ~@begin (<- ~@body) ~@prereqs)))
+  (let [[ll :as args] (remove string? args)
+        [begin args] (if (keyword? ll)
+                       (split-at 2 args)
+                       (split-at 1 args))
+        [reqs body] (extract-prereqs args)]
+    `(~factor ~@begin (<- ~@body) ~@reqs)))
 
 (defmacro fact?- [& bindings] (build-fact?- bindings `fact))
 (defmacro fact?<- [& args] (build-fact?<- args `fact?-))
