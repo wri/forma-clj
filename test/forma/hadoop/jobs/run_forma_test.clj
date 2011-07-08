@@ -1,7 +1,7 @@
 (ns forma.hadoop.jobs.run-forma-test
   (:use forma.hadoop.jobs.run-forma
         cascalog.api
-        forma.testing
+        forma.midje
         midje.sweet)
   (:require [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]

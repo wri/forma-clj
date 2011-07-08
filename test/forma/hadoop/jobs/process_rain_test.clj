@@ -2,7 +2,7 @@
   (:use cascalog.api
         forma.hadoop.jobs.process-rain
         midje.sweet
-        forma.testing)
+        forma.midje)
   (require [forma.source.static :as static]))
 
 (def test-gadm [["1000" 1 1 1 1 5]

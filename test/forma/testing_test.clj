@@ -1,5 +1,6 @@
 (ns forma.testing-test
   (:use forma.testing
+        forma.midje
         cascalog.api
         midje.sweet)
   (:require [cascalog.vars :as v]
@@ -75,7 +76,7 @@ directory moves."
           (bang .a. .b.) => [[12 15]]
           (bang .d. .e.) => [[10 15]]))
 
-(fact?<- "the provided and background clauses work at the end of
+(fact?<- :info "the provided and background clauses work at the end of
           fact?<- as well."
          [[10]]
          [?a]

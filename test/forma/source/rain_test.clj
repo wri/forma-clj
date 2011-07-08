@@ -2,6 +2,7 @@
   (:use [forma.source.rain] :reload)
   (:use cascalog.api
         midje.sweet
+        forma.midje
         [forma.static :only (static-datasets)])
   (:require [forma.testing :as t])
   (:import  [java.io InputStream]

@@ -1,6 +1,7 @@
 (ns forma.hadoop.predicate-test
   (:use [forma.hadoop.predicate] :reload)
   (:use forma.testing
+        forma.midje
         cascalog.api
         midje.sweet))
 

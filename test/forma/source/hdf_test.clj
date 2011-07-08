@@ -2,6 +2,7 @@
   (:use [forma.source.hdf] :reload)
   (:use cascalog.api
         forma.testing
+        forma.midje
         midje.sweet)
   (:require [forma.hadoop.io :as io]
             [cascalog.ops :as c]))
@@ -36,14 +37,14 @@ error."
     (test-keys #{:ndv}) => (throws AssertionError)))
 
 (tabular
- (fact "Test that our cascalog queries are returning the proper
- subdatasets."
-   (let [src (io/hfs-wholefile hdf-path)
-         [datasets n] ((juxt identity count) ?dataset-seq)]
-     (fact?<- ?result [?count]
-              (src ?filename ?hdf)
-              (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
-              (c/count ?count))))
+ (let [src (io/hfs-wholefile hdf-path)
+       [datasets n] ((juxt identity count) ?dataset-seq)]
+   (fact?<- "Test that our cascalog queries are returning
+             the proper subdatasets."
+            ?result [?count]
+            (src ?filename ?hdf)
+            (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
+            (c/count ?count)))
  ?dataset-seq      ?result
  [:ndvi :evi]      [[2]]
  [:evi :reli :mir] [[3]])
