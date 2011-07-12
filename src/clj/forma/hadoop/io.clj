@@ -447,18 +447,22 @@ together each entry in the supplied sequence of `FormaValue`s."
           (float? v) (double-struct xs)))
   (get-vals [x] x)
   (count-vals [x] (count x))
+
   FireSeries
   (get-vals [x] (.getValues x))
   (count-vals [x]
     (count (.getValues x)))
+
   FormaSeries
   (get-vals [x] (.getValues x))
   (count-vals [x]
     (count (.getValues x)))
+
   IntArray
   (get-vals [x] (.getInts x))
   (count-vals [x]
     (count (.getInts x)))
+
   DoubleArray
   (get-vals [x] (.getDoubles x))
   (count-vals [x]

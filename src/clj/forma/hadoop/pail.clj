@@ -1,17 +1,19 @@
 (ns forma.hadoop.pail
-  (:use cascalog.api
-        [forma.source.modis :only (hv->tilestring)])
-  (:import [forma.schema
-            DataChunk FireTuple FormaValue LocationProperty LocationPropertyValue
+  (:use [forma.source.modis :only (hv->tilestring)])
+  (:import [forma.schema DataChunk FireTuple FormaValue
+            LocationProperty LocationPropertyValue
             ModisPixelLocation DataValue]
+           [backtype.cascading.tap PailTap PailTap$PailTapOptions]
            [backtype.hadoop.pail Pail]))
+
+;; ## Pail Data Structures
 
 (gen-class :name forma.hadoop.pail.DataChunkPailStructure
            :extends forma.tap.ThriftPailStructure
            :prefix "pail-")
 
 (defn pail-getType [this] DataChunk)
-(defn pail-createThriftObject [this] (new DataChunk))
+(defn pail-createThriftObject [this] (DataChunk.))
 
 (gen-class :name forma.hadoop.pail.SplitDataChunkPailStructure
            :extends forma.hadoop.pail.DataChunkPailStructure
@@ -29,24 +31,44 @@
 (defn split-isValidTarget [this dirs]
   (boolean (#{3 4} (count dirs))))
 
-(defn mk-chunk
-  [dataset t-res date s-res mh mv sample line val]
-  (doto (DataChunk. dataset
-                    (->> (ModisPixelLocation. s-res mh mv sample line)
-                         LocationPropertyValue/pixelLocation
-                         LocationProperty.)
-                    (DataValue/intVal val)
-                    t-res)
-    (.setDate date)))
+;; ## Taps
 
-(def my-pail
-  (let [path "/tmp/pail"]
-    (try (Pail. path)
-         (catch Exception e
-           (Pail/create path (new forma.hadoop.pail.SplitDataChunkPailStructure))))))
+(gen-class :name forma.hadoop.pail.DataChunkPailTap
+           :extends backtype.cascading.tap.PailTap
+           :init init
+           :constructors {[String]
+                          [String backtype.cascading.tap.PailTap$PailTapOptions]
+                          [String Object]
+                          [String backtype.cascading.tap.PailTap$PailTapOptions]
+                          [String Object Object]
+                          [String backtype.cascading.tap.PailTap$PailTapOptions]}
+           :prefix "tap-")
 
-(defn write-tuples [dataset m-res t-res]
-  (with-open [stream (.openWrite my-pail)]
-    (try (doseq [x (range 1000)]
-           (.writeObject stream (mk-chunk dataset t-res "2005-12-01" m-res 8 6 x 1 10)))
-         (finally (.consolidate my-pail)))))
+(defn tap-init
+  "Accepts a base pail path and a sequence of "
+  ([s] (tap-init s nil))
+  ([s coll] (tap-init s coll (forma.hadoop.pail.DataChunkPailStructure.)))
+  ([s coll structure]
+     [[s (-> (PailTap/makeSpec nil structure)
+             (PailTap$PailTapOptions. "datachunk" (into-array java.util.List coll) nil))]
+      nil]))
+
+(defn tap-getSpecificStructure [this]
+  (forma.hadoop.pail.DataChunkPailStructure.))
+
+(gen-class :name forma.hadoop.pail.SplitDataChunkPailTap
+           :extends forma.hadoop.pail.DataChunkPailTap
+           :init init
+           :constructors {[String] [String Object Object]
+                          [String Object] [String Object Object]
+                          [String Object Object] [String Object Object]}
+           :prefix "splittap-")
+
+(defn splittap-init
+  "Accepts a base pail path and a sequence of "
+  ([s] (splittap-init s nil (forma.hadoop.pail.SplitDataChunkPailStructure.)))
+  ([s coll] (splittap-init s coll (forma.hadoop.pail.SplitDataChunkPailStructure.)))
+  ([s coll structure] [[s coll structure] nil]))
+
+(defn splittap-getSpecificStructure [this]
+  (forma.hadoop.pail.SplitDataChunkPailStructure.))
