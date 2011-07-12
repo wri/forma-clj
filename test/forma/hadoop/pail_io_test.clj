@@ -25,3 +25,6 @@
     (.consolidate some-pail)))
 
 (future-fact "tuple-writing tests!")
+
+;; (?pail- (split-chunk-tap "/tmp/output")
+;;         (<- [?a] ((tuple-src "precl" "1000" "32") ?a)))

@@ -1,18 +1,44 @@
 (ns forma.hadoop.pail-io
-  (:use cascalog.api)
+  (:use cascalog.api
+        [cascalog.io :only (with-fs-tmp)])
   (:require [forma.hadoop.io :as io])
   (:import [backtype.hadoop.pail Pail]
-           [forma.schema DataChunk FireTuple FormaValue
-            LocationProperty LocationPropertyValue
-            ModisPixelLocation DataValue]
-           [forma.hadoop.pail DataChunkPailTap SplitDataChunkPailTap
-            DataChunkPailStructure SplitDataChunkPailStructure]))
+           [backtype.cascading.tap PailTap PailTap$PailTapOptions]
+           [forma.schema DataChunk LocationProperty ModisPixelLocation DataValue]
+           [forma.hadoop.pail DataChunkPailStructure SplitDataChunkPailStructure]))
 
-;; TODO: Move o
+;; ## Taps
+
 (defn pail-tap
-  "Returns a tap into the guts of the supplied pail."
-  [path]
-  (SplitDataChunkPailTap. path))
+  [s colls structure]
+  (let [seqs (into-array java.util.List colls)
+        spec (PailTap/makeSpec nil structure)
+        opts (PailTap$PailTapOptions. spec "datachunk" seqs nil)]
+    (PailTap. s opts)))
+
+(defn data-chunk-tap [s & colls]
+  (pail-tap s colls (DataChunkPailStructure.)))
+
+(defn split-chunk-tap [s & colls]
+  (pail-tap s colls (SplitDataChunkPailStructure.)))
+
+(defn ?pail-*
+  "Executes the supplied query into the pail located at the supplied
+  path, consolidating when finished."
+  [tap pail-path query]
+  (let [pail (Pail. pail-path)]
+    (with-fs-tmp [_ tmp]
+      (?- (tap tmp) query)
+      (.absorb pail (Pail. tmp))
+      (.consolidate pail))))
+
+(defmacro ?pail-
+  "Executes the supplied query into the pail located at the supplied
+  path, consolidating when finished."
+  [[tap path] query]
+  (list `?pail-* tap path query))
+
+;; ## DataValue Generation
 
 (defn mk-data-value
   [val type]

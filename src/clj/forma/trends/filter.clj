@@ -170,7 +170,7 @@
   passable values, presumably interchangeable.  If this assumption is
   not true, then an adjustment will have to be made to this function."
   [bad-set good-set quality-coll value-coll]
-  (when-not (empty? (filter bad-set quality-coll))
+  (when (seq (filter bad-set quality-coll))
     (let [bad-end-set (bad-ends bad-set quality-coll)
           new-qual (replace-index-set bad-end-set
                                       (first good-set)
