@@ -4,7 +4,8 @@
   (:require [forma.hadoop.io :as io])
   (:import [backtype.hadoop.pail Pail]
            [backtype.cascading.tap PailTap PailTap$PailTapOptions]
-           [forma.schema DataChunk LocationProperty ModisPixelLocation DataValue]
+           [forma.schema DataChunk LocationProperty
+            LocationPropertyValue ModisPixelLocation DataValue]
            [forma.hadoop.pail DataChunkPailStructure SplitDataChunkPailStructure]))
 
 ;; ## Taps
