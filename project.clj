@@ -34,6 +34,7 @@
                      [midje-cascalog "0.1.0-SNAPSHOT"]]
   :tasks [cake-marginalia.tasks]
   :aot [
+        forma.hadoop.pail
         forma.hadoop.jobs.preprocess
         forma.hadoop.jobs.load-tseries
         forma.hadoop.jobs.run-forma
