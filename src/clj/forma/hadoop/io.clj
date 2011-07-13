@@ -124,6 +124,23 @@ tuples into the supplied directory, using the format specified by
                 :templatefields templatefields
                 :sink-parts sink-parts))
 
+(defnk my-hfs-textline
+  "Creates a tap on HDFS using textline format. Different filesystems
+   can be selected by using different prefixes for {path}. (Optional
+   `sinkmode` argument can be one of `:keep`, `:include` or
+   `:replace`.)
+   
+   See http://www.cascading.org/javadoc/cascading/tap/Hfs.html and
+   http://www.cascading.org/javadoc/cascading/scheme/TextLine.html"
+  [path :sinkmode nil :outfields Fields/ALL :sink-parts nil]
+  (let [scheme (if sink-parts
+                 (doto (w/text-line ["line"] outfields)
+                   (.setNumSinkParts sink-parts))
+                 (w/text-line ["line"] outfields))]
+    (w/hfs-tap scheme
+               path
+               :sinkmode sinkmode)))
+
 (defnk hfs-wholefile
   "Subquery to return distinct files in the supplied directory. Files
   will be returned as 2-tuples, formatted as `<filename, file>` The

@@ -142,14 +142,19 @@
 (def *ndvi-path* "s3n://redddata/ndvi/1000-32/*/*/")
 (def *rain-path* "s3n://redddata/precl/1000-32/*/*/")
 (def *fire-path* "s3n://redddata/fire/1000-01/*/")
-(def *vcf-tap*
+
+(defn static-chunktap [dataset]
   (io/chunk-tap "s3n://redddata/"
-                "gadm"
+                "vcf"
                 "1000-00"
                 (for [[th tv] (vec (tile-set :IDN :MYS))]
                   (format "%03d%03d" th tv))))
 
+(def *vcf-tap* (static-chunktap "vcf"))
+(def *hansen-tap* (static-chunktap "hansen"))
+
 (def *gadm-path* "s3n://redddata/gadm/1000-00/*/*/")
+(def *ecoid-path* "s3n://redddata/ecoid/1000-00/*/*/")
 (def *convert-path* "s3n://modisfiles/ascii/admin-map.csv")
 
 (def forma-map
@@ -169,11 +174,34 @@
 ;; with one reducer.
 
 ;; (forma-textline out-path "%s-%s/%s/%s/")
+
+
+
+
+(defn get-static-stuff []
+  (let [converter (line->nums (hfs-textline *convert-path*))
+        [vcf hansen ecoid gadm] (map static/static-tap
+                                     [*vcf-tap*
+                                      *hansen-tap*
+                                      (hfs-seqfile *ecoid-path*)
+                                      (hfs-seqfile *gadm-path*)])]
+    (?<- (io/my-hfs-textline "s3n://formares/statics/" :sink-parts 3)
+         [?country ?mod-h ?mod-v ?sample ?line ?hansen ?ecoid ?vcf ?gadm]
+         (vcf _ ?mod-h ?mod-v ?sample ?line ?vcf)
+         (hansen _ ?mod-h ?mod-v ?sample ?line ?hansen)
+         (ecoid _ ?mod-h ?mod-v ?sample ?line ?ecoid)
+         (gadm _ ?mod-h ?mod-v ?sample ?line ?gadm)
+         (converter ?country ?gadm)
+         (>= ?vcf 25))))
+
+(defn chunk-forma []
+  (let [src (hfs-seqfile "s3n://formares/results/")]
+    (?<- (forma-textline "s3n://formares/stata/" "%s-%s/%s/%s/")
+         [?s-res ?t-res ?country ?datestring ?text]
+         (src ?s-res ?t-res ?country ?datestring ?text))))
+
 (defn -main
-  ([] (let [src (hfs-seqfile "s3n://formares/results/")]
-        (?<- (forma-textline "s3n://formares/stata/" "%s-%s/%s/%s/")
-             [?s-res ?t-res ?country ?datestring ?text]
-             (src ?s-res ?t-res ?country ?datestring ?text))))
+  ([] (get-static-stuff))
   ([out-path]
      (let [ndvi-src (tseries/tseries-query *ndvi-path*)
            rain-src (tseries/tseries-query *rain-path*)

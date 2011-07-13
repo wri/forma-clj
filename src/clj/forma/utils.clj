@@ -33,8 +33,8 @@
 (defn scale
   "Returns a collection obtained by scaling each number in `coll` by
   the supplied number `fact`."
-  [fact coll]
-  (for [x coll] (* x fact)))
+  [factor coll]
+  (for [x coll] (* x factor)))
 
 (defn running-sum
   "Given an accumulator, an initial value and an addition function,

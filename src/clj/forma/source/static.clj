@@ -70,7 +70,7 @@
   are supported, currently) determines the way in which multiple
   values are combined."
   [m-res dataset line-tap agg]
-  {:pre [(or (= agg c/sum) (= agg c/max))]}
+  {:pre [(#{c/sum, c/max} agg)]}
   (let [ascii-info (static-datasets (keyword dataset))]
     (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?outval]
         (line-tap ?textline)
