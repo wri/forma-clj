@@ -15,7 +15,8 @@
   (:import [forma WholeFile]
            [forma.schema DoubleArray IntArray
             FireTuple FireSeries FormaValue FormaSeries
-            FormaNeighborValue]
+            FormaNeighborValue DataChunk LocationProperty
+            LocationPropertyValue ModisPixelLocation DataValue]
            [java.util ArrayList]
            [cascading.tuple Fields]
            [cascading.scheme Scheme]
@@ -60,7 +61,7 @@
 ;; we're overriding Hadoop's ability to leap across files and stick to
 ;; its optimal 64MB input split size.)
 ;;
-;;MODIS files range from 24 to 48 MB, so all is well, but a more
+;; MODIS files range from 24 to 48 MB, so all is well, but a more
 ;; efficient general solution can be obtained by deriving
 ;; WholeFileInputFormat from
 ;; [CombineFileInputFormat](http://goo.gl/awr4T). In this scenario, An
@@ -75,8 +76,6 @@
 ;; data sources. Once we had WholeFile.java, the clojure wrapper
 ;; became trivial.
 
-;; ## Cascading Schemes
-
 (defn whole-file
   "Custom scheme for dealing with entire files."
   [field-names]
@@ -86,91 +85,23 @@
 ;;
 ;; Another helpful feature provided by cascading is the ability to
 ;; pair a scheme with a special [HFS class](http://goo.gl/JHpNT), that
-;; allows access to a number of different file systems. A tap
-;; acts like a massive vacuum cleaner. Open up a tap in a directory,
-;; and the tap inhales everything inside of it, passing it in as food
-;; for whatever scheme it's associated with. HFS can deal with HDFS,
-;; local fileystem, and Amazon S3 bucket paths; A path prefix of, respectively,
-;; `hdfs://`, `file://`, and `s3n://` forces the proper choice.
+;; allows access to a number of different file systems. A tap acts
+;; like a massive vacuum cleaner. Open up a tap in a directory, and
+;; the tap inhales everything inside of it, passing it in as food for
+;; whatever scheme it's associated with. HFS can deal with HDFS, local
+;; fileystem, and Amazon S3 bucket paths; A path prefix of,
+;; respectively, `hdfs://`, `file://`, and `s3n://` forces the proper
+;; choice.
 
-(defnk template-tap
-  [^Scheme scheme path-or-file pathstr :templatefields Fields/ALL :sink-parts nil]
-  (let [scheme (if sink-parts
-                 (doto scheme (.setNumSinkParts sink-parts))
-                 scheme)]
-    (TemplateTap. (w/hfs-tap scheme (w/path path-or-file))
-                  pathstr
-                  (w/fields templatefields))))
-
-(defnk template-seqfile
-  "Opens up a Cascading [TemplateTap](http://goo.gl/Vsnm5) that sinks
-tuples into the supplied directory, using the format specified by
-`pathstr`."
-  [path pathstr :outfields Fields/ALL :templatefields nil :sink-parts nil]
-  (template-tap (w/sequence-file outfields)
-                path
-                pathstr
-                :templatefields templatefields
-                :sink-parts sink-parts))
-
-(defnk template-textline
-  "Opens up a Cascading [TemplateTap](http://goo.gl/Vsnm5) that sinks
-tuples into the supplied directory, using the format specified by
-`pathstr`."
-  [path pathstr :outfields Fields/ALL :templatefields nil :sink-parts nil]
-  (template-tap (w/text-line ["line"] outfields)
-                path
-                pathstr
-                :templatefields templatefields
-                :sink-parts sink-parts))
-
-(defnk my-hfs-textline
-  "Creates a tap on HDFS using textline format. Different filesystems
-   can be selected by using different prefixes for {path}. (Optional
-   `sinkmode` argument can be one of `:keep`, `:include` or
-   `:replace`.)
-   
-   See http://www.cascading.org/javadoc/cascading/tap/Hfs.html and
-   http://www.cascading.org/javadoc/cascading/scheme/TextLine.html"
-  [path :sinkmode nil :outfields Fields/ALL :sink-parts nil]
-  (let [scheme (if sink-parts
-                 (doto (w/text-line ["line"] outfields)
-                   (.setNumSinkParts sink-parts))
-                 (w/text-line ["line"] outfields))]
-    (w/hfs-tap scheme
-               path
-               :sinkmode sinkmode)))
-
-(defnk hfs-wholefile
+(defn hfs-wholefile
   "Subquery to return distinct files in the supplied directory. Files
   will be returned as 2-tuples, formatted as `<filename, file>` The
   filename is a text object, while the entire, unchopped file is
   encoded as a Hadoop `BytesWritable` object."
-  [path :outfields Fields/ALL]
-  (w/hfs-tap (whole-file outfields) path))
-
-(defnk globhfs-wholefile
-  "Subquery to return distinct files in the supplied directory that
-  match the supplied pattern. See [this link](http://goo.gl/uIEzu) for
-  details on Hadoop's globbing pattern syntax.
-
-  As with `hfs-wholefile`, files will be returned as 2-tuples,
-  formatted as `<filename, file>` The filename is a text object, while
-  the entire, unchopped file is encoded as a Hadoop `BytesWritable`
-  object."
-  [pattern :outfields Fields/ALL]
-  (GlobHfs. (whole-file outfields) pattern))
-
-(defnk globhfs-seqfile
-  "Identical tap to `globhfs-wholefile`, to be used with
-  `SequenceFile`s instead of entire files."
-  [pattern :outfields Fields/ALL]
-  (GlobHfs. (w/sequence-file outfields) pattern))
-
-(defnk globhfs-textline
-  "Identical tap to `globhfs-wholefile`, to be used with text files."
-  [pattern :outfields Fields/ALL]
-  (GlobHfs. (w/text-line ["line"] outfields) pattern))
+  [path & {:keys [outfields] :or {outfields Fields/ALL} :as opts}]
+  (let [opts (apply concat opts)
+        scheme (whole-file outfields)]
+    (apply w/hfs-tap scheme path opts)))
 
 ;; ## Backend Data Processing Queries
 ;;
@@ -242,14 +173,13 @@ tuples into the supplied directory, using the format specified by
 
     (globstring \"s3n://bucket/\" * * [\"008006\" \"033011\"])
     ;=> \"s3://bucket/*/*/{008006,033011}\""
-  [basepath & pieces]
+  [& pieces]
   (->> pieces
        (map (fn [x]
               (cond (= * x) "*"
                     (coll? x) (format "{%s}" (join "," x))
                     :else x)))
-       (join "/")
-       (apply str basepath)))
+       (join "/")))
 
 (defn chunk-tap
   "Generalized source and sink for the chunk tuples stored and
@@ -259,22 +189,23 @@ tuples into the supplied directory, using the format specified by
   `chunk-tap`source makes use of Cascading's
   [TemplateTap](http://goo.gl/txP2a).
 
-  The sink makes use of `globhfs-seqfile` to draw tuples back out of
-  the directory structure using a globstring constructed out of the
-  supplied basepath and collections of datasets, resolutions, tiles
-  and specific data runs, identified by jobtag."
+  The sink makes use of `hfs-seqfile`'s `:pattern` argument to draw
+  tuples back out of the directory structure using a globstring
+  constructed out of the supplied basepath and collections of
+  datasets, resolutions, tiles and specific data runs, identified by
+  jobtag."
   ([out-dir]
      (chunk-tap out-dir "%s/%s-%s/%s/"))
   ([out-dir pattern]
-     (template-seqfile out-dir (str pattern (date/jobtag) "/")))
+     (hfs-seqfile out-dir :pattern (str pattern (date/jobtag) "/")))
   ([basepath datasets resolutions]
      (chunk-tap basepath datasets resolutions * *))
   ([basepath datasets resolutions tiles]
      (chunk-tap basepath datasets resolutions tiles *))
   ([basepath datasets resolutions tiles batches]
-     (globhfs-seqfile (str (globstring basepath datasets
-                                       resolutions
-                                       tiles batches *)))))
+     (hfs-seqfile basepath :pattern (globstring datasets
+                                                resolutions
+                                                tiles batches *))))
 
 ;; ## BytesWritable Interaction
 ;;
@@ -536,7 +467,7 @@ together each entry in the supplied sequence of `FormaValue`s."
   position, and converts the first entry in each timeseries to a
   `FormaValue`, for all first values and on up the sequence. Series
   must be supplied as specified by the arguments for
-  `forma.hadoop.io/forma-value`. For example:
+  `forma-value`. For example:
 
     (forma-schema fire-series short-series long-series t-stat-series)
 
@@ -548,3 +479,23 @@ together each entry in the supplied sequence of `FormaValue`s."
         (map #(if % (get-vals %) (repeat %)))
         (apply map forma-value)
         (to-struct))])
+
+;; ## DataValue Generation
+
+(defn mk-data-value
+  [val type]
+  (case type
+        :int-struct    (DataValue/ints (int-struct val))
+        :int           (DataValue/intVal val)
+        :double-struct (DataValue/doubles (double-struct val))
+        :double        (DataValue/doubleVal val)))
+
+(defn mk-chunk
+  [dataset t-res date s-res mh mv sample line data-value]
+  (doto (DataChunk. dataset
+                    (->> (ModisPixelLocation. s-res mh mv sample line)
+                         LocationPropertyValue/pixelLocation
+                         LocationProperty.)
+                    data-value
+                    t-res)
+    (.setDate date)))

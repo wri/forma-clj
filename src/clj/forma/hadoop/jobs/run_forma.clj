@@ -133,10 +133,11 @@
 
 (defn forma-textline
   [path pathstr]
-  (io/template-textline path pathstr
-                        :outfields ["?text"]
-                        :templatefields ["?s-res" "?t-res" "?country" "?datestring"]
-                        :sink-parts 3))
+  (hfs-textline path
+                :pattern pathstr
+                :outfields ["?text"]
+                :templatefields ["?s-res" "?t-res" "?country" "?datestring"]
+                :sinkparts 3))
 
 ;; Hardcoded in, for the big run.
 (def *ndvi-path* "s3n://redddata/ndvi/1000-32/*/*/")
@@ -175,9 +176,6 @@
 
 ;; (forma-textline out-path "%s-%s/%s/%s/")
 
-
-
-
 (defn get-static-stuff []
   (let [converter (line->nums (hfs-textline *convert-path*))
         [vcf hansen ecoid gadm] (map static/static-tap
@@ -185,7 +183,7 @@
                                       *hansen-tap*
                                       (hfs-seqfile *ecoid-path*)
                                       (hfs-seqfile *gadm-path*)])]
-    (?<- (io/my-hfs-textline "s3n://formares/statics/" :sink-parts 3)
+    (?<- (hfs-textline "s3n://formares/statics/" :sinkparts 3)
          [?country ?mod-h ?mod-v ?sample ?line ?hansen ?ecoid ?vcf ?gadm]
          (vcf _ ?mod-h ?mod-v ?sample ?line ?vcf)
          (hansen _ ?mod-h ?mod-v ?sample ?line ?hansen)

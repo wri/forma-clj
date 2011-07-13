@@ -31,8 +31,8 @@
   file, and an output dir, harvests tuples out of the HDF files, and
   sinks them into a custom directory structure inside of
   `output-dir`."
-  [subsets chunk-size pattern out-path]
-  (let [source (io/globhfs-wholefile pattern)]
+  [subsets chunk-size in-path pattern out-path]
+  (let [source (io/hfs-wholefile in-path :pattern pattern)]
     (chunk-job out-path
                (h/modis-chunks subsets chunk-size source))))
 
@@ -61,8 +61,8 @@
 
 (defn fire-chunker
   "Preprocessing for fires data."
-  [m-res pattern out-path]
-  (let [source (io/globhfs-textline pattern)]
+  [m-res in-path pattern out-path]
+  (let [source (hfs-textline in-path :pattern pattern)]
     (chunk-job out-path
                (f/reproject-fires m-res source))))
 
@@ -72,10 +72,10 @@
   (let [pattern (->> tiles
                      (map read-string)
                      (apply tile-set)
-                     (apply io/tiles->globstring)
-                     (str path))]
+                     (apply io/tiles->globstring))]
     (modis-chunker static/forma-subsets
                    static/chunk-size
+                   path
                    pattern
                    output-path)))
 
@@ -104,8 +104,9 @@
 
 (defn fire-main
   "See project wiki for example usage."
-  [pattern output-path]
+  [in-path pattern output-path]
   (fire-chunker "1000"
+                in-path
                 pattern
                 output-path))
 
