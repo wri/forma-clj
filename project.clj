@@ -7,18 +7,19 @@
   :javac-options {:debug "true" :fork "true"}
   :jvm-opts ["-XX:MaxPermSize=128M"]
   :repositories {"conjars" "http://conjars.org/repo/"
-                 "sonatype"
-                 "http://oss.sonatype.org/content/repositories/releases/"}
+                 "sonatype" "http://oss.sonatype.org/content/repositories/releases/"}
   :dependencies [[org.clojure/clojure "1.2.1"]
                  [org.clojure/clojure-contrib "1.2.0"]
                  [incanter "1.2.3" :exclusions [swank-clojure]]
                  [clj-time "0.3.0"]
                  [redd/thrift "0.5.0"]
-                 [org.clojars.sritchie09/cascalog "1.7.2"]
+                 [org.clojars.sritchie09/cascalog "1.7.3"]
                  [org.clojars.sritchie09/gdal-java-native "1.8.0"]
                  [backtype/cascading-thrift "0.1.0"
                   :exclusions [backtype/thriftjava]]
-                 [redd/dfs-datastores "1.0.4"]]
+                 [redd/dfs-datastores "1.0.4"]
+                 [backtype/dfs-datastores-cascading "1.0.4"
+                  :exclusions [backtype/dfs-datastores]]]
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
                      [pallet-hadoop "0.3.0"]
                      [org.jclouds/jclouds-all "1.0.0"]
@@ -34,6 +35,7 @@
                      [midje-cascalog "0.1.0-SNAPSHOT"]]
   :tasks [cake-marginalia.tasks]
   :aot [
+        forma.hadoop.pail
         forma.hadoop.jobs.preprocess
         forma.hadoop.jobs.load-tseries
         forma.hadoop.jobs.run-forma
