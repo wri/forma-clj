@@ -51,12 +51,11 @@
   data, effectively sampling all ASCII data into a higher resolution."
   [m-res dataset pixel-tap line-tap]
   (let [ascii-info (static-datasets (keyword dataset))]
-    (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?outval]
+    (<- [?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val]
         (line-tap ?textline)
-        (p/break ?textline :> ?row ?col ?outval)
+        (p/break ?textline :> ?row ?col ?val)
         (pixel-tap ?mod-h ?mod-v ?sample ?line)
         (wgs84-indexer m-res ascii-info ?mod-h ?mod-v ?sample ?line :> ?row ?col)
-        (m/hv->tilestring ?mod-h ?mod-v :> ?tilestring)
         (p/add-fields dataset m-res "00" :> ?dataset ?m-res ?t-res))))
 
 (defn downsample-modis
@@ -72,13 +71,12 @@
   [m-res dataset line-tap agg]
   {:pre [(#{c/sum, c/max} agg)]}
   (let [ascii-info (static-datasets (keyword dataset))]
-    (<- [?dataset ?m-res ?t-res ?tilestring ?sample ?line ?outval]
+    (<- [?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val]
         (line-tap ?textline)
-        (p/break ?textline :> ?row ?col ?val)
+        (p/break ?textline :> ?row ?col ?temp-val)
         (modis-indexer m-res ascii-info ?row ?col :> ?mod-h ?mod-v ?sample ?line)
-        (agg ?val :> ?outval)
-        (p/add-fields dataset m-res "00" :> ?dataset ?m-res ?t-res)
-        (m/hv->tilestring ?mod-h ?mod-v :> ?tilestring))))
+        (agg ?temp-val :> ?val)
+        (p/add-fields dataset m-res "00" nil :> ?dataset ?m-res ?t-res !date))))
 
 ;; TODO: Make a note that gzipped files can't be unpacked well when
 ;; they exist on S3. They need to be moved over to HDFS for that. I
@@ -87,22 +85,37 @@
 ;;
 ;; Added to the wiki.
 
+(defn agg-chunks
+  "val-gen must generate
+
+?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val"
+  [val-gen m-res chunk-size nodata type]
+  {:pre [(#{:int :double} type)]}
+  (let [chunkifier (-> (name type)
+                       (str "-struct")
+                       (keyword)
+                       (io/chunkify))
+        src (p/sparse-windower val-gen
+                               ["?sample" "?line"]
+                               (m/chunk-dims m-res chunk-size)
+                               "?val"
+                               nodata)]
+    (<- [?datachunk]
+        (src ?dataset ?s-res ?t-res !date ?mod-h ?mod-v  _ ?chunkid ?window)
+        (p/window->struct [type] ?window :> ?chunk)
+
+        (chunkifier ?dataset !date ?s-res
+                    ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk))))
+
 (defn static-chunks
   "TODO: DOCS!"
   [m-res chunk-size dataset agg line-tap pix-tap]
-  (let [[width height] (m/chunk-dims m-res chunk-size)
-        upsample? (>= (-> dataset keyword static-datasets :step)
-                      (wgs84-resolution m-res))
-        window-src (-> (if upsample?
-                         (upsample-modis m-res dataset pix-tap line-tap)
-                         (downsample-modis m-res dataset line-tap agg))
-                       (p/sparse-windower ["?sample" "?line"]
-                                          [width height]
-                                          "?outval"
-                                          -9999))]
-    (<- [?dataset ?spatial-res ?t-res ?tilestring ?chunkid ?chunk]
-        (window-src ?dataset ?spatial-res ?t-res ?tilestring  _ ?chunkid ?window)
-        (p/window->struct [:int] ?window :> ?chunk))))
+  (let [upsample? (>= (-> dataset keyword static-datasets :step)
+                      (wgs84-resolution m-res))]
+    (-> (if upsample?
+          (upsample-modis m-res dataset pix-tap line-tap)
+          (downsample-modis m-res dataset line-tap agg))
+        (agg-chunks m-res chunk-size -9999 :int))))
 
 ;; TODOSAM: Think about dependencies with run-forma, fix this shit!
 ;; Consolidate with the new rain extraction.

@@ -14,6 +14,7 @@
                                 dimensions-for-step)])
   (:require [forma.hadoop.io :as io]
             [forma.utils :as u]
+            [forma.source.static :as static]
             [forma.hadoop.predicate :as p]
             [clojure.string :as s])
   (:import  [java.io InputStream]))
@@ -144,9 +145,10 @@
   [m-res {:keys [step] :as ascii-map} file-tap pix-tap]
   (let [rain-vals (rain-values step file-tap)
         mod-coords ["?mod-h" "?mod-v" "?sample" "?line"]]
-    (<- [?date ?mod-h ?mod-v ?sample ?line ?val]
-        (rain-vals ?date ?row ?col ?val)
+    (<- [?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val]
+        (rain-vals !date ?row ?col ?val)
         (pix-tap :>> mod-coords)
+        (p/add-fields "precl" "32" m-res :> ?dataset ?t-res ?m-res)
         (wgs84-indexer :<< (into [m-res ascii-map] mod-coords) :> ?row ?col))))
 
 (defn rain-chunks
@@ -155,15 +157,5 @@
   suitable for comparison to any MODIS dataset at the supplied modis
   resolution `m-res`, partitioned by the supplied chunk size."
   [m-res {:keys [nodata] :as ascii-map} chunk-size file-tap pix-tap]
-  (let [[width height] (chunk-dims m-res chunk-size)
-        window-src (-> (resample-rain m-res ascii-map file-tap pix-tap)
-                       (p/sparse-windower ["?sample" "?line"]
-                                          [width height]
-                                          "?val"
-                                          nodata))
-        chunkifier (io/chunkify :int-struct)]
-    (<- [?datachunk]
-        (window-src ?date ?mod-h ?mod-v _ ?chunkid ?window)
-        (p/add-fields "precl" "32" m-res :> ?dataset ?t-res ?s-res)
-        (p/window->struct [:int] ?window :> ?chunk)
-        (chunkifier ?dataset ?date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk))))
+  (-> (resample-rain m-res ascii-map file-tap pix-tap)
+      (static/agg-chunks m-res chunk-size nodata :int)))

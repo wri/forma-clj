@@ -190,23 +190,23 @@
   `chunk-tap`source makes use of Cascading's
   [TemplateTap](http://goo.gl/txP2a).
 
-  The sink makes use of `hfs-seqfile`'s `:pattern` argument to draw
-  tuples back out of the directory structure using a globstring
+  The sink makes use of `hfs-seqfile`'s `:source-pattern` argument to
+  draw tuples back out of the directory structure using a globstring
   constructed out of the supplied basepath and collections of
   datasets, resolutions, tiles and specific data runs, identified by
   jobtag."
   ([out-dir]
      (chunk-tap out-dir "%s/%s-%s/%s/"))
   ([out-dir pattern]
-     (hfs-seqfile out-dir :pattern (str pattern (date/jobtag) "/")))
+     (hfs-seqfile out-dir :sink-template (str pattern (date/jobtag) "/")))
   ([basepath datasets resolutions]
      (chunk-tap basepath datasets resolutions * *))
   ([basepath datasets resolutions tiles]
      (chunk-tap basepath datasets resolutions tiles *))
   ([basepath datasets resolutions tiles batches]
-     (hfs-seqfile basepath :pattern (globstring datasets
-                                                resolutions
-                                                tiles batches *))))
+     (hfs-seqfile basepath :source-pattern (globstring datasets
+                                                       resolutions
+                                                       tiles batches *))))
 
 ;; ## BytesWritable Interaction
 ;;
@@ -505,11 +505,13 @@ together each entry in the supplied sequence of `FormaValue`s."
 
 (defn mk-chunk
   [dataset t-res date location-prop data-value]
-  (doto (DataChunk. dataset
-                    location-prop
-                    data-value
-                    t-res)
-    (.setDate date)))
+  (let [chunk (DataChunk. dataset
+                          location-prop
+                          data-value
+                          t-res)]
+    (if date
+      (doto chunk (.setDate date))
+      chunk)))
 
 (defmapop [data-val [type]]
   "Generates chunk data values."
@@ -517,7 +519,7 @@ together each entry in the supplied sequence of `FormaValue`s."
   (mk-data-value val type))
 
 (defn chunkify [chunk-size type]
-  (<- [?dataset ?date ?s-res ?t-res ?mh ?mv ?chunkid ?chunk :> ?datachunk]
+  (<- [?dataset !date ?s-res ?t-res ?mh ?mv ?chunkid ?chunk :> ?datachunk]
       (chunk-location ?s-res ?mh ?mv ?chunkid chunk-size :> ?location)
       (data-val [type] ?chunk :> ?data-val)
-      (mk-chunk ?dataset ?t-res ?date ?location ?data-val :> ?datachunk)))
+      (mk-chunk ?dataset ?t-res !date ?location ?data-val :> ?datachunk)))

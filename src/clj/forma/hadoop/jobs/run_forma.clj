@@ -134,7 +134,7 @@
 (defn forma-textline
   [path pathstr]
   (hfs-textline path
-                :pattern pathstr
+                :sink-template pathstr
                 :outfields ["?text"]
                 :templatefields ["?s-res" "?t-res" "?country" "?datestring"]
                 :sinkparts 3))
