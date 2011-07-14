@@ -160,9 +160,10 @@
                        (p/sparse-windower ["?sample" "?line"]
                                           [width height]
                                           "?val"
-                                          nodata))]
-    (<- [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk]
+                                          nodata))
+        chunkifier (io/chunkify :int-struct)]
+    (<- [?datachunk]
         (window-src ?date ?mod-h ?mod-v _ ?chunkid ?window)
+        (p/add-fields "precl" "32" m-res :> ?dataset ?t-res ?s-res)
         (p/window->struct [:int] ?window :> ?chunk)
-        (hv->tilestring ?mod-h ?mod-v :> ?tilestring)
-        (p/add-fields "precl" "32" m-res :> ?dataset ?temporal-res ?spatial-res))))
+        (chunkifier ?dataset ?date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk))))

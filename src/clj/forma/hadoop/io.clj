@@ -486,9 +486,9 @@ together each entry in the supplied sequence of `FormaValue`s."
 (defn mk-data-value
   [val type]
   (case type
-        :int-struct    (DataValue/ints (int-struct val))
+        :int-struct    (DataValue/ints val)
         :int           (DataValue/intVal val)
-        :double-struct (DataValue/doubles (double-struct val))
+        :double-struct (DataValue/doubles val)
         :double        (DataValue/doubleVal val)))
 
 (defn chunk-location
@@ -503,12 +503,21 @@ together each entry in the supplied sequence of `FormaValue`s."
        LocationPropertyValue/pixelLocation
        LocationProperty.))
 
-(mk-location-property s-res mh mv sample line)
-
 (defn mk-chunk
-  [dataset t-res location-prop data-value]
+  [dataset t-res date location-prop data-value]
   (doto (DataChunk. dataset
                     location-prop
                     data-value
                     t-res)
     (.setDate date)))
+
+(defmapop [data-val [type]]
+  "Generates chunk data values."
+  [val]
+  (mk-data-value val type))
+
+(defn chunkify [chunk-size type]
+  (<- [?dataset ?date ?s-res ?t-res ?mh ?mv ?chunkid ?chunk :> ?datachunk]
+      (chunk-location ?s-res ?mh ?mv ?chunkid chunk-size :> ?location)
+      (data-val [type] ?chunk :> ?data-val)
+      (mk-chunk ?dataset ?t-res ?date ?location ?data-val :> ?datachunk)))

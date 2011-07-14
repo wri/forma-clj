@@ -22,7 +22,7 @@
            :prefix "split-")
 
 (defn split-getTarget [this ^DataChunk d]
-  (let [location (-> d .getLocationProperty .getProperty .getPixelLocation)
+  (let [location (-> d .getLocationProperty .getProperty .getFieldValue)
         tilestring (hv->tilestring (.getTileH location) (.getTileV location))
         res (format "%s-%s"
                     (.getResolution location)

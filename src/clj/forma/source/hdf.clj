@@ -233,8 +233,8 @@ of a MODIS TileID acts as a key to retrieve this data."
   the processed product uses a sinusoial projection."
   [tileid]
   {:pre [(= (first tileid) \5)]}
-  ((juxt tileid->res
-         #(subs % 2)) tileid))
+  (cons (tileid->res tileid)
+        (tilestring->hv (subs tileid 2))))
 
 (defn t-res
   "Returns the temporal resolution of the supplied MODIS short product
@@ -252,14 +252,6 @@ of a MODIS TileID acts as a key to retrieve this data."
 ;; data, is smaller than 64MB, so sending each file to a different
 ;; mapper won't present any problems.
 
-;; (mk-chunk ?dataset ?temporal-res ?date ?spatial-res ?mh ?mv ?chunkid ?chunk)
-
-(def chunkify
-  (<- [?dataset ?date ?s-res ?t-res ?tilestring ?chunkid ?chunk :> ?datachunk]
-      
-      (mk-location-property )
-      (tilestring->hv ?tilestring :> ?mh ?mv)))
-
 (defn modis-chunks
   "Takes a cascading source, and returns a number of tuples that fully
   describe chunks of MODIS data for the supplied datasets. Chunks are
@@ -267,12 +259,14 @@ of a MODIS TileID acts as a key to retrieve this data."
   before running any sort of data analysis, as seqs require linear
   time for lookups."
   [datasets chunk-size source]
-  (let [keys ["SHORTNAME" "TileID" "RANGEBEGINNINGDATE"]]
-    (<- [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk]
+  (let [keys ["SHORTNAME" "TileID" "RANGEBEGINNINGDATE"]
+        chunkifier (hadoop.io/chunkify chunk-size :int-struct)]
+    (<- [?datachunk]
         (source ?filename ?hdf)
         (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
         (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk)
         (meta-values [keys] ?freetile :> ?productname ?tileid ?date)
-        (t-res ?productname :> ?temporal-res)
-        (split-id ?tileid :> ?spatial-res ?tilestring)
+        (t-res ?productname :> ?t-res)
+        (split-id ?tileid :> ?s-res ?mod-h ?mod-v)
+        (chunkifier ?dataset ?date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk)
         (:distinct false))))
