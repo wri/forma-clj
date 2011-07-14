@@ -16,7 +16,8 @@
            [forma.schema DoubleArray IntArray
             FireTuple FireSeries FormaValue FormaSeries
             FormaNeighborValue DataChunk LocationProperty
-            LocationPropertyValue ModisPixelLocation DataValue]
+            LocationPropertyValue DataValue
+            ModisPixelLocation ModisChunkLocation]
            [java.util ArrayList]
            [cascading.tuple Fields]
            [cascading.scheme Scheme]
@@ -490,12 +491,24 @@ together each entry in the supplied sequence of `FormaValue`s."
         :double-struct (DataValue/doubles (double-struct val))
         :double        (DataValue/doubleVal val)))
 
+(defn chunk-location
+  [s-res mod-h mod-v idx size]
+  (->> (ModisChunkLocation. s-res mod-h mod-v idx size)
+       LocationPropertyValue/chunkLocation
+       LocationProperty.))
+
+(defn pixel-location
+  [s-res mh mv sample line]
+  (->> (ModisPixelLocation. s-res mh mv sample line)
+       LocationPropertyValue/pixelLocation
+       LocationProperty.))
+
+(mk-location-property s-res mh mv sample line)
+
 (defn mk-chunk
-  [dataset t-res date s-res mh mv sample line data-value]
+  [dataset t-res location-prop data-value]
   (doto (DataChunk. dataset
-                    (->> (ModisPixelLocation. s-res mh mv sample line)
-                         LocationPropertyValue/pixelLocation
-                         LocationProperty.)
+                    location-prop
                     data-value
                     t-res)
     (.setDate date)))

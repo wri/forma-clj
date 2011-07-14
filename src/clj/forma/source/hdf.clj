@@ -13,12 +13,12 @@
 
 (ns forma.source.hdf
   (:use cascalog.api
-        [forma.hadoop.io :only (hash-str get-bytes to-struct)]
-        [forma.source.modis :only (temporal-res)]
+        [forma.source.modis :only (temporal-res tilestring->hv)]
         [cascalog.io :only (temp-dir)]
         [clojure.contrib.seq-utils :only (find-first indexed)])
   (:require [clojure.set :as set]
             [clojure.contrib.string :as s]
+            [forma.hadoop.io :as hadoop.io]
             [clojure.contrib.io :as contrib.io])
   (:import [org.gdal.gdal gdal Dataset Band]
            [org.gdal.gdalconst gdalconstConstants]))
@@ -155,8 +155,8 @@ as a 1-tuple."
   {:stateful true}
   ([] (temp-dir "hdf"))
   ([tdir stream]
-     (let [bytes (get-bytes stream)
-           temp-hdf (contrib.io/file tdir (hash-str stream))]
+     (let [bytes (hadoop.io/get-bytes stream)
+           temp-hdf (contrib.io/file tdir (hadoop.io/hash-str stream))]
        (do (contrib.io/copy bytes temp-hdf)
            (->> (subdataset-names temp-hdf)
                 (filter (dataset-filter to-keep))
@@ -183,7 +183,7 @@ as a 1-tuple."
     (.ReadRaster band 0 0 width height ret)
     (->> ret
          (partition chunk-size)
-         (map to-struct)
+         (map hadoop.io/to-struct)
          indexed)))
 
 ;; ### Metadata Parsing
@@ -251,6 +251,14 @@ of a MODIS TileID acts as a key to retrieve this data."
 ;; return tuples from the subquery. Each MODIS file, even down to 250m
 ;; data, is smaller than 64MB, so sending each file to a different
 ;; mapper won't present any problems.
+
+;; (mk-chunk ?dataset ?temporal-res ?date ?spatial-res ?mh ?mv ?chunkid ?chunk)
+
+(def chunkify
+  (<- [?dataset ?date ?s-res ?t-res ?tilestring ?chunkid ?chunk :> ?datachunk]
+      
+      (mk-location-property )
+      (tilestring->hv ?tilestring :> ?mh ?mv)))
 
 (defn modis-chunks
   "Takes a cascading source, and returns a number of tuples that fully

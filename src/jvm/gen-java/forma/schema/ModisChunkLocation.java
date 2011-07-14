@@ -30,18 +30,24 @@ public class ModisChunkLocation implements TBase<ModisChunkLocation, ModisChunkL
   private static final TStruct STRUCT_DESC = new TStruct("ModisChunkLocation");
 
   private static final TField RESOLUTION_FIELD_DESC = new TField("resolution", TType.STRING, (short)1);
-  private static final TField CHUNK_ID_FIELD_DESC = new TField("chunkID", TType.I32, (short)2);
-  private static final TField CHUNK_SIZE_FIELD_DESC = new TField("chunkSize", TType.I32, (short)3);
+  private static final TField TILE_H_FIELD_DESC = new TField("tileH", TType.I32, (short)2);
+  private static final TField TILE_V_FIELD_DESC = new TField("tileV", TType.I32, (short)3);
+  private static final TField CHUNK_ID_FIELD_DESC = new TField("chunkID", TType.I32, (short)4);
+  private static final TField CHUNK_SIZE_FIELD_DESC = new TField("chunkSize", TType.I32, (short)5);
 
   public String resolution;
+  public int tileH;
+  public int tileV;
   public int chunkID;
   public int chunkSize;
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements TFieldIdEnum {
     RESOLUTION((short)1, "resolution"),
-    CHUNK_ID((short)2, "chunkID"),
-    CHUNK_SIZE((short)3, "chunkSize");
+    TILE_H((short)2, "tileH"),
+    TILE_V((short)3, "tileV"),
+    CHUNK_ID((short)4, "chunkID"),
+    CHUNK_SIZE((short)5, "chunkSize");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -58,9 +64,13 @@ public class ModisChunkLocation implements TBase<ModisChunkLocation, ModisChunkL
       switch(fieldId) {
         case 1: // RESOLUTION
           return RESOLUTION;
-        case 2: // CHUNK_ID
+        case 2: // TILE_H
+          return TILE_H;
+        case 3: // TILE_V
+          return TILE_V;
+        case 4: // CHUNK_ID
           return CHUNK_ID;
-        case 3: // CHUNK_SIZE
+        case 5: // CHUNK_SIZE
           return CHUNK_SIZE;
         default:
           return null;
@@ -102,15 +112,21 @@ public class ModisChunkLocation implements TBase<ModisChunkLocation, ModisChunkL
   }
 
   // isset id assignments
-  private static final int __CHUNKID_ISSET_ID = 0;
-  private static final int __CHUNKSIZE_ISSET_ID = 1;
-  private BitSet __isset_bit_vector = new BitSet(2);
+  private static final int __TILEH_ISSET_ID = 0;
+  private static final int __TILEV_ISSET_ID = 1;
+  private static final int __CHUNKID_ISSET_ID = 2;
+  private static final int __CHUNKSIZE_ISSET_ID = 3;
+  private BitSet __isset_bit_vector = new BitSet(4);
 
   public static final Map<_Fields, FieldMetaData> metaDataMap;
   static {
     Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
     tmpMap.put(_Fields.RESOLUTION, new FieldMetaData("resolution", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.STRING)));
+    tmpMap.put(_Fields.TILE_H, new FieldMetaData("tileH", TFieldRequirementType.DEFAULT, 
+        new FieldValueMetaData(TType.I32)));
+    tmpMap.put(_Fields.TILE_V, new FieldMetaData("tileV", TFieldRequirementType.DEFAULT, 
+        new FieldValueMetaData(TType.I32)));
     tmpMap.put(_Fields.CHUNK_ID, new FieldMetaData("chunkID", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.I32)));
     tmpMap.put(_Fields.CHUNK_SIZE, new FieldMetaData("chunkSize", TFieldRequirementType.DEFAULT, 
@@ -124,11 +140,17 @@ public class ModisChunkLocation implements TBase<ModisChunkLocation, ModisChunkL
 
   public ModisChunkLocation(
     String resolution,
+    int tileH,
+    int tileV,
     int chunkID,
     int chunkSize)
   {
     this();
     this.resolution = resolution;
+    this.tileH = tileH;
+    setTileHIsSet(true);
+    this.tileV = tileV;
+    setTileVIsSet(true);
     this.chunkID = chunkID;
     setChunkIDIsSet(true);
     this.chunkSize = chunkSize;
@@ -144,6 +166,8 @@ public class ModisChunkLocation implements TBase<ModisChunkLocation, ModisChunkL
     if (other.isSetResolution()) {
       this.resolution = other.resolution;
     }
+    this.tileH = other.tileH;
+    this.tileV = other.tileV;
     this.chunkID = other.chunkID;
     this.chunkSize = other.chunkSize;
   }
@@ -155,6 +179,10 @@ public class ModisChunkLocation implements TBase<ModisChunkLocation, ModisChunkL
   @Override
   public void clear() {
     this.resolution = null;
+    setTileHIsSet(false);
+    this.tileH = 0;
+    setTileVIsSet(false);
+    this.tileV = 0;
     setChunkIDIsSet(false);
     this.chunkID = 0;
     setChunkSizeIsSet(false);
@@ -183,6 +211,52 @@ public class ModisChunkLocation implements TBase<ModisChunkLocation, ModisChunkL
     if (!value) {
       this.resolution = null;
     }
+  }
+
+  public int getTileH() {
+    return this.tileH;
+  }
+
+  public ModisChunkLocation setTileH(int tileH) {
+    this.tileH = tileH;
+    setTileHIsSet(true);
+    return this;
+  }
+
+  public void unsetTileH() {
+    __isset_bit_vector.clear(__TILEH_ISSET_ID);
+  }
+
+  /** Returns true if field tileH is set (has been asigned a value) and false otherwise */
+  public boolean isSetTileH() {
+    return __isset_bit_vector.get(__TILEH_ISSET_ID);
+  }
+
+  public void setTileHIsSet(boolean value) {
+    __isset_bit_vector.set(__TILEH_ISSET_ID, value);
+  }
+
+  public int getTileV() {
+    return this.tileV;
+  }
+
+  public ModisChunkLocation setTileV(int tileV) {
+    this.tileV = tileV;
+    setTileVIsSet(true);
+    return this;
+  }
+
+  public void unsetTileV() {
+    __isset_bit_vector.clear(__TILEV_ISSET_ID);
+  }
+
+  /** Returns true if field tileV is set (has been asigned a value) and false otherwise */
+  public boolean isSetTileV() {
+    return __isset_bit_vector.get(__TILEV_ISSET_ID);
+  }
+
+  public void setTileVIsSet(boolean value) {
+    __isset_bit_vector.set(__TILEV_ISSET_ID, value);
   }
 
   public int getChunkID() {
@@ -241,6 +315,22 @@ public class ModisChunkLocation implements TBase<ModisChunkLocation, ModisChunkL
       }
       break;
 
+    case TILE_H:
+      if (value == null) {
+        unsetTileH();
+      } else {
+        setTileH((Integer)value);
+      }
+      break;
+
+    case TILE_V:
+      if (value == null) {
+        unsetTileV();
+      } else {
+        setTileV((Integer)value);
+      }
+      break;
+
     case CHUNK_ID:
       if (value == null) {
         unsetChunkID();
@@ -265,6 +355,12 @@ public class ModisChunkLocation implements TBase<ModisChunkLocation, ModisChunkL
     case RESOLUTION:
       return getResolution();
 
+    case TILE_H:
+      return new Integer(getTileH());
+
+    case TILE_V:
+      return new Integer(getTileV());
+
     case CHUNK_ID:
       return new Integer(getChunkID());
 
@@ -284,6 +380,10 @@ public class ModisChunkLocation implements TBase<ModisChunkLocation, ModisChunkL
     switch (field) {
     case RESOLUTION:
       return isSetResolution();
+    case TILE_H:
+      return isSetTileH();
+    case TILE_V:
+      return isSetTileV();
     case CHUNK_ID:
       return isSetChunkID();
     case CHUNK_SIZE:
@@ -311,6 +411,24 @@ public class ModisChunkLocation implements TBase<ModisChunkLocation, ModisChunkL
       if (!(this_present_resolution && that_present_resolution))
         return false;
       if (!this.resolution.equals(that.resolution))
+        return false;
+    }
+
+    boolean this_present_tileH = true;
+    boolean that_present_tileH = true;
+    if (this_present_tileH || that_present_tileH) {
+      if (!(this_present_tileH && that_present_tileH))
+        return false;
+      if (this.tileH != that.tileH)
+        return false;
+    }
+
+    boolean this_present_tileV = true;
+    boolean that_present_tileV = true;
+    if (this_present_tileV || that_present_tileV) {
+      if (!(this_present_tileV && that_present_tileV))
+        return false;
+      if (this.tileV != that.tileV)
         return false;
     }
 
@@ -354,6 +472,26 @@ public class ModisChunkLocation implements TBase<ModisChunkLocation, ModisChunkL
     }
     if (isSetResolution()) {
       lastComparison = TBaseHelper.compareTo(this.resolution, typedOther.resolution);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetTileH()).compareTo(typedOther.isSetTileH());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetTileH()) {
+      lastComparison = TBaseHelper.compareTo(this.tileH, typedOther.tileH);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetTileV()).compareTo(typedOther.isSetTileV());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetTileV()) {
+      lastComparison = TBaseHelper.compareTo(this.tileV, typedOther.tileV);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -402,7 +540,23 @@ public class ModisChunkLocation implements TBase<ModisChunkLocation, ModisChunkL
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case 2: // CHUNK_ID
+        case 2: // TILE_H
+          if (field.type == TType.I32) {
+            this.tileH = iprot.readI32();
+            setTileHIsSet(true);
+          } else { 
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 3: // TILE_V
+          if (field.type == TType.I32) {
+            this.tileV = iprot.readI32();
+            setTileVIsSet(true);
+          } else { 
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 4: // CHUNK_ID
           if (field.type == TType.I32) {
             this.chunkID = iprot.readI32();
             setChunkIDIsSet(true);
@@ -410,7 +564,7 @@ public class ModisChunkLocation implements TBase<ModisChunkLocation, ModisChunkL
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case 3: // CHUNK_SIZE
+        case 5: // CHUNK_SIZE
           if (field.type == TType.I32) {
             this.chunkSize = iprot.readI32();
             setChunkSizeIsSet(true);
@@ -438,6 +592,12 @@ public class ModisChunkLocation implements TBase<ModisChunkLocation, ModisChunkL
       oprot.writeString(this.resolution);
       oprot.writeFieldEnd();
     }
+    oprot.writeFieldBegin(TILE_H_FIELD_DESC);
+    oprot.writeI32(this.tileH);
+    oprot.writeFieldEnd();
+    oprot.writeFieldBegin(TILE_V_FIELD_DESC);
+    oprot.writeI32(this.tileV);
+    oprot.writeFieldEnd();
     oprot.writeFieldBegin(CHUNK_ID_FIELD_DESC);
     oprot.writeI32(this.chunkID);
     oprot.writeFieldEnd();
@@ -459,6 +619,14 @@ public class ModisChunkLocation implements TBase<ModisChunkLocation, ModisChunkL
     } else {
       sb.append(this.resolution);
     }
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("tileH:");
+    sb.append(this.tileH);
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("tileV:");
+    sb.append(this.tileV);
     first = false;
     if (!first) sb.append(", ");
     sb.append("chunkID:");
