@@ -3,6 +3,12 @@
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]))
 
+(defn integerize
+  "Accepts any number of string representations of integers, and
+  returns the corresponding sequence of ints."
+  [& strings]
+  (map #(Integer. %) strings))
+
 (defn between?
   "Returns true of the supplied arg `x` falls between the supplied
   `lower` and `upper` bounds (inclusive), false otherwise."

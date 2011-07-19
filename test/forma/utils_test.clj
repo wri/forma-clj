@@ -5,6 +5,10 @@
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]))
 
+(facts "integerize tests."
+  (integerize "192") => [192]
+  (integerize "192" "12") => [192 12])
+
 (facts "between? tests."
   (between? -2 2 1) => truthy
   (between? -2 2 -2) => truthy

@@ -115,7 +115,7 @@
           (downsample-modis m-res dataset line-tap agg))
         (agg-chunks m-res chunk-size -9999 :int))))
 
-;; TODOSAM: Think about dependencies with run-forma, fix this shit!
+;; TODOSAM: Think about dependencies with forma, fix this shit!
 ;; Consolidate with the new rain extraction.
 (defn static-tap
   "TODO: Very similar to extract-tseries. Consolidate."

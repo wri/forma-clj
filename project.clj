@@ -38,7 +38,7 @@
         forma.hadoop.pail
         forma.hadoop.jobs.preprocess
         forma.hadoop.jobs.load-tseries
-        forma.hadoop.jobs.run-forma
+        forma.hadoop.jobs.scatter
         forma.hadoop.jobs.process-rain
         forma.source.fire
         ])
