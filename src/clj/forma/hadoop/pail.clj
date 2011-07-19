@@ -63,3 +63,6 @@
   path, consolidating when finished."
   [[tap path] query]
   (list `?pail-* tap path query))
+
+(defn consolidate [pail-path]
+  (.consolidate (Pail. pail-path)))

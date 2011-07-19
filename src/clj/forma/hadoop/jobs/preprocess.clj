@@ -1,12 +1,10 @@
 (ns forma.hadoop.jobs.preprocess
   (:use cascalog.api
-        [forma.hadoop.pail :only (?pail- split-chunk-tap)]
+        [forma.hadoop.pail :only (?pail- split-chunk-tap consolidate)]
         [forma.source.tilesets :only (tile-set)]
         [cascalog.io :only (with-fs-tmp)]
-        [forma.source.modis :only (pixels-at-res
-                                   chunk-dims)]
-        [forma.hadoop.predicate :only (sparse-windower
-                                       pixel-generator)])
+        [forma.source.modis :only (pixels-at-res chunk-dims)]
+        [forma.hadoop.predicate :only (sparse-windower pixel-generator)])
   (:require [forma.hadoop.predicate :as p]
             [forma.hadoop.io :as io]
             [forma.source.hdf :as h]
@@ -77,7 +75,8 @@
   (let [pattern (->> tiles
                      (map read-string)
                      (apply tile-set)
-                     (apply io/tiles->globstring))]
+                     (apply io/tiles->globstring)
+                     (str "*/"))]
     (modis-chunker static/forma-subsets
                    static/chunk-size
                    path

@@ -91,10 +91,10 @@
 ?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val"
   [val-gen m-res chunk-size nodata type]
   {:pre [(#{:int :double} type)]}
-  (let [chunkifier (-> (name type)
-                       (str "-struct")
-                       (keyword)
-                       (io/chunkify))
+  (let [chunkifier (io/chunkify chunk-size
+                                (-> (name type)
+                                    (str "-struct")
+                                    (keyword)))
         src (p/sparse-windower val-gen
                                ["?sample" "?line"]
                                (m/chunk-dims m-res chunk-size)
@@ -103,9 +103,7 @@
     (<- [?datachunk]
         (src ?dataset ?s-res ?t-res !date ?mod-h ?mod-v  _ ?chunkid ?window)
         (p/window->struct [type] ?window :> ?chunk)
-
-        (chunkifier ?dataset !date ?s-res
-                    ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk))))
+        (chunkifier ?dataset !date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk))))
 
 (defn static-chunks
   "TODO: DOCS!"

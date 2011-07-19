@@ -146,7 +146,7 @@
 
 (defn static-chunktap [dataset]
   (io/chunk-tap "s3n://redddata/"
-                "vcf"
+                dataset
                 "1000-00"
                 (for [[th tv] (vec (tile-set :IDN :MYS))]
                   (format "%03d%03d" th tv))))
