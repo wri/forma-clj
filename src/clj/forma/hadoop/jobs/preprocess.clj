@@ -13,11 +13,9 @@
             [forma.static :as static]
             [cascalog.ops :as c]))
 
-;; And, here we are, at the chunkers. These simply execute the
-;; relevant subqueries, using a TemplateTap designed to sink our
-;; tuples into our custom directory structure.
-
 (defn to-pail
+  "Executes the supplied `query` into the pail at `pail-path`. This
+  pail must make use of the `SplitDataChunkPailStructure`."
   [pail-path query]
   (?pail- (split-chunk-tap pail-path)
       query))
@@ -30,8 +28,8 @@
   `output-dir`."
   [subsets chunk-size in-path pattern pail-path]
   (let [source (io/hfs-wholefile in-path :source-pattern pattern)]
-    (to-pail pail-path
-             (h/modis-chunks subsets chunk-size source))))
+    (->> (h/modis-chunks subsets chunk-size source)
+         (to-pail pail-path))))
 
 (defjob PreprocessModis
   "See project wiki for example usage."
@@ -54,8 +52,8 @@
     (let [file-tap (io/hfs-wholefile path)
           pix-tap (p/pixel-generator tmp-dir m-res tile-seq)
           ascii-map (:precl static/static-datasets)]
-      (to-pail pail-path
-               (r/rain-chunks m-res ascii-map chunk-size file-tap pix-tap)))))
+      (->> (r/rain-chunks m-res ascii-map chunk-size file-tap pix-tap)
+           (to-pail pail-path)))))
 
 (defjob PreprocessRain
   "See project wiki for example usage."
@@ -72,8 +70,8 @@
   (with-fs-tmp [fs tmp-dir]
     (let [line-tap (hfs-textline ascii-path)
           pix-tap  (p/pixel-generator tmp-dir m-res tile-seq)]
-      (to-pail pail-path
-               (s/static-chunks m-res chunk-size dataset agg line-tap pix-tap)))))
+      (->> (s/static-chunks m-res chunk-size dataset agg line-tap pix-tap)
+           (to-pail pail-path)))))
 
 (defjob PreprocessStatic
   "See project wiki for example usage."
