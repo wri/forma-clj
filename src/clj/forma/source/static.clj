@@ -61,20 +61,23 @@
 (defn downsample-modis
   "Returns a cascalog query designed to pair each value on an ASCII
   data grid with a particular MODIS pixel at the specified spatial
-  resolution, `m-res`.
+  resolution, `m-res`. The modis pixels produced by the supplied
+  `pixel-tap` act as a set; only pixels with locations matching those
+  produced by `pixel-tap` will be output.
 
  `downsample-modis` handles situations in which the ASCII resolution
   is higher than the supplied MODIS resolution; more than one value is
   guaranteed to exist for every MODIS pixel. `agg` (`c/sum` or `c/max`
   are supported, currently) determines the way in which multiple
   values are combined."
-  [m-res dataset line-tap agg]
+  [m-res dataset pixel-tap line-tap agg]
   {:pre [(#{c/sum, c/max} agg)]}
   (let [ascii-info (static-datasets (keyword dataset))]
     (<- [?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val]
         (line-tap ?textline)
         (p/break ?textline :> ?row ?col ?temp-val)
         (modis-indexer m-res ascii-info ?row ?col :> ?mod-h ?mod-v ?sample ?line)
+        (pixel-tap ?mod-h ?mod-v ?sample ?line :> true)
         (agg ?temp-val :> ?val)
         (p/add-fields dataset m-res "00" nil :> ?dataset ?m-res ?t-res !date))))
 
@@ -112,7 +115,7 @@
                       (wgs84-resolution m-res))]
     (-> (if upsample?
           (upsample-modis m-res dataset pix-tap line-tap)
-          (downsample-modis m-res dataset line-tap agg))
+          (downsample-modis m-res dataset pix-tap line-tap agg))
         (agg-chunks m-res chunk-size -9999 :int))))
 
 ;; TODOSAM: Think about dependencies with forma, fix this shit!
