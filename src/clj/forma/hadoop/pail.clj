@@ -29,7 +29,6 @@
                     (.getTemporalRes d))]
     [(.getDataset d) res tilestring]))
 
-
 (defn split-isValidTarget [this dirs]
   (boolean (#{3 4} (count dirs))))
 

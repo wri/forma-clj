@@ -27,7 +27,8 @@
 (def *rain-path* "s3n://redddata/precl/1000-32/*/*/")
 (def *fire-path* "s3n://redddata/fire/1000-01/*/")
 
-(defjob GetStatic [out-path]
+(defjob GetStatic
+  [out-path]
   (let [converter (forma/line->nums (hfs-textline *convert-path*))
         [vcf hansen ecoid gadm] (map static-tap
                                      [(static-chunktap "vcf")
@@ -65,7 +66,6 @@
 
 ;; TODO: Rewrite this, so that we only need to give it a sequence of
 ;; countries (or tiles), and it'll generate the rest.
-
 (defjob RunForma
   [out-path]
   (let [[ndvi-src rain-src] (map tseries/tseries-query
