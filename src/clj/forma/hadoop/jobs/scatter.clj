@@ -3,10 +3,13 @@
   (:use cascalog.api
         [forma.source.tilesets :only (tile-set)]
         [forma.source.static :only (static-tap)])
-  (:require [forma.hadoop.io :as io]
+  (:require [cascalog.ops :as c]
+            [forma.hadoop.io :as io]
             [forma.source.fire :as fire]
+            [forma.source.modis :as m]
+            [forma.hadoop.predicate :as p]
             [forma.hadoop.jobs.forma :as forma]
-            [forma.hadoop.jobs.load-tseries :as tseries]))
+            [forma.hadoop.jobs.timeseries :as tseries]))
 
 (defn static-chunktap
   [dataset]
@@ -19,9 +22,12 @@
 (def *gadm-path* "s3n://redddata/gadm/1000-00/*/*/")
 (def *ecoid-path* "s3n://redddata/ecoid/1000-00/*/*/")
 (def *convert-path* "s3n://modisfiles/ascii/admin-map.csv")
+(def *ndvi-path* "s3n://redddata/ndvi/1000-32/*/*/")
+(def *rain-path* "s3n://redddata/precl/1000-32/*/*/")
+(def *fire-path* "s3n://redddata/fire/1000-01/*/")
 
 (gen-class :name forma.hadoop.jobs.GetStatic
-           :prefix "get-static")
+           :prefix "get-static-")
 
 (defn get-static-main [out-path]
   (let [converter (forma/line->nums (hfs-textline *convert-path*))
@@ -52,12 +58,7 @@
    :window 5})
 
 (gen-class :name forma.hadoop.jobs.RunForma
-           :prefix "run-forma")
-
-;; Hardcoded in, for the big run.
-(def *ndvi-path* "s3n://redddata/ndvi/1000-32/*/*/")
-(def *rain-path* "s3n://redddata/precl/1000-32/*/*/")
-(def *fire-path* "s3n://redddata/fire/1000-01/*/")
+           :prefix "run-forma-")
 
 (defn forma-textline
   [path pathstr]
@@ -72,11 +73,56 @@
 
 (defn run-forma-main
   [out-path]
-  (let [vcf-src     (static-chunktap "vcf")
+  (let [
         [ndvi-src rain-src] (map tseries/tseries-query
                                  [*ndvi-path* *rain-path*])
         country-src (forma/country-tap (hfs-seqfile *gadm-path*)
                                        (hfs-textline *convert-path*))
+        vcf-src  (static-chunktap "vcf")
         fire-src (fire/fire-query "32" "2000-11-01" "2011-04-01" *fire-path*)]
     (?- (forma-textline out-path "%s-%s/%s/%s/")
         (forma/forma-query forma-map ndvi-src rain-src vcf-src country-src fire-src))))
+
+;; ## Fires Processing
+
+(gen-class :name forma.hadoop.jobs.ProcessFires
+           :prefix "process-fires-")
+
+(defn process-fires-main
+  "Path for running FORMA fires processing. See the forma-clj wiki for
+more details."
+  [type path out-dir]
+  (?- (io/chunk-tap out-dir "%s/%s-%s/")
+      (->> (case type
+                 "daily" (fire/fire-source-daily     (hfs-textline path))
+                 "monthly" (fire/fire-source-monthly (hfs-textline path)))
+           (fire/reproject-fires "1000"))))
+
+;; ## Rain Processing, for Dan
+
+(gen-class :name forma.hadoop.jobs.ProcessRain
+           :prefix "process-rain-")
+
+(defn rain-tap
+  "TODO: Very similar to extract-tseries. Consolidate."
+  [rain-src]
+  (<- [?mod-h ?mod-v ?sample ?line ?date ?val]
+      (rain-src _ ?s-res _ ?tilestring ?date ?chunkid ?chunk)
+      (io/count-vals ?chunk :> ?chunk-size)
+      (p/struct-index 0 ?chunk :> ?pix-idx ?val)
+      (m/tilestring->hv ?tilestring :> ?mod-h ?mod-v)
+      (m/tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line)))
+
+(defn run-rain
+  [gadm-src rain-src]
+  (let [gadm-src (static-tap gadm-src)
+        rain-src (rain-tap rain-src)]
+    (<- [?gadm ?date ?avg-rain]
+        (gadm-src _ ?mod-h ?mod-v ?sample ?line ?gadm)
+        (rain-src ?mod-h ?mod-v ?sample ?line ?date ?rain)
+        (c/avg ?rain :> ?avg-rain))))
+
+(defn process-rain-main [path]
+  (?- (hfs-textline path)
+      (run-rain (hfs-seqfile *gadm-path*)
+                (hfs-seqfile *rain-path*))))

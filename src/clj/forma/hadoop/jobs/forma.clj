@@ -93,7 +93,7 @@
   (<- [?country ?admin]
       (convert-src ?line)
       (p/mangle #"," ?line :> ?country-s ?admin-s)
-      (utils/integerize ?country-s ?admin-s :> ?country ?admin)))
+      (utils/strings->ints ?country-s ?admin-s :> ?country ?admin)))
 
 (defn country-tap
   "TODO: Very similar to extract-tseries, and almost identical to

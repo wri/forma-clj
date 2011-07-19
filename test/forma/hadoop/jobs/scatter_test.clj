@@ -1,8 +1,10 @@
-(ns forma.hadoop.jobs.process-rain-test
+(ns forma.hadoop.jobs.scatter-test
   (:use cascalog.api
-        forma.hadoop.jobs.process-rain
+        forma.hadoop.jobs.scatter
         [midje sweet cascalog])
   (require [forma.source.static :as static]))
+
+;; Rain Testing
 
 (def test-gadm [["1000" 1 1 1 1 5]
                 ["1000" 1 1 1 2 5]
