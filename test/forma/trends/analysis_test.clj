@@ -1,8 +1,8 @@
 (ns forma.trends.analysis-test
   (:use [forma.trends.analysis] :reload)
-  (:use midje.sweet)
-  (:use [forma.presentation.ndvi-filter :only (ndvi reli rain)])
-  (:use [forma.trends.filter :only (deseasonalize)])
+  (:use midje.sweet
+        [forma.presentation.ndvi-filter :only (ndvi reli rain)]
+        [forma.trends.filter :only (deseasonalize)])
   (:require [incanter.core :as i]
             [incanter.stats :as s]))
 
@@ -18,5 +18,5 @@
   "check that short-term trend output is the correct shape for the estimation months"
   (let [start 75
         end 131
-        final-count (inc (- 131 75))]
+        final-count (inc (- end start))]
     (count (collect-short-trend start end 15 5 ndvi (vec reli))) => final-count))
