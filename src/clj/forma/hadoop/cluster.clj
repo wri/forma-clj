@@ -74,27 +74,35 @@
                    :slaves     (slave-group nodecount)
                    }
                   :base-machine-spec {
-                                      ;; :hardware-id "m1.large"
-                                      :hardware-id "m2.4xlarge"
+                                      :hardware-id "m1.large"
+                                      ;; :hardware-id "m2.4xlarge"
                                       :image-id "us-east-1/ami-08f40561"
-                                      :spot-price (float 1.20)
+                                      :spot-price (float 0.75)
                                       }
                   :base-props {:hadoop-env {:JAVA_LIBRARY_PATH native-path
                                             :LD_LIBRARY_PATH lib-path}
                                :hdfs-site {:dfs.data.dir "/mnt/dfs/data"
-                                           :dfs.name.dir "/mnt/dfs/name"}
+                                           :dfs.name.dir "/mnt/dfs/name"
+                                           :dfs.datanode.max.xcievers 5096}
                                :core-site {:io.serializations serializers
                                            :cascading.serialization.tokens tokens
-                                           :fs.s3n.awsAccessKeyId "AKIAJ56QWQ45GBJELGQA"
-                                           :fs.s3n.awsSecretAccessKey "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"}
+                                           :fs.s3n.awsAccessKeyId
+                                           "AKIAJ56QWQ45GBJELGQA"
+                                           :fs.s3n.awsSecretAccessKey
+                                           "6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV"}
                                :mapred-site {:mapred.local.dir "/mnt/hadoop/mapred/local"
-                                             :mapred.task.timeout 10000000
-                                             :mapred.compress.map.output true
-                                             :mapred.reduce.tasks (int (* 1.2 30 nodecount))
-                                             :mapred.tasktracker.map.tasks.maximum 30
-                                             :mapred.tasktracker.reduce.tasks.maximum 30
-                                             :mapred.child.java.opts (str "-Djava.library.path=" native-path " -Xms1024m -Xmx1024m")
-                                             :mapred.child.env (str "LD_LIBRARY_PATH=" lib-path)}})))
+                                             :mapred.task.timeout 1000000
+                                             ;; :mapred.reduce.tasks (int (* 1.2 22 nodecount))
+                                             :mapred.tasktracker.map.tasks.maximum 4
+                                             :mapred.tasktracker.reduce.tasks.maximum 2
+                                             :mapred.reduce.max.attempts 12
+                                             :mapred.map.max.attempts 20
+                                             :mapred.map.tasks.speculative.execution false
+                                             :mapred.child.java.opts (str "-Djava.library.path="
+                                                                          native-path
+                                                                          " -Xms1024m -Xmx1024m")
+                                             :mapred.child.env (str "LD_LIBRARY_PATH="
+                                                                    lib-path)}})))
 
 (defn create-cluster
   [node-count]

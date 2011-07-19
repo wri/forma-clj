@@ -1,16 +1,13 @@
-(ns forma.hadoop.jobs.run-forma
+(ns forma.hadoop.jobs.forma
   (:use cascalog.api
-        [forma.source.tilesets :only (tile-set)])
-  (:require [forma.matrix.walk :as w]
+        [forma.source.static :only (static-tap)])
+  (:require [forma.utils :as utils]
+            [forma.matrix.walk :as w]
             [forma.date-time :as date]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
-            [forma.hadoop.jobs.load-tseries :as tseries]
             [forma.trends.analysis :as a]
-            [forma.source.modis :as modis]
-            [forma.source.fire :as fire]
-            [forma.source.static :as static])
-  (:gen-class))
+            [forma.source.modis :as modis]))
 
 (defn short-trend-shell
   "a wrapper to collect the short-term trends into a form that can be
@@ -47,7 +44,7 @@
   filtering out all pixels with VCF less than the supplied
   `vcf-limit`."
   [vcf-limit ndvi-src rain-src vcf-src]
-  (let [vcf-pixels (static/static-tap vcf-src)]
+  (let [vcf-pixels (static-tap vcf-src)]
     (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi-series ?precl-series]
         (ndvi-src _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?n-start _ ?n-series)
         (rain-src _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?r-start _ ?r-series)
@@ -82,7 +79,6 @@
 
 ;; Processes all neighbors... Returns the index within the chunk, the
 ;; value, and the aggregate of the neighbors.
-
 (defmapcatop [process-neighbors [num-neighbors]]
   [window]
   (->> (for [[val neighbors] (w/neighbor-scan num-neighbors window)
@@ -93,15 +89,11 @@
                    (io/combine-neighbors))])
        (map-indexed cons)))
 
-
-(defn integerize [& strings]
-  (map #(Integer. %) strings))
-
 (defn line->nums [convert-src]
   (<- [?country ?admin]
       (convert-src ?line)
       (p/mangle #"," ?line :> ?country-s ?admin-s)
-      (integerize ?country-s ?admin-s :> ?country ?admin)))
+      (utils/strings->ints ?country-s ?admin-s :> ?country ?admin)))
 
 (defn country-tap
   "TODO: Very similar to extract-tseries, and almost identical to
@@ -130,82 +122,3 @@
         (process-neighbors [neighbors] ?window :> ?win-idx ?val ?neighbor-vals)
         (modis/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)
         (io/textify ?mod-h ?mod-v ?sample ?line ?val ?neighbor-vals :> ?text))))
-
-(defn forma-textline
-  [path pathstr]
-  (hfs-textline path
-                :pattern pathstr
-                :outfields ["?text"]
-                :templatefields ["?s-res" "?t-res" "?country" "?datestring"]
-                :sinkparts 3))
-
-;; Hardcoded in, for the big run.
-(def *ndvi-path* "s3n://redddata/ndvi/1000-32/*/*/")
-(def *rain-path* "s3n://redddata/precl/1000-32/*/*/")
-(def *fire-path* "s3n://redddata/fire/1000-01/*/")
-
-(defn static-chunktap [dataset]
-  (io/chunk-tap "s3n://redddata/"
-                "vcf"
-                "1000-00"
-                (for [[th tv] (vec (tile-set :IDN :MYS))]
-                  (format "%03d%03d" th tv))))
-
-(def *vcf-tap* (static-chunktap "vcf"))
-(def *hansen-tap* (static-chunktap "hansen"))
-
-(def *gadm-path* "s3n://redddata/gadm/1000-00/*/*/")
-(def *ecoid-path* "s3n://redddata/ecoid/1000-00/*/*/")
-(def *convert-path* "s3n://modisfiles/ascii/admin-map.csv")
-
-(def forma-map
-  {:est-start "2005-12-01"
-   :est-end "2011-04-01"
-   :t-res "32"
-   :neighbors 1
-   :window-dims [600 600]
-   :vcf-limit 25
-   :long-block 15
-   :window 5})
-
-;; TODO: Rewrite this, so that we only need to give it a sequence of
-;; countries (or tiles), and it'll generate the rest.
-
-;; TODO: Outputting to this doesn't help. We need to do a separate job
-;; with one reducer.
-
-;; (forma-textline out-path "%s-%s/%s/%s/")
-
-(defn get-static-stuff []
-  (let [converter (line->nums (hfs-textline *convert-path*))
-        [vcf hansen ecoid gadm] (map static/static-tap
-                                     [*vcf-tap*
-                                      *hansen-tap*
-                                      (hfs-seqfile *ecoid-path*)
-                                      (hfs-seqfile *gadm-path*)])]
-    (?<- (hfs-textline "s3n://formares/statics/" :sinkparts 3)
-         [?country ?mod-h ?mod-v ?sample ?line ?hansen ?ecoid ?vcf ?gadm]
-         (vcf _ ?mod-h ?mod-v ?sample ?line ?vcf)
-         (hansen _ ?mod-h ?mod-v ?sample ?line ?hansen)
-         (ecoid _ ?mod-h ?mod-v ?sample ?line ?ecoid)
-         (gadm _ ?mod-h ?mod-v ?sample ?line ?gadm)
-         (converter ?country ?gadm)
-         (>= ?vcf 25))))
-
-(defn chunk-forma []
-  (let [src (hfs-seqfile "s3n://formares/results/")]
-    (?<- (forma-textline "s3n://formares/stata/" "%s-%s/%s/%s/")
-         [?s-res ?t-res ?country ?datestring ?text]
-         (src ?s-res ?t-res ?country ?datestring ?text))))
-
-(defn -main
-  ([] (get-static-stuff))
-  ([out-path]
-     (let [ndvi-src (tseries/tseries-query *ndvi-path*)
-           rain-src (tseries/tseries-query *rain-path*)
-           vcf-src *vcf-tap*
-           country-src (country-tap (hfs-seqfile *gadm-path*)
-                                    (hfs-textline *convert-path*))
-           fire-src (fire/fire-query "32" "2000-11-01" "2011-04-01" *fire-path*)]
-       (?- (hfs-seqfile out-path)
-           (forma-query forma-map ndvi-src rain-src vcf-src country-src fire-src)))))

@@ -47,8 +47,10 @@ struct ModisPixelLocation {
 
 struct ModisChunkLocation {
   1: string resolution;
-  2: i32 chunkID;
-  3: i32 chunkSize;
+  2: i32 tileH;
+  3: i32 tileV;
+  4: i32 chunkID;
+  5: i32 chunkSize;
 }
 
 union LocationPropertyValue {

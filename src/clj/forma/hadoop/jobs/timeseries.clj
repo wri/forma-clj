@@ -1,13 +1,12 @@
-(ns forma.hadoop.jobs.load-tseries
+(ns forma.hadoop.jobs.timeseries
   (:use cascalog.api
         [forma.matrix.utils :only (sparse-expander)]
         [forma.date-time :only (datetime->period)]
-        [forma.matrix.walk :only (walk-matrix)]
-        [forma.hadoop.predicate :only (sparse-windower)]
-        [forma.source.modis :only (tile-position
-                                   tilestring->hv)])
-  (:require [forma.hadoop.io :as io])
-  (:gen-class))
+        [forma.matrix.walk :only (walk-matrix)])
+  (:require [forma.utils :as utils]
+            [forma.source.modis :as m]
+            [forma.hadoop.io :as io]
+            [forma.hadoop.predicate :as p]))
 
 (defbufferop [timeseries [missing-val]]
   "Takes in a number of `<t-period, modis-chunk>` tuples,
@@ -60,21 +59,23 @@
   (<- [?dataset ?s-res ?t-res ?tile-h ?tile-v ?sample ?line ?t-start ?t-end ?tseries]
       (tseries-source ?dataset ?s-res ?t-res ?tilestring
                       ?chunk-size ?chunkid ?pix-idx ?t-start ?t-end ?tseries)
-      (tilestring->hv ?tilestring :> ?tile-h ?tile-v)
-      (tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line)))
+      (m/tilestring->hv ?tilestring :> ?tile-h ?tile-v)
+      (m/tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line)))
+
+(gen-class :name forma.hadoop.jobs.DynamicTimeseries
+           :prefix "dynamic-timeseries-")
 
 (def *missing-val* -9999)
 
-;; TODO: Process a pattern, here, as below. Can we grab rain and ndvi
-;; timeseries at the same time?
-
-(defn tseries-query
-  [in-path]
+(defn tseries-query [in-path]
   (-> (hfs-seqfile in-path)
       (extract-tseries *missing-val*)
       process-tseries))
 
-(defn -main
+;; TODO: Process a pattern, here, as below. Can we grab rain and ndvi
+;; timeseries at the same time?
+
+(defn dynamic-timeseries-main
   [in-path output-path]
   (?- (hfs-seqfile output-path)
       (tseries-query in-path)))
@@ -97,3 +98,57 @@
 ;;         (-> chunk-source
 ;;             extract-tseries
 ;;             process-tseries))))
+
+;; #### Fire Time Series Processing
+
+(defaggregateop merge-firetuples
+  " Aggregates a number of firetuples by adding up the values
+  of each `FireTuple` property."
+  ([] [0 0 0 0])
+  ([state tuple] (map + state (io/extract-fields tuple)))
+  ([state] [(apply io/fire-tuple state)]))
+
+;; Special case of `running-sum` for `FireTuple` thrift objects.
+(defmapop running-fire-sum
+  [tseries]
+  (let [empty (io/fire-tuple 0 0 0 0)]
+    (->> tseries
+         (utils/running-sum [] empty io/add-fires)
+         io/fire-series)))
+
+(defn aggregate-fires
+  "Converts the datestring into a time period based on the supplied
+  temporal resolution."
+  [t-res src]
+  (<- [?dataset ?m-res ?new-t-res ?tilestring ?tperiod ?sample ?line ?newtuple]
+      (p/add-fields t-res :> ?new-t-res)
+      (src ?dataset ?m-res ?t-res ?tilestring ?datestring ?sample ?line ?tuple)
+      (datetime->period ?new-t-res ?datestring :> ?tperiod)
+      (merge-firetuples ?tuple :> ?newtuple)))
+
+(defn fire-series
+  "Aggregates fires into timeseries."
+  [t-res start end src]
+  (let [[start end] (map (partial datetime->period t-res) [start end])
+        length (-> end (- start) inc)
+        mk-fire-tseries (p/vals->sparsevec start length (io/fire-tuple 0 0 0 0))]
+    (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?t-start ?t-end ?ct-series]
+        (src ?dataset ?m-res ?t-res ?tilestring ?tperiod ?sample ?line ?tuple)
+        (m/tilestring->hv ?tilestring :> ?mod-h ?mod-v)
+        (mk-fire-tseries ?tperiod ?tuple :> _ ?tseries)
+        (p/add-fields start end :> ?t-start ?t-end)
+        (running-fire-sum ?tseries :> ?ct-series))))
+
+(gen-class :name forma.hadoop.jobs.FireTimeseries
+           :prefix "fire-timeseries-")
+
+(defn fire-query
+  [t-res start end chunk-path]
+  (->> (hfs-seqfile chunk-path)
+       (aggregate-fires t-res)
+       (fire-series t-res start end)))
+
+(defn fire-timeseries-main
+  [t-res start end chunk-path tseries-path]
+  (?- (hfs-seqfile tseries-path)
+      (fire-query t-res start end chunk-path)))

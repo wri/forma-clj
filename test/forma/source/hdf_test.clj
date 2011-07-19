@@ -88,9 +88,9 @@ error."
   (tileid->res "54003011") => "250")
 
 (fact "split-id tests."
-  (split-id "51003011") => ["1000" "003011"]
-  (split-id "52010010") => ["500" "010010"]
-  (split-id "54028027") => ["250" "028027"])
+  (split-id "51003011") => ["1000" 3 11]
+  (split-id "52010010") => ["500" 10 10]
+  (split-id "54029009") => ["250" 29 9])
 
 (fact "t-res cascalog shell test. (Really, this could go in
 forma.source.modis, with `temporal-res`.)"
@@ -106,5 +106,5 @@ and total chunks becomes off."
   (let [subquery (->> (io/hfs-wholefile hdf-path)
                       (modis-chunks [:ndvi] 24000))]
     (fact?<- [[60]] [?count]
-             (subquery ?dataset ?s-res ?t-res ?tstring ?date ?chunkid ?chunk)
+             (subquery ?datachunk)
              (c/count ?count))))

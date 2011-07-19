@@ -16,7 +16,8 @@
            [forma.schema DoubleArray IntArray
             FireTuple FireSeries FormaValue FormaSeries
             FormaNeighborValue DataChunk LocationProperty
-            LocationPropertyValue ModisPixelLocation DataValue]
+            LocationPropertyValue DataValue
+            ModisPixelLocation ModisChunkLocation]
            [java.util ArrayList]
            [cascading.tuple Fields]
            [cascading.scheme Scheme]
@@ -189,23 +190,23 @@
   `chunk-tap`source makes use of Cascading's
   [TemplateTap](http://goo.gl/txP2a).
 
-  The sink makes use of `hfs-seqfile`'s `:pattern` argument to draw
-  tuples back out of the directory structure using a globstring
+  The sink makes use of `hfs-seqfile`'s `:source-pattern` argument to
+  draw tuples back out of the directory structure using a globstring
   constructed out of the supplied basepath and collections of
   datasets, resolutions, tiles and specific data runs, identified by
   jobtag."
   ([out-dir]
      (chunk-tap out-dir "%s/%s-%s/%s/"))
   ([out-dir pattern]
-     (hfs-seqfile out-dir :pattern (str pattern (date/jobtag) "/")))
+     (hfs-seqfile out-dir :sink-template (str pattern (date/jobtag) "/")))
   ([basepath datasets resolutions]
      (chunk-tap basepath datasets resolutions * *))
   ([basepath datasets resolutions tiles]
      (chunk-tap basepath datasets resolutions tiles *))
   ([basepath datasets resolutions tiles batches]
-     (hfs-seqfile basepath :pattern (globstring datasets
-                                                resolutions
-                                                tiles batches *))))
+     (hfs-seqfile basepath :source-pattern (globstring datasets
+                                                       resolutions
+                                                       tiles batches *))))
 
 ;; ## BytesWritable Interaction
 ;;
@@ -485,17 +486,40 @@ together each entry in the supplied sequence of `FormaValue`s."
 (defn mk-data-value
   [val type]
   (case type
-        :int-struct    (DataValue/ints (int-struct val))
+        :int-struct    (DataValue/ints val)
         :int           (DataValue/intVal val)
-        :double-struct (DataValue/doubles (double-struct val))
+        :double-struct (DataValue/doubles val)
         :double        (DataValue/doubleVal val)))
 
+(defn chunk-location
+  [s-res mod-h mod-v idx size]
+  (->> (ModisChunkLocation. s-res mod-h mod-v idx size)
+       LocationPropertyValue/chunkLocation
+       LocationProperty.))
+
+(defn pixel-location
+  [s-res mh mv sample line]
+  (->> (ModisPixelLocation. s-res mh mv sample line)
+       LocationPropertyValue/pixelLocation
+       LocationProperty.))
+
 (defn mk-chunk
-  [dataset t-res date s-res mh mv sample line data-value]
-  (doto (DataChunk. dataset
-                    (->> (ModisPixelLocation. s-res mh mv sample line)
-                         LocationPropertyValue/pixelLocation
-                         LocationProperty.)
-                    data-value
-                    t-res)
-    (.setDate date)))
+  [dataset t-res date location-prop data-value]
+  (let [chunk (DataChunk. dataset
+                          location-prop
+                          data-value
+                          t-res)]
+    (if date
+      (doto chunk (.setDate date))
+      chunk)))
+
+(defmapop [data-val [type]]
+  "Generates chunk data values."
+  [val]
+  (mk-data-value val type))
+
+(defn chunkify [chunk-size type]
+  (<- [?dataset !date ?s-res ?t-res ?mh ?mv ?chunkid ?chunk :> ?datachunk]
+      (chunk-location ?s-res ?mh ?mv ?chunkid chunk-size :> ?location)
+      (data-val [type] ?chunk :> ?data-val)
+      (mk-chunk ?dataset ?t-res !date ?location ?data-val :> ?datachunk)))

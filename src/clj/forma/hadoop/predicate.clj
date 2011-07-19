@@ -42,7 +42,7 @@ I recommend wrapping queries that use this tap with
            ...)))"
   [tmp-path lazy-seq]
   {:pre [(coll? (first lazy-seq))]}
-  (let [tap (hfs-seqfile tmp-path)
+  (let [tap (:sink (hfs-seqfile tmp-path))
         n-fields (count (first lazy-seq))]
     (with-open [collector (.openForWrite tap (JobConf.))]
       (doseq [item lazy-seq]
@@ -56,7 +56,7 @@ I recommend wrapping queries that use this tap with
   located at `tmp-dir`. See `forma.hadoop.predicate/lazy-generator`
   for usage advice."
   [tmp-path res tileseq]
-  (let [tap (hfs-seqfile tmp-path)]
+  (let [tap (:sink (hfs-seqfile tmp-path))]
     (with-open [collector (.openForWrite tap (JobConf.))]
       (doseq [[h v] tileseq
               s (range (pixels-at-res res))

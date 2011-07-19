@@ -13,12 +13,12 @@
 
 (ns forma.source.hdf
   (:use cascalog.api
-        [forma.hadoop.io :only (hash-str get-bytes to-struct)]
-        [forma.source.modis :only (temporal-res)]
+        [forma.source.modis :only (temporal-res tilestring->hv)]
         [cascalog.io :only (temp-dir)]
         [clojure.contrib.seq-utils :only (find-first indexed)])
   (:require [clojure.set :as set]
             [clojure.contrib.string :as s]
+            [forma.hadoop.io :as hadoop.io]
             [clojure.contrib.io :as contrib.io])
   (:import [org.gdal.gdal gdal Dataset Band]
            [org.gdal.gdalconst gdalconstConstants]))
@@ -155,8 +155,8 @@ as a 1-tuple."
   {:stateful true}
   ([] (temp-dir "hdf"))
   ([tdir stream]
-     (let [bytes (get-bytes stream)
-           temp-hdf (contrib.io/file tdir (hash-str stream))]
+     (let [bytes (hadoop.io/get-bytes stream)
+           temp-hdf (contrib.io/file tdir (hadoop.io/hash-str stream))]
        (do (contrib.io/copy bytes temp-hdf)
            (->> (subdataset-names temp-hdf)
                 (filter (dataset-filter to-keep))
@@ -183,7 +183,7 @@ as a 1-tuple."
     (.ReadRaster band 0 0 width height ret)
     (->> ret
          (partition chunk-size)
-         (map to-struct)
+         (map hadoop.io/to-struct)
          indexed)))
 
 ;; ### Metadata Parsing
@@ -233,8 +233,8 @@ of a MODIS TileID acts as a key to retrieve this data."
   the processed product uses a sinusoial projection."
   [tileid]
   {:pre [(= (first tileid) \5)]}
-  ((juxt tileid->res
-         #(subs % 2)) tileid))
+  (cons (tileid->res tileid)
+        (tilestring->hv (subs tileid 2))))
 
 (defn t-res
   "Returns the temporal resolution of the supplied MODIS short product
@@ -259,12 +259,14 @@ of a MODIS TileID acts as a key to retrieve this data."
   before running any sort of data analysis, as seqs require linear
   time for lookups."
   [datasets chunk-size source]
-  (let [keys ["SHORTNAME" "TileID" "RANGEBEGINNINGDATE"]]
-    (<- [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk]
+  (let [keys ["SHORTNAME" "TileID" "RANGEBEGINNINGDATE"]
+        chunkifier (hadoop.io/chunkify chunk-size :int-struct)]
+    (<- [?datachunk]
         (source ?filename ?hdf)
         (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
         (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk)
         (meta-values [keys] ?freetile :> ?productname ?tileid ?date)
-        (t-res ?productname :> ?temporal-res)
-        (split-id ?tileid :> ?spatial-res ?tilestring)
+        (t-res ?productname :> ?t-res)
+        (split-id ?tileid :> ?s-res ?mod-h ?mod-v)
+        (chunkifier ?dataset ?date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk)
         (:distinct false))))
