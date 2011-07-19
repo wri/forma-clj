@@ -1,11 +1,12 @@
 (ns forma.hadoop.jobs.scatter
   "Namespace for arbitrary queries."
   (:use cascalog.api
+        [forma.utils :only (defjob)]
+        [forma.hadoop.pail :only (?pail- split-chunk-tap)]
         [forma.source.tilesets :only (tile-set)]
         [forma.source.static :only (static-tap)])
   (:require [cascalog.ops :as c]
             [forma.hadoop.io :as io]
-            [forma.source.fire :as fire]
             [forma.source.modis :as m]
             [forma.hadoop.predicate :as p]
             [forma.hadoop.jobs.forma :as forma]
@@ -26,10 +27,7 @@
 (def *rain-path* "s3n://redddata/precl/1000-32/*/*/")
 (def *fire-path* "s3n://redddata/fire/1000-01/*/")
 
-(gen-class :name forma.hadoop.jobs.GetStatic
-           :prefix "get-static-")
-
-(defn get-static-main [out-path]
+(defjob GetStatic [out-path]
   (let [converter (forma/line->nums (hfs-textline *convert-path*))
         [vcf hansen ecoid gadm] (map static-tap
                                      [(static-chunktap "vcf")
@@ -57,9 +55,6 @@
    :long-block 15
    :window 5})
 
-(gen-class :name forma.hadoop.jobs.RunForma
-           :prefix "run-forma-")
-
 (defn forma-textline
   [path pathstr]
   (hfs-textline path
@@ -71,37 +66,20 @@
 ;; TODO: Rewrite this, so that we only need to give it a sequence of
 ;; countries (or tiles), and it'll generate the rest.
 
-(defn run-forma-main
+(defjob RunForma
   [out-path]
-  (let [
-        [ndvi-src rain-src] (map tseries/tseries-query
+  (let [[ndvi-src rain-src] (map tseries/tseries-query
                                  [*ndvi-path* *rain-path*])
         country-src (forma/country-tap (hfs-seqfile *gadm-path*)
                                        (hfs-textline *convert-path*))
         vcf-src  (static-chunktap "vcf")
-        fire-src (fire/fire-query "32" "2000-11-01" "2011-04-01" *fire-path*)]
+        fire-src (tseries/fire-query "32" "2000-11-01" "2011-04-01" *fire-path*)]
     (?- (forma-textline out-path "%s-%s/%s/%s/")
         (forma/forma-query forma-map ndvi-src rain-src vcf-src country-src fire-src))))
 
-;; ## Fires Processing
-
-(gen-class :name forma.hadoop.jobs.ProcessFires
-           :prefix "process-fires-")
-
-(defn process-fires-main
-  "Path for running FORMA fires processing. See the forma-clj wiki for
-more details."
-  [type path out-dir]
-  (?- (io/chunk-tap out-dir "%s/%s-%s/")
-      (->> (case type
-                 "daily" (fire/fire-source-daily     (hfs-textline path))
-                 "monthly" (fire/fire-source-monthly (hfs-textline path)))
-           (fire/reproject-fires "1000"))))
-
 ;; ## Rain Processing, for Dan
-
-(gen-class :name forma.hadoop.jobs.ProcessRain
-           :prefix "process-rain-")
+;;
+;; This can probably go into its own project.
 
 (defn rain-tap
   "TODO: Very similar to extract-tseries. Consolidate."
@@ -122,7 +100,24 @@ more details."
         (rain-src ?mod-h ?mod-v ?sample ?line ?date ?rain)
         (c/avg ?rain :> ?avg-rain))))
 
-(defn process-rain-main [path]
+(defjob ProcessRain
+  [path]
   (?- (hfs-textline path)
       (run-rain (hfs-seqfile *gadm-path*)
                 (hfs-seqfile *rain-path*))))
+
+;; this guy really exists only to transfer the old processed static
+;; chunks over to the new SplitDataChunkPailStructure.
+
+(defjob StaticPailer
+  [pattern]
+  (let [static-src (hfs-seqfile "s3n://redddata/"
+                                :source-pattern pattern)
+        chunkifier (io/chunkify 24000 :int-struct)]
+    (?pail- (split-chunk-tap "s3n://pailbucket/rawstore/")
+            (<- [?datachunk]
+                (static-src ?dataset ?s-res ?t-res ?tilestring ?chunkid ?chunk)
+                (p/add-fields nil :> !date)
+                (m/tilestring->hv ?tilestring :> ?mod-h ?mod-v)
+                (chunkifier ?dataset !date ?s-res ?t-res
+                            ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk)))))

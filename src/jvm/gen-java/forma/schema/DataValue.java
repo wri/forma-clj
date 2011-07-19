@@ -32,13 +32,15 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
   private static final TField INTS_FIELD_DESC = new TField("ints", TType.STRUCT, (short)2);
   private static final TField DOUBLE_VAL_FIELD_DESC = new TField("doubleVal", TType.DOUBLE, (short)3);
   private static final TField DOUBLES_FIELD_DESC = new TField("doubles", TType.STRUCT, (short)4);
+  private static final TField FIRE_VAL_FIELD_DESC = new TField("fireVal", TType.STRUCT, (short)5);
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements TFieldIdEnum {
     INT_VAL((short)1, "intVal"),
     INTS((short)2, "ints"),
     DOUBLE_VAL((short)3, "doubleVal"),
-    DOUBLES((short)4, "doubles");
+    DOUBLES((short)4, "doubles"),
+    FIRE_VAL((short)5, "fireVal");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -61,6 +63,8 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
           return DOUBLE_VAL;
         case 4: // DOUBLES
           return DOUBLES;
+        case 5: // FIRE_VAL
+          return FIRE_VAL;
         default:
           return null;
       }
@@ -111,6 +115,8 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
         new FieldValueMetaData(TType.DOUBLE)));
     tmpMap.put(_Fields.DOUBLES, new FieldMetaData("doubles", TFieldRequirementType.DEFAULT, 
         new StructMetaData(TType.STRUCT, DoubleArray.class)));
+    tmpMap.put(_Fields.FIRE_VAL, new FieldMetaData("fireVal", TFieldRequirementType.DEFAULT, 
+        new StructMetaData(TType.STRUCT, FireTuple.class)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     FieldMetaData.addStructMetaDataMap(DataValue.class, metaDataMap);
   }
@@ -154,6 +160,12 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
     return x;
   }
 
+  public static DataValue fireVal(FireTuple value) {
+    DataValue x = new DataValue();
+    x.setFireVal(value);
+    return x;
+  }
+
 
   @Override
   protected void checkType(_Fields setField, Object value) throws ClassCastException {
@@ -178,6 +190,11 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
           break;
         }
         throw new ClassCastException("Was expecting value of type DoubleArray for field 'doubles', but got " + value.getClass().getSimpleName());
+      case FIRE_VAL:
+        if (value instanceof FireTuple) {
+          break;
+        }
+        throw new ClassCastException("Was expecting value of type FireTuple for field 'fireVal', but got " + value.getClass().getSimpleName());
       default:
         throw new IllegalArgumentException("Unknown field id " + setField);
     }
@@ -226,6 +243,16 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
             TProtocolUtil.skip(iprot, field.type);
             return null;
           }
+        case FIRE_VAL:
+          if (field.type == FIRE_VAL_FIELD_DESC.type) {
+            FireTuple fireVal;
+            fireVal = new FireTuple();
+            fireVal.read(iprot);
+            return fireVal;
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+            return null;
+          }
         default:
           throw new IllegalStateException("setField wasn't null, but didn't match any of the case statements!");
       }
@@ -254,6 +281,10 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
         DoubleArray doubles = (DoubleArray)value_;
         doubles.write(oprot);
         return;
+      case FIRE_VAL:
+        FireTuple fireVal = (FireTuple)value_;
+        fireVal.write(oprot);
+        return;
       default:
         throw new IllegalStateException("Cannot write union with unknown field " + setField_);
     }
@@ -270,6 +301,8 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
         return DOUBLE_VAL_FIELD_DESC;
       case DOUBLES:
         return DOUBLES_FIELD_DESC;
+      case FIRE_VAL:
+        return FIRE_VAL_FIELD_DESC;
       default:
         throw new IllegalArgumentException("Unknown field id " + setField);
     }
@@ -341,6 +374,20 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
   public void setDoubles(DoubleArray value) {
     if (value == null) throw new NullPointerException();
     setField_ = _Fields.DOUBLES;
+    value_ = value;
+  }
+
+  public FireTuple getFireVal() {
+    if (getSetField() == _Fields.FIRE_VAL) {
+      return (FireTuple)getFieldValue();
+    } else {
+      throw new RuntimeException("Cannot get field 'fireVal' because union is currently set to " + getFieldDesc(getSetField()).name);
+    }
+  }
+
+  public void setFireVal(FireTuple value) {
+    if (value == null) throw new NullPointerException();
+    setField_ = _Fields.FIRE_VAL;
     value_ = value;
   }
 

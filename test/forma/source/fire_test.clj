@@ -11,21 +11,27 @@
 (def monthly-fires-path
   (t/dev-path "/testdata/FireMonthly/MCD14ML.200011.005.01.asc"))
 
+(defn fire-datachunk
+  [date mh mv sample line val]
+  (io/mk-chunk "fire" "01" date
+               (io/pixel-location "1000" mh mv sample line)
+               (io/mk-data-value val :fire)))
+
 (fact?- "Projecting fires into 1000m resolution."
-        [["fire" "1000" "01" "031011" "2011-03-15" 181 1087 (io/fire-tuple 1 1 1 1)]
-         ["fire" "1000" "01" "033009" "2011-03-15" 213 505  (io/fire-tuple 0 0 0 1)]
-         ["fire" "1000" "01" "031011" "2011-03-15" 282 997  (io/fire-tuple 0 1 0 1)]
-         ["fire" "1000" "01" "031011" "2011-03-15" 324 775  (io/fire-tuple 0 0 0 1)]
-         ["fire" "1000" "01" "030011" "2011-03-15" 492 931  (io/fire-tuple 0 1 0 1)]]
+        [[(fire-datachunk "2011-03-15" 31 11 181 1087 (io/fire-tuple 1 1 1 1))]
+         [(fire-datachunk "2011-03-15" 33 9  213 505  (io/fire-tuple 0 0 0 1))]
+         [(fire-datachunk "2011-03-15" 31 11 282 997  (io/fire-tuple 0 1 0 1))]
+         [(fire-datachunk "2011-03-15" 31 11 324 775  (io/fire-tuple 0 0 0 1))]
+         [(fire-datachunk "2011-03-15" 30 11 492 931  (io/fire-tuple 0 1 0 1))]]
         (->> (hfs-textline daily-fires-path)
              fire-source-daily
              (reproject-fires "1000"))
 
-        [["fire" "1000" "01" "032009" "2000-11-01" 759 715 (io/fire-tuple 0 1 0 1)]
-         ["fire" "1000" "01" "032009" "2000-11-01" 761 715 (io/fire-tuple 1 1 1 1)]
-         ["fire" "1000" "01" "033009" "2000-11-01" 902 940 (io/fire-tuple 0 0 0 1)]
-         ["fire" "1000" "01" "033009" "2000-11-01" 907 942 (io/fire-tuple 1 1 1 1)]
-         ["fire" "1000" "01" "033009" "2000-11-01" 908 947 (io/fire-tuple 0 0 0 1)]]
+        [[(fire-datachunk "2000-11-01" 32 9 759 715 (io/fire-tuple 0 1 0 1))]
+         [(fire-datachunk "2000-11-01" 32 9 761 715 (io/fire-tuple 1 1 1 1))]
+         [(fire-datachunk "2000-11-01" 33 9 902 940 (io/fire-tuple 0 0 0 1))]
+         [(fire-datachunk "2000-11-01" 33 9 907 942 (io/fire-tuple 1 1 1 1))]
+         [(fire-datachunk "2000-11-01" 33 9 908 947 (io/fire-tuple 0 0 0 1))]]
         (->> (hfs-textline monthly-fires-path)
              fire-source-monthly
              (reproject-fires "1000")))

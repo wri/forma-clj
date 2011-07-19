@@ -489,7 +489,8 @@ together each entry in the supplied sequence of `FormaValue`s."
         :int-struct    (DataValue/ints val)
         :int           (DataValue/intVal val)
         :double-struct (DataValue/doubles val)
-        :double        (DataValue/doubleVal val)))
+        :double        (DataValue/doubleVal val)
+        :fire          (DataValue/fireVal val)))
 
 (defn chunk-location
   [s-res mod-h mod-v idx size]

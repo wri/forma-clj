@@ -83,8 +83,10 @@
   "Aggregates fire data at the supplied path by modis pixel at the
   supplied resolution."
   [m-res src]
-  (<- [?dataset ?m-res ?t-res ?tilestring ?date ?sample ?line ?tuple]
+  (<- [?datachunk]
       (p/add-fields m-res :> ?m-res)
       (src ?dataset ?date ?t-res ?lat ?lon ?tuple)
-      (m/latlon->modis m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
-      (m/hv->tilestring ?mod-h ?mod-v :> ?tilestring)))
+      (m/latlon->modis ?m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
+      (io/pixel-location ?m-res ?mod-h ?mod-v ?sample ?line :> ?location)
+      (io/data-val [:fire] ?tuple :> ?data-val)
+      (io/mk-chunk ?dataset ?t-res ?date ?location ?data-val :> ?datachunk)))

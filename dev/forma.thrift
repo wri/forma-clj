@@ -34,7 +34,8 @@ union DataValue {
   1: i32 intVal
   2: IntArray ints
   3: double doubleVal
-  4: DoubleArray doubles  
+  4: DoubleArray doubles
+  5: FireTuple fireVal;
 }
 
 struct ModisPixelLocation {

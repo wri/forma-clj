@@ -1,7 +1,7 @@
 (ns forma.date-time-test
   (:use [forma.date-time] :reload)
   (:use midje.sweet
-        [clj-time.core :only (date-time month interval)]))
+        [clj-time.core :only (now date-time month interval)]))
 
 (facts "Date parsing and conversion tests."
   (parse "2011-06-23" :year-month-day) => (date-time 2011 6 23)
@@ -51,14 +51,11 @@ or supplied formats."
  (fact "16 and 8 day periods per year, and 1 month periods per year."
    (per-year ordinal ?length ?days-per)
    ?length ?days-per
-   16 23, 8 46, 1 12))
+   16      23
+   8       46
+   1       12))
 
 (fact (periodize "32" (date-time 2005 12 04)) => 431)
-
-(facts "Beginning tests!"
-  (beginning "16" "2005-12-31") => "2005-12-19"
-  (beginning "32" "2005-12-31") => "2005-12-01"
-  (beginning "32" "2011-06-23T22" :date-hour) => "2011-06-01T00")
 
 (tabular
  (facts "Date conversion, forward and backward, in various temporal
@@ -74,6 +71,23 @@ or supplied formats."
  "16" "2003-12-31" 781
  "8"  "2003-04-12" 1530
  "8"  "2003-12-31" 1563)
+
+(facts "Beginning tests!"
+  (beginning "16" "2005-12-31") => "2005-12-19"
+  (beginning "32" "2005-12-31") => "2005-12-01"
+  (beginning "32" "2011-06-23T22" :date-hour) => "2011-06-01T00")
+
+(facts "current-period tests."
+  (jobtag) => "20020101T000000Z"
+  (provided
+    (now) => (date-time 2002))
+
+  (jobtag) => "20051201T131009Z"
+  (current-period "32") => 431
+  (current-period "16") => 825
+
+  (against-background
+    (now) => (date-time 2005 12 01 13 10 9 128)))
 
 (fact "Relative period test."
   (relative-period "32" 391 ["2005-02-01" "2005-03-01"]) => [30 31])

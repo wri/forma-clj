@@ -67,7 +67,9 @@
   pick that reduce capacity based on the recommended 1.2 times the
   number of tasks times number of nodes"
   [nodecount]
-  (let [lib-path (str fw-path "/usr/lib")]
+  (let [lib-path (str fw-path "/usr/lib")
+        mappers 4
+        reducers 2]
     (cluster-spec :private
                   {
                    :jobtracker (node-group [:jobtracker :namenode])
@@ -86,18 +88,17 @@
                                            :dfs.datanode.max.xcievers 5096}
                                :core-site {:io.serializations serializers
                                            :cascading.serialization.tokens tokens
-                                           :fs.s3n.awsAccessKeyId
-                                           "AKIAJ56QWQ45GBJELGQA"
-                                           :fs.s3n.awsSecretAccessKey
-                                           "6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV"}
+                                           :fs.s3n.awsAccessKeyId "AKIAJ56QWQ45GBJELGQA"
+                                           :fs.s3n.awsSecretAccessKey "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"}
                                :mapred-site {:mapred.local.dir "/mnt/hadoop/mapred/local"
                                              :mapred.task.timeout 1000000
-                                             ;; :mapred.reduce.tasks (int (* 1.2 22 nodecount))
-                                             :mapred.tasktracker.map.tasks.maximum 4
-                                             :mapred.tasktracker.reduce.tasks.maximum 2
+                                             :mapred.reduce.tasks (int (* reducers nodecount))
+                                             :mapred.tasktracker.map.tasks.maximum mappers
+                                             :mapred.tasktracker.reduce.tasks.maximum reducers
                                              :mapred.reduce.max.attempts 12
                                              :mapred.map.max.attempts 20
                                              :mapred.map.tasks.speculative.execution false
+                                             :mapred.reduce.tasks.speculative.execution false
                                              :mapred.child.java.opts (str "-Djava.library.path="
                                                                           native-path
                                                                           " -Xms1024m -Xmx1024m")

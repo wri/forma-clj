@@ -1,5 +1,6 @@
 (ns forma.hadoop.jobs.timeseries
   (:use cascalog.api
+        [forma.utils :only (defjob)]
         [forma.matrix.utils :only (sparse-expander)]
         [forma.date-time :only (datetime->period)]
         [forma.matrix.walk :only (walk-matrix)])
@@ -62,9 +63,6 @@
       (m/tilestring->hv ?tilestring :> ?tile-h ?tile-v)
       (m/tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line)))
 
-(gen-class :name forma.hadoop.jobs.DynamicTimeseries
-           :prefix "dynamic-timeseries-")
-
 (def *missing-val* -9999)
 
 (defn tseries-query [in-path]
@@ -75,7 +73,7 @@
 ;; TODO: Process a pattern, here, as below. Can we grab rain and ndvi
 ;; timeseries at the same time?
 
-(defn dynamic-timeseries-main
+(defjob DynamicTimeseries
   [in-path output-path]
   (?- (hfs-seqfile output-path)
       (tseries-query in-path)))
@@ -139,16 +137,13 @@
         (p/add-fields start end :> ?t-start ?t-end)
         (running-fire-sum ?tseries :> ?ct-series))))
 
-(gen-class :name forma.hadoop.jobs.FireTimeseries
-           :prefix "fire-timeseries-")
-
 (defn fire-query
   [t-res start end chunk-path]
   (->> (hfs-seqfile chunk-path)
        (aggregate-fires t-res)
        (fire-series t-res start end)))
 
-(defn fire-timeseries-main
+(defjob FireTimeseries
   [t-res start end chunk-path tseries-path]
   (?- (hfs-seqfile tseries-path)
       (fire-query t-res start end chunk-path)))

@@ -230,7 +230,7 @@
 
 
 (defn lengthening-mat
-" for a matrix of any dimension (including a vector), create a list
+  "for a matrix of any dimension (including a vector), create a list
   of matrices with rows from the start index through the end of the
   matrix.
 
@@ -238,8 +238,7 @@
 
   (def A (i/matrix [1 2 3 4 5 6 7 8 9] 3))
   (map i/diag (lengthening-mat 0 A))
-  => ((1.0) (1.0 5.0) (1.0 5.0 9.0))
-"
+  => ((1.0) (1.0 5.0) (1.0 5.0 9.0))"
   [start-index coll]
   (let [mat (if (i/matrix? coll) coll (i/matrix coll))]
     (for [i (range start-index (i/nrow mat))]

@@ -3,6 +3,20 @@
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]))
 
+(defmacro defjob
+  "Defines an AOT-compiled function with the supplied
+  `name`. Containing namespace must be marked for AOT compilation to
+  have any effect."
+  [name & forms]
+  (let [classname (str *ns* "." name)
+        sym (with-meta
+              (symbol (str name "-main"))
+              (meta name))]
+    `(do (gen-class :name ~classname
+                    :main true
+                    :prefix ~(str name "-"))
+         (defn ~sym ~@forms))))
+
 (defn strings->ints
   "Accepts any number of string representations of integers, and
   returns the corresponding sequence of ints."
