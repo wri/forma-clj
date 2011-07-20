@@ -35,12 +35,13 @@
                                       (static-chunktap "hansen")
                                       (hfs-seqfile *ecoid-path*)
                                       (hfs-seqfile *gadm-path*)])]
-    (?<- (hfs-textline out-path :sinkparts 3)
-         [?country ?mod-h ?mod-v ?sample ?line ?hansen ?ecoid ?vcf ?gadm]
+    (?<- (hfs-textline out-path :sinkparts 3 :sink-template "%s/")
+         [?country ?lat ?lon ?mod-h ?mod-v ?sample ?line ?hansen ?ecoid ?vcf ?gadm]
          (vcf _ ?mod-h ?mod-v ?sample ?line ?vcf)
          (hansen _ ?mod-h ?mod-v ?sample ?line ?hansen)
          (ecoid _ ?mod-h ?mod-v ?sample ?line ?ecoid)
          (gadm _ ?mod-h ?mod-v ?sample ?line ?gadm)
+         (m/modis->latlon ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
          (converter ?country ?gadm)
          (>= ?vcf 25))))
 
