@@ -2,9 +2,9 @@
   (:use cascalog.api
         [forma.utils :only (defjob)]
         [forma.matrix.utils :only (sparse-expander)]
-        [forma.date-time :only (datetime->period)]
-        [forma.matrix.walk :only (walk-matrix)])
-  (:require [forma.utils :as utils]
+        [forma.date-time :only (datetime->period)])
+  (:require [forma.hadoop.pail :as pail]
+            [forma.utils :as utils]
             [forma.source.modis :as m]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]))
@@ -45,57 +45,37 @@
       (timeseries [missing-val] ?tperiod ?chunk :> ?pix-idx ?t-start ?t-end ?tseries)))
 
 (defn extract-tseries
+  "Given a source of chunks, this subquery extracts the proper
+  position information and outputs new datachunks containing
+  timeseries."
   [chunk-source missing-val]
-  (let [mk-tseries (form-tseries missing-val)]
-    (<- [?dataset ?s-res ?t-res ?tilestring ?chunk-size
-         ?chunkid ?pix-idx ?t-start ?t-end ?tseries]
-        (chunk-source ?dataset ?s-res ?t-res ?tilestring ?date ?chunkid ?chunk)
-        (io/count-vals ?chunk :> ?chunk-size)
-        (mk-tseries ?t-res ?date ?chunk :> ?pix-idx ?t-start ?t-end ?tseries))))
-
-(defn process-tseries
-  "Given a source of timeseries, this subquery extracts the proper
-  position information and outputs the timeseries tagged well."
-  [tseries-source]
-  (<- [?dataset ?s-res ?t-res ?tile-h ?tile-v ?sample ?line ?t-start ?t-end ?tseries]
-      (tseries-source ?dataset ?s-res ?t-res ?tilestring
-                      ?chunk-size ?chunkid ?pix-idx ?t-start ?t-end ?tseries)
-      (m/tilestring->hv ?tilestring :> ?tile-h ?tile-v)
-      (m/tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line)))
+  (let [mk-tseries (form-tseries missing-val)
+        series-src (<- [?name ?location ?pix-idx ?series-struct]
+                       (chunk-source _ ?chunk)
+                       (io/extract-location ?chunk :> ?location)
+                       (io/extract-timeseries-data ?chunk :> ?name ?t-res ?date ?datachunk)
+                       (mk-tseries ?t-res ?date ?datachunk :> ?pix-idx ?start ?end ?tseries)
+                       (io/array-val [:int-struct] ?tseries :> ?series-val)
+                       (io/timeseries-value ?start ?end ?series-val :> ?series-struct))]
+    (<- [?final-chunk]
+        (chunk-source _ ?chunk)
+        (io/extract-location ?chunk :> ?location)
+        (series-src ?name ?location ?pix-idx ?series-struct)
+        (io/chunkloc->pixloc ?location ?pix-idx :> ?pix-location)
+        (io/massage-ts-chunk ?chunk ?series-struct ?pix-location :> ?final-chunk))))
 
 (def *missing-val* -9999)
 
-(defn tseries-query [in-path]
-  (-> (hfs-seqfile in-path)
-      (extract-tseries *missing-val*)
-      process-tseries))
-
-;; TODO: Process a pattern, here, as below. Can we grab rain and ndvi
-;; timeseries at the same time?
+(defn tseries-query [pail-path]
+  (-> pail-path
+      (pail/split-chunk-tap ["ndvi"] ["precl"] ["reli"] ["qual"] ["evi"])
+      (extract-tseries *missing-val*)))
 
 (defjob DynamicTimeseries
-  [in-path output-path]
-  (?- (hfs-seqfile output-path)
-      (tseries-query in-path)))
-
-;; This is the old one, that allows for the pieces. We'll reinstitute
-;; it when I'm sure that the pieces get processed properly... not sure
-;; how `map read-string` does.
-;;
-;; (defn -main
-;;   "TODO: Docs.
-
-;;   Sample usage:
-
-;;       (-main s3n://redddata/ /timeseries/ \"ndvi\"
-;;              \"1000-32\" [\"008006\" \"008009\"])"
-;;   [base-input-path output-path & pieces]
-;;   (let [pieces (map read-string pieces)
-;;         chunk-source (apply io/chunk-tap base-input-path pieces)]
-;;     (?- (hfs-seqfile output-path)
-;;         (-> chunk-source
-;;             extract-tseries
-;;             process-tseries))))
+  "TODO: Process a pattern, here."
+  [source-pail-path ts-pail-path]
+  (->> (tseries-query source-pail-path)
+       (pail/to-pail ts-pail-path)))
 
 ;; #### Fire Time Series Processing
 

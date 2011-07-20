@@ -1,9 +1,9 @@
 (ns forma.hadoop.io-test
   (:use [forma.hadoop.io] :reload)
-  (:use midje.sweet
-        midje.cascalog)
+  (:use [midje sweet cascalog])
   (:require [forma.date-time :as date])
   (:import [backtype.hadoop.pail Pail]
+           [forma.schema ModisChunkLocation]
            [forma.hadoop.pail SplitDataChunkPailStructure]))
 
 (tabular
@@ -74,6 +74,9 @@ textual representation."
                                                        (fire-series [(fire-tuple 0 0 0 1)])]
     (adjust-fires est-map (+ 2 f-period) f-series) => [420 nil]))
 
+(fact "chunk to pixel location conversions."
+  (-> (ModisChunkLocation. "1000" 10 10 59 24000)
+      (chunkloc->pixloc 23999)) => (pixel-location "1000" 10 10 1199 1199))
 
 ;; TODO: Integrate these into some tests.
 (def some-pail

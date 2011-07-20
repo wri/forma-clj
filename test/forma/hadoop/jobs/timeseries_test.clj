@@ -1,17 +1,34 @@
 (ns forma.hadoop.jobs.timeseries-test
-  (:use forma.hadoop.jobs.timeseries
-        midje.sweet)
-  (:require [forma.hadoop.io :as io]))
+  (:use cascalog.api
+        forma.hadoop.jobs.timeseries
+        [midje sweet cascalog])
+  (:require [forma.hadoop.io :as io]
+            [forma.date-time :as d]))
 
 (defn test-chunks
   "Returns a sample input to the timeseries creation buffer, or a
   sequence of 2-tuples, structured as <period, int-struct>. Each
   int-array is sized to `chunk-size`; the returned sequence contains
   tuples equal to the supplied value for `periods`."
-  [periods chunk-size]
-  (for [period (range periods)]
-    [period (io/int-struct (range chunk-size))]))
+  [dataset periods chunk-size]
+  (for [period (range periods)
+        :let [date (d/period->datetime "32" period)
+              location (io/chunk-location "1000" 8 6 0 chunk-size)
+              chunk (-> (range chunk-size)
+                        (io/int-struct)
+                        (io/mk-data-value :int-struct))]]
+    ["path" (io/mk-chunk dataset "32" date location chunk)]))
 
+(future-fact
+ "Need to update this -- we want to check that the results of
+this query don't contain -9999."
+ (let [results (-> (concat (test-chunks "precl" 10 1200)
+                           (test-chunks "ndvi" 10 1200))
+                   (vec)
+                   (extract-tseries -9999)
+                   (??-)
+                   (first))]
+   (second results) =not=> "something about not containing -9999."))
 
 ;; TODO: Check this code for possible tests for the fires
 ;; timeseries. This comes from the main namespace, for the version of

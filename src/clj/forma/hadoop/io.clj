@@ -8,15 +8,16 @@
   (:use cascalog.api
         [clojure.contrib.def :only (defnk)]
         [clojure.string :only (join)]
-        [forma.source.modis :only (valid-modis?)])
-  (:require [cascalog.workflow :as w]
+        [cascalog.tap :only (hfs-tap)])
+  (:require [forma.source.modis :as m]
+            [cascalog.workflow :as w]
             [forma.utils :as u]
             [forma.date-time :as date])
   (:import [forma WholeFile]
            [forma.schema DoubleArray IntArray
             FireTuple FireSeries FormaValue FormaSeries
             FormaNeighborValue DataChunk LocationProperty
-            LocationPropertyValue DataValue
+            LocationPropertyValue DataValue ArrayValue TimeSeries
             ModisPixelLocation ModisChunkLocation]
            [java.util ArrayList]
            [cascading.tuple Fields]
@@ -102,7 +103,7 @@
   [path & {:keys [outfields] :or {outfields Fields/ALL} :as opts}]
   (let [opts (apply concat opts)
         scheme (whole-file outfields)]
-    (apply w/hfs-tap scheme path opts)))
+    (apply hfs-tap scheme path opts)))
 
 ;; ## Backend Data Processing Queries
 ;;
@@ -157,7 +158,7 @@
 
 (defn tiles->globstring
   [& tiles]
-  {:pre [(valid-modis? tiles)]}
+  {:pre [(m/valid-modis? tiles)]}
   (->> (for [[th tv] tiles]
          (format "h%02dv%02d" th tv))
        (join "," )
@@ -483,6 +484,12 @@ together each entry in the supplied sequence of `FormaValue`s."
 
 ;; ## DataValue Generation
 
+(defn mk-array-value
+  [val type]
+  (case type
+        :int-struct    (ArrayValue/ints val)
+        :double-struct (ArrayValue/doubles val)))
+
 (defn mk-data-value
   [val type]
   (case type
@@ -490,7 +497,8 @@ together each entry in the supplied sequence of `FormaValue`s."
         :int           (DataValue/intVal val)
         :double-struct (DataValue/doubles val)
         :double        (DataValue/doubleVal val)
-        :fire          (DataValue/fireVal val)))
+        :fire          (DataValue/fireVal val)
+        :timeseries    (DataValue/timeSeries val)))
 
 (defn chunk-location
   [s-res mod-h mod-v idx size]
@@ -504,6 +512,60 @@ together each entry in the supplied sequence of `FormaValue`s."
        LocationPropertyValue/pixelLocation
        LocationProperty.))
 
+(defn extract-location
+  [^DataChunk chunk]
+  (-> chunk
+      .getLocationProperty
+      .getProperty
+      .getFieldValue))
+
+(defn extract-timeseries-data
+  "Used by timeseries. Returns `[dataset-name t-res date collection]`,
+   where collection is `IntArray` or `DoubleArray`."
+  [^DataChunk chunk]
+  [(.getDataset chunk)
+   (.getTemporalRes chunk)
+   (.getDate chunk)
+   (-> chunk .getChunkValue .getFieldValue)])
+
+(defn chunkloc->pixloc
+  "Used by timeseries for conversion."
+  [loc pix-idx]
+  (let [m-res      (.getResolution loc)
+        chunk-size (.getChunkSize loc)
+        chunk-idx  (.getChunkID loc)
+        [sample line] (m/tile-position m-res chunk-size chunk-idx pix-idx)]
+    (pixel-location m-res
+                    (.getTileH loc)
+                    (.getTileV loc)
+                    sample
+                    line)))
+
+;; The following are used in timeseries.
+(defn swap-location
+  [^DataChunk chunk location]
+  (doto chunk (.setLocationProperty location)))
+
+(defn swap-data
+  [^DataChunk chunk data-value]
+  (doto chunk (.setChunkValue data-value)))
+
+(defn set-date
+  [^DataChunk chunk date]
+  (doto chunk (.setDate date)))
+
+(defn massage-ts-chunk
+  "Here strictly for timeseries generation ease."
+  [chunk series-struct pix-location]
+  (-> chunk
+      (swap-data series-struct)
+      (swap-location pix-location)
+      (set-date nil)))
+
+(defn timeseries-value [start end series]
+  (-> (TimeSeries. start end series)
+      (mk-data-value :timeseries)))
+
 (defn mk-chunk
   [dataset t-res date location-prop data-value]
   (let [chunk (DataChunk. dataset
@@ -514,10 +576,16 @@ together each entry in the supplied sequence of `FormaValue`s."
       (doto chunk (.setDate date))
       chunk)))
 
+;; Get rid of these with support for multimethods in cascalog.
 (defmapop [data-val [type]]
   "Generates chunk data values."
   [val]
   (mk-data-value val type))
+
+(defmapop [array-val [type]]
+  "Generates chunk data values."
+  [val]
+  (mk-array-value val type))
 
 (defn chunkify [chunk-size type]
   (<- [?dataset !date ?s-res ?t-res ?mh ?mv ?chunkid ?chunk :> ?datachunk]

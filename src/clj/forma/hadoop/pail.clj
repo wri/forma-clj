@@ -34,18 +34,18 @@
 
 ;; ## Pail Taps
 
-(defn pail-tap
-  [s colls structure]
+(defn- pail-tap
+  [path colls structure]
   (let [seqs (into-array java.util.List colls)
         spec (PailTap/makeSpec nil structure)
         opts (PailTap$PailTapOptions. spec "datachunk" seqs nil)]
-    (PailTap. s opts)))
+    (PailTap. path opts)))
 
-(defn data-chunk-tap [s & colls]
-  (pail-tap s colls (forma.hadoop.pail.DataChunkPailStructure.)))
+(defn data-chunk-tap [path & colls]
+  (pail-tap path colls (forma.hadoop.pail.DataChunkPailStructure.)))
 
-(defn split-chunk-tap [s & colls]
-  (pail-tap s colls (forma.hadoop.pail.SplitDataChunkPailStructure.)))
+(defn split-chunk-tap [path & colls]
+  (pail-tap path colls (forma.hadoop.pail.SplitDataChunkPailStructure.)))
 
 (defn ?pail-*
   "Executes the supplied query into the pail located at the supplied
@@ -62,6 +62,13 @@
   path, consolidating when finished."
   [[tap path] query]
   (list `?pail-* tap path query))
+
+(defn to-pail
+  "Executes the supplied `query` into the pail at `pail-path`. This
+  pail must make use of the `SplitDataChunkPailStructure`."
+  [pail-path query]
+  (?pail- (split-chunk-tap pail-path)
+          query))
 
 (defn consolidate [pail-path]
   (.consolidate (Pail. pail-path)))

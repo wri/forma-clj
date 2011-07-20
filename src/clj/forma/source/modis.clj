@@ -35,7 +35,8 @@
   `chunk-size` must be a whole number multiple of the number of pixels
   per row in a MODIS tile of the supplied resolution `m-res`."
   [m-res chunk-size]
-  {:pre [(pos? chunk-size)
+  {:pre [(string? m-res)
+         (pos? chunk-size)
          (zero? (mod chunk-size (pixels-at-res m-res)))]}
   (let [width (pixels-at-res m-res)
         height (quot chunk-size width)]

@@ -13,7 +13,7 @@
                  [incanter "1.2.3" :exclusions [swank-clojure]]
                  [clj-time "0.3.0"]
                  [redd/thrift "0.5.0"]
-                 [org.clojars.sritchie09/cascalog "1.7.4"]
+                 [org.clojars.sritchie09/cascalog "1.7.5"]
                  [org.clojars.sritchie09/gdal-java-native "1.8.0"]
                  [backtype/cascading-thrift "0.1.0"
                   :exclusions [backtype/thriftjava]]

@@ -1,7 +1,7 @@
 (ns forma.hadoop.jobs.preprocess
   (:use cascalog.api
         [forma.utils :only (defjob)]
-        [forma.hadoop.pail :only (?pail- split-chunk-tap)]
+        [forma.hadoop.pail :only (to-pail)]
         [forma.source.tilesets :only (tile-set)]
         [cascalog.io :only (with-fs-tmp)])
   (:require [forma.hadoop.predicate :as p]
@@ -12,13 +12,6 @@
             [forma.source.static :as s]
             [forma.static :as static]
             [cascalog.ops :as c]))
-
-(defn to-pail
-  "Executes the supplied `query` into the pail at `pail-path`. This
-  pail must make use of the `SplitDataChunkPailStructure`."
-  [pail-path query]
-  (?pail- (split-chunk-tap pail-path)
-      query))
 
 (defn modis-chunker
   "Cascalog job that takes set of dataset identifiers, a chunk size, a
@@ -82,7 +75,7 @@
                        (map read-string)
                        (apply tile-set))
                   dataset
-                  c/sum
+                  c/max
                   ascii-path
                   output-path))
 

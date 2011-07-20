@@ -33,6 +33,7 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
   private static final TField DOUBLE_VAL_FIELD_DESC = new TField("doubleVal", TType.DOUBLE, (short)3);
   private static final TField DOUBLES_FIELD_DESC = new TField("doubles", TType.STRUCT, (short)4);
   private static final TField FIRE_VAL_FIELD_DESC = new TField("fireVal", TType.STRUCT, (short)5);
+  private static final TField TIME_SERIES_FIELD_DESC = new TField("timeSeries", TType.STRUCT, (short)6);
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements TFieldIdEnum {
@@ -40,7 +41,8 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
     INTS((short)2, "ints"),
     DOUBLE_VAL((short)3, "doubleVal"),
     DOUBLES((short)4, "doubles"),
-    FIRE_VAL((short)5, "fireVal");
+    FIRE_VAL((short)5, "fireVal"),
+    TIME_SERIES((short)6, "timeSeries");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -65,6 +67,8 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
           return DOUBLES;
         case 5: // FIRE_VAL
           return FIRE_VAL;
+        case 6: // TIME_SERIES
+          return TIME_SERIES;
         default:
           return null;
       }
@@ -117,6 +121,8 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
         new StructMetaData(TType.STRUCT, DoubleArray.class)));
     tmpMap.put(_Fields.FIRE_VAL, new FieldMetaData("fireVal", TFieldRequirementType.DEFAULT, 
         new StructMetaData(TType.STRUCT, FireTuple.class)));
+    tmpMap.put(_Fields.TIME_SERIES, new FieldMetaData("timeSeries", TFieldRequirementType.DEFAULT, 
+        new StructMetaData(TType.STRUCT, TimeSeries.class)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     FieldMetaData.addStructMetaDataMap(DataValue.class, metaDataMap);
   }
@@ -166,6 +172,12 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
     return x;
   }
 
+  public static DataValue timeSeries(TimeSeries value) {
+    DataValue x = new DataValue();
+    x.setTimeSeries(value);
+    return x;
+  }
+
 
   @Override
   protected void checkType(_Fields setField, Object value) throws ClassCastException {
@@ -195,6 +207,11 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
           break;
         }
         throw new ClassCastException("Was expecting value of type FireTuple for field 'fireVal', but got " + value.getClass().getSimpleName());
+      case TIME_SERIES:
+        if (value instanceof TimeSeries) {
+          break;
+        }
+        throw new ClassCastException("Was expecting value of type TimeSeries for field 'timeSeries', but got " + value.getClass().getSimpleName());
       default:
         throw new IllegalArgumentException("Unknown field id " + setField);
     }
@@ -253,6 +270,16 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
             TProtocolUtil.skip(iprot, field.type);
             return null;
           }
+        case TIME_SERIES:
+          if (field.type == TIME_SERIES_FIELD_DESC.type) {
+            TimeSeries timeSeries;
+            timeSeries = new TimeSeries();
+            timeSeries.read(iprot);
+            return timeSeries;
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+            return null;
+          }
         default:
           throw new IllegalStateException("setField wasn't null, but didn't match any of the case statements!");
       }
@@ -285,6 +312,10 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
         FireTuple fireVal = (FireTuple)value_;
         fireVal.write(oprot);
         return;
+      case TIME_SERIES:
+        TimeSeries timeSeries = (TimeSeries)value_;
+        timeSeries.write(oprot);
+        return;
       default:
         throw new IllegalStateException("Cannot write union with unknown field " + setField_);
     }
@@ -303,6 +334,8 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
         return DOUBLES_FIELD_DESC;
       case FIRE_VAL:
         return FIRE_VAL_FIELD_DESC;
+      case TIME_SERIES:
+        return TIME_SERIES_FIELD_DESC;
       default:
         throw new IllegalArgumentException("Unknown field id " + setField);
     }
@@ -388,6 +421,20 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
   public void setFireVal(FireTuple value) {
     if (value == null) throw new NullPointerException();
     setField_ = _Fields.FIRE_VAL;
+    value_ = value;
+  }
+
+  public TimeSeries getTimeSeries() {
+    if (getSetField() == _Fields.TIME_SERIES) {
+      return (TimeSeries)getFieldValue();
+    } else {
+      throw new RuntimeException("Cannot get field 'timeSeries' because union is currently set to " + getFieldDesc(getSetField()).name);
+    }
+  }
+
+  public void setTimeSeries(TimeSeries value) {
+    if (value == null) throw new NullPointerException();
+    setField_ = _Fields.TIME_SERIES;
     value_ = value;
   }
 
