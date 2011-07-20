@@ -1,9 +1,10 @@
 (ns forma.hadoop.jobs.timeseries
   (:use cascalog.api
         [forma.utils :only (defjob)]
-        [forma.matrix.utils :only (sparse-expander)]
-        [forma.date-time :only (datetime->period)])
-  (:require [forma.hadoop.pail :as pail]
+        [forma.matrix.utils :only (sparse-expander)])
+  (:require [cascalog.ops :as c]
+            [forma.date-time :as date]
+            [forma.hadoop.pail :as pail]
             [forma.utils :as utils]
             [forma.source.modis :as m]
             [forma.hadoop.io :as io]
@@ -40,7 +41,7 @@
   `forma.schema.DoubleArray`."
   [missing-val]
   (<- [?temporal-res ?date ?chunk :> ?pix-idx ?t-start ?t-end ?tseries]
-      (datetime->period ?temporal-res ?date :> ?tperiod)
+      (date/datetime->period ?temporal-res ?date :> ?tperiod)
       (:sort ?tperiod)
       (timeseries [missing-val] ?tperiod ?chunk :> ?pix-idx ?t-start ?t-end ?tseries)))
 
@@ -94,20 +95,20 @@
          (utils/running-sum [] empty io/add-fires)
          io/fire-series)))
 
-(defn aggregate-fires
+(defn old-aggregate-fires
   "Converts the datestring into a time period based on the supplied
   temporal resolution."
   [t-res src]
   (<- [?dataset ?m-res ?new-t-res ?tilestring ?tperiod ?sample ?line ?newtuple]
       (p/add-fields t-res :> ?new-t-res)
       (src ?dataset ?m-res ?t-res ?tilestring ?datestring ?sample ?line ?tuple)
-      (datetime->period ?new-t-res ?datestring :> ?tperiod)
+      (date/datetime->period ?new-t-res ?datestring :> ?tperiod)
       (merge-firetuples ?tuple :> ?newtuple)))
 
-(defn fire-series
+(defn old-fire-series
   "Aggregates fires into timeseries."
   [t-res start end src]
-  (let [[start end] (map (partial datetime->period t-res) [start end])
+  (let [[start end] (map (partial date/datetime->period t-res) [start end])
         length (-> end (- start) inc)
         mk-fire-tseries (p/vals->sparsevec start length (io/fire-tuple 0 0 0 0))]
     (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?t-start ?t-end ?ct-series]
@@ -117,13 +118,62 @@
         (p/add-fields start end :> ?t-start ?t-end)
         (running-fire-sum ?tseries :> ?ct-series))))
 
-(defn fire-query
+(defn old-fire-query
   [t-res start end chunk-path]
   (->> (hfs-seqfile chunk-path)
-       (aggregate-fires t-res)
-       (fire-series t-res start end)))
+       (old-aggregate-fires t-res)
+       (old-fire-series t-res start end)))
 
-(defjob FireTimeseries
+(defjob OldFireTimeseries
   [t-res start end chunk-path tseries-path]
   (?- (hfs-seqfile tseries-path)
-      (fire-query t-res start end chunk-path)))
+      (old-fire-query t-res start end chunk-path)))
+
+;; New Stuff!
+
+(defn update-chunk
+  [chunk t-res date firetuple]
+  (->  (io/set-date date)
+       (io/set-temporal-res t-res)
+       (io/swap-data (io/mk-data-value firetuple :fire))))
+
+(defn aggregate-fires
+  "Converts the datestring into a time period based on the supplied
+  temporal resolution."
+  [src t-res]
+  (<- [?datestring ?location ?final-chunk]
+      (src _ ?chunk)
+      (io/extract-location ?chunk :> ?location)
+      ((c/comp #'date/beginning #'io/extract-date) ?chunk :> ?datestring)
+      ((c/comp merge-firetuples #'io/extract-chunk-value) ?chunk :> ?tuple)
+      (update-chunk ?chunk t-res ?datestring ?tuple :> ?final-chunk)))
+
+;; TODO: Update
+(defn fire-series
+  "Aggregates fires into timeseries."
+  [src t-res start end]
+  (let [[start end] (map (partial date/datetime->period t-res) [start end])
+        length (-> end (- start) inc)
+        mk-fire-tseries (p/vals->sparsevec start length (io/fire-tuple 0 0 0 0))]
+    (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?t-start ?t-end ?ct-series]
+
+        (src ?dataset ?m-res ?t-res ?tilestring ?tperiod ?sample ?line ?tuple)
+
+
+        (m/tilestring->hv ?tilestring :> ?mod-h ?mod-v)
+        (mk-fire-tseries ?tperiod ?tuple :> _ ?tseries)
+        (p/add-fields start end :> ?t-start ?t-end)
+        (running-fire-sum ?tseries :> ?ct-series))))
+
+(defn fire-query
+  [pail-path t-res start end]
+  (-> pail-path
+      (pail/split-chunk-tap ["fire"])
+      (aggregate-fires t-res)
+      (fire-series t-res start end)))
+
+(defjob FireTimeseries
+  [t-res start end source-pail-path ts-pail-path]
+  (-> source-pail-path
+      (fire-query t-res start end)
+      (pail/to-pail ts-pail-path)))

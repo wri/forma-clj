@@ -519,14 +519,23 @@ together each entry in the supplied sequence of `FormaValue`s."
       .getProperty
       .getFieldValue))
 
+(defn extract-chunk-value
+  [^DataChunk chunk]
+  (-> chunk
+      .getChunkValue
+      .getFieldValue))
+
+(defn extract-date [chunk]
+  (.getDate chunk))
+
 (defn extract-timeseries-data
   "Used by timeseries. Returns `[dataset-name t-res date collection]`,
    where collection is `IntArray` or `DoubleArray`."
   [^DataChunk chunk]
   [(.getDataset chunk)
    (.getTemporalRes chunk)
-   (.getDate chunk)
-   (-> chunk .getChunkValue .getFieldValue)])
+   (extract-date chunk)
+   (extract-chunk-value chunk)])
 
 (defn chunkloc->pixloc
   "Used by timeseries for conversion."
@@ -553,6 +562,10 @@ together each entry in the supplied sequence of `FormaValue`s."
 (defn set-date
   [^DataChunk chunk date]
   (doto chunk (.setDate date)))
+
+(defn set-temporal-res
+  [^DataChunk chunk t-res]
+  (doto chunk (.setTemporalRes t-res)))
 
 (defn massage-ts-chunk
   "Here strictly for timeseries generation ease."
