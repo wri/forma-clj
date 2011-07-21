@@ -32,12 +32,15 @@
     ["path" (io/mk-chunk "fire" "32" date location tuple)]))
 
 (future-fact?-
- "TODO: Add in test for results, here! Add another test for the usual
- aggregate-fires business."
+ "Add in test for results, here! Add another test for the usual
+ aggregate-fires business.
+
+Also note that we're testing for truncation after march."
+ "this results vector needs an overhaul:"
  [[1] [2]]
- (-> (vec (concat (test-fires 4 100)
-                  (test-fires 10 100)))
-     (create-fire-series "32" "1970-01-01" "1970-04-01")))
+ (??- (-> (vec (concat (test-fires 4 100)
+                       (test-fires 10 100)))
+          (create-fire-series "32" "1970-01-01" "1970-03-01"))))
 
 (future-fact
  "Need to update this -- we want to check that the results of

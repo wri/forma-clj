@@ -470,7 +470,7 @@ together each entry in the supplied sequence of `FormaValue`s."
         [start end] (for [pd [est-start est-end]]
                       (date/datetime->period "32" pd))]
     [start (->> (get-vals f-series)
-                (trim-seq start (inc end) f-start)
+                (u/trim-seq start (inc end) f-start)
                 (fire-series start))]))
 
 (defn forma-schema
