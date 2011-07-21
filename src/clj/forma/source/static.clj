@@ -103,6 +103,8 @@
     (<- [?datachunk]
         (src ?dataset ?s-res ?t-res !date ?mod-h ?mod-v  _ ?chunkid ?window)
         (p/window->struct [type] ?window :> ?chunk)
+        (io/count-vals ?chunk :> ?count)
+        (= ?count chunk-size)
         (chunkifier ?dataset !date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk))))
 
 (defn static-chunks

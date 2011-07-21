@@ -140,8 +140,8 @@
       (create-fire-series t-res start end)))
 
 (defjob FireTimeseries
-  "Note that currently, as of july 21st, we have fires data through
-July 9th or so. So, our ending date should by 2011-06-01."
+  "TODO: Note that currently, as of july 21st, we have fires data
+through July 9th or so. So, our ending date should by 2011-06-01."
   ([source-pail-path ts-pail-path]
      (FireTimeseries-main source-pail-path ts-pail-path "32" "2011-06-01"))
   ([source-pail-path ts-pail-path t-res end]
