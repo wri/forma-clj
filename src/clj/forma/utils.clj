@@ -88,6 +88,16 @@
               (reduce (partial map +))
               (apply /))))
 
+(defn trim-seq
+  "Trims a sequence with initial value indexed at x0 to fit within
+  bottom (inclusive) and top (exclusive). For example:
+
+    (trim-seq 0 2 0 [1 2 3]) => [0 1 2]"
+  [bottom top x0 seq]
+  (->> seq
+       (drop (- bottom x0))
+       (drop-last (- (+ x0 (count seq)) top))))
+
 ;; ## IO Utils
 
 (defn input-stream

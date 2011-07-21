@@ -62,17 +62,21 @@ textual representation."
  2   [9 8 7]   0   [1 2 3 4] 2      [9 8]   [3 4]
  10  [2 3 4]   1   [1 2 3]   10     []      [])
 
-(facts "adjust-fires testing."
-  (let [est-map {:est-start "2005-01-01"
-                 :est-end "2005-02-01"
-                 :t-res "32"}
-        f-period (date/datetime->period "32" "2005-01-01")
-        f-series (fire-series [(fire-tuple 0 0 0 1)
-                               (fire-tuple 1 1 1 1)])]
-    (adjust-fires est-map f-period f-series) => [f-period f-series]
-    (adjust-fires est-map (inc f-period) f-series) => [f-period
-                                                       (fire-series [(fire-tuple 0 0 0 1)])]
-    (adjust-fires est-map (+ 2 f-period) f-series) => [420 nil]))
+(tabular
+ (facts "adjust-fires testing."
+   (let [est-map {:est-start "2005-01-01"
+                  :est-end "2005-02-01"
+                  :t-res "32"}
+         f-start (date/datetime->period "32" "2005-01-01")
+         mk-f-series (fn [offset]
+                       (fire-series (+ f-start offset)
+                                    [(fire-tuple 0 0 0 1)
+                                     (fire-tuple 1 1 1 1)]))]
+     (adjust-fires est-map (mk-f-series ?offset)) => [f-start ?series]))
+ ?offset ?series
+ 0       (fire-series f-start [(fire-tuple 0 0 0 1) (fire-tuple 1 1 1 1)])
+ 1       (fire-series f-start [(fire-tuple 0 0 0 1)])
+ 2      nil)
 
 (fact "chunk to pixel location conversions."
   (-> (ModisChunkLocation. "1000" 10 10 59 24000)

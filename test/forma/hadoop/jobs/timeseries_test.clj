@@ -1,6 +1,6 @@
 (ns forma.hadoop.jobs.timeseries-test
-  (:use cascalog.api
-        forma.hadoop.jobs.timeseries
+  (:use forma.hadoop.jobs.timeseries
+        cascalog.api
         [midje sweet cascalog])
   (:require [forma.hadoop.io :as io]
             [forma.date-time :as d]))
@@ -19,6 +19,26 @@
                         (io/mk-data-value))]]
     ["path" (io/mk-chunk dataset "32" date location chunk)]))
 
+(defn test-fires
+  "Returns a sample input to the timeseries creation buffer, or a
+  sequence of 2-tuples, structured as <period, int-struct>. Each
+  int-array is sized to `chunk-size`; the returned sequence contains
+  tuples equal to the supplied value for `periods`."
+  [sample periods]
+  (for [period (range periods)
+        :let [date (d/period->datetime "1" period)
+              location (io/pixel-location "1000" sample 6 10 10)
+              tuple    (io/mk-data-value (io/fire-tuple 1 1 1 1))]]
+    ["path" (io/mk-chunk "fire" "32" date location tuple)]))
+
+(future-fact?-
+ "TODO: Add in test for results, here! Add another test for the usual
+ aggregate-fires business."
+ [[1] [2]]
+ (-> (vec (concat (test-fires 4 100)
+                  (test-fires 10 100)))
+     (create-fire-series "32" "1970-01-01" "1970-04-01")))
+
 (future-fact
  "Need to update this -- we want to check that the results of
 this query don't contain -9999."
@@ -29,39 +49,3 @@ this query don't contain -9999."
                    (??-)
                    (first))]
    (second results) =not=> "something about not containing -9999."))
-
-;; TODO: Check this code for possible tests for the fires
-;; timeseries. This comes from the main namespace, for the version of
-;; FORMA that requires preloading data into HDFS for processsing.
-;;
-;; (defn run-test [path out-path]
-;;   (?- (hfs-seqfile out-path)
-;;       (->> (hfs-textline path)
-;;            fire-source-daily
-;;            (reproject-fires "1000")
-;;            (aggregate-fires "32")
-;;            (fire-series "32" "2000-11-01" "2011-04-01"))))
-
-;; (def some-map
-;;   {:est-start "2005-12-01"
-;;    :est-end "2011-04-01"
-;;    :t-res "32"
-;;    :long-block 15
-;;    :window 5})
-
-;; (defn run-second [path]
-;;   (let [src (hfs-seqfile path)]
-;;     (?- (stdout)
-;;         (-> (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?est-start ?count]
-;;              (src ?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?start _ ?series)
-;;              (adjust-fires some-map ?start ?series :> ?est-start ?fire-series)
-;;              (io/count-vals ?fire-series :> ?count))
-;;             (cascalog.ops/first-n 2)))))
-
-;; (defn run-check []
-;;   (let [src (hfs-seqfile "/Users/sritchie/Desktop/FireOutput/")]
-;;     (?- (stdout)
-;;         (-> (<- [?dataset ?m-res ?t-res ?mod-h ?mod-v ?sample ?line ?t-start ?t-end ?ct-series]
-;;                 (src ?dataset ?m-res ?t-res
-;;                      ?mod-h ?mod-v ?sample ?line ?t-start ?t-end ?ct-series))
-;;             (cascalog.ops/first-n 2)))))

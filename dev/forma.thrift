@@ -39,7 +39,9 @@ struct IntArray {
 }
 
 struct FireSeries {
-  1: list<FireTuple> values
+  1: i32 startIdx
+  2: i32 endIdx;
+  3: list<FireTuple> values
 }
 
 struct FormaSeries {

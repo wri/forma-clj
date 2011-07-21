@@ -174,7 +174,8 @@ resolution. `DateTime` objects can be created with `clj-time`'s
      (let [[unit span f] (case res
                                "32" [month 1 time/months]
                                "16" [ordinal 16 time/days]
-                               "8" [ordinal 8 time/days])
+                               "8" [ordinal 8 time/days]
+                               "1" [ordinal 1 time/days])
            [yrs pds] ((juxt quot mod) period (per-year unit span))]
        (-> (time/epoch)
            (time/plus (time/years yrs) (f (* span pds)))

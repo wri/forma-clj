@@ -30,13 +30,19 @@ import org.apache.thrift.protocol.*;
 public class FireSeries implements TBase<FireSeries, FireSeries._Fields>, java.io.Serializable, Cloneable {
   private static final TStruct STRUCT_DESC = new TStruct("FireSeries");
 
-  private static final TField VALUES_FIELD_DESC = new TField("values", TType.LIST, (short)1);
+  private static final TField START_IDX_FIELD_DESC = new TField("startIdx", TType.I32, (short)1);
+  private static final TField END_IDX_FIELD_DESC = new TField("endIdx", TType.I32, (short)2);
+  private static final TField VALUES_FIELD_DESC = new TField("values", TType.LIST, (short)3);
 
+  public int startIdx;
+  public int endIdx;
   public List<FireTuple> values;
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements TFieldIdEnum {
-    VALUES((short)1, "values");
+    START_IDX((short)1, "startIdx"),
+    END_IDX((short)2, "endIdx"),
+    VALUES((short)3, "values");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -51,7 +57,11 @@ public class FireSeries implements TBase<FireSeries, FireSeries._Fields>, java.i
      */
     public static _Fields findByThriftId(int fieldId) {
       switch(fieldId) {
-        case 1: // VALUES
+        case 1: // START_IDX
+          return START_IDX;
+        case 2: // END_IDX
+          return END_IDX;
+        case 3: // VALUES
           return VALUES;
         default:
           return null;
@@ -93,10 +103,17 @@ public class FireSeries implements TBase<FireSeries, FireSeries._Fields>, java.i
   }
 
   // isset id assignments
+  private static final int __STARTIDX_ISSET_ID = 0;
+  private static final int __ENDIDX_ISSET_ID = 1;
+  private BitSet __isset_bit_vector = new BitSet(2);
 
   public static final Map<_Fields, FieldMetaData> metaDataMap;
   static {
     Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
+    tmpMap.put(_Fields.START_IDX, new FieldMetaData("startIdx", TFieldRequirementType.DEFAULT, 
+        new FieldValueMetaData(TType.I32)));
+    tmpMap.put(_Fields.END_IDX, new FieldMetaData("endIdx", TFieldRequirementType.DEFAULT, 
+        new FieldValueMetaData(TType.I32)));
     tmpMap.put(_Fields.VALUES, new FieldMetaData("values", TFieldRequirementType.DEFAULT, 
         new ListMetaData(TType.LIST, 
             new StructMetaData(TType.STRUCT, FireTuple.class))));
@@ -108,9 +125,15 @@ public class FireSeries implements TBase<FireSeries, FireSeries._Fields>, java.i
   }
 
   public FireSeries(
+    int startIdx,
+    int endIdx,
     List<FireTuple> values)
   {
     this();
+    this.startIdx = startIdx;
+    setStartIdxIsSet(true);
+    this.endIdx = endIdx;
+    setEndIdxIsSet(true);
     this.values = values;
   }
 
@@ -118,6 +141,10 @@ public class FireSeries implements TBase<FireSeries, FireSeries._Fields>, java.i
    * Performs a deep copy on <i>other</i>.
    */
   public FireSeries(FireSeries other) {
+    __isset_bit_vector.clear();
+    __isset_bit_vector.or(other.__isset_bit_vector);
+    this.startIdx = other.startIdx;
+    this.endIdx = other.endIdx;
     if (other.isSetValues()) {
       List<FireTuple> __this__values = new ArrayList<FireTuple>();
       for (FireTuple other_element : other.values) {
@@ -133,7 +160,57 @@ public class FireSeries implements TBase<FireSeries, FireSeries._Fields>, java.i
 
   @Override
   public void clear() {
+    setStartIdxIsSet(false);
+    this.startIdx = 0;
+    setEndIdxIsSet(false);
+    this.endIdx = 0;
     this.values = null;
+  }
+
+  public int getStartIdx() {
+    return this.startIdx;
+  }
+
+  public FireSeries setStartIdx(int startIdx) {
+    this.startIdx = startIdx;
+    setStartIdxIsSet(true);
+    return this;
+  }
+
+  public void unsetStartIdx() {
+    __isset_bit_vector.clear(__STARTIDX_ISSET_ID);
+  }
+
+  /** Returns true if field startIdx is set (has been asigned a value) and false otherwise */
+  public boolean isSetStartIdx() {
+    return __isset_bit_vector.get(__STARTIDX_ISSET_ID);
+  }
+
+  public void setStartIdxIsSet(boolean value) {
+    __isset_bit_vector.set(__STARTIDX_ISSET_ID, value);
+  }
+
+  public int getEndIdx() {
+    return this.endIdx;
+  }
+
+  public FireSeries setEndIdx(int endIdx) {
+    this.endIdx = endIdx;
+    setEndIdxIsSet(true);
+    return this;
+  }
+
+  public void unsetEndIdx() {
+    __isset_bit_vector.clear(__ENDIDX_ISSET_ID);
+  }
+
+  /** Returns true if field endIdx is set (has been asigned a value) and false otherwise */
+  public boolean isSetEndIdx() {
+    return __isset_bit_vector.get(__ENDIDX_ISSET_ID);
+  }
+
+  public void setEndIdxIsSet(boolean value) {
+    __isset_bit_vector.set(__ENDIDX_ISSET_ID, value);
   }
 
   public int getValuesSize() {
@@ -177,6 +254,22 @@ public class FireSeries implements TBase<FireSeries, FireSeries._Fields>, java.i
 
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
+    case START_IDX:
+      if (value == null) {
+        unsetStartIdx();
+      } else {
+        setStartIdx((Integer)value);
+      }
+      break;
+
+    case END_IDX:
+      if (value == null) {
+        unsetEndIdx();
+      } else {
+        setEndIdx((Integer)value);
+      }
+      break;
+
     case VALUES:
       if (value == null) {
         unsetValues();
@@ -190,6 +283,12 @@ public class FireSeries implements TBase<FireSeries, FireSeries._Fields>, java.i
 
   public Object getFieldValue(_Fields field) {
     switch (field) {
+    case START_IDX:
+      return new Integer(getStartIdx());
+
+    case END_IDX:
+      return new Integer(getEndIdx());
+
     case VALUES:
       return getValues();
 
@@ -204,6 +303,10 @@ public class FireSeries implements TBase<FireSeries, FireSeries._Fields>, java.i
     }
 
     switch (field) {
+    case START_IDX:
+      return isSetStartIdx();
+    case END_IDX:
+      return isSetEndIdx();
     case VALUES:
       return isSetValues();
     }
@@ -223,6 +326,24 @@ public class FireSeries implements TBase<FireSeries, FireSeries._Fields>, java.i
     if (that == null)
       return false;
 
+    boolean this_present_startIdx = true;
+    boolean that_present_startIdx = true;
+    if (this_present_startIdx || that_present_startIdx) {
+      if (!(this_present_startIdx && that_present_startIdx))
+        return false;
+      if (this.startIdx != that.startIdx)
+        return false;
+    }
+
+    boolean this_present_endIdx = true;
+    boolean that_present_endIdx = true;
+    if (this_present_endIdx || that_present_endIdx) {
+      if (!(this_present_endIdx && that_present_endIdx))
+        return false;
+      if (this.endIdx != that.endIdx)
+        return false;
+    }
+
     boolean this_present_values = true && this.isSetValues();
     boolean that_present_values = true && that.isSetValues();
     if (this_present_values || that_present_values) {
@@ -238,6 +359,16 @@ public class FireSeries implements TBase<FireSeries, FireSeries._Fields>, java.i
   @Override
   public int hashCode() {
     HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_startIdx = true;
+    builder.append(present_startIdx);
+    if (present_startIdx)
+      builder.append(startIdx);
+
+    boolean present_endIdx = true;
+    builder.append(present_endIdx);
+    if (present_endIdx)
+      builder.append(endIdx);
 
     boolean present_values = true && (isSetValues());
     builder.append(present_values);
@@ -255,6 +386,26 @@ public class FireSeries implements TBase<FireSeries, FireSeries._Fields>, java.i
     int lastComparison = 0;
     FireSeries typedOther = (FireSeries)other;
 
+    lastComparison = Boolean.valueOf(isSetStartIdx()).compareTo(typedOther.isSetStartIdx());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetStartIdx()) {
+      lastComparison = TBaseHelper.compareTo(this.startIdx, typedOther.startIdx);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetEndIdx()).compareTo(typedOther.isSetEndIdx());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetEndIdx()) {
+      lastComparison = TBaseHelper.compareTo(this.endIdx, typedOther.endIdx);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     lastComparison = Boolean.valueOf(isSetValues()).compareTo(typedOther.isSetValues());
     if (lastComparison != 0) {
       return lastComparison;
@@ -282,7 +433,23 @@ public class FireSeries implements TBase<FireSeries, FireSeries._Fields>, java.i
         break;
       }
       switch (field.id) {
-        case 1: // VALUES
+        case 1: // START_IDX
+          if (field.type == TType.I32) {
+            this.startIdx = iprot.readI32();
+            setStartIdxIsSet(true);
+          } else { 
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 2: // END_IDX
+          if (field.type == TType.I32) {
+            this.endIdx = iprot.readI32();
+            setEndIdxIsSet(true);
+          } else { 
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 3: // VALUES
           if (field.type == TType.LIST) {
             {
               TList _list8 = iprot.readListBegin();
@@ -315,6 +482,12 @@ public class FireSeries implements TBase<FireSeries, FireSeries._Fields>, java.i
     validate();
 
     oprot.writeStructBegin(STRUCT_DESC);
+    oprot.writeFieldBegin(START_IDX_FIELD_DESC);
+    oprot.writeI32(this.startIdx);
+    oprot.writeFieldEnd();
+    oprot.writeFieldBegin(END_IDX_FIELD_DESC);
+    oprot.writeI32(this.endIdx);
+    oprot.writeFieldEnd();
     if (this.values != null) {
       oprot.writeFieldBegin(VALUES_FIELD_DESC);
       {
@@ -336,6 +509,14 @@ public class FireSeries implements TBase<FireSeries, FireSeries._Fields>, java.i
     StringBuilder sb = new StringBuilder("FireSeries(");
     boolean first = true;
 
+    sb.append("startIdx:");
+    sb.append(this.startIdx);
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("endIdx:");
+    sb.append(this.endIdx);
+    first = false;
+    if (!first) sb.append(", ");
     sb.append("values:");
     if (this.values == null) {
       sb.append("null");

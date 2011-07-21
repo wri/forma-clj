@@ -372,9 +372,16 @@ together each entry in the supplied sequence of `FormaValue`s."
 (defn fire-series
   "Creates a `FireSeries` object from the supplied sequence of
   `FireTuple` objects."
-  [xs]
-  (doto (FireSeries.)
-    (.setValues (ArrayList. xs))))
+  ([start xs]
+     (fire-series start
+                  (dec (+ start (count xs)))
+                  xs))
+  ([start end xs]
+     (when (seq xs)
+       (doto (FireSeries.)
+         (.setValues (ArrayList. xs))
+         (.setStartIdx start)
+         (.setEndIdx end)))))
 
 (defn forma-series
   "Creates a `FormaSeries` object from the supplied sequence of
@@ -391,8 +398,7 @@ together each entry in the supplied sequence of `FormaValue`s."
 (extend-protocol Thriftable
   java.lang.Iterable
   (to-struct [[v :as xs]]
-    (cond (= forma.schema.FireTuple (type v)) (fire-series xs)
-          (= forma.schema.FormaValue (type v)) (forma-series xs)
+    (cond (= forma.schema.FormaValue (type v)) (forma-series xs)
           (integer? v) (int-struct xs)
           (float? v) (double-struct xs)))
   (get-vals [x] x)
@@ -432,14 +438,14 @@ together each entry in the supplied sequence of `FormaValue`s."
             [x0 (+ x0 (count-vals seq))])))
 
 (defn trim-struct
-  "Trims a sequence with initial value indexed at x0 to fit within
-  bottom (inclusive) and top (exclusive). For example:
+  "Trims a Thriftable struct with initial value indexed at x0 to fit
+  within bottom (inclusive) and top (exclusive). For example:
 
     (trim-struct 0 2 0 [1 2 3]) => (to-struct [0 1 2])"
   [bottom top x0 seq]
-  (->> (get-vals seq)
-       (drop (- bottom x0))
-       (drop-last (- (+ x0 (count-vals seq)) top))
+  (->> seq
+       (get-vals)
+       (u/trim-seq bottom top x0)
        (to-struct)))
 
 (defn adjust
@@ -459,10 +465,13 @@ together each entry in the supplied sequence of `FormaValue`s."
 (defn adjust-fires
   "Returns the section of fires data found appropriate based on the
   information in the estimation parameter map."
-  [{:keys [est-start est-end t-res]} f-start f-series]
-  (let [[start end] (for [pd [est-start est-end]]
-                      (date/datetime->period "32" pd))]    
-    [start (trim-struct start (inc end) f-start f-series)]))
+  [{:keys [est-start est-end t-res]} ^FireSeries f-series]
+  (let [f-start (.getStartIdx f-series)
+        [start end] (for [pd [est-start est-end]]
+                      (date/datetime->period "32" pd))]
+    [start (->> (get-vals f-series)
+                (trim-seq start (inc end) f-start)
+                (fire-series start))]))
 
 (defn forma-schema
   "Accepts a number of timeseries of equal length and starting
