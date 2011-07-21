@@ -64,8 +64,8 @@ direction, then half-stepping to the centroid."
                     :travel [+ +]}]
      (apply modis-indexer ?res ascii-map ?wgs-coords) => ?mod-coords
      (apply wgs84-indexer ?res ascii-map ?mod-coords) => ?wgs-coords))
- ?res   ?mod-coords ?wgs-coords
- "1000" [8 6 12 12] [14387 29372]
+ ?res   ?mod-coords      ?wgs-coords
+ "1000" [8 6 12 12]      [14387 29372]
  "1000" [29 10 100 1120] [8479 14095]
- "500" [25 7 2399 2399] [24000 19495]
+ "500" [25 7 2399 2399]  [24000 19495]
  "250" [29 10 3432 1222] [37177 57608])
