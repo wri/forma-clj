@@ -5,6 +5,7 @@
  */
 package forma.schema;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -216,7 +217,14 @@ public class LocationProperty implements TBase<LocationProperty, LocationPropert
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_property = true && (isSetProperty());
+    builder.append(present_property);
+    if (present_property)
+      builder.append(property);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(LocationProperty other) {

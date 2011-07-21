@@ -5,6 +5,7 @@
  */
 package forma.schema;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -632,7 +633,49 @@ public class FormaNeighborValue implements TBase<FormaNeighborValue, FormaNeighb
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_fireValue = true && (isSetFireValue());
+    builder.append(present_fireValue);
+    if (present_fireValue)
+      builder.append(fireValue);
+
+    boolean present_numNeighbors = true;
+    builder.append(present_numNeighbors);
+    if (present_numNeighbors)
+      builder.append(numNeighbors);
+
+    boolean present_avgShortDrop = true;
+    builder.append(present_avgShortDrop);
+    if (present_avgShortDrop)
+      builder.append(avgShortDrop);
+
+    boolean present_minShortDrop = true;
+    builder.append(present_minShortDrop);
+    if (present_minShortDrop)
+      builder.append(minShortDrop);
+
+    boolean present_avgLongDrop = true;
+    builder.append(present_avgLongDrop);
+    if (present_avgLongDrop)
+      builder.append(avgLongDrop);
+
+    boolean present_minLongDrop = true;
+    builder.append(present_minLongDrop);
+    if (present_minLongDrop)
+      builder.append(minLongDrop);
+
+    boolean present_avgTStat = true;
+    builder.append(present_avgTStat);
+    if (present_avgTStat)
+      builder.append(avgTStat);
+
+    boolean present_minTStat = true;
+    builder.append(present_minTStat);
+    if (present_minTStat)
+      builder.append(minTStat);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(FormaNeighborValue other) {

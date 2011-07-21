@@ -5,6 +5,7 @@
  */
 package forma.schema;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -276,12 +277,20 @@ public class ArrayValue extends TUnion<ArrayValue, ArrayValue._Fields> {
   }
 
 
-  /**
-   * If you'd like this to perform more respectably, use the hashcode generator option.
-   */
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder hcb = new HashCodeBuilder();
+    hcb.append(this.getClass().getName());
+    TFieldIdEnum setField = getSetField();
+    if (setField != null) {
+      hcb.append(setField.getThriftFieldId());
+      Object value = getFieldValue();
+      if (value instanceof TEnum) {
+        hcb.append(((TEnum)getFieldValue()).getValue());
+      } else {
+        hcb.append(value);
+      }
+    }
+    return hcb.toHashCode();
   }
-
 }

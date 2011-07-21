@@ -5,6 +5,7 @@
  */
 package forma.schema;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -236,7 +237,14 @@ public class DoubleArray implements TBase<DoubleArray, DoubleArray._Fields>, jav
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_doubles = true && (isSetDoubles());
+    builder.append(present_doubles);
+    if (present_doubles)
+      builder.append(doubles);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(DoubleArray other) {

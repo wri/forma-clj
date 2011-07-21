@@ -5,6 +5,7 @@
  */
 package forma.schema;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -455,7 +456,34 @@ public class ModisPixelLocation implements TBase<ModisPixelLocation, ModisPixelL
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_resolution = true && (isSetResolution());
+    builder.append(present_resolution);
+    if (present_resolution)
+      builder.append(resolution);
+
+    boolean present_tileH = true;
+    builder.append(present_tileH);
+    if (present_tileH)
+      builder.append(tileH);
+
+    boolean present_tileV = true;
+    builder.append(present_tileV);
+    if (present_tileV)
+      builder.append(tileV);
+
+    boolean present_sample = true;
+    builder.append(present_sample);
+    if (present_sample)
+      builder.append(sample);
+
+    boolean present_line = true;
+    builder.append(present_line);
+    if (present_line)
+      builder.append(line);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(ModisPixelLocation other) {

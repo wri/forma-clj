@@ -498,7 +498,8 @@ together each entry in the supplied sequence of `FormaValue`s."
         :double-struct (DataValue/doubles val)
         :double        (DataValue/doubleVal val)
         :fire          (DataValue/fireVal val)
-        :timeseries    (DataValue/timeSeries val)))
+        :timeseries    (DataValue/timeSeries val)
+        :fireseries    (DataValue/fireSeries val)))
 
 (defn chunk-location
   [s-res mod-h mod-v idx size]

@@ -65,6 +65,7 @@ union DataValue {
   4: DoubleArray doubles;
   5: FireTuple fireVal;
   6: TimeSeries timeSeries;
+  7: FireSeries fireSeries;
 }
 
 struct ModisPixelLocation {

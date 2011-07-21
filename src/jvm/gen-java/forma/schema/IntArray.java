@@ -5,6 +5,7 @@
  */
 package forma.schema;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -236,7 +237,14 @@ public class IntArray implements TBase<IntArray, IntArray._Fields>, java.io.Seri
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_ints = true && (isSetInts());
+    builder.append(present_ints);
+    if (present_ints)
+      builder.append(ints);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(IntArray other) {

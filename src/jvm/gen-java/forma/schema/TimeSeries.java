@@ -5,6 +5,7 @@
  */
 package forma.schema;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -337,7 +338,24 @@ public class TimeSeries implements TBase<TimeSeries, TimeSeries._Fields>, java.i
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_startIdx = true;
+    builder.append(present_startIdx);
+    if (present_startIdx)
+      builder.append(startIdx);
+
+    boolean present_endIdx = true;
+    builder.append(present_endIdx);
+    if (present_endIdx)
+      builder.append(endIdx);
+
+    boolean present_series = true && (isSetSeries());
+    builder.append(present_series);
+    if (present_series)
+      builder.append(series);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(TimeSeries other) {

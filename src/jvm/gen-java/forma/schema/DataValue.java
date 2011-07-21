@@ -5,6 +5,7 @@
  */
 package forma.schema;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -34,6 +35,7 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
   private static final TField DOUBLES_FIELD_DESC = new TField("doubles", TType.STRUCT, (short)4);
   private static final TField FIRE_VAL_FIELD_DESC = new TField("fireVal", TType.STRUCT, (short)5);
   private static final TField TIME_SERIES_FIELD_DESC = new TField("timeSeries", TType.STRUCT, (short)6);
+  private static final TField FIRE_SERIES_FIELD_DESC = new TField("fireSeries", TType.STRUCT, (short)7);
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements TFieldIdEnum {
@@ -42,7 +44,8 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
     DOUBLE_VAL((short)3, "doubleVal"),
     DOUBLES((short)4, "doubles"),
     FIRE_VAL((short)5, "fireVal"),
-    TIME_SERIES((short)6, "timeSeries");
+    TIME_SERIES((short)6, "timeSeries"),
+    FIRE_SERIES((short)7, "fireSeries");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -69,6 +72,8 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
           return FIRE_VAL;
         case 6: // TIME_SERIES
           return TIME_SERIES;
+        case 7: // FIRE_SERIES
+          return FIRE_SERIES;
         default:
           return null;
       }
@@ -123,6 +128,8 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
         new StructMetaData(TType.STRUCT, FireTuple.class)));
     tmpMap.put(_Fields.TIME_SERIES, new FieldMetaData("timeSeries", TFieldRequirementType.DEFAULT, 
         new StructMetaData(TType.STRUCT, TimeSeries.class)));
+    tmpMap.put(_Fields.FIRE_SERIES, new FieldMetaData("fireSeries", TFieldRequirementType.DEFAULT, 
+        new StructMetaData(TType.STRUCT, FireSeries.class)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     FieldMetaData.addStructMetaDataMap(DataValue.class, metaDataMap);
   }
@@ -178,6 +185,12 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
     return x;
   }
 
+  public static DataValue fireSeries(FireSeries value) {
+    DataValue x = new DataValue();
+    x.setFireSeries(value);
+    return x;
+  }
+
 
   @Override
   protected void checkType(_Fields setField, Object value) throws ClassCastException {
@@ -212,6 +225,11 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
           break;
         }
         throw new ClassCastException("Was expecting value of type TimeSeries for field 'timeSeries', but got " + value.getClass().getSimpleName());
+      case FIRE_SERIES:
+        if (value instanceof FireSeries) {
+          break;
+        }
+        throw new ClassCastException("Was expecting value of type FireSeries for field 'fireSeries', but got " + value.getClass().getSimpleName());
       default:
         throw new IllegalArgumentException("Unknown field id " + setField);
     }
@@ -280,6 +298,16 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
             TProtocolUtil.skip(iprot, field.type);
             return null;
           }
+        case FIRE_SERIES:
+          if (field.type == FIRE_SERIES_FIELD_DESC.type) {
+            FireSeries fireSeries;
+            fireSeries = new FireSeries();
+            fireSeries.read(iprot);
+            return fireSeries;
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+            return null;
+          }
         default:
           throw new IllegalStateException("setField wasn't null, but didn't match any of the case statements!");
       }
@@ -316,6 +344,10 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
         TimeSeries timeSeries = (TimeSeries)value_;
         timeSeries.write(oprot);
         return;
+      case FIRE_SERIES:
+        FireSeries fireSeries = (FireSeries)value_;
+        fireSeries.write(oprot);
+        return;
       default:
         throw new IllegalStateException("Cannot write union with unknown field " + setField_);
     }
@@ -336,6 +368,8 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
         return FIRE_VAL_FIELD_DESC;
       case TIME_SERIES:
         return TIME_SERIES_FIELD_DESC;
+      case FIRE_SERIES:
+        return FIRE_SERIES_FIELD_DESC;
       default:
         throw new IllegalArgumentException("Unknown field id " + setField);
     }
@@ -438,6 +472,20 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
     value_ = value;
   }
 
+  public FireSeries getFireSeries() {
+    if (getSetField() == _Fields.FIRE_SERIES) {
+      return (FireSeries)getFieldValue();
+    } else {
+      throw new RuntimeException("Cannot get field 'fireSeries' because union is currently set to " + getFieldDesc(getSetField()).name);
+    }
+  }
+
+  public void setFireSeries(FireSeries value) {
+    if (value == null) throw new NullPointerException();
+    setField_ = _Fields.FIRE_SERIES;
+    value_ = value;
+  }
+
   public boolean equals(Object other) {
     if (other instanceof DataValue) {
       return equals((DataValue)other);
@@ -460,12 +508,20 @@ public class DataValue extends TUnion<DataValue, DataValue._Fields> {
   }
 
 
-  /**
-   * If you'd like this to perform more respectably, use the hashcode generator option.
-   */
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder hcb = new HashCodeBuilder();
+    hcb.append(this.getClass().getName());
+    TFieldIdEnum setField = getSetField();
+    if (setField != null) {
+      hcb.append(setField.getThriftFieldId());
+      Object value = getFieldValue();
+      if (value instanceof TEnum) {
+        hcb.append(((TEnum)getFieldValue()).getValue());
+      } else {
+        hcb.append(value);
+      }
+    }
+    return hcb.toHashCode();
   }
-
 }

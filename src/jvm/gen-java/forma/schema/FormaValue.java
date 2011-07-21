@@ -5,6 +5,7 @@
  */
 package forma.schema;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -396,7 +397,29 @@ public class FormaValue implements TBase<FormaValue, FormaValue._Fields>, java.i
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_fireValue = true && (isSetFireValue());
+    builder.append(present_fireValue);
+    if (present_fireValue)
+      builder.append(fireValue);
+
+    boolean present_shortDrop = true;
+    builder.append(present_shortDrop);
+    if (present_shortDrop)
+      builder.append(shortDrop);
+
+    boolean present_longDrop = true;
+    builder.append(present_longDrop);
+    if (present_longDrop)
+      builder.append(longDrop);
+
+    boolean present_tStat = true;
+    builder.append(present_tStat);
+    if (present_tStat)
+      builder.append(tStat);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(FormaValue other) {

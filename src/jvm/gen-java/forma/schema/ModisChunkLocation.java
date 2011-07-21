@@ -5,6 +5,7 @@
  */
 package forma.schema;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -455,7 +456,34 @@ public class ModisChunkLocation implements TBase<ModisChunkLocation, ModisChunkL
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_resolution = true && (isSetResolution());
+    builder.append(present_resolution);
+    if (present_resolution)
+      builder.append(resolution);
+
+    boolean present_tileH = true;
+    builder.append(present_tileH);
+    if (present_tileH)
+      builder.append(tileH);
+
+    boolean present_tileV = true;
+    builder.append(present_tileV);
+    if (present_tileV)
+      builder.append(tileV);
+
+    boolean present_chunkID = true;
+    builder.append(present_chunkID);
+    if (present_chunkID)
+      builder.append(chunkID);
+
+    boolean present_chunkSize = true;
+    builder.append(present_chunkSize);
+    if (present_chunkSize)
+      builder.append(chunkSize);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(ModisChunkLocation other) {

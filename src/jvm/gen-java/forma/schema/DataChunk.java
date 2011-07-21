@@ -5,6 +5,7 @@
  */
 package forma.schema;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -450,7 +451,34 @@ public class DataChunk implements TBase<DataChunk, DataChunk._Fields>, java.io.S
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_dataset = true && (isSetDataset());
+    builder.append(present_dataset);
+    if (present_dataset)
+      builder.append(dataset);
+
+    boolean present_locationProperty = true && (isSetLocationProperty());
+    builder.append(present_locationProperty);
+    if (present_locationProperty)
+      builder.append(locationProperty);
+
+    boolean present_chunkValue = true && (isSetChunkValue());
+    builder.append(present_chunkValue);
+    if (present_chunkValue)
+      builder.append(chunkValue);
+
+    boolean present_temporalRes = true && (isSetTemporalRes());
+    builder.append(present_temporalRes);
+    if (present_temporalRes)
+      builder.append(temporalRes);
+
+    boolean present_date = true && (isSetDate());
+    builder.append(present_date);
+    if (present_date)
+      builder.append(date);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(DataChunk other) {
