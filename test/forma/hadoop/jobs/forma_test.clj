@@ -134,6 +134,8 @@
              line (range 4)]
          ["1000" 13 9 sample line 1])))
 
+;; All of this is now invalid, due to the pail stuff!!
+;;
 ;; (let [est-map {:neighbors 1 :window-dims [4 4]}]
 ;;   (test?- [[2]] (forma-query est-map :ndvi-src :rain-src
 ;;                 :vcf-src :country-src :fire-src) => true

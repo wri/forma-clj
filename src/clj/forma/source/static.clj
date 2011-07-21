@@ -94,7 +94,7 @@
 ?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val"
   [val-gen m-res chunk-size nodata type]
   {:pre [(#{:int :double} type)]}
-  (let [chunkifier (io/chunkify chunk-size)
+  (let [chunkifier (p/chunkify chunk-size)
         src (p/sparse-windower val-gen
                                ["?sample" "?line"]
                                (m/chunk-dims m-res chunk-size)
@@ -116,16 +116,3 @@
           (upsample-modis m-res dataset pix-tap line-tap)
           (downsample-modis m-res dataset pix-tap line-tap agg))
         (agg-chunks m-res chunk-size -9999 :int))))
-
-;; TODOSAM: Think about dependencies with forma, fix this shit!
-;; Consolidate with the new rain extraction.
-
-(defn static-tap
-  "TODO: Very similar to extract-tseries. Consolidate."
-  [chunk-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?val]
-      (chunk-src _ ?chunk)
-      ((c/juxt #'io/extract-chunk-value
-               #'io/extract-location) ?chunk :> ?static-chunk ?location)
-      (p/struct-index 0 ?static-chunk :> ?pix-idx ?val)
-      (io/get-pos ?location ?pix-idx :> ?s-res ?mod-h ?mod-v ?sample ?line)))

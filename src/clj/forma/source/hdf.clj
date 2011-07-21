@@ -18,6 +18,7 @@
         [clojure.contrib.seq-utils :only (find-first indexed)])
   (:require [clojure.set :as set]
             [clojure.contrib.string :as s]
+            [forma.hadoop.predicate :as p]
             [forma.hadoop.io :as hadoop.io]
             [clojure.contrib.io :as contrib.io])
   (:import [org.gdal.gdal gdal Dataset Band]
@@ -260,7 +261,7 @@ of a MODIS TileID acts as a key to retrieve this data."
   time for lookups."
   [datasets chunk-size source]
   (let [keys ["SHORTNAME" "TileID" "RANGEBEGINNINGDATE"]
-        chunkifier (hadoop.io/chunkify chunk-size)]
+        chunkifier (p/chunkify chunk-size)]
     (<- [?datachunk]
         (source ?filename ?hdf)
         (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)

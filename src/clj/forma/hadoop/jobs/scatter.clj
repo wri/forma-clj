@@ -3,8 +3,7 @@
   (:use cascalog.api
         [forma.utils :only (defjob)]
         [forma.hadoop.pail :only (?pail- split-chunk-tap)]
-        [forma.source.tilesets :only (tile-set)]
-        [forma.source.static :only (static-tap)])
+        [forma.source.tilesets :only (tile-set)])
   (:require [cascalog.ops :as c]
             [forma.hadoop.io :as io]
             [forma.source.modis :as m]
@@ -12,32 +11,45 @@
             [forma.hadoop.jobs.forma :as forma]
             [forma.hadoop.jobs.timeseries :as tseries]))
 
-(def *convert-path* "s3n://modisfiles/ascii/admin-map.csv")
+(def convert-line-src
+  (hfs-textline "s3n://modisfiles/ascii/admin-map.csv"))
+
+(defn static-tap
+  "Accepts a source of DataChunks containing DoubleArrays or IntArrays
+  as values, and returns a new query with all relevant spatial
+  information plus the actual value."
+  [chunk-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?val]
+      (chunk-src _ ?chunk)
+      (p/blossom-chunk ?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val)))
+
+(defn country-tap
+  [gadm-src convert-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?country]
+      (gadm-src _ ?chunk)
+      (convert-src ?line)
+      (p/converter ?line :> ?country ?admin)
+      (p/blossom-chunk ?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?admin)))
 
 (defjob GetStatic
   [pail-path out-path]
-  (let [converter (forma/line->nums (hfs-textline *convert-path*))
-        [vcf hansen ecoid gadm] (map (comp static-tap
+  (let [[vcf hansen ecoid gadm] (map (comp static-tap
                                            split-chunk-tap)
                                      [["vcf"] ["hansen"] ["ecoid"] ["gadm"]])]
     (?<- (hfs-textline out-path
                        :sinkparts 3
                        :sink-template "%s/")
          [?country ?lat ?lon ?mod-h ?mod-v ?sample ?line ?hansen ?ecoid ?vcf ?gadm]
-         (vcf _ ?mod-h ?mod-v ?sample ?line ?vcf)
+         (vcf    _ ?mod-h ?mod-v ?sample ?line ?vcf)
          (hansen _ ?mod-h ?mod-v ?sample ?line ?hansen)
-         (ecoid _ ?mod-h ?mod-v ?sample ?line ?ecoid)
-         (gadm _ ?mod-h ?mod-v ?sample ?line ?gadm)
+         (ecoid  _ ?mod-h ?mod-v ?sample ?line ?ecoid)
+         (gadm   _ ?mod-h ?mod-v ?sample ?line ?gadm)
          (m/modis->latlon ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
-         (converter ?country ?gadm)
+         (convert-line-src ?textline)
+         (p/converter ?textline :> ?country ?gadm)
          (>= ?vcf 25))))
 
 ;; ## Forma
-
-(def *gadm-path* "s3n://redddata/gadm/1000-00/*/*/")
-(def *ndvi-path* "s3n://redddata/ndvi/1000-32/*/*/")
-(def *rain-path* "s3n://redddata/precl/1000-32/*/*/")
-(def *fire-path* "s3n://redddata/fire/1000-01/*/")
 
 (def forma-map
   {:est-start "2005-12-01"
@@ -61,14 +73,15 @@
 ;; countries (or tiles), and it'll generate the rest.
 
 (defjob RunForma
-  [pail-path out-path]
-  (let [[ndvi-src rain-src] (map tseries/tseries-query [*ndvi-path* *rain-path*])
-        country-src (forma/country-tap (hfs-seqfile *gadm-path*)
-                                       (hfs-textline *convert-path*))
-        vcf-src  (split-chunk-tap pail-path ["vcf"])
-        fire-src (tseries/fire-query "32" "2000-11-01" "2011-04-01" *fire-path*)]
-    (?- (forma-textline out-path "%s-%s/%s/%s/")
-        (forma/forma-query forma-map ndvi-src rain-src vcf-src country-src fire-src))))
+  [pail-path ts-pail-path out-path]
+  (?- (forma-textline out-path "%s-%s/%s/%s/")
+      (forma/forma-query forma-map
+                         (split-chunk-tap ts-pail-path ["ndvi"])
+                         (split-chunk-tap ts-pail-path ["precl"])
+                         (split-chunk-tap pail-path ["vcf"])
+                         (country-tap (split-chunk-tap pail-path ["gadm"])
+                                      convert-line-src)
+                         (split-chunk-tap ts-pail-path ["fire"]))))
 
 ;; ## Rain Processing, for Dan
 ;;
@@ -78,28 +91,18 @@
 ;; administrative boundary; MODIS is far finer than gadm, so this will
 ;; mimic a weighted average.
 
-(defn rain-tap
-  "TODO: Very similar to extract-tseries. Consolidate."
-  [rain-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?date ?val]
-      (rain-src _ ?chunk)
-      ((c/juxt #'io/extract-chunk-value
-               #'io/extract-location
-               #'io/extract-date) ?chunk :> ?rain-chunk ?location ?date)
-      (p/struct-index 0 ?rain-chunk :> ?pix-idx ?val)
-      (io/get-pos ?location ?pix-idx :> ?s-res ?mod-h ?mod-v ?sample ?line)))
-
-(defn run-rain
+(defn rain-query
   [gadm-src rain-src]
-  (let [gadm-src (static-tap gadm-src)
-        rain-src (rain-tap rain-src)]
-    (<- [?gadm ?date ?avg-rain]
-        (gadm-src _ ?mod-h ?mod-v ?sample ?line ?gadm)
-        (rain-src _ ?mod-h ?mod-v ?sample ?line ?date ?rain)
-        (c/avg ?rain :> ?avg-rain))))
+  (<- [?gadm ?date ?avg-rain]
+      (rain-src _ ?rain-chunk)
+      (gadm-src _ ?gadm-chunk)
+      (io/extract-date ?rain-chunk :> ?date)
+      (p/blossom-chunk ?rain-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?rain)
+      (p/blossom-chunk ?gadm-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
+      (c/avg ?rain :> ?avg-rain)))
 
 (defjob ProcessRain
   [pail-path output-path]
   (?- (hfs-textline output-path)
-      (run-rain (split-chunk-tap pail-path ["gadm"])
-                (split-chunk-tap pail-path ["rain"]))))
+      (rain-query (split-chunk-tap pail-path ["gadm"])
+                  (split-chunk-tap pail-path ["rain"]))))

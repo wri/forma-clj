@@ -1,7 +1,7 @@
 (ns forma.hadoop.jobs.forma
-  (:use cascalog.api
-        [forma.source.static :only (static-tap)])
-  (:require [forma.utils :as utils]
+  (:use cascalog.api)
+  (:require [cascalog.ops :as c]
+            [forma.utils :as utils]
             [forma.matrix.walk :as w]
             [forma.date-time :as date]
             [forma.hadoop.io :as io]
@@ -9,6 +9,8 @@
             [forma.trends.analysis :as a]
             [forma.source.modis :as modis]))
 
+;; TODO: Remove ts-start from both. Convert both to deal with actual
+;; timeseries objects, not just structs of ints or doubles.
 (defn short-trend-shell
   "a wrapper to collect the short-term trends into a form that can be
   manipulated from within cascalog."
@@ -19,6 +21,8 @@
           (a/collect-short-trend start end long-block window)
           io/to-struct)]))
 
+;; TODO: Remove ts-start from both. Convert both to deal with actual
+;; timeseries objects, not just structs of ints or doubles.
 (defn long-trend-shell
   "a wrapper that takes a map of options and attributes of the input
   time-series (and cofactors) to extract the long-term trends and
@@ -32,35 +36,51 @@
                                       (map io/get-vals cofactors))
                 (apply map (comp io/to-struct vector))))))
 
+;; TODO: Update adjust-fires to cover the new type of tseries.
 (defn fire-tap
   "Accepts an est-map and a source of fire timeseries."
   [est-map fire-src]
-  (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start ?fire-series]
-      (fire-src _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?f-start _ ?f-series)
-      (io/adjust-fires est-map ?f-start ?f-series :> ?start ?fire-series)))
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?fire-series]
+      (fire-src _ ?chunk)
+      ((c/juxt #'io/extract-location
+               #'io/extract-chunk-value) ?chunk :> ?location ?f-series)
+      (io/get-pos ?location :> ?s-res ?mod-h ?mod-v ?sample ?line)
+      (io/adjust-fires est-map ?f-series :> ?fire-series)))
 
+;; TODO: Note that we're using adjust. This should be a new version fo
+;; io/adjust -- update this, and tests, to deal with actual timeseries
+;; objects, not just doublearray and intarray.
 (defn dynamic-filter
   "Returns a new generator of ndvi and rain timeseries obtained by
   filtering out all pixels with VCF less than the supplied
   `vcf-limit`."
   [vcf-limit ndvi-src rain-src vcf-src]
-  (let [vcf-pixels (static-tap vcf-src)]
-    (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi-series ?precl-series]
-        (ndvi-src _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?n-start _ ?n-series)
-        (rain-src _ ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?r-start _ ?r-series)
-        (io/adjust ?r-start ?r-series ?n-start ?n-series :> ?start ?precl-series ?ndvi-series)
-        (vcf-pixels ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
+  (let [extracter (c/juxt #'io/extract-location
+                          #'io/extract-chunk-value)]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?ndvi-series ?precl-series]
+        (ndvi-src _ ?ndvi-chunk)
+        (rain-src _ ?rain-chunk)
+        (vcf-src _ ?vcf-chunk)
+        (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
+        (extracter ?ndvi-chunk :> ?location ?n-series)
+        (extracter ?rain-chunk :> ?location ?r-series)
+        (io/get-pos ?location :> ?s-res ?mod-h ?mod-v ?sample ?line)
+        (io/adjust ?r-series ?n-series :> ?precl-series ?ndvi-series)
         (>= ?vcf vcf-limit))))
 
 (defn dynamic-tap
   "Accepts an est-map, and sources for ndvi and rain timeseries and
-  vcf values split up by pixel."
+  vcf values split up by pixel.
+
+  We break this apart from dynamic-filter to force the filtering to
+  occur before the analysis."
   [est-map dynamic-src]
-  (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line
-       ?est-start ?short-series ?long-series ?t-stat-series]
-      (dynamic-src ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi-series ?precl-series)
-      (short-trend-shell est-map ?start ?ndvi-series :> ?est-start ?short-series)
-      (long-trend-shell est-map ?start ?ndvi-series ?precl-series :> ?est-start ?long-series ?t-stat-series)))
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?short-series ?long-series ?t-stat-series]
+      (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?ndvi-series ?precl-series)
+      (short-trend-shell est-map ?ndvi-series :> ?start ?short-series)
+      (long-trend-shell est-map
+                        ?ndvi-series
+                        ?precl-series :> ?start ?long-series ?t-stat-series)))
 
 (defn forma-tap
   "Accepts an est-map and sources for ndvi, rain, and fire timeseries,
@@ -70,11 +90,14 @@
         {lim :vcf-limit} est-map
         dynamic-src (->> (dynamic-filter lim ndvi-src rain-src vcf-src)
                          (dynamic-tap est-map))]
-    (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?period ?forma-val]
-        (dynamic-src ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start
-                     ?short-series ?long-series ?t-stat-series)
-        (fire-src ?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?start !!fire-series)
-        (io/forma-schema !!fire-series ?short-series ?long-series ?t-stat-series :> ?forma-series)
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?period ?forma-val]
+        (fire-src ?s-res ?mod-h ?mod-v ?sample ?line !!fire-series)
+        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line
+                     ?start ?short-series ?long-series ?t-stat-series)
+        (io/forma-schema !!fire-series
+                         ?short-series
+                         ?long-series
+                         ?t-stat-series :> ?forma-series)
         (p/struct-index ?start ?forma-series :> ?period ?forma-val))))
 
 ;; Processes all neighbors... Returns the index within the chunk, the
@@ -88,25 +111,6 @@
                    (filter (complement nil?))
                    (io/combine-neighbors))])
        (map-indexed cons)))
-
-(defn line->nums [convert-src]
-  (<- [?country ?admin]
-      (convert-src ?line)
-      (p/mangle #"," ?line :> ?country-s ?admin-s)
-      (utils/strings->ints ?country-s ?admin-s :> ?country ?admin)))
-
-(defn country-tap
-  "TODO: Very similar to extract-tseries, and almost identical to
-  static-tap. Consolidate."
-  [gadm-src convert-src]
-  (let [converter (line->nums convert-src)]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?country]
-        (gadm-src _ ?s-res _ ?tilestring ?chunkid ?chunk)
-        (converter ?country ?admin)
-        (io/count-vals ?chunk :> ?chunk-size)
-        (p/struct-index 0 ?chunk :> ?pix-idx ?admin)
-        (modis/tilestring->hv ?tilestring :> ?mod-h ?mod-v)
-        (modis/tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line))))
 
 (defn forma-query
   "final query that walks the neighbors and spits out the values."

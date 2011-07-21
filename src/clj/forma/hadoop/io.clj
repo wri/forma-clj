@@ -545,6 +545,14 @@ together each entry in the supplied sequence of `FormaValue`s."
    (extract-chunk-value chunk)])
 
 (defn get-pos
+  [^ModisPixelLocation loc]
+  [(.getResolution loc)
+   (.getTileH loc)
+   (.getTileV loc)
+   (.getSample loc)
+   (.getLine loc)])
+
+(defn expand-pos
   "TODO: Rename this bastard."
   [^ModisChunkLocation loc pix-idx]
   (let [m-res (.getResolution loc)
@@ -558,7 +566,7 @@ together each entry in the supplied sequence of `FormaValue`s."
 (defn chunkloc->pixloc
   "Used by timeseries for conversion."
   [loc pix-idx]
-  (apply pixel-location (get-pos loc pix-idx)))
+  (apply pixel-location (expand-pos loc pix-idx)))
 
 ;; The following are used in timeseries.
 (defn swap-location
@@ -597,9 +605,3 @@ together each entry in the supplied sequence of `FormaValue`s."
     (if date
       (doto chunk (.setDate date))
       chunk)))
-
-(defn chunkify [chunk-size]
-  (<- [?dataset !date ?s-res ?t-res ?mh ?mv ?chunkid ?chunk :> ?datachunk]
-      (chunk-location ?s-res ?mh ?mv ?chunkid chunk-size :> ?location)
-      (mk-data-value ?chunk :> ?data-val)
-      (mk-chunk ?dataset ?t-res !date ?location ?data-val :> ?datachunk)))
