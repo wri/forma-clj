@@ -140,7 +140,11 @@
       (create-fire-series t-res start end)))
 
 (defjob FireTimeseries
-  [source-pail-path ts-pail-path t-res start end]
-  (-> source-pail-path
-      (fire-query t-res start end)
-      (pail/to-pail ts-pail-path)))
+  "Note that currently, as of july 21st, we have fires data through
+July 9th or so. So, our ending date should by 2011-06-01."
+  ([source-pail-path ts-pail-path]
+     (FireTimeseries-main source-pail-path ts-pail-path "32" "2011-06-01"))
+  ([source-pail-path ts-pail-path t-res end]
+     (-> source-pail-path
+         (fire-query t-res "2000-11-01" end)
+         (pail/to-pail ts-pail-path))))
