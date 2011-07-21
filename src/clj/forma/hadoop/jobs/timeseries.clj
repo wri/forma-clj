@@ -134,13 +134,13 @@
         (update-chunk ?chunk t-res ?fire-series :> ?final-chunk))))
 
 (defn fire-query
-  [pail-path t-res start end]
-  (-> pail-path
+  [source-pail-path t-res start end]
+  (-> source-pail-path
       (pail/split-chunk-tap ["fire"])
       (create-fire-series t-res start end)))
 
 (defjob FireTimeseries
-  [t-res start end source-pail-path ts-pail-path]
+  [source-pail-path ts-pail-path t-res start end]
   (-> source-pail-path
       (fire-query t-res start end)
       (pail/to-pail ts-pail-path)))
