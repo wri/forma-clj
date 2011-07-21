@@ -15,7 +15,7 @@
   [date mh mv sample line val]
   (io/mk-chunk "fire" "01" date
                (io/pixel-location "1000" mh mv sample line)
-               (io/mk-data-value val :fire)))
+               (io/mk-data-value val)))
 
 (fact?- "Projecting fires into 1000m resolution."
         [[(fire-datachunk "2011-03-15" 31 11 181 1087 (io/fire-tuple 1 1 1 1))]

@@ -114,7 +114,7 @@
   [pattern]
   (let [static-src (hfs-seqfile "s3n://redddata/"
                                 :source-pattern pattern)
-        chunkifier (io/chunkify 24000 :int-struct)]
+        chunkifier (io/chunkify 24000)]
     (?pail- (split-chunk-tap "s3n://pailbucket/rawstore/")
             (<- [?datachunk]
                 (static-src ?dataset ?s-res ?t-res ?tilestring ?chunkid ?chunk)

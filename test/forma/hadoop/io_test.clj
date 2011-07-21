@@ -85,16 +85,17 @@ textual representation."
          (catch Exception e
            (Pail/create path (SplitDataChunkPailStructure.))))))
 
+;; TODO: Consolidate these two.
 (defn gen-tuples [dataset m-res t-res]
   (into []
         (for [x (range 1000)]
-          (let [data (mk-data-value x :int)]
+          (let [data (mk-data-value x)]
             (mk-chunk dataset t-res "2005-12-01" m-res 8 6 x 1 data)))))
 
 (defn tuple-writer [dataset m-res t-res]
   (with-open [stream (.openWrite some-pail)]
     (doseq [x (range 1000)]
-      (let [data (mk-data-value x :int)]
+      (let [data (mk-data-value x)]
         (.writeObject stream (mk-chunk dataset t-res "2005-12-01" m-res 8 6 x 1 data))))
     (.consolidate some-pail)))
 

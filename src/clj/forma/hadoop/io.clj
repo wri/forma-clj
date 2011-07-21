@@ -484,22 +484,18 @@ together each entry in the supplied sequence of `FormaValue`s."
 
 ;; ## DataValue Generation
 
-(defn mk-array-value
-  [val type]
-  (case type
-        :int-struct    (ArrayValue/ints val)
-        :double-struct (ArrayValue/doubles val)))
+(defmulti mk-array-value class)
+(defmethod mk-array-value IntArray [x] (ArrayValue/ints x))
+(defmethod mk-array-value DoubleArray [x] (ArrayValue/doubles x))
 
-(defn mk-data-value
-  [val type]
-  (case type
-        :int-struct    (DataValue/ints val)
-        :int           (DataValue/intVal val)
-        :double-struct (DataValue/doubles val)
-        :double        (DataValue/doubleVal val)
-        :fire          (DataValue/fireVal val)
-        :timeseries    (DataValue/timeSeries val)
-        :fireseries    (DataValue/fireSeries val)))
+(defmulti mk-data-value class)
+(defmethod mk-data-value IntArray [x] (DataValue/ints x))
+(defmethod mk-data-value Integer [x] (DataValue/intVal x))
+(defmethod mk-data-value DoubleArray [x] (DataValue/doubles x))
+(defmethod mk-data-value Double [x] (DataValue/doubleVal x))
+(defmethod mk-data-value FireTuple [x] (DataValue/fireVal x))
+(defmethod mk-data-value TimeSeries [x] (DataValue/timeSeries x))
+(defmethod mk-data-value FireSeries [x] (DataValue/fireSeries x))
 
 (defn chunk-location
   [s-res mod-h mod-v idx size]
@@ -577,8 +573,7 @@ together each entry in the supplied sequence of `FormaValue`s."
       (set-date nil)))
 
 (defn timeseries-value [start end series]
-  (-> (TimeSeries. start end series)
-      (mk-data-value :timeseries)))
+  (mk-data-value (TimeSeries. start end series)))
 
 (defn mk-chunk
   [dataset t-res date location-prop data-value]
@@ -590,19 +585,8 @@ together each entry in the supplied sequence of `FormaValue`s."
       (doto chunk (.setDate date))
       chunk)))
 
-;; Get rid of these with support for multimethods in cascalog.
-(defmapop [data-val [type]]
-  "Generates chunk data values."
-  [val]
-  (mk-data-value val type))
-
-(defmapop [array-val [type]]
-  "Generates chunk data values."
-  [val]
-  (mk-array-value val type))
-
-(defn chunkify [chunk-size type]
+(defn chunkify [chunk-size]
   (<- [?dataset !date ?s-res ?t-res ?mh ?mv ?chunkid ?chunk :> ?datachunk]
       (chunk-location ?s-res ?mh ?mv ?chunkid chunk-size :> ?location)
-      (data-val [type] ?chunk :> ?data-val)
+      (mk-data-value ?chunk :> ?data-val)
       (mk-chunk ?dataset ?t-res !date ?location ?data-val :> ?datachunk)))

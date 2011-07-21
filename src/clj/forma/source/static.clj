@@ -94,10 +94,7 @@
 ?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val"
   [val-gen m-res chunk-size nodata type]
   {:pre [(#{:int :double} type)]}
-  (let [chunkifier (io/chunkify chunk-size
-                                (-> (name type)
-                                    (str "-struct")
-                                    (keyword)))
+  (let [chunkifier (io/chunkify chunk-size)
         src (p/sparse-windower val-gen
                                ["?sample" "?line"]
                                (m/chunk-dims m-res chunk-size)

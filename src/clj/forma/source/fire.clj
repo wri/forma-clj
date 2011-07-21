@@ -88,5 +88,5 @@
       (src ?dataset ?date ?t-res ?lat ?lon ?tuple)
       (m/latlon->modis ?m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
       (io/pixel-location ?m-res ?mod-h ?mod-v ?sample ?line :> ?location)
-      (io/data-val [:fire] ?tuple :> ?data-val)
+      (io/mk-data-value ?tuple :> ?data-val)
       (io/mk-chunk ?dataset ?t-res ?date ?location ?data-val :> ?datachunk)))

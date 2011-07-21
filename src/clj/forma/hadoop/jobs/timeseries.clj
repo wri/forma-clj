@@ -56,7 +56,7 @@
                        (io/extract-location ?chunk :> ?location)
                        (io/extract-timeseries-data ?chunk :> ?name ?t-res ?date ?datachunk)
                        (mk-tseries ?t-res ?date ?datachunk :> ?pix-idx ?start ?end ?tseries)
-                       (io/array-val [:int-struct] ?tseries :> ?series-val)
+                       (io/mk-array-value ?tseries :> ?series-val)
                        (io/timeseries-value ?start ?end ?series-val :> ?series-struct))]
     (<- [?final-chunk]
         (chunk-source _ ?chunk)
@@ -135,7 +135,7 @@
   [chunk t-res date firetuple]
   (->  (io/set-date date)
        (io/set-temporal-res t-res)
-       (io/swap-data (io/mk-data-value firetuple :fire))))
+       (io/swap-data (io/mk-data-value firetuple))))
 
 (defn aggregate-fires
   "Converts the datestring into a time period based on the supplied
@@ -159,6 +159,7 @@
 
         (src ?dataset ?m-res ?t-res ?tilestring ?tperiod ?sample ?line ?tuple)
 
+        (src ?datestring ?location ?final-chunk)
 
         (m/tilestring->hv ?tilestring :> ?mod-h ?mod-v)
         (mk-fire-tseries ?tperiod ?tuple :> _ ?tseries)

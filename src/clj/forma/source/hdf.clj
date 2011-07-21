@@ -260,7 +260,7 @@ of a MODIS TileID acts as a key to retrieve this data."
   time for lookups."
   [datasets chunk-size source]
   (let [keys ["SHORTNAME" "TileID" "RANGEBEGINNINGDATE"]
-        chunkifier (hadoop.io/chunkify chunk-size :int-struct)]
+        chunkifier (hadoop.io/chunkify chunk-size)]
     (<- [?datachunk]
         (source ?filename ?hdf)
         (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)

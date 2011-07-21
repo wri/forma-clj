@@ -16,7 +16,7 @@
               location (io/chunk-location "1000" 8 6 0 chunk-size)
               chunk (-> (range chunk-size)
                         (io/int-struct)
-                        (io/mk-data-value :int-struct))]]
+                        (io/mk-data-value))]]
     ["path" (io/mk-chunk dataset "32" date location chunk)]))
 
 (future-fact
