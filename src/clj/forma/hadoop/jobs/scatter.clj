@@ -30,9 +30,12 @@
 (defjob GetStatic
   [pail-path out-path]
   (let [converter (forma/line->nums (hfs-textline *convert-path*))
-        [vcf hansen ecoid gadm] (map split-chunk-tap
+        [vcf hansen ecoid gadm] (map (comp static-tap
+                                           split-chunk-tap)
                                      [["vcf"] ["hansen"] ["ecoid"] ["gadm"]])]
-    (?<- (hfs-textline out-path :sinkparts 3 :sink-template "%s/")
+    (?<- (hfs-textline out-path
+                       :sinkparts 3
+                       :sink-template "%s/")
          [?country ?lat ?lon ?mod-h ?mod-v ?sample ?line ?hansen ?ecoid ?vcf ?gadm]
          (vcf _ ?mod-h ?mod-v ?sample ?line ?vcf)
          (hansen _ ?mod-h ?mod-v ?sample ?line ?hansen)
@@ -80,7 +83,9 @@
 ;; This can probably go into its own project.
 
 (defn rain-tap
-  "TODO: Very similar to extract-tseries. Consolidate."
+  "TODO: Very similar to extract-tseries. Consolidate.
+
+   TODO: Update to match static-tap."
   [rain-src]
   (<- [?mod-h ?mod-v ?sample ?line ?date ?val]
       (rain-src _ ?s-res _ ?tilestring ?date ?chunkid ?chunk)

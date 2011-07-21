@@ -119,12 +119,26 @@
 
 ;; TODOSAM: Think about dependencies with forma, fix this shit!
 ;; Consolidate with the new rain extraction.
+;;
+;; TODO: Fix the issues that this is going to have with get-pos, using
+;; the pix-index.
+
+(def get-pos
+  (comp (fn [loc]
+          (.getResolution loc)
+          (.getTileH loc)
+          (.getTileV loc)
+          (.getSample loc)
+          (.getLine loc))
+        io/chunkloc->pixloc
+        io/extract-location))
+
 (defn static-tap
-  "TODO: Very similar to extract-tseries. Consolidate."
-  [static-src]
+  "TODO: Very similar to extract-tseries. Consolidate. ALSO, update
+  those to match this new business."
+  [chunk-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?val]
-      (static-src _ ?s-res _ ?tilestring ?chunkid ?chunk)
-      (io/count-vals ?chunk :> ?chunk-size)
-      (p/struct-index 0 ?chunk :> ?pix-idx ?val)
-      (m/tilestring->hv ?tilestring :> ?mod-h ?mod-v)
-      (m/tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line)))
+      (chunk-src _ ?chunk)
+      (io/extract-chunk-value ?chunk :> ?static-chunk)
+      (p/struct-index 0 ?static-chunk :> ?pix-idx ?val)
+      (get-pos ?chunk ?pix-idx :> ?s-res ?mod-h ?mod-v ?sample ?line)))
