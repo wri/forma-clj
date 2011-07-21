@@ -12,20 +12,7 @@
             [forma.hadoop.jobs.forma :as forma]
             [forma.hadoop.jobs.timeseries :as tseries]))
 
-(defn static-chunktap
-  [dataset]
-  (io/chunk-tap "s3n://redddata/"
-                dataset
-                "1000-00"
-                (for [[th tv] (vec (tile-set :IDN :MYS))]
-                  (format "%03d%03d" th tv))))
-
-(def *gadm-path* "s3n://redddata/gadm/1000-00/*/*/")
-(def *ecoid-path* "s3n://redddata/ecoid/1000-00/*/*/")
 (def *convert-path* "s3n://modisfiles/ascii/admin-map.csv")
-(def *ndvi-path* "s3n://redddata/ndvi/1000-32/*/*/")
-(def *rain-path* "s3n://redddata/precl/1000-32/*/*/")
-(def *fire-path* "s3n://redddata/fire/1000-01/*/")
 
 (defjob GetStatic
   [pail-path out-path]
@@ -47,6 +34,11 @@
 
 ;; ## Forma
 
+(def *gadm-path* "s3n://redddata/gadm/1000-00/*/*/")
+(def *ndvi-path* "s3n://redddata/ndvi/1000-32/*/*/")
+(def *rain-path* "s3n://redddata/precl/1000-32/*/*/")
+(def *fire-path* "s3n://redddata/fire/1000-01/*/")
+
 (def forma-map
   {:est-start "2005-12-01"
    :est-end "2011-04-01"
@@ -67,32 +59,35 @@
 
 ;; TODO: Rewrite this, so that we only need to give it a sequence of
 ;; countries (or tiles), and it'll generate the rest.
+
 (defjob RunForma
-  [out-path]
-  (let [[ndvi-src rain-src] (map tseries/tseries-query
-                                 [*ndvi-path* *rain-path*])
+  [pail-path out-path]
+  (let [[ndvi-src rain-src] (map tseries/tseries-query [*ndvi-path* *rain-path*])
         country-src (forma/country-tap (hfs-seqfile *gadm-path*)
                                        (hfs-textline *convert-path*))
-        vcf-src  (static-chunktap "vcf")
+        vcf-src  (split-chunk-tap pail-path ["vcf"])
         fire-src (tseries/fire-query "32" "2000-11-01" "2011-04-01" *fire-path*)]
     (?- (forma-textline out-path "%s-%s/%s/%s/")
         (forma/forma-query forma-map ndvi-src rain-src vcf-src country-src fire-src))))
 
 ;; ## Rain Processing, for Dan
 ;;
-;; This can probably go into its own project.
+;; Dan wanted some means of generating the average rainfall per
+;; administrative region. As we've already projected the data into
+;; modis coordinates, we can simply take an average of all values per
+;; administrative boundary; MODIS is far finer than gadm, so this will
+;; mimic a weighted average.
 
 (defn rain-tap
-  "TODO: Very similar to extract-tseries. Consolidate.
-
-   TODO: Update to match static-tap."
+  "TODO: Very similar to extract-tseries. Consolidate."
   [rain-src]
-  (<- [?mod-h ?mod-v ?sample ?line ?date ?val]
-      (rain-src _ ?s-res _ ?tilestring ?date ?chunkid ?chunk)
-      (io/count-vals ?chunk :> ?chunk-size)
-      (p/struct-index 0 ?chunk :> ?pix-idx ?val)
-      (m/tilestring->hv ?tilestring :> ?mod-h ?mod-v)
-      (m/tile-position ?s-res ?chunk-size ?chunkid ?pix-idx :> ?sample ?line)))
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?date ?val]
+      (rain-src _ ?chunk)
+      ((c/juxt #'io/extract-chunk-value
+               #'io/extract-location
+               #'io/extract-date) ?chunk :> ?rain-chunk ?location ?date)
+      (p/struct-index 0 ?rain-chunk :> ?pix-idx ?val)
+      (io/get-pos ?location ?pix-idx :> ?s-res ?mod-h ?mod-v ?sample ?line)))
 
 (defn run-rain
   [gadm-src rain-src]
@@ -100,27 +95,11 @@
         rain-src (rain-tap rain-src)]
     (<- [?gadm ?date ?avg-rain]
         (gadm-src _ ?mod-h ?mod-v ?sample ?line ?gadm)
-        (rain-src ?mod-h ?mod-v ?sample ?line ?date ?rain)
+        (rain-src _ ?mod-h ?mod-v ?sample ?line ?date ?rain)
         (c/avg ?rain :> ?avg-rain))))
 
 (defjob ProcessRain
-  [path]
-  (?- (hfs-textline path)
-      (run-rain (hfs-seqfile *gadm-path*)
-                (hfs-seqfile *rain-path*))))
-
-;; this guy really exists only to transfer the old processed static
-;; chunks over to the new SplitDataChunkPailStructure.
-
-(defjob StaticPailer
-  [pattern]
-  (let [static-src (hfs-seqfile "s3n://redddata/"
-                                :source-pattern pattern)
-        chunkifier (io/chunkify 24000)]
-    (?pail- (split-chunk-tap "s3n://pailbucket/rawstore/")
-            (<- [?datachunk]
-                (static-src ?dataset ?s-res ?t-res ?tilestring ?chunkid ?chunk)
-                (p/add-fields nil :> !date)
-                (m/tilestring->hv ?tilestring :> ?mod-h ?mod-v)
-                (chunkifier ?dataset !date ?s-res ?t-res
-                            ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk)))))
+  [pail-path output-path]
+  (?- (hfs-textline output-path)
+      (run-rain (split-chunk-tap pail-path ["gadm"])
+                (split-chunk-tap pail-path ["rain"]))))
