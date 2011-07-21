@@ -28,13 +28,10 @@
 (def *fire-path* "s3n://redddata/fire/1000-01/*/")
 
 (defjob GetStatic
-  [out-path]
+  [pail-path out-path]
   (let [converter (forma/line->nums (hfs-textline *convert-path*))
-        [vcf hansen ecoid gadm] (map static-tap
-                                     [(static-chunktap "vcf")
-                                      (static-chunktap "hansen")
-                                      (hfs-seqfile *ecoid-path*)
-                                      (hfs-seqfile *gadm-path*)])]
+        [vcf hansen ecoid gadm] (map split-chunk-tap
+                                     [["vcf"] ["hansen"] ["ecoid"] ["gadm"]])]
     (?<- (hfs-textline out-path :sinkparts 3 :sink-template "%s/")
          [?country ?lat ?lon ?mod-h ?mod-v ?sample ?line ?hansen ?ecoid ?vcf ?gadm]
          (vcf _ ?mod-h ?mod-v ?sample ?line ?vcf)
