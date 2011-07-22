@@ -75,7 +75,7 @@
                        (map read-string)
                        (apply tile-set))
                   dataset
-                  c/max
+                  ({"vcf" c/max "hansen" c/sum} dataset c/max)
                   ascii-path
                   output-path))
 
