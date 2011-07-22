@@ -69,7 +69,7 @@
   [nodecount]
   (let [lib-path (str fw-path "/usr/lib")
         mappers 4
-        reducers 2]
+        reducers 3]
     (cluster-spec :private
                   {
                    :jobtracker (node-group [:jobtracker :namenode])
@@ -79,6 +79,7 @@
                                       :hardware-id "m1.large"
                                       ;; :hardware-id "m2.4xlarge"
                                       :image-id "us-east-1/ami-08f40561"
+                                      ;; :key-pair "forma2"
                                       :spot-price (float 0.75)
                                       }
                   :base-props {:hadoop-env {:JAVA_LIBRARY_PATH native-path
