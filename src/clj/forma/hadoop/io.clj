@@ -466,13 +466,14 @@ together each entry in the supplied sequence of `FormaValue`s."
   [^DataChunk chunk]
   (.getDate chunk))
 
-(defn extract-timeseries-data
+(defn extract-ts-data
   "Used by timeseries. Returns `[dataset-name t-res date collection]`,
    where collection is `IntArray` or `DoubleArray`."
   [^DataChunk chunk]
   [(.getDataset chunk)
    (.getTemporalRes chunk)
    (extract-date chunk)
+   (extract-location chunk)
    (extract-chunk-value chunk)])
 
 (defn get-pos
@@ -515,14 +516,6 @@ together each entry in the supplied sequence of `FormaValue`s."
 (defn set-temporal-res
   [^DataChunk chunk t-res]
   (doto chunk (.setTemporalRes t-res)))
-
-(defn massage-ts-chunk
-  "Here strictly for timeseries generation ease."
-  [chunk series-struct pix-location]
-  (-> chunk
-      (swap-data series-struct)
-      (swap-location pix-location)
-      (set-date nil)))
 
 (defn timeseries-value [start end series]
   (mk-data-value (TimeSeries. start end series)))

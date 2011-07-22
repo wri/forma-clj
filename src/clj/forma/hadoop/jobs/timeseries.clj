@@ -51,19 +51,16 @@
   timeseries."
   [chunk-source missing-val]
   (let [mk-tseries (form-tseries missing-val)
-        series-src (<- [?name ?location ?pix-idx ?series-struct]
+        series-src (<- [?name ?t-res ?location ?pix-idx ?timeseries]
                        (chunk-source _ ?chunk)
-                       (io/extract-location ?chunk :> ?location)
-                       (io/extract-timeseries-data ?chunk :> ?name ?t-res ?date ?datachunk)
+                       (io/extract-ts-data ?chunk :> ?name ?t-res ?date ?location ?datachunk)
                        (mk-tseries ?t-res ?date ?datachunk :> ?pix-idx ?start ?end ?tseries)
                        (io/mk-array-value ?tseries :> ?series-val)
-                       (io/timeseries-value ?start ?end ?series-val :> ?series-struct))]
-    (<- [?final-chunk]
-        (chunk-source _ ?chunk)
-        (io/extract-location ?chunk :> ?location)
-        (series-src ?name ?location ?pix-idx ?series-struct)
+                       (io/timeseries-value ?start ?end ?series-val :> ?timeseries))]
+    (<- [?chunk]
+        (series-src ?name ?t-res ?location ?pix-idx ?timeseries)
         (io/chunkloc->pixloc ?location ?pix-idx :> ?pix-location)
-        (io/massage-ts-chunk ?chunk ?series-struct ?pix-location :> ?final-chunk))))
+        (io/mk-chunk ?name ?t-res nil ?pix-location ?timeseries :> ?chunk))))
 
 (def *missing-val* -9999)
 
