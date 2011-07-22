@@ -449,6 +449,10 @@ together each entry in the supplied sequence of `FormaValue`s."
        LocationPropertyValue/pixelLocation
        LocationProperty.))
 
+(defn get-location-property
+  [^DataChunk chunk]
+  (.getLocationProperty chunk))
+
 (defn extract-location
   [^DataChunk chunk]
   (-> chunk
@@ -462,6 +466,10 @@ together each entry in the supplied sequence of `FormaValue`s."
       .getChunkValue
       .getFieldValue))
 
+(defn extract-dataset
+  [^DataChunk chunk]
+  (.getDataset chunk))
+
 (defn extract-date
   [^DataChunk chunk]
   (.getDate chunk))
@@ -470,7 +478,7 @@ together each entry in the supplied sequence of `FormaValue`s."
   "Used by timeseries. Returns `[dataset-name t-res date collection]`,
    where collection is `IntArray` or `DoubleArray`."
   [^DataChunk chunk]
-  [(.getDataset chunk)
+  [(extract-dataset chunk)
    (.getTemporalRes chunk)
    (extract-date chunk)
    (extract-location chunk)

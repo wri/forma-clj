@@ -92,23 +92,17 @@
          (utils/running-sum [] empty io/add-fires)
          (io/fire-series start))))
 
-(defn update-chunk
-  [chunk t-res data-val]
-  (->  chunk
-       (io/set-date nil)
-       (io/set-temporal-res t-res)
-       (io/swap-data data-val)))
-
 (defn aggregate-fires
   "Converts the datestring into a time period based on the supplied
   temporal resolution."
   [src t-res]
-  (let [mash (c/juxt #'io/extract-location
+  (let [mash (c/juxt #'io/extract-dataset
+                     #'io/get-location-property
                      #'io/extract-date
                      (c/comp merge-firetuples #'io/extract-chunk-value))]
-    (<- [?datestring ?location ?tuple]
+    (<- [?name ?datestring ?location ?tuple]
         (src _ ?chunk)
-        (mash ?chunk :> ?location ?date ?tuple)
+        (mash ?chunk :> ?name ?location ?date ?tuple)
         (date/beginning t-res ?date :> ?datestring))))
 
 (defn create-fire-series
@@ -118,17 +112,15 @@
         length          (inc (- end start))
         mk-fire-tseries (p/vals->sparsevec start length (io/fire-tuple 0 0 0 0))
         series-src      (aggregate-fires src t-res)
-        query (<- [?location ?fire-series]
-                  (series-src ?datestring ?location ?tuple)
+        query (<- [?name ?location ?fire-series]
+                  (series-src ?name ?datestring ?location ?tuple)
                   (date/datetime->period t-res ?datestring :> ?tperiod)
                   (mk-fire-tseries ?tperiod ?tuple :> _ ?tseries)
                   ((c/comp #'io/mk-data-value
                            running-fire-sum) start ?tseries :> ?fire-series))]
-    (<- [?final-chunk]
-        (src _ ?chunk)
-        (io/extract-location ?chunk :> ?location)
-        (query ?location ?fire-series)
-        (update-chunk ?chunk t-res ?fire-series :> ?final-chunk))))
+    (<- [?chunk]
+        (query ?name ?location ?fire-series)
+        (io/mk-chunk ?name t-res nil ?location ?fire-series :> ?chunk))))
 
 (defn fire-query
   [source-pail-path t-res start end]
