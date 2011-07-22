@@ -4,7 +4,6 @@
 
 (ns forma.date-time
   (:use [clj-time.core :only (date-time month year)]
-        [clojure.string :only (split)]
         [clojure.contrib.def :only (defnk)])
   (:require [clj-time.core :as time]
             [clj-time.format :as f]))
