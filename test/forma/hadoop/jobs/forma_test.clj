@@ -29,33 +29,24 @@
 ;; FORMA, broken down into pieces. We're going to have sixteen sample
 ;; timeseries, to test the business with the neighbors.
 
-(def dynamic-tuples [["1000" "32" 13 9 0 0 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                     ["1000" "32" 13 9 1 0 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                     ["1000" "32" 13 9 2 0 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                     ["1000" "32" 13 9 3 0 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                     ["1000" "32" 13 9 0 1 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                     ["1000" "32" 13 9 1 1 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                     ["1000" "32" 13 9 2 1 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                     ["1000" "32" 13 9 3 1 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                     ["1000" "32" 13 9 0 2 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                     ["1000" "32" 13 9 1 2 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                     ["1000" "32" 13 9 2 2 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                     ["1000" "32" 13 9 3 2 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                     ["1000" "32" 13 9 0 3 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                     ["1000" "32" 13 9 1 3 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                     ["1000" "32" 13 9 2 3 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]
-                     ["1000" "32" 13 9 3 3 370 (io/int-struct [3 2 1]) (io/int-struct [3 2 1]) (io/int-struct [3 2 1])]])
+(def dynamic-tuples
+  (let [ts (->> [3 2 1]
+                (io/int-struct)
+                (io/mk-array-value)
+                (io/timeseries-value 370))]
+    (into [] (for [sample (range 4)
+                   line (range 4)]
+               ["1000" 13 9 sample line ts ts ts]))))
 
-(def fire-tuples [["1000" "32" 13 9 0 0 (io/fire-series 370 [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
-                  ["1000" "32" 13 9 1 0 (io/fire-series 370 [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
-                  ["1000" "32" 13 9 2 0 (io/fire-series 370 [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
-                  ["1000" "32" 13 9 3 0 (io/fire-series 370 [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
-                  ["1000" "32" 13 9 1 1 (io/fire-series 370 [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
-                  ["1000" "32" 13 9 2 1 (io/fire-series 370 [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
-                  ["1000" "32" 13 9 3 1 (io/fire-series 370 [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
-                  ["1000" "32" 13 9 2 2 (io/fire-series 370 [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
-                  ["1000" "32" 13 9 0 3 (io/fire-series 370 [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]
-                  ["1000" "32" 13 9 3 3 (io/fire-series 370 [(io/fire-tuple 1 1 1 1) (io/fire-tuple 0 1 1 1) (io/fire-tuple 3 2 1 1)])]])
+(def fire-tuples
+  (let [keep? (complement #{[0 1] [0 2] [1 2] [3 2] [1 3] [2 3]})
+        series (io/fire-series 370 [(io/fire-tuple 1 1 1 1)
+                                    (io/fire-tuple 0 1 1 1)
+                                    (io/fire-tuple 3 2 1 1)])]
+    (into [] (for [sample (range 4)
+                   line (range 4)
+                   :when (keep? [sample line])]
+               ["1000" 13 9 sample line series]))))
 
 (def outer-src (let [no-fire-3 (io/forma-value nil 3.0 3.0 3.0)
                      no-fire-2 (io/forma-value nil 2.0 2.0 2.0)
@@ -64,54 +55,54 @@
                      forma-2 (io/forma-value (io/fire-tuple 0 1 1 1) 2.0 2.0 2.0)
                      forma-1 (io/forma-value (io/fire-tuple 3 2 1 1) 1.0 1.0 1.0)]
                  [
-                  ["1000" "32" 13 9 0 0 370  forma-3]
-                  ["1000" "32" 13 9 0 0 371  forma-2]
-                  ["1000" "32" 13 9 0 0 372  forma-1]
-                  ["1000" "32" 13 9 1 0 370  forma-3]
-                  ["1000" "32" 13 9 1 0 371  forma-2]
-                  ["1000" "32" 13 9 1 0 372  forma-1]
-                  ["1000" "32" 13 9 2 0 370  forma-3]
-                  ["1000" "32" 13 9 2 0 371  forma-2]
-                  ["1000" "32" 13 9 2 0 372  forma-1]
-                  ["1000" "32" 13 9 3 0 370  forma-3]
-                  ["1000" "32" 13 9 3 0 371  forma-2]
-                  ["1000" "32" 13 9 3 0 372  forma-1]
-                  ["1000" "32" 13 9 0 1 370  no-fire-3]
-                  ["1000" "32" 13 9 0 1 371  no-fire-2]
-                  ["1000" "32" 13 9 0 1 372  no-fire-1]
-                  ["1000" "32" 13 9 1 1 370  forma-3]
-                  ["1000" "32" 13 9 1 1 371  forma-2]
-                  ["1000" "32" 13 9 1 1 372  forma-1]
-                  ["1000" "32" 13 9 2 1 370  forma-3]
-                  ["1000" "32" 13 9 2 1 371  forma-2]
-                  ["1000" "32" 13 9 2 1 372  forma-1]
-                  ["1000" "32" 13 9 3 1 370  forma-3]
-                  ["1000" "32" 13 9 3 1 371  forma-2]
-                  ["1000" "32" 13 9 3 1 372  forma-1]
-                  ["1000" "32" 13 9 0 2 370  no-fire-3]
-                  ["1000" "32" 13 9 0 2 371  no-fire-2]
-                  ["1000" "32" 13 9 0 2 372  no-fire-1]
-                  ["1000" "32" 13 9 1 2 370  no-fire-3]
-                  ["1000" "32" 13 9 1 2 371  no-fire-2]
-                  ["1000" "32" 13 9 1 2 372  no-fire-1]
-                  ["1000" "32" 13 9 2 2 370  forma-3]
-                  ["1000" "32" 13 9 2 2 371  forma-2]
-                  ["1000" "32" 13 9 2 2 372  forma-1]
-                  ["1000" "32" 13 9 3 2 370  no-fire-3]
-                  ["1000" "32" 13 9 3 2 371  no-fire-2]
-                  ["1000" "32" 13 9 3 2 372  no-fire-1]
-                  ["1000" "32" 13 9 0 3 370  forma-3]
-                  ["1000" "32" 13 9 0 3 371  forma-2]
-                  ["1000" "32" 13 9 0 3 372  forma-1]
-                  ["1000" "32" 13 9 1 3 370  no-fire-3]
-                  ["1000" "32" 13 9 1 3 371  no-fire-2]
-                  ["1000" "32" 13 9 1 3 372  no-fire-1]
-                  ["1000" "32" 13 9 2 3 370  no-fire-3]
-                  ["1000" "32" 13 9 2 3 371  no-fire-2]
-                  ["1000" "32" 13 9 2 3 372  no-fire-1]
-                  ["1000" "32" 13 9 3 3 370  forma-3]
-                  ["1000" "32" 13 9 3 3 371  forma-2]
-                  ["1000" "32" 13 9 3 3 372  forma-1]
+                  ["1000" 13 9 0 0 370  forma-3]
+                  ["1000" 13 9 0 0 371  forma-2]
+                  ["1000" 13 9 0 0 372  forma-1]
+                  ["1000" 13 9 1 0 370  forma-3]
+                  ["1000" 13 9 1 0 371  forma-2]
+                  ["1000" 13 9 1 0 372  forma-1]
+                  ["1000" 13 9 2 0 370  forma-3]
+                  ["1000" 13 9 2 0 371  forma-2]
+                  ["1000" 13 9 2 0 372  forma-1]
+                  ["1000" 13 9 3 0 370  forma-3]
+                  ["1000" 13 9 3 0 371  forma-2]
+                  ["1000" 13 9 3 0 372  forma-1]
+                  ["1000" 13 9 0 1 370  no-fire-3]
+                  ["1000" 13 9 0 1 371  no-fire-2]
+                  ["1000" 13 9 0 1 372  no-fire-1]
+                  ["1000" 13 9 1 1 370  forma-3]
+                  ["1000" 13 9 1 1 371  forma-2]
+                  ["1000" 13 9 1 1 372  forma-1]
+                  ["1000" 13 9 2 1 370  forma-3]
+                  ["1000" 13 9 2 1 371  forma-2]
+                  ["1000" 13 9 2 1 372  forma-1]
+                  ["1000" 13 9 3 1 370  forma-3]
+                  ["1000" 13 9 3 1 371  forma-2]
+                  ["1000" 13 9 3 1 372  forma-1]
+                  ["1000" 13 9 0 2 370  no-fire-3]
+                  ["1000" 13 9 0 2 371  no-fire-2]
+                  ["1000" 13 9 0 2 372  no-fire-1]
+                  ["1000" 13 9 1 2 370  no-fire-3]
+                  ["1000" 13 9 1 2 371  no-fire-2]
+                  ["1000" 13 9 1 2 372  no-fire-1]
+                  ["1000" 13 9 2 2 370  forma-3]
+                  ["1000" 13 9 2 2 371  forma-2]
+                  ["1000" 13 9 2 2 372  forma-1]
+                  ["1000" 13 9 3 2 370  no-fire-3]
+                  ["1000" 13 9 3 2 371  no-fire-2]
+                  ["1000" 13 9 3 2 372  no-fire-1]
+                  ["1000" 13 9 0 3 370  forma-3]
+                  ["1000" 13 9 0 3 371  forma-2]
+                  ["1000" 13 9 0 3 372  forma-1]
+                  ["1000" 13 9 1 3 370  no-fire-3]
+                  ["1000" 13 9 1 3 371  no-fire-2]
+                  ["1000" 13 9 1 3 372  no-fire-1]
+                  ["1000" 13 9 2 3 370  no-fire-3]
+                  ["1000" 13 9 2 3 371  no-fire-2]
+                  ["1000" 13 9 2 3 372  no-fire-1]
+                  ["1000" 13 9 3 3 370  forma-3]
+                  ["1000" 13 9 3 3 371  forma-2]
+                  ["1000" 13 9 3 3 372  forma-1]
                   ]))
 
 (let [est-map  {:est-start "2005-12-01"
@@ -122,12 +113,11 @@
                 :vcf-limit 25
                 :long-block 15
                 :window 5}]
-  (future-fact?- "TODO: Modify forma to handle new fire-series, etc,
-   then come back to this."
-                 outer-src (forma-tap est-map :n-src :r-src :v-src :f-src)
-                 (provided
-                   (dynamic-tap est-map (dynamic-filter 25 :n-src :r-src :v-src)) => dynamic-tuples
-                   (fire-tap est-map :f-src) => fire-tuples)))
+  (fact?- "forma-tap tests."
+          outer-src (forma-tap est-map :n-src :r-src :v-src :f-src)
+          (provided
+            (dynamic-tap est-map (dynamic-filter 25 :n-src :r-src :v-src)) => dynamic-tuples
+            (fire-tap est-map :f-src) => fire-tuples)))
 
 (def country-src
   (vec (for [sample (range 4)

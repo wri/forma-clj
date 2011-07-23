@@ -1,7 +1,8 @@
 (ns forma.hadoop.jobs.timeseries
   (:use cascalog.api
         [forma.utils :only (defjob)]
-        [forma.matrix.utils :only (sparse-expander)])
+        [forma.matrix.utils :only (sparse-expander)]
+        [forma.source.tilesets :only (tile-set)])
   (:require [cascalog.ops :as c]
             [forma.date-time :as date]
             [forma.hadoop.pail :as pail]
@@ -56,7 +57,8 @@
                        (io/extract-ts-data ?chunk :> ?name ?t-res ?date ?location ?datachunk)
                        (mk-tseries ?t-res ?date ?datachunk :> ?pix-idx ?start ?end ?tseries)
                        (io/mk-array-value ?tseries :> ?series-val)
-                       (io/timeseries-value ?start ?end ?series-val :> ?timeseries))]
+                       ((c/comp #'io/mk-data-value
+                                #'io/timeseries-value) ?start ?end ?series-val :> ?timeseries))]
     (<- [?chunk]
         (series-src ?name ?t-res ?location ?pix-idx ?timeseries)
         (io/chunkloc->pixloc ?location ?pix-idx :> ?pix-location)
@@ -123,17 +125,21 @@
         (io/mk-chunk ?name t-res nil ?location ?fire-series :> ?chunk))))
 
 (defn fire-query
-  [source-pail-path t-res start end]
-  (-> source-pail-path
-      (pail/split-chunk-tap ["fire"])
-      (create-fire-series t-res start end)))
+  [source-pail-path t-res start end tile-seq]
+  (let [tap (apply pail/split-chunk-tap
+                   source-pail-path
+                   (for [tile (apply tile-set tile-seq)]
+                     ["fire" "1000-01" (apply m/hv->tilestring tile)]))]
+    (create-fire-series tap t-res start end)))
 
 (defjob FireTimeseries
   "TODO: Note that currently, as of july 21st, we have fires data
 through July 9th or so. So, our ending date should by 2011-06-01."
   ([source-pail-path ts-pail-path]
-     (FireTimeseries-main source-pail-path ts-pail-path "32" "2011-06-01"))
-  ([source-pail-path ts-pail-path t-res end]
+     (FireTimeseries-main source-pail-path
+                          ts-pail-path
+                          "32" "2011-06-01" :IDN :MYS))
+  ([source-pail-path ts-pail-path t-res end & countries]
      (-> source-pail-path
-         (fire-query t-res "2000-11-01" end)
+         (fire-query t-res "2000-11-01" end (map read-string countries))
          (->> (pail/to-pail ts-pail-path)))))

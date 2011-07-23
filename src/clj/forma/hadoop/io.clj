@@ -335,25 +335,31 @@ together each entry in the supplied sequence of `FormaValue`s."
   (get-vals [x] x)
   (count-vals [x] (count x))
 
+  TimeSeries
+  (get-vals [x] (get-vals
+                 (.getFieldValue (.getSeries x))))
+  (count-vals [x]
+    (count (get-vals x)))
+  
   FireSeries
   (get-vals [x] (.getValues x))
   (count-vals [x]
-    (count (.getValues x)))
+    (count (get-vals x)))
 
   FormaSeries
   (get-vals [x] (.getValues x))
   (count-vals [x]
-    (count (.getValues x)))
+    (count (get-vals x)))
 
   IntArray
   (get-vals [x] (.getInts x))
   (count-vals [x]
-    (count (.getInts x)))
+    (count (get-vals x)))
 
   DoubleArray
   (get-vals [x] (.getDoubles x))
   (count-vals [x]
-    (count (.getDoubles x))))
+    (count (get-vals x))))
 
 (defn struct-edges
   "Accepts a sequence of pairs of initial integer time period and
@@ -392,17 +398,6 @@ together each entry in the supplied sequence of `FormaValue`s."
     (cons bottom
           (for [[x0 seq] (partition 2 pairs)]
             (trim-struct bottom top x0 seq)))))
-
-(defn adjust-fires
-  "Returns the section of fires data found appropriate based on the
-  information in the estimation parameter map."
-  [{:keys [est-start est-end t-res]} ^FireSeries f-series]
-  (let [f-start (.getStartIdx f-series)
-        [start end] (for [pd [est-start est-end]]
-                      (date/datetime->period "32" pd))]
-    [start (->> (get-vals f-series)
-                (u/trim-seq start (inc end) f-start)
-                (fire-series start))]))
 
 (defn forma-schema
   "Accepts a number of timeseries of equal length and starting
@@ -448,6 +443,9 @@ together each entry in the supplied sequence of `FormaValue`s."
   (->> (ModisPixelLocation. s-res mh mv sample line)
        LocationPropertyValue/pixelLocation
        LocationProperty.))
+
+(defn get-start-idx [^TimeSeries ts]
+  (.getStartIdx ts))
 
 (defn get-location-property
   [^DataChunk chunk]
@@ -525,8 +523,41 @@ together each entry in the supplied sequence of `FormaValue`s."
   [^DataChunk chunk t-res]
   (doto chunk (.setTemporalRes t-res)))
 
-(defn timeseries-value [start end series]
-  (mk-data-value (TimeSeries. start end series)))
+(defn timeseries-value
+  "TODO: get rid of the whens, here."
+  ([start ^ArrayValue series]
+     (when series
+       (let [elems (-> series
+                       .getFieldValue
+                       count-vals)]
+         (timeseries-value start
+                           (dec (+ start elems))
+                           series))))
+  ([start end series]
+     (when series
+       (TimeSeries. start end series))))
+
+(defn adjust-timeseries
+  "Takes in any number of thrift TimeSeries objects, and returns a new
+  sequence of appropriately truncated TimeSeries objects."
+  [& tseries]
+  (let [[start & ts-seq] (->> tseries
+                              (mapcat (juxt #(.getStartIdx %) get-vals))
+                              (apply adjust))]
+    (map (comp (partial timeseries-value start)
+               #(when % (mk-array-value %)))
+         ts-seq)))
+
+(defn adjust-fires
+  "Returns the section of fires data found appropriate based on the
+  information in the estimation parameter map."
+  [{:keys [est-start est-end t-res]} ^FireSeries f-series]
+  (let [f-start (.getStartIdx f-series)
+        [start end] (for [pd [est-start est-end]]
+                      (date/datetime->period "32" pd))]
+    [(->> (get-vals f-series)
+          (u/trim-seq start (inc end) f-start)
+          (fire-series start))]))
 
 (defn mk-chunk
   [dataset t-res date location-prop data-value]

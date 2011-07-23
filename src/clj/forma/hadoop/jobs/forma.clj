@@ -7,49 +7,47 @@
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
             [forma.trends.analysis :as a]
-            [forma.source.modis :as modis]))
+            [forma.source.modis :as modis])
+  (:import [forma.schema TimeSeries]))
 
-;; TODO: Remove ts-start from both. Convert both to deal with actual
-;; timeseries objects, not just structs of ints or doubles.
 (defn short-trend-shell
   "a wrapper to collect the short-term trends into a form that can be
   manipulated from within cascalog."
-  [{:keys [est-start est-end t-res long-block window]} ts-start ts-series]
-  (let [[start end] (date/relative-period t-res ts-start [est-start est-end])]
-    [(date/datetime->period t-res est-start)
-     (->> (io/get-vals ts-series)
+  [{:keys [est-start est-end t-res long-block window]} ts-series]
+  (let [ts-start (.getStartIdx ts-series)
+        [start end] (date/relative-period t-res ts-start [est-start est-end])]
+    [(->> (io/get-vals ts-series)
           (a/collect-short-trend start end long-block window)
-          io/to-struct)]))
+          io/to-struct
+          io/mk-array-value
+          (io/timeseries-value ts-start))]))
 
-;; TODO: Remove ts-start from both. Convert both to deal with actual
-;; timeseries objects, not just structs of ints or doubles.
 (defn long-trend-shell
   "a wrapper that takes a map of options and attributes of the input
   time-series (and cofactors) to extract the long-term trends and
   t-statistics from the time-series."
-  [{:keys [est-start est-end t-res long-block window]} ts-start ts-series & cofactors]
-  (let [[start end] (date/relative-period t-res ts-start [est-start est-end])]
-    (apply vector
-           (date/datetime->period t-res est-start)
-           (->> (a/collect-long-trend start end
-                                      (io/get-vals ts-series)
-                                      (map io/get-vals cofactors))
-                (apply map (comp io/to-struct vector))))))
+  [{:keys [est-start est-end t-res long-block window]} ts-series & cofactors]
+  (let [ts-start (.getStartIdx ts-series)
+        [start end] (date/relative-period t-res ts-start [est-start est-end])]
+    (->> (a/collect-long-trend start end
+                               (io/get-vals ts-series)
+                               (map io/get-vals cofactors))
+         (apply map (comp (partial io/timeseries-value ts-start)
+                          io/mk-array-value
+                          io/to-struct
+                          vector)))))
 
-;; TODO: Update adjust-fires to cover the new type of tseries.
 (defn fire-tap
-  "Accepts an est-map and a source of fire timeseries."
+  "Accepts an est-map and a query source of fire timeseries. Note that
+  this won't work, pulling directly from the pail!"
   [est-map fire-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?fire-series]
-      (fire-src _ ?chunk)
+      (fire-src ?chunk)
       ((c/juxt #'io/extract-location
                #'io/extract-chunk-value) ?chunk :> ?location ?f-series)
       (io/get-pos ?location :> ?s-res ?mod-h ?mod-v ?sample ?line)
       (io/adjust-fires est-map ?f-series :> ?fire-series)))
 
-;; TODO: Note that we're using adjust. This should be a new version fo
-;; io/adjust -- update this, and tests, to deal with actual timeseries
-;; objects, not just doublearray and intarray.
 (defn dynamic-filter
   "Returns a new generator of ndvi and rain timeseries obtained by
   filtering out all pixels with VCF less than the supplied
@@ -65,7 +63,7 @@
         (extracter ?ndvi-chunk :> ?location ?n-series)
         (extracter ?rain-chunk :> ?location ?r-series)
         (io/get-pos ?location :> ?s-res ?mod-h ?mod-v ?sample ?line)
-        (io/adjust ?r-series ?n-series :> ?precl-series ?ndvi-series)
+        (io/adjust-timeseries ?r-series ?n-series :> ?precl-series ?ndvi-series)
         (>= ?vcf vcf-limit))))
 
 (defn dynamic-tap
@@ -75,12 +73,12 @@
   We break this apart from dynamic-filter to force the filtering to
   occur before the analysis."
   [est-map dynamic-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?short-series ?long-series ?t-stat-series]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?short-series ?long-series ?t-stat-series]
       (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?ndvi-series ?precl-series)
-      (short-trend-shell est-map ?ndvi-series :> ?start ?short-series)
+      (short-trend-shell est-map ?ndvi-series :> ?short-series)
       (long-trend-shell est-map
                         ?ndvi-series
-                        ?precl-series :> ?start ?long-series ?t-stat-series)))
+                        ?precl-series :> ?long-series ?t-stat-series)))
 
 (defn forma-tap
   "Accepts an est-map and sources for ndvi, rain, and fire timeseries,
@@ -92,12 +90,12 @@
                          (dynamic-tap est-map))]
     (<- [?s-res ?mod-h ?mod-v ?sample ?line ?period ?forma-val]
         (fire-src ?s-res ?mod-h ?mod-v ?sample ?line !!fire-series)
-        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line
-                     ?start ?short-series ?long-series ?t-stat-series)
+        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?short-series ?long-series ?t-stat-series)
         (io/forma-schema !!fire-series
                          ?short-series
                          ?long-series
                          ?t-stat-series :> ?forma-series)
+        (io/get-start-idx ?short-series :> ?start)
         (p/struct-index ?start ?forma-series :> ?period ?forma-val))))
 
 ;; Processes all neighbors... Returns the index within the chunk, the
@@ -115,13 +113,13 @@
 (defn forma-query
   "final query that walks the neighbors and spits out the values."
   [est-map ndvi-src rain-src vcf-src country-src fire-src]
-  (let [{:keys [neighbors window-dims]} est-map
+  (let [{:keys [t-res neighbors window-dims]} est-map
         [rows cols] window-dims
         src (-> (forma-tap est-map ndvi-src rain-src vcf-src fire-src)
                 (p/sparse-windower ["?sample" "?line"] window-dims "?forma-val" nil))]
-    (<- [?s-res ?t-res ?country ?datestring ?text]
-        (date/period->datetime ?t-res ?period :> ?datestring)
-        (src ?s-res ?t-res ?mod-h ?mod-v ?win-col ?win-row ?period ?window)
+    (<- [?s-res ?country ?datestring ?text]
+        (date/period->datetime t-res ?period :> ?datestring)
+        (src ?s-res ?mod-h ?mod-v ?win-col ?win-row ?period ?window)
         (country-src ?s-res ?mod-h ?mod-v ?sample ?line ?country)
         (process-neighbors [neighbors] ?window :> ?win-idx ?val ?neighbor-vals)
         (modis/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)

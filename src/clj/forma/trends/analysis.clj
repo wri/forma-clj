@@ -177,7 +177,6 @@
        (map (partial lengthening-ts start end))
        (apply map long-trend)))
 
-
 ;; BFAST-Lite
 
 (defn cumsum

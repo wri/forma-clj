@@ -54,9 +54,16 @@ textual representation."
   (trim-struct 5 10 0 [1 2 3]) => nil)
 
 (tabular
- (fact "adjust testing."
-   (let [[av bv a b] (map to-struct [?a-vec ?b-vec ?a ?b])]
-     (adjust ?a0 av ?b0 bv) => [?start a b]))
+ (fact "adjust and adjust-timeseries testing, combined!"
+   (let [arrayize #(when-let [xs (to-struct %)] (mk-array-value xs))
+         [av bv a b] (map to-struct [?a-vec ?b-vec ?a ?b])]
+     (adjust ?a0 av ?b0 bv) => [?start a b]
+     (adjust-timeseries
+      (timeseries-value ?a0 (arrayize ?a-vec))
+      (timeseries-value ?b0 (arrayize ?b-vec)))
+     =>
+     [(timeseries-value ?start (arrayize ?a))
+      (timeseries-value ?start (arrayize ?b))]))
  ?a0 ?a-vec    ?b0 ?b-vec    ?start ?a      ?b
  0   [1 2 3 4] 1   [2 3 4 5] 1      [2 3 4] [2 3 4]
  2   [9 8 7]   0   [1 2 3 4] 2      [9 8]   [3 4]

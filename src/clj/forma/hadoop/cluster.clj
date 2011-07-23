@@ -68,19 +68,19 @@
   number of tasks times number of nodes"
   [nodecount]
   (let [lib-path (str fw-path "/usr/lib")
-        mappers 4
-        reducers 3]
+        mappers 35
+        reducers 27]
     (cluster-spec :private
                   {
                    :jobtracker (node-group [:jobtracker :namenode])
                    :slaves     (slave-group nodecount)
                    }
                   :base-machine-spec {
-                                      :hardware-id "m1.large"
-                                      ;; :hardware-id "m2.4xlarge"
+                                      ;; :hardware-id "m1.large"
+                                      :hardware-id "m2.4xlarge"
                                       :image-id "us-east-1/ami-08f40561"
                                       ;; :key-pair "forma2"
-                                      :spot-price (float 0.75)
+                                      :spot-price (float 1.50)
                                       }
                   :base-props {:hadoop-env {:JAVA_LIBRARY_PATH native-path
                                             :LD_LIBRARY_PATH lib-path}

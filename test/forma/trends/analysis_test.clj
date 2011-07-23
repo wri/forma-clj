@@ -14,9 +14,15 @@
         {coef :coefs} (s/linear-model y X)]
     (long-trend-general [:coefs] ndvi rain) => [(second coef)]))
 
-(fact
+(facts
+  "TODO: Make these actually run tests, not just count."
+
   "check that short-term trend output is the correct shape for the estimation months"
   (let [start 75
         end 131
         final-count (inc (- end start))]
-    (count (collect-short-trend start end 15 5 ndvi (vec reli))) => final-count))
+    (count (collect-short-trend start end 15 5 ndvi (vec reli))) => final-count
+    (count (collect-long-trend start end ndvi [(vec reli)])) => final-count))
+
+;; The above test results in this, for short trends.
+

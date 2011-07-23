@@ -2,8 +2,7 @@
   "Namespace for arbitrary queries."
   (:use cascalog.api
         [forma.utils :only (defjob)]
-        [forma.hadoop.pail :only (?pail- split-chunk-tap)]
-        [forma.source.tilesets :only (tile-set)])
+        [forma.hadoop.pail :only (?pail- split-chunk-tap)])
   (:require [cascalog.ops :as c]
             [forma.hadoop.io :as io]
             [forma.source.modis :as m]
@@ -25,11 +24,11 @@
 
 (defn country-tap
   [gadm-src convert-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?country]
-      (gadm-src _ ?chunk)
-      (convert-src ?line)
-      (p/converter ?line :> ?country ?admin)
-      (p/blossom-chunk ?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?admin)))
+  (let [gadm-tap (static-tap gadm-src)]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?country]
+        (gadm-tap ?s-res ?mod-h ?mod-v ?sample ?line ?admin)
+        (convert-src ?textline)
+        (p/converter ?textline :> ?country ?admin))))
 
 (defjob GetStatic
   [pail-path out-path]
@@ -53,7 +52,7 @@
 
 (def forma-map
   {:est-start "2005-12-01"
-   :est-end "2011-04-01"
+   :est-end "2011-05-01"
    :t-res "32"
    :neighbors 1
    :window-dims [600 600]
@@ -66,7 +65,7 @@
   (hfs-textline path
                 :sink-template pathstr
                 :outfields ["?text"]
-                :templatefields ["?s-res" "?t-res" "?country" "?datestring"]
+                :templatefields ["?s-res" "?country" "?datestring"]
                 :sinkparts 3))
 
 ;; TODO: Rewrite this, so that we only need to give it a sequence of
@@ -74,14 +73,21 @@
 
 (defjob RunForma
   [pail-path ts-pail-path out-path]
-  (?- (forma-textline out-path "%s-%s/%s/%s/")
+  (?- (hfs-seqfile out-path)
+      #_(forma-textline out-path "%s/%s/%s/")
       (forma/forma-query forma-map
                          (split-chunk-tap ts-pail-path ["ndvi"])
                          (split-chunk-tap ts-pail-path ["precl"])
                          (split-chunk-tap pail-path ["vcf"])
                          (country-tap (split-chunk-tap pail-path ["gadm"])
                                       convert-line-src)
-                         (split-chunk-tap ts-pail-path ["fire"]))))
+                         (tseries/fire-query pail-path
+                                             "32"
+                                             "2000-11-01"
+                                             "2011-06-01"
+                                             [:IDN :MYS]))))
+
+
 
 ;; ## Rain Processing, for Dan
 ;;
@@ -97,8 +103,8 @@
       (rain-src _ ?rain-chunk)
       (gadm-src _ ?gadm-chunk)
       (io/extract-date ?rain-chunk :> ?date)
-      (p/blossom-chunk ?rain-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?rain)
-      (p/blossom-chunk ?gadm-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
+      (p/blossom-chunk ?rain-chunk :> _ ?mod-h ?mod-v ?sample ?line ?rain)
+      (p/blossom-chunk ?gadm-chunk :> _ ?mod-h ?mod-v ?sample ?line ?gadm)
       (c/avg ?rain :> ?avg-rain)))
 
 (defjob ProcessRain
