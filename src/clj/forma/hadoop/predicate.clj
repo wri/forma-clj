@@ -33,6 +33,8 @@
   [line]
   (s/split line re))
 
+;; TODO: Note that this currently forces int-structs on everything. Do
+;; we want to have some way to choose?
 (defn liberate
   "Takes a line with an index as the first value and numbers as the
   rest, and converts it into a 2-tuple formatted as `[idx, row-vals]`,
@@ -44,7 +46,12 @@
     (liberate \"1 12 13 14 15\")
     ;=> [1 #<IntArray IntArray(ints:[12, 13, 14, 15])>"
   [line]
-  (let [[idx & row-vals] (map #(Integer. %)
+  (let [[idx & row-vals] (map (fn [x]
+                                (let [val (read-string x)]
+                                  (if (number? val)
+                                    val
+                                    (u/throw-illegal
+                                     "We can only liberate numbers, here!"))))
                               (s/split line #" "))]
     [idx (io/int-struct row-vals)]))
 

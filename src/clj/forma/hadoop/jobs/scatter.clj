@@ -32,17 +32,20 @@
 
 (defjob GetStatic
   [pail-path out-path]
-  (let [[vcf hansen ecoid gadm] (map (comp static-tap
-                                           (partial split-chunk-tap pail-path))
-                                     [["vcf"] ["hansen"] ["ecoid"] ["gadm"]])]
+  (let [[vcf hansen ecoid gadm border] (map (comp static-tap
+                                                  (partial split-chunk-tap pail-path))
+                                            [["vcf"] ["hansen"]
+                                             ["ecoid"] ["gadm"]
+                                             ["border"]])]
     (?<- (hfs-textline out-path
                        :sinkparts 3
                        :sink-template "%s/")
-         [?country ?lat ?lon ?mod-h ?mod-v ?sample ?line ?hansen ?ecoid ?vcf ?gadm]
+         [?country ?lat ?lon ?mod-h ?mod-v ?sample ?line ?hansen ?ecoid ?vcf ?gadm ?border]
          (vcf    ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
          (hansen ?s-res ?mod-h ?mod-v ?sample ?line ?hansen)
          (ecoid  ?s-res ?mod-h ?mod-v ?sample ?line ?ecoid)
          (gadm   ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
+         (border   ?s-res ?mod-h ?mod-v ?sample ?line ?border)
          (m/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
          (convert-line-src ?textline)
          (p/converter ?textline :> ?country ?gadm)

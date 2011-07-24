@@ -147,6 +147,11 @@ valid arguments."
        (cons buf (partition-stream n stream)))
       (.close stream))))
 
+;; ## Argument Validation
+
+(defn throw-illegal [s]
+  (throw (IllegalArgumentException. s)))
+
 ;; ## Byte Manipulation
 
 (def float-bytes
