@@ -124,6 +124,9 @@
         (query ?name ?location ?fire-series)
         (io/mk-chunk ?name t-res nil ?location ?fire-series :> ?chunk))))
 
+;; TODO: Think of converting this to https://gist.github.com/1102111,
+;; and cutting fire-query totally out of the loop.
+
 (defn fire-query
   [source-pail-path t-res start end tile-seq]
   (let [tap (apply pail/split-chunk-tap
