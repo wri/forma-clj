@@ -112,3 +112,13 @@
   (?- (hfs-textline output-path)
       (rain-query (split-chunk-tap pail-path ["gadm"])
                   (split-chunk-tap pail-path ["rain"]))))
+
+(defjob TestCount
+  "Useful for testing how many of each business is inside of some
+  particular pail."
+  [pail-path out-path]
+  (let [src (split-chunk-tap pail-path)]
+    (?<- (hfs-textline out-path)
+         [?path ?count]
+         (src ?path ?chunk)
+         (c/count ?count))))
