@@ -87,6 +87,7 @@ do show that we have a sequence of byte arrays being generated."
       (type (first result)) => byte-array-type
       (count result) => 6)))
 
+(future-fact "read numbers testing.")
 ;; ## Byte Manipulation Tests
 
 (fact float-bytes => 4)

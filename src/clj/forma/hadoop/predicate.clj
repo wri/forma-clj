@@ -46,12 +46,7 @@
     (liberate \"1 12 13 14 15\")
     ;=> [1 #<IntArray IntArray(ints:[12, 13, 14, 15])>"
   [line]
-  (let [[idx & row-vals] (map (fn [x]
-                                (let [val (read-string x)]
-                                  (if (number? val)
-                                    val
-                                    (u/throw-illegal
-                                     "We can only liberate numbers, here!"))))
+  (let [[idx & row-vals] (map u/read-numbers
                               (s/split line #" "))]
     [idx (io/int-struct row-vals)]))
 

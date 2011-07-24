@@ -3,6 +3,11 @@
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]))
 
+;; ## Argument Validation
+
+(defn throw-illegal [s]
+  (throw (IllegalArgumentException. s)))
+
 (defmacro defjob
   "Defines an AOT-compiled function with the supplied
   `name`. Containing namespace must be marked for AOT compilation to
@@ -147,10 +152,11 @@ valid arguments."
        (cons buf (partition-stream n stream)))
       (.close stream))))
 
-;; ## Argument Validation
-
-(defn throw-illegal [s]
-  (throw (IllegalArgumentException. s)))
+(defn read-numbers [x]
+  (let [val (read-string x)]
+    (if (number? val)
+      val
+      (throw-illegal "We can only liberate numbers, here!"))))
 
 ;; ## Byte Manipulation
 
