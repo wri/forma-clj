@@ -1,20 +1,18 @@
 (ns forma.hadoop.jobs.forma
   (:use cascalog.api)
   (:require [cascalog.ops :as c]
-            [forma.utils :as utils]
             [forma.matrix.walk :as w]
             [forma.date-time :as date]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
             [forma.trends.analysis :as a]
-            [forma.source.modis :as modis])
-  (:import [forma.schema TimeSeries]))
+            [forma.source.modis :as modis]))
 
 (defn short-trend-shell
   "a wrapper to collect the short-term trends into a form that can be
   manipulated from within cascalog."
   [{:keys [est-start est-end t-res long-block window]} ts-series]
-  (let [ts-start (.getStartIdx ts-series)
+  (let [ts-start (io/get-start-idx ts-series)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
     [(->> (io/get-vals ts-series)
           (a/collect-short-trend start end long-block window)
@@ -27,7 +25,7 @@
   time-series (and cofactors) to extract the long-term trends and
   t-statistics from the time-series."
   [{:keys [est-start est-end t-res long-block window]} ts-series & cofactors]
-  (let [ts-start (.getStartIdx ts-series)
+  (let [ts-start (io/get-start-idx ts-series)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
     (->> (a/collect-long-trend start end
                                (io/get-vals ts-series)
