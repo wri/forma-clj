@@ -26,12 +26,12 @@
 
 (defjob PreprocessModis
   "See project wiki for example usage."
-  [path output-path & tiles]
+  [path output-path date & tiles]
   (let [pattern (->> tiles
                      (map read-string)
                      (apply tile-set)
                      (apply io/tiles->globstring)
-                     (str "*/"))]
+                     (str date "/"))]
     (modis-chunker static/forma-subsets
                    static/chunk-size
                    path

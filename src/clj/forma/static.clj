@@ -70,7 +70,7 @@
             :travel [+ -]
             :step 0.0041752289295106
             :nodata -9999}
-   :border {:corner [70.617900569926 -32.17811808339]
-            :travel [+ +]
+   :border {:corner [70.6179006 34.7968792]
+            :travel [+ -]
             :step 0.008333333
             :nodata -9999}})

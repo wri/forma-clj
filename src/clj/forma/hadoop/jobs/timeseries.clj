@@ -66,9 +66,10 @@
 
 (def *missing-val* -9999)
 
-(defn tseries-query [pail-path]
+(defn tseries-query
+  [pail-path]
   (-> pail-path
-      (pail/split-chunk-tap ["ndvi"] ["precl"] ["reli"] ["qual"] ["evi"])
+      (pail/split-chunk-tap ["ndvi"] ["reli"] ["qual"] ["evi"])
       (extract-tseries *missing-val*)))
 
 (defjob DynamicTimeseries

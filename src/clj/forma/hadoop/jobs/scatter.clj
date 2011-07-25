@@ -1,6 +1,7 @@
 (ns forma.hadoop.jobs.scatter
   "Namespace for arbitrary queries."
   (:use cascalog.api
+        [forma.source.tilesets :only (tile-set)]
         [forma.utils :only (defjob)]
         [forma.hadoop.pail :only (?pail- split-chunk-tap)])
   (:require [cascalog.ops :as c]
@@ -45,7 +46,7 @@
          (hansen ?s-res ?mod-h ?mod-v ?sample ?line ?hansen)
          (ecoid  ?s-res ?mod-h ?mod-v ?sample ?line ?ecoid)
          (gadm   ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
-         (border   ?s-res ?mod-h ?mod-v ?sample ?line ?border)
+         (border ?s-res ?mod-h ?mod-v ?sample ?line ?border)
          (m/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
          (convert-line-src ?textline)
          (p/converter ?textline :> ?country ?gadm)
@@ -71,15 +72,20 @@
                 :templatefields ["?s-res" "?country" "?datestring"]
                 :sinkparts 3))
 
+(defn paths-for-dataset
+  [dataset]
+  (for [tile (tile-set :IDN :MYS)]
+    [dataset "1000-32" (apply m/hv->tilestring tile)]))
+
 ;; TODO: Rewrite this, so that we only need to give it a sequence of
 ;; countries (or tiles), and it'll generate the rest.
-
 (defjob RunForma
   [pail-path ts-pail-path out-path]
   (?- (hfs-seqfile out-path)
-      #_(forma-textline out-path "%s/%s/%s/")
       (forma/forma-query forma-map
-                         (split-chunk-tap ts-pail-path ["ndvi"])
+                         (apply split-chunk-tap
+                                ts-pail-path
+                                (paths-for-dataset "ndvi"))
                          (split-chunk-tap ts-pail-path ["precl"])
                          (split-chunk-tap pail-path ["vcf"])
                          (country-tap (split-chunk-tap pail-path ["gadm"])
@@ -90,7 +96,12 @@
                                              "2011-06-01"
                                              [:IDN :MYS]))))
 
-
+(defjob BucketForma
+  [forma-path bucketed-path]
+  (let [src (hfs-seqfile forma-path)]
+    (?<- (forma-textline bucketed-path "%s/%s/%s/")
+         [?s-res ?country ?datestring ?text]
+         (src ?s-res ?country ?datestring ?text))))
 
 ;; ## Rain Processing, for Dan
 ;;

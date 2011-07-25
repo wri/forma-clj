@@ -4,6 +4,9 @@
         [pallet.crate.hadoop :only (hadoop-user)]
         [pallet.extensions :only (def-phase-fn phase)])
   (:require [forma.hadoop.environment :as env]
+            [pallet.script :as script]
+            [pallet.stevedore :as stevedore]
+            [pallet.action.exec-script :as exec-script]
             [pallet.resource.remote-directory :as rd]
             [pallet.resource.directory :as d]
             [pallet.resource.package :as package])
@@ -62,6 +65,20 @@
    "FWTools-linux-x86_64-4.0.0.tar.gz" fw-path
    "linuxnative.tar.gz" native-path))
 
+(def-phase-fn raise-file-limits
+  "Raises file descriptor limits on all machines to the specified
+  limit."
+  [lim]
+  (let [command  #(join " " [hadoop-user % "nofile" 65000])
+        path "/etc/security/limits.conf"
+        pam-lims "session required  pam_limits.so"]
+    (exec-script/exec-script
+     ((echo ~(command "hard")) ">>" ~path))
+    (exec-script/exec-script
+     ((echo ~(command "soft")) ">>" ~path))
+    (exec-script/exec-script
+     ((echo ~pam-lims) ">>" "/etc/pam.d/common-session"))))
+
 (defn forma-cluster
   "Generates a FORMA cluster with the supplied number of nodes. We
   pick that reduce capacity based on the recommended 1.2 times the
@@ -92,7 +109,7 @@
                                            :fs.s3n.awsAccessKeyId "AKIAJ56QWQ45GBJELGQA"
                                            :fs.s3n.awsSecretAccessKey "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"}
                                :mapred-site {:mapred.local.dir "/mnt/hadoop/mapred/local"
-                                             :mapred.task.timeout 1000000
+                                             :mapred.task.timeout 10000000
                                              :mapred.reduce.tasks (int (* reducers nodecount))
                                              :mapred.tasktracker.map.tasks.maximum mappers
                                              :mapred.tasktracker.reduce.tasks.maximum reducers
@@ -114,7 +131,7 @@
                     :compute env/ec2-service
                     :environment env/remote-env)
       (lift-cluster cluster
-                    :phase config-redd
+                    :phase (phase config-redd (raise-file-limits 90000))
                     :compute env/ec2-service
                     :environment env/remote-env)
       (start-cluster cluster
