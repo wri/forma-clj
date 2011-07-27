@@ -121,4 +121,5 @@
         (country-src ?s-res ?mod-h ?mod-v ?sample ?line ?country)
         (process-neighbors [neighbors] ?window :> ?win-idx ?val ?neighbor-vals)
         (modis/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)
-        (io/textify ?mod-h ?mod-v ?sample ?line ?val ?neighbor-vals :> ?text))))
+        (io/textify ?mod-h ?mod-v ?sample ?line ?val ?neighbor-vals :> ?text)
+        (:distinct false))))

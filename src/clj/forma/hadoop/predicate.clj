@@ -47,7 +47,7 @@
     ;=> [1 #<IntArray IntArray(ints:[12, 13, 14, 15])>"
   [line]
   (let [[idx & row-vals] (map u/read-numbers
-                              (s/split line #" "))]
+                              (s/split line #"\s+"))]
     [idx (io/int-struct row-vals)]))
 
 (defmapop [window->array [type]]

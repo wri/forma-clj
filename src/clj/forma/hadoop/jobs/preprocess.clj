@@ -79,6 +79,22 @@
                   ascii-path
                   output-path))
 
+(defjob PreprocessAscii
+  "TODO: Tidy up. This needs to be combined with PreprocessStatic."
+  [dataset ascii-path pail-path & countries]
+  (with-fs-tmp [_ tmp-dir]
+    (let [line-tap (hfs-textline ascii-path)
+          pix-tap  (->> countries
+                        (map read-string)
+                        (apply tile-set)
+                        (p/pixel-generator tmp-dir "1000"))]
+      (->> (s/static-modis-chunks static/chunk-size
+                                  dataset
+                                  ({"vcf" c/min "hansen" c/sum} dataset c/max)
+                                  line-tap
+                                  pix-tap)
+           (to-pail pail-path)))))
+
 ;; ## Fires Processing
 ;;
 ;; Note that the preprocessing performed by `fire-chunker` is going to

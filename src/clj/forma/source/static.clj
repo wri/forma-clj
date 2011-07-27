@@ -81,6 +81,26 @@
         (agg ?temp-val :> ?val)
         (p/add-fields dataset m-res "00" nil :> ?dataset ?m-res ?t-res !date))))
 
+;; TODO: Figure out a way to specify the projection we're coming from,
+;; and relate it to the supplied m-res. currently, we just assume it's
+;; 500m, given that "2" multiplier. The 5 down here is because the
+;; initial mod-h, mod-v for the dataset was 0, 5.
+(defn absorb-modis
+  [m-res dataset pixel-tap line-tap agg]
+  (let [ascii-info (static-datasets (keyword dataset))
+        span (m/pixels-at-res m-res)]
+    (<- [?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val]
+        (line-tap ?textline)
+        (p/break ?textline :> ?r ?c ?temp-val)
+        (quot ?r 2 :> ?row)
+        (quot ?c 2 :> ?col)
+        ((c/juxt #'mod #'quot) ?col span :> ?sample ?mod-h)
+        ((c/juxt #'mod #'quot) ?row span :> ?line ?mv)
+        (+ 5 ?mv :> ?mod-v)
+        (agg ?temp-val :> ?val)
+        (pixel-tap ?mod-h ?mod-v ?sample ?line :> true)
+        (p/add-fields dataset m-res "00" nil :> ?dataset ?m-res ?t-res !date))))
+
 ;; TODO: Make a note that gzipped files can't be unpacked well when
 ;; they exist on S3. They need to be moved over to HDFS for that. I
 ;; think the answer here is to code up some sort of way to transfer
@@ -116,3 +136,9 @@
           (upsample-modis m-res dataset pix-tap line-tap)
           (downsample-modis m-res dataset pix-tap line-tap agg))
         (agg-chunks m-res chunk-size -9999 :int))))
+
+(defn static-modis-chunks
+  "TODO: DESTROY. Replace with a better system."
+  [chunk-size dataset agg line-tap pix-tap]
+  (-> (absorb-modis "1000" dataset pix-tap line-tap agg)
+      (agg-chunks "1000" chunk-size -9999 :int)))
