@@ -98,10 +98,13 @@
 
 (defjob BucketForma
   [forma-path bucketed-path]
-  (let [src (hfs-seqfile forma-path)]
+  (let [forma-fields ["?s-res" "?country" "?datestring"
+                      "?mod-h" "?mod-v" "?sample" "?line" "?text"]
+        src (hfs-seqfile forma-path)]
     (?<- (forma-textline bucketed-path "%s/%s/%s/")
-         [?s-res ?country ?datestring ?mod-h ?mod-v ?sample ?line ?text]
-         (src ?s-res ?country ?datestring ?mod-h ?mod-v ?sample ?line ?text))))
+         forma-fields
+         (src :>> forma-fields)
+         ([[103] [158]] ?country :> true))))
 
 ;; ## Rain Processing, for Dan
 ;;
