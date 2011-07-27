@@ -76,7 +76,8 @@
       (short-trend-shell est-map ?ndvi-series :> ?short-series)
       (long-trend-shell est-map
                         ?ndvi-series
-                        ?precl-series :> ?long-series ?t-stat-series)))
+                        ?precl-series :> ?long-series ?t-stat-series)
+      (:distinct false)))
 
 (defn forma-tap
   "Accepts an est-map and sources for ndvi, rain, and fire timeseries,
@@ -86,7 +87,7 @@
         {lim :vcf-limit} est-map
         dynamic-src (->> (dynamic-filter lim ndvi-src rain-src vcf-src)
                          (dynamic-tap est-map))]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?period ?forma-val]
+    (<- [?s-res ?period ?mod-h ?mod-v ?sample ?line ?forma-val]
         (fire-src ?s-res ?mod-h ?mod-v ?sample ?line !!fire-series)
         (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?short-series ?long-series ?t-stat-series)
         (io/forma-schema !!fire-series
@@ -94,19 +95,20 @@
                          ?long-series
                          ?t-stat-series :> ?forma-series)
         (io/get-start-idx ?short-series :> ?start)
-        (p/struct-index ?start ?forma-series :> ?period ?forma-val))))
+        (p/struct-index ?start ?forma-series :> ?period ?forma-val)
+        (:distinct false))))
 
-;; Processes all neighbors... Returns the index within the chunk, the
-;; value, and the aggregate of the neighbors.
 (defmapcatop [process-neighbors [num-neighbors]]
+  "Processes all neighbors... Returns the index within the chunk, the
+value, and the aggregate of the neighbors."
   [window]
-  (->> (for [[val neighbors] (w/neighbor-scan num-neighbors window)
-             :when val]
-         [val (->> neighbors
-                   (apply concat)
-                   (filter (complement nil?))
-                   (io/combine-neighbors))])
-       (map-indexed cons)))
+  (for [[idx [val neighbors]] (->> (w/neighbor-scan num-neighbors window)
+                                   (map-indexed vector))
+        :when val]
+    [idx val (->> neighbors
+                  (apply concat)
+                  (filter (complement nil?))
+                  (io/combine-neighbors))]))
 
 (defn forma-query
   "final query that walks the neighbors and spits out the values."
@@ -117,7 +119,7 @@
                 (p/sparse-windower ["?sample" "?line"] window-dims "?forma-val" nil))]
     (<- [?s-res ?country ?datestring ?mod-h ?mod-v ?sample ?line ?text]
         (date/period->datetime t-res ?period :> ?datestring)
-        (src ?s-res ?mod-h ?mod-v ?win-col ?win-row ?period ?window)
+        (src ?s-res ?period ?mod-h ?mod-v ?win-col ?win-row ?window)
         (country-src ?s-res ?mod-h ?mod-v ?sample ?line ?country)
         (process-neighbors [neighbors] ?window :> ?win-idx ?val ?neighbor-vals)
         (modis/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)

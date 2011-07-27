@@ -7,16 +7,13 @@
 ;; Generates combinations of `mod-h`, `mod-v`, `sample` and `line` for
 ;; use in buffers.
 
-(def pixel-tap
-  (let [pix (for [sample (range 10)
-                  line   (range 10)
-                  :let [val sample]]
-              [1 1 sample line val])]
-    (<- [?mh ?mv ?s ?l ?v]
-        ((vec pix) ?mh ?mv ?s ?l ?v))))
+(defn pixel-tap [xs]
+  (name-vars (vec xs) ["?mh" "?mv" "?s" "?l" "?v"]))
 
 (fact "swap-syms test."
-  (swap-syms pixel-tap ["?mh" "?s"] ["?a" "?b"]) => ["?a" "?mv" "?b" "?l" "?v"])
+  (swap-syms (pixel-tap [[0 0 0 0 370 0]])
+             ["?mh" "?s"]
+             ["?a" "?b"]) => ["?a" "?mv" "?b" "?l" "?v"])
 
 (cascalog.io/with-fs-tmp [_ tmp]
   (tabular
@@ -70,8 +67,18 @@
 
 (tabular
  (fact?- "test of sparse-windower capability."
-         ?res (sparse-windower pixel-tap ?dims ?sizes "?v" 0))
+         ?res (-> (pixel-tap (for [sample (range 10)
+                                   line   (range 10)
+                                   :let [val sample]]
+                               [1 1 sample line val]))
+                  (sparse-windower ?dims ?sizes "?v" 0)))
  ?dims       ?sizes ?res
  ["?s"]      5      line-set
  ["?s" "?l"] 5      square-set
+ ["?s" "?l"] [5 2]  rect-set
  ["?s" "?l"] [5 2]  rect-set)
+
+(fact?- "test of sparse-windower's ability to fill in the blanks."
+        [[0 0 0 0 [[10 0 0 0 0]
+                   [0 0 0 0 0]]]]
+        (sparse-windower (pixel-tap [[0 0 0 0 10]]) ["?s" "?l"] [5 2] "?v" 0))

@@ -170,10 +170,10 @@ strings and their integer representations."}
      (vals->sparsevec 0 length empty-val))
   ([start length empty-val]
      (<- [?idx ?val :> ?split-idx ?split-vec]
-         (:sort ?idx)
+         (:sort ?sub-idx)
          (- ?idx start :> ?start-idx)
          ((c/juxt #'mod #'quot) ?start-idx length :> ?sub-idx ?split-idx)
-         (sparse-expansion [0 length empty-val] ?sub-idx ?val :> ?split-vec))))
+         (sparse-expansion [start length empty-val] ?sub-idx ?val :> ?split-vec))))
 
 ;; ### Generators
 
@@ -243,15 +243,15 @@ I recommend wrapping queries that use this tap with
 
     (s ?mod-h ?mod-v ?window-col ?window-row ?window)"
   [gen in-syms dim-vec val sparse-val]
-  (let [[outpos outval] (v/gen-non-nullable-vars 2)
-        dim-vec (if (coll? dim-vec) dim-vec [dim-vec])]
+  (let [[outpos outval] (v/gen-nullable-vars 2)
+        dim-vec (if (coll? dim-vec) dim-vec [dim-vec])
+        get-length #(try (dim-vec %) (catch Exception e (last dim-vec)))]
     (apply u/thrush
            gen
            (for [[dim inpos] (map-indexed vector in-syms)
-                 :let [length (try (dim-vec dim)
-                                   (catch Exception e (last dim-vec)))
-                       empty (matrix-of sparse-val dim length)
-                       aggr (vals->sparsevec length empty)]]
+                 :let [aggr (->> (get-length (max 0 (dec dim)))
+                                 (matrix-of sparse-val dim)
+                                 (vals->sparsevec (get-length dim)))]]
              (fn [src]
                (construct (swap-syms gen [inpos val] [outpos outval])
                           [[src :>> (get-out-fields gen)]
