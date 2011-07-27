@@ -249,9 +249,9 @@ I recommend wrapping queries that use this tap with
     (apply u/thrush
            gen
            (for [[dim inpos] (map-indexed vector in-syms)
-                 :let [aggr (->> (get-length (max 0 (dec dim)))
-                                 (matrix-of sparse-val dim)
-                                 (vals->sparsevec (get-length dim)))]]
+                 :let [empty-val (->> (get-length (max 0 (dec dim)))
+                                      (matrix-of sparse-val dim))
+                       aggr (vals->sparsevec (get-length dim) empty-val)]]
              (fn [src]
                (construct (swap-syms gen [inpos val] [outpos outval])
                           [[src :>> (get-out-fields gen)]
