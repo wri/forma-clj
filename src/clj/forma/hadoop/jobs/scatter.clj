@@ -64,14 +64,6 @@
    :long-block 15
    :window 5})
 
-(defn forma-textline
-  [path pathstr]
-  (hfs-textline path
-                :sink-template pathstr
-                :outfields ["?text"]
-                :templatefields ["?s-res" "?country" "?datestring"]
-                :sinkparts 3))
-
 (defn paths-for-dataset
   [dataset]
   (for [tile (tile-set :IDN :MYS)]
@@ -96,12 +88,20 @@
                                              "2011-06-01"
                                              [:IDN :MYS]))))
 
+(defn forma-textline
+  [path pathstr]
+  (hfs-textline path
+                :sink-template pathstr
+                :outfields ["?mod-h" "?mod-v" "?sample" "?line" "?text"]
+                :templatefields ["?s-res" "?country" "?datestring"]
+                :sinkparts 3))
+
 (defjob BucketForma
   [forma-path bucketed-path]
   (let [src (hfs-seqfile forma-path)]
     (?<- (forma-textline bucketed-path "%s/%s/%s/")
-         [?s-res ?country ?datestring ?text]
-         (src ?s-res ?country ?datestring ?text))))
+         [?s-res ?country ?datestring ?mod-h ?mod-v ?sample ?line ?text]
+         (src ?s-res ?country ?datestring ?mod-h ?mod-v ?sample ?line ?text))))
 
 ;; ## Rain Processing, for Dan
 ;;
@@ -126,13 +126,3 @@
   (?- (hfs-textline output-path)
       (rain-query (split-chunk-tap pail-path ["gadm"])
                   (split-chunk-tap pail-path ["rain"]))))
-
-(defjob TestCount
-  "Useful for testing how many of each business is inside of some
-  particular pail."
-  [pail-path out-path]
-  (let [src (split-chunk-tap pail-path)]
-    (?<- (hfs-textline out-path)
-         [?path ?count]
-         (src ?path ?chunk)
-         (c/count ?count))))

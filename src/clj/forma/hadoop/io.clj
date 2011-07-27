@@ -269,16 +269,14 @@ together each entry in the supplied sequence of `FormaValue`s."
 (defn textify
   "Converts the supplied coordinates, `FormaValue` and
   `FormaNeighborValue` into a line of text suitable for use in STATA."
-  [mod-h mod-v sample line ^FormaValue val ^FormaNeighborValue neighbor-val]
+  [^FormaValue val ^FormaNeighborValue neighbor-val]
   (let [[fire-val s-drop l-drop t-drop] (unpack-forma-val val)
         [fire-sum ct short-mean short-min
          long-mean long-min t-mean t-min] (unpack-neighbor-val neighbor-val)
         [k330 c50 ck fire] (extract-fields fire-val)
         [k330-n c50-n ck-n fire-n] (extract-fields fire-sum)]
     (join " "
-          [mod-h mod-v sample line
-           k330 c50 ck fire
-           s-drop l-drop t-drop
+          [k330 c50 ck fire s-drop l-drop t-drop
            k330-n c50-n ck-n fire-n
            ct short-mean short-min long-mean long-min t-mean t-min])))
 

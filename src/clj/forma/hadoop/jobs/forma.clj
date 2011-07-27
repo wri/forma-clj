@@ -18,7 +18,7 @@
           (a/collect-short-trend start end long-block window)
           io/to-struct
           io/mk-array-value
-          (io/timeseries-value ts-start))]))
+          (io/timeseries-value start))]))
 
 (defn long-trend-shell
   "a wrapper that takes a map of options and attributes of the input
@@ -30,7 +30,7 @@
     (->> (a/collect-long-trend start end
                                (io/get-vals ts-series)
                                (map io/get-vals cofactors))
-         (apply map (comp (partial io/timeseries-value ts-start)
+         (apply map (comp (partial io/timeseries-value start)
                           io/mk-array-value
                           io/to-struct
                           vector)))))
@@ -115,11 +115,11 @@
         [rows cols] window-dims
         src (-> (forma-tap est-map ndvi-src rain-src vcf-src fire-src)
                 (p/sparse-windower ["?sample" "?line"] window-dims "?forma-val" nil))]
-    (<- [?s-res ?country ?datestring ?text]
+    (<- [?s-res ?country ?datestring ?mod-h ?mod-v ?sample ?line ?text]
         (date/period->datetime t-res ?period :> ?datestring)
         (src ?s-res ?mod-h ?mod-v ?win-col ?win-row ?period ?window)
         (country-src ?s-res ?mod-h ?mod-v ?sample ?line ?country)
         (process-neighbors [neighbors] ?window :> ?win-idx ?val ?neighbor-vals)
         (modis/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)
-        (io/textify ?mod-h ?mod-v ?sample ?line ?val ?neighbor-vals :> ?text)
+        (io/textify ?val ?neighbor-vals :> ?text)
         (:distinct false))))
