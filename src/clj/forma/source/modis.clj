@@ -1,6 +1,5 @@
 (ns forma.source.modis
-  (:use [forma.matrix.utils :only (idx->rowcol)]
-        [clojure.contrib.generic.math-functions :only (cos)])
+  (:use [forma.matrix.utils :only (idx->rowcol)])
   (:require [forma.utils :as u]))
 
 ;; From the [user's guide](http://goo.gl/uoi8p) to MODIS product MCD45
@@ -21,12 +20,16 @@
    "500" 2400
    "1000" 1200})
 
-(def temporal-res
-  {"MCD45A1" "32"
-   "MOD13Q1" "16"
-   "MOD13A1" "16"
-   "MOD13A2" "16"
-   "MOD13A3" "32"})
+(defn temporal-res
+  "Returns the temporal resolution of the supplied MODIS short product
+  name."
+  [dataset]
+  (case dataset
+        "MCD45A1" "32"
+        "MOD13Q1" "16"
+        "MOD13A1" "16"
+        "MOD13A2" "16"
+        "MOD13A3" "32"))
 
 (defn chunk-dims
   "Returns the width and height in pixels of a chunk at the supplied
@@ -162,7 +165,7 @@ line. For example:
   "Returns the sinusoidal x and y coordinates for the supplied
   latitude and longitude (in radians)."
   [lat lon]
-  (u/scale rho [(* (cos lat) lon) lat]))
+  (u/scale rho [(* (Math/cos lat) lon) lat]))
 
 (defn latlon->sinu-xy
   "Returns the sinusoidal x and y coordinates for the supplied
@@ -185,7 +188,7 @@ line. For example:
   sinusoidal map coordinates (in meters)."
   [x y]
   (let [lat (/ y rho)
-        lon (/ x (* rho (cos lat)))]
+        lon (/ x (* rho (Math/cos lat)))]
     (map #(Math/toDegrees %) [lat lon])))
 
 ;; These are the meter values of the minimum possible x and y values

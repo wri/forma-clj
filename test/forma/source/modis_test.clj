@@ -19,7 +19,6 @@
 (fact "wgs84-resolution test."
   (wgs84-resolution "1000") => (roughly 0.00833))
 
-
 (facts "valid-modis? testing."
   "First version takes a sequence of tiles."
   (valid-modis? [[8 6]]) => truthy

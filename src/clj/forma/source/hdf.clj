@@ -237,13 +237,6 @@ of a MODIS TileID acts as a key to retrieve this data."
   (cons (tileid->res tileid)
         (tilestring->hv (subs tileid 2))))
 
-(defn t-res
-  "Returns the temporal resolution of the supplied MODIS short product
-  name. (wrapper exists for cascalog. Better to use the `temporal-res`
-  map as a function, but this unsupported."
-  [prodname]
-  (temporal-res prodname))
-
 ;; ### The Chunker!
 ;;
 ;; The chunker can't be refactored, as `org.gdal.gdal.Dataset` doesn't
@@ -267,7 +260,7 @@ of a MODIS TileID acts as a key to retrieve this data."
         (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
         (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk)
         (meta-values [keys] ?freetile :> ?productname ?tileid ?date)
-        (t-res ?productname :> ?t-res)
+        (temporal-res ?productname :> ?t-res)
         (split-id ?tileid :> ?s-res ?mod-h ?mod-v)
         (chunkifier ?dataset ?date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk)
         (:distinct false))))

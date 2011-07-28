@@ -6,8 +6,7 @@
 
 (ns forma.hadoop.io
   (:use cascalog.api
-        [clojure.string :only (join)]
-        [cascalog.tap :only (hfs-tap)])
+        [clojure.string :only (join)])
   (:require [forma.source.modis :as m]
             [cascalog.workflow :as w]
             [forma.utils :as u]

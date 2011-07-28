@@ -92,10 +92,6 @@ error."
   (split-id "52010010") => ["500" 10 10]
   (split-id "54029009") => ["250" 29 9])
 
-(fact "t-res cascalog shell test. (Really, this could go in
-forma.source.modis, with `temporal-res`.)"
-  (t-res "MOD13A3") => "32")
-
 (fact "modis-chunks test. `modis-chunks` is bound to a subquery, which
 is used as a source for the final count aggregator. We check that the
 chunk-size makes sense for the supplied dataset.
