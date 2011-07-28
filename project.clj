@@ -14,7 +14,7 @@
                  [clj-time "0.3.0"]
                  [redd/thrift "0.5.0"]
                  [commons-lang "2.6"] ;required for thrift
-                 [org.clojars.sritchie09/cascalog "1.7.5"]
+                 [cascalog "1.8.0"]
                  [org.clojars.sritchie09/gdal-java-native "1.8.0"]
                  [backtype/cascading-thrift "0.1.0" :exclusions [backtype/thriftjava]]
                  [redd/dfs-datastores "1.0.4"]

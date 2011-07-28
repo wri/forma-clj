@@ -98,7 +98,7 @@
   filename is a text object, while the entire, unchopped file is
   encoded as a Hadoop `BytesWritable` object."
   [path & opts]
-  (let [scheme (-> (:outfields opts Fields/ALL)
+  (let [scheme (-> (:outfields (apply array-map opts) Fields/ALL)
                    (whole-file))]
     (apply hfs-tap scheme path opts)))
 
