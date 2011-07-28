@@ -1,11 +1,11 @@
 (ns forma.hadoop.jobs.scatter
   "Namespace for arbitrary queries."
   (:use cascalog.api
+        [juke.utils :only (defmain)]
         [forma.source.tilesets :only (tile-set)]
-        [forma.utils :only (defjob)]
         [forma.hadoop.pail :only (?pail- split-chunk-tap)])
   (:require [cascalog.ops :as c]
-            [forma.reproject :as r]
+            [juke.reproject :as r]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
             [forma.hadoop.jobs.forma :as forma]
@@ -31,7 +31,7 @@
         (convert-src ?textline)
         (p/converter ?textline :> ?country ?admin))))
 
-(defjob GetStatic
+(defmain GetStatic
   [pail-path out-path]
   (let [[vcf hansen ecoid gadm border] (map (comp static-tap
                                                   (partial split-chunk-tap pail-path))
@@ -71,7 +71,7 @@
 
 ;; TODO: Rewrite this, so that we only need to give it a sequence of
 ;; countries (or tiles), and it'll generate the rest.
-(defjob RunForma
+(defmain RunForma
   [pail-path ts-pail-path out-path]
   (?- (hfs-seqfile out-path)
       (forma/forma-query forma-map
@@ -96,7 +96,7 @@
                 :templatefields ["?s-res" "?country" "?datestring"]
                 :sinkparts 3))
 
-(defjob BucketForma
+(defmain BucketForma
   [forma-path bucketed-path]
   (let [forma-fields ["?s-res" "?country" "?datestring"
                       "?mod-h" "?mod-v" "?sample" "?line" "?text"]
@@ -124,7 +124,7 @@
       (p/blossom-chunk ?gadm-chunk :> _ ?mod-h ?mod-v ?sample ?line ?gadm)
       (c/avg ?rain :> ?avg-rain)))
 
-(defjob ProcessRain
+(defmain ProcessRain
   [pail-path output-path]
   (?- (hfs-textline output-path)
       (rain-query (split-chunk-tap pail-path ["gadm"])

@@ -1,9 +1,11 @@
-(ns forma.utils-test
-  (:use forma.utils
+(ns juke.utils-test
+  (:use juke.utils
         midje.sweet)
   (:require [forma.testing :as t])
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]))
+
+(future-fact "round-places testing.")
 
 (facts "string conversion tests."
 

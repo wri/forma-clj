@@ -1,8 +1,8 @@
-(ns forma.reproject-test
-  (:use [forma.reproject] :reload)
+(ns juke.reproject-test
+  (:use [juke.reproject] :reload)
   (:use cascalog.api
         midje.sweet
-        [forma.matrix.utils :only (rowcol->idx)]))
+        [juke.matrix.utils :only (rowcol->idx)]))
 
 (tabular
  (fact "chunk-dims test. Currently, chunk-size has to be a

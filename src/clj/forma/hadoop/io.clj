@@ -8,9 +8,9 @@
   (:use cascalog.api
         [clojure.string :only (join)])
   (:require [cascalog.workflow :as w]
-            [forma.utils :as u]
-            [forma.reproject :as r]
-            [forma.date-time :as date])
+            [juke.utils :as u]
+            [juke.reproject :as r]
+            [juke.date-time :as date])
   (:import [forma WholeFile]
            [forma.schema DoubleArray IntArray
             FireTuple FireSeries FormaValue FormaSeries

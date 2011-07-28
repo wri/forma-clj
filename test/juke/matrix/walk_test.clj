@@ -1,5 +1,5 @@
-(ns forma.matrix.walk-test
-  (:use [forma.matrix.walk] :reload)
+(ns juke.matrix.walk-test
+  (:use [juke.matrix.walk] :reload)
   (:use midje.sweet))
 
 (def little-matrix [[0 1 2]
@@ -64,3 +64,10 @@
                                              16 17 18 19 19
                                              21 22 23 24 24
                                              21 22 23 24 24]))
+
+(fact "`windowed-function` retains the number of elements of the
+original matrix."
+  (let [test-mat (for [i (range 5) :let [j (* i 5)]]
+                   (range j (+ j 5)))]
+    (count (windowed-function 1 + test-mat)) => (count (flatten test-mat))))
+

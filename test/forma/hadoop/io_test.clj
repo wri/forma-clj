@@ -1,7 +1,7 @@
 (ns forma.hadoop.io-test
   (:use [forma.hadoop.io] :reload)
   (:use [midje sweet cascalog])
-  (:require [forma.date-time :as date])
+  (:require [juke.date-time :as date])
   (:import [backtype.hadoop.pail Pail]
            [forma.schema ModisChunkLocation]
            [forma.hadoop.pail SplitDataChunkPailStructure]))

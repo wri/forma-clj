@@ -1,9 +1,9 @@
 (ns forma.trends.analysis
-  (:use [forma.matrix.utils :only (variance-matrix coll-avg)]
+  (:use [juke.matrix.utils :only (variance-matrix coll-avg)]
         [forma.trends.filter :only (deseasonalize make-reliable hp-filter)]
         [clojure.contrib.seq :only (positions)]
         [clojure.contrib.math :only (sqrt floor abs round expt)])
-  (:require [forma.utils :as utils]
+  (:require [juke.utils :as utils]
             [incanter.core :as i]
             [incanter.stats :as s]))
 

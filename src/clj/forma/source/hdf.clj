@@ -13,7 +13,7 @@
 
 (ns forma.source.hdf
   (:use cascalog.api
-        [forma.reproject :only (temporal-res tilestring->hv)]
+        [juke.reproject :only (temporal-res tilestring->hv)]
         [cascalog.io :only (temp-dir)]
         [clojure.contrib.seq-utils :only (find-first indexed)])
   (:require [clojure.set :as set]

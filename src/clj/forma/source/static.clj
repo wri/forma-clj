@@ -2,7 +2,7 @@
   (:use cascalog.api
         [forma.static :only (static-datasets)])
   (:require [cascalog.ops :as c]
-            [forma.reproject :as r]
+            [juke.reproject :as r]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
             [clojure.contrib.duck-streams :as duck]))
@@ -96,7 +96,8 @@
         (+ 5 ?mv :> ?mod-v)
         (agg ?temp-val :> ?val)
         (pixel-tap ?mod-h ?mod-v ?sample ?line :> true)
-        (p/add-fields dataset m-res "00" nil :> ?dataset ?m-res ?t-res !date))))
+        (p/add-fields dataset m-res "00" nil :> ?dataset ?m-res ?t-res !date)
+        (:distinct false))))
 
 ;; TODO: Make a note that gzipped files can't be unpacked well when
 ;; they exist on S3. They need to be moved over to HDFS for that. I
@@ -122,7 +123,8 @@
         (p/window->struct [type] ?window :> ?chunk)
         (io/count-vals ?chunk :> ?count)
         (= ?count chunk-size)
-        (chunkifier ?dataset !date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk))))
+        (chunkifier ?dataset !date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk)
+        (:distinct false))))
 
 (defn static-chunks
   "TODO: DOCS!"

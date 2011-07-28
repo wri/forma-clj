@@ -9,8 +9,8 @@
 
 (ns forma.source.rain
   (:use cascalog.api)
-  (:require [forma.reproject :as r]
-            [forma.utils :as u]
+  (:require [juke.reproject :as r]
+            [juke.utils :as u]
             [forma.hadoop.io :as io]
             [forma.source.static :as static]
             [forma.hadoop.predicate :as p]
@@ -147,7 +147,8 @@
         (rain-vals !date ?row ?col ?val)
         (pix-tap :>> mod-coords)
         (p/add-fields "precl" "32" m-res :> ?dataset ?t-res ?m-res)
-        (r/wgs84-indexer :<< (into [m-res ascii-map] mod-coords) :> ?row ?col))))
+        (r/wgs84-indexer :<< (into [m-res ascii-map] mod-coords) :> ?row ?col)
+        (:distinct false))))
 
 (defn rain-chunks
   "Cascalog subquery to fully process a WGS84 float array at the

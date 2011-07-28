@@ -1,4 +1,5 @@
-(ns forma.utils
+(ns juke.utils
+  (:use [clojure.contrib.math :only (round expt)])
   (:require [clojure.contrib.io :as io])
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]))
@@ -8,7 +9,7 @@
 (defn throw-illegal [s]
   (throw (IllegalArgumentException. s)))
 
-(defmacro defjob
+(defmacro defmain
   "Defines an AOT-compiled function with the supplied
   `name`. Containing namespace must be marked for AOT compilation to
   have any effect."
@@ -21,6 +22,13 @@
                     :main true
                     :prefix ~(str name "-"))
          (defn ~sym ~@forms))))
+
+(defn round-places
+  "Rounds the supplied number to the supplied number of decimal
+  points, and returns a float representation."
+  [sig-figs number]
+  (let [factor (expt 10 sig-figs)]
+    (float (/ (round (* factor number)) factor))))
 
 (defn strings->ints
   "Accepts any number of string representations of integers, and

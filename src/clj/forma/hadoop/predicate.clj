@@ -1,10 +1,10 @@
 (ns forma.hadoop.predicate
   (:use cascalog.api
-        [forma.matrix.utils :only (sparse-expander matrix-of)]
-        [forma.reproject :only (pixels-at-res)])
-  (:require [forma.utils :as u]
-            [clojure.string :as s]
+        [juke.matrix.utils :only (sparse-expander matrix-of)]
+        [juke.reproject :only (pixels-at-res)])
+  (:require [juke.utils :as u]
             [forma.hadoop.io :as io]
+            [clojure.string :as s]
             [cascalog.ops :as c]
             [cascalog.vars :as v])
   (:import [org.apache.hadoop.mapred JobConf]
