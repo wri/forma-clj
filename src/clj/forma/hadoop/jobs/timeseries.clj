@@ -4,10 +4,10 @@
         [forma.matrix.utils :only (sparse-expander)]
         [forma.source.tilesets :only (tile-set)])
   (:require [cascalog.ops :as c]
+            [forma.reproject :as r]
             [forma.date-time :as date]
             [forma.hadoop.pail :as pail]
             [forma.utils :as utils]
-            [forma.source.modis :as m]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]))
 
@@ -133,7 +133,7 @@
   (let [tap (apply pail/split-chunk-tap
                    source-pail-path
                    (for [tile (apply tile-set tile-seq)]
-                     ["fire" "1000-01" (apply m/hv->tilestring tile)]))]
+                     ["fire" "1000-01" (apply r/hv->tilestring tile)]))]
     (create-fire-series tap t-res start end)))
 
 (defjob FireTimeseries

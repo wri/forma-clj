@@ -7,9 +7,9 @@
 (ns forma.hadoop.io
   (:use cascalog.api
         [clojure.string :only (join)])
-  (:require [forma.source.modis :as m]
-            [cascalog.workflow :as w]
+  (:require [cascalog.workflow :as w]
             [forma.utils :as u]
+            [forma.reproject :as r]
             [forma.date-time :as date])
   (:import [forma WholeFile]
            [forma.schema DoubleArray IntArray
@@ -114,7 +114,7 @@
 
 (defn tiles->globstring
   [& tiles]
-  {:pre [(m/valid-modis? tiles)]}
+  {:pre [(r/valid-modis? tiles)]}
   (->> (for [[th tv] tiles]
          (format "h%02dv%02d" th tv))
        (join "," )
@@ -496,7 +496,7 @@ together each entry in the supplied sequence of `FormaValue`s."
     (apply vector m-res
            (.getTileH loc)
            (.getTileV loc)
-           (m/tile-position m-res chunk-size chunk-idx pix-idx))))
+           (r/tile-position m-res chunk-size chunk-idx pix-idx))))
 
 (defn chunkloc->pixloc
   "Used by timeseries for conversion."

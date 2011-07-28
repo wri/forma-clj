@@ -3,7 +3,7 @@
         [forma.date-time :only (convert)])
   (:require [clojure.string :as s]
             [forma.utils :as utils]
-            [forma.source.modis :as m]
+            [forma.reproject :as r]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p])
   (:import [forma.schema FireTuple]))
@@ -86,7 +86,7 @@
   (<- [?datachunk]
       (p/add-fields m-res :> ?m-res)
       (src ?dataset ?date ?t-res ?lat ?lon ?tuple)
-      (m/latlon->modis ?m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
+      (r/latlon->modis ?m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
       (io/pixel-location ?m-res ?mod-h ?mod-v ?sample ?line :> ?location)
       (io/mk-data-value ?tuple :> ?data-val)
       (io/mk-chunk ?dataset ?t-res ?date ?location ?data-val :> ?datachunk)))

@@ -5,8 +5,8 @@
         [forma.utils :only (defjob)]
         [forma.hadoop.pail :only (?pail- split-chunk-tap)])
   (:require [cascalog.ops :as c]
+            [forma.reproject :as r]
             [forma.hadoop.io :as io]
-            [forma.source.modis :as m]
             [forma.hadoop.predicate :as p]
             [forma.hadoop.jobs.forma :as forma]
             [forma.hadoop.jobs.timeseries :as tseries]))
@@ -47,7 +47,7 @@
          (ecoid  ?s-res ?mod-h ?mod-v ?sample ?line ?ecoid)
          (gadm   ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
          (border ?s-res ?mod-h ?mod-v ?sample ?line ?border)
-         (m/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
+         (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
          (convert-line-src ?textline)
          (p/converter ?textline :> ?country ?gadm)
          (>= ?vcf 25))))
@@ -67,7 +67,7 @@
 (defn paths-for-dataset
   [dataset]
   (for [tile (tile-set :IDN :MYS)]
-    [dataset "1000-32" (apply m/hv->tilestring tile)]))
+    [dataset "1000-32" (apply r/hv->tilestring tile)]))
 
 ;; TODO: Rewrite this, so that we only need to give it a sequence of
 ;; countries (or tiles), and it'll generate the rest.

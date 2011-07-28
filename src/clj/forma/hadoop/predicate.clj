@@ -1,7 +1,7 @@
 (ns forma.hadoop.predicate
   (:use cascalog.api
         [forma.matrix.utils :only (sparse-expander matrix-of)]
-        [forma.source.modis :only (pixels-at-res)])
+        [forma.reproject :only (pixels-at-res)])
   (:require [forma.utils :as u]
             [clojure.string :as s]
             [forma.hadoop.io :as io]

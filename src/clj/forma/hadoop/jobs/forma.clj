@@ -2,11 +2,11 @@
   (:use cascalog.api)
   (:require [cascalog.ops :as c]
             [forma.matrix.walk :as w]
+            [forma.reproject :as r]
             [forma.date-time :as date]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
-            [forma.trends.analysis :as a]
-            [forma.source.modis :as modis]))
+            [forma.trends.analysis :as a]))
 
 (defn short-trend-shell
   "a wrapper to collect the short-term trends into a form that can be
@@ -122,6 +122,6 @@ value, and the aggregate of the neighbors."
         (src ?s-res ?period ?mod-h ?mod-v ?win-col ?win-row ?window)
         (country-src ?s-res ?mod-h ?mod-v ?sample ?line ?country)
         (process-neighbors [neighbors] ?window :> ?win-idx ?val ?neighbor-vals)
-        (modis/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)
+        (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)
         (io/textify ?val ?neighbor-vals :> ?text)
         (:distinct false))))

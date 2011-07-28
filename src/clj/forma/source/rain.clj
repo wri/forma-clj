@@ -8,12 +8,10 @@
 ;;     [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk-pix]
 
 (ns forma.source.rain
-  (:use cascalog.api
-        [forma.source.modis :only (hv->tilestring chunk-dims)]
-        [forma.reproject :only (wgs84-indexer
-                                dimensions-for-step)])
-  (:require [forma.hadoop.io :as io]
+  (:use cascalog.api)
+  (:require [forma.reproject :as r]
             [forma.utils :as u]
+            [forma.hadoop.io :as io]
             [forma.source.static :as static]
             [forma.hadoop.predicate :as p]
             [clojure.string :as s])
@@ -44,7 +42,7 @@
   "Length of the row of floats (in # of bytes) representing the earth
   at the specified spatial step."
   [step]
-  (apply * u/float-bytes (dimensions-for-step step)))
+  (apply * u/float-bytes (r/dimensions-for-step step)))
 
 ;; ### Data Extraction
 
@@ -117,7 +115,7 @@
   into single rows of data, based on the supplied step size. `to-rows`
   outputs 2-tuples of the form `[row-idx, row-array]`."
   [coll]
-  (let [[row-length] (dimensions-for-step step)]
+  (let [[row-length] (r/dimensions-for-step step)]
     (->> coll
          (partition row-length)
          (map-indexed (fn [idx xs]
@@ -149,7 +147,7 @@
         (rain-vals !date ?row ?col ?val)
         (pix-tap :>> mod-coords)
         (p/add-fields "precl" "32" m-res :> ?dataset ?t-res ?m-res)
-        (wgs84-indexer :<< (into [m-res ascii-map] mod-coords) :> ?row ?col))))
+        (r/wgs84-indexer :<< (into [m-res ascii-map] mod-coords) :> ?row ?col))))
 
 (defn rain-chunks
   "Cascalog subquery to fully process a WGS84 float array at the
