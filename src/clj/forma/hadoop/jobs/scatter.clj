@@ -1,12 +1,12 @@
 (ns forma.hadoop.jobs.scatter
   "Namespace for arbitrary queries."
   (:use cascalog.api
+        [juke.utils :only (defmain)]
         [forma.source.tilesets :only (tile-set)]
-        [forma.utils :only (defjob)]
         [forma.hadoop.pail :only (?pail- split-chunk-tap)])
   (:require [cascalog.ops :as c]
+            [juke.reproject :as r]
             [forma.hadoop.io :as io]
-            [forma.source.modis :as m]
             [forma.hadoop.predicate :as p]
             [forma.hadoop.jobs.forma :as forma]
             [forma.hadoop.jobs.timeseries :as tseries]))
@@ -31,7 +31,7 @@
         (convert-src ?textline)
         (p/converter ?textline :> ?country ?admin))))
 
-(defjob GetStatic
+(defmain GetStatic
   [pail-path out-path]
   (let [[vcf hansen ecoid gadm border] (map (comp static-tap
                                                   (partial split-chunk-tap pail-path))
@@ -47,7 +47,7 @@
          (ecoid  ?s-res ?mod-h ?mod-v ?sample ?line ?ecoid)
          (gadm   ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
          (border ?s-res ?mod-h ?mod-v ?sample ?line ?border)
-         (m/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
+         (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
          (convert-line-src ?textline)
          (p/converter ?textline :> ?country ?gadm)
          (>= ?vcf 25))))
@@ -67,11 +67,11 @@
 (defn paths-for-dataset
   [dataset]
   (for [tile (tile-set :IDN :MYS)]
-    [dataset "1000-32" (apply m/hv->tilestring tile)]))
+    [dataset "1000-32" (apply r/hv->tilestring tile)]))
 
 ;; TODO: Rewrite this, so that we only need to give it a sequence of
 ;; countries (or tiles), and it'll generate the rest.
-(defjob RunForma
+(defmain RunForma
   [pail-path ts-pail-path out-path]
   (?- (hfs-seqfile out-path)
       (forma/forma-query forma-map
@@ -96,7 +96,7 @@
                 :templatefields ["?s-res" "?country" "?datestring"]
                 :sinkparts 3))
 
-(defjob BucketForma
+(defmain BucketForma
   [forma-path bucketed-path]
   (let [forma-fields ["?s-res" "?country" "?datestring"
                       "?mod-h" "?mod-v" "?sample" "?line" "?text"]
@@ -124,7 +124,7 @@
       (p/blossom-chunk ?gadm-chunk :> _ ?mod-h ?mod-v ?sample ?line ?gadm)
       (c/avg ?rain :> ?avg-rain)))
 
-(defjob ProcessRain
+(defmain ProcessRain
   [pail-path output-path]
   (?- (hfs-textline output-path)
       (rain-query (split-chunk-tap pail-path ["gadm"])

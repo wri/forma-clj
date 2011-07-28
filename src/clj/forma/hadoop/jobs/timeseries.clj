@@ -1,13 +1,12 @@
 (ns forma.hadoop.jobs.timeseries
   (:use cascalog.api
-        [forma.utils :only (defjob)]
-        [forma.matrix.utils :only (sparse-expander)]
+        [juke.utils :only (defmain running-sum)]
+        [juke.matrix.utils :only (sparse-expander)]
         [forma.source.tilesets :only (tile-set)])
   (:require [cascalog.ops :as c]
-            [forma.date-time :as date]
+            [juke.reproject :as r]
+            [juke.date-time :as date]
             [forma.hadoop.pail :as pail]
-            [forma.utils :as utils]
-            [forma.source.modis :as m]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]))
 
@@ -62,7 +61,8 @@
     (<- [?chunk]
         (series-src ?name ?t-res ?location ?pix-idx ?timeseries)
         (io/chunkloc->pixloc ?location ?pix-idx :> ?pix-location)
-        (io/mk-chunk ?name ?t-res nil ?pix-location ?timeseries :> ?chunk))))
+        (io/mk-chunk ?name ?t-res nil ?pix-location ?timeseries :> ?chunk)
+        (:distinct false))))
 
 (def *missing-val* -9999)
 
@@ -72,7 +72,7 @@
       (pail/split-chunk-tap ["ndvi"] ["reli"] ["qual"] ["evi"])
       (extract-tseries *missing-val*)))
 
-(defjob DynamicTimeseries
+(defmain DynamicTimeseries
   "TODO: Process a pattern, here."
   [source-pail-path ts-pail-path]
   (->> (tseries-query source-pail-path)
@@ -87,12 +87,13 @@
   ([state tuple] (map + state (io/extract-fields tuple)))
   ([state] [(apply io/fire-tuple state)]))
 
-;; Special case of `running-sum` for `FireTuple` thrift objects.
+
 (defmapop running-fire-sum
+  "Special case of `running-sum` for `FireTuple` thrift objects."
   [start tseries]
   (let [empty (io/fire-tuple 0 0 0 0)]
     (->> tseries
-         (utils/running-sum [] empty io/add-fires)
+         (running-sum [] empty io/add-fires)
          (io/fire-series start))))
 
 (defn aggregate-fires
@@ -106,7 +107,8 @@
     (<- [?name ?datestring ?location ?tuple]
         (src _ ?chunk)
         (mash ?chunk :> ?name ?location ?date ?tuple)
-        (date/beginning t-res ?date :> ?datestring))))
+        (date/beginning t-res ?date :> ?datestring)
+        (:distinct false))))
 
 (defn create-fire-series
   "Aggregates fires into timeseries."
@@ -133,10 +135,10 @@
   (let [tap (apply pail/split-chunk-tap
                    source-pail-path
                    (for [tile (apply tile-set tile-seq)]
-                     ["fire" "1000-01" (apply m/hv->tilestring tile)]))]
+                     ["fire" "1000-01" (apply r/hv->tilestring tile)]))]
     (create-fire-series tap t-res start end)))
 
-(defjob FireTimeseries
+(defmain FireTimeseries
   "TODO: Note that currently, as of july 21st, we have fires data
 through July 9th or so. So, our ending date should by 2011-06-01."
   ([source-pail-path ts-pail-path]

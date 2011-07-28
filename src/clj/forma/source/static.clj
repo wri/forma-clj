@@ -1,12 +1,9 @@
 (ns forma.source.static
   (:use cascalog.api
-        [forma.source.modis :only (wgs84-resolution)]
-        [forma.static :only (static-datasets)]
-        [forma.reproject :only (wgs84-indexer
-                                modis-indexer)])
+        [forma.static :only (static-datasets)])
   (:require [cascalog.ops :as c]
+            [juke.reproject :as r]
             [forma.hadoop.io :as io]
-            [forma.source.modis :as m]
             [forma.hadoop.predicate :as p]
             [clojure.contrib.duck-streams :as duck]))
 
@@ -55,7 +52,7 @@
         (line-tap ?textline)
         (p/break ?textline :> ?row ?col ?val)
         (pixel-tap ?mod-h ?mod-v ?sample ?line)
-        (wgs84-indexer m-res ascii-info ?mod-h ?mod-v ?sample ?line :> ?row ?col)
+        (r/wgs84-indexer m-res ascii-info ?mod-h ?mod-v ?sample ?line :> ?row ?col)
         (p/add-fields dataset m-res "00" :> ?dataset ?m-res ?t-res))))
 
 (defn downsample-modis
@@ -76,7 +73,7 @@
     (<- [?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val]
         (line-tap ?textline)
         (p/break ?textline :> ?row ?col ?temp-val)
-        (modis-indexer m-res ascii-info ?row ?col :> ?mod-h ?mod-v ?sample ?line)
+        (r/modis-indexer m-res ascii-info ?row ?col :> ?mod-h ?mod-v ?sample ?line)
         (pixel-tap ?mod-h ?mod-v ?sample ?line :> true)
         (agg ?temp-val :> ?val)
         (p/add-fields dataset m-res "00" nil :> ?dataset ?m-res ?t-res !date))))
@@ -88,7 +85,7 @@
 (defn absorb-modis
   [m-res dataset pixel-tap line-tap agg]
   (let [ascii-info (static-datasets (keyword dataset))
-        span (m/pixels-at-res m-res)]
+        span (r/pixels-at-res m-res)]
     (<- [?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val]
         (line-tap ?textline)
         (p/break ?textline :> ?r ?c ?temp-val)
@@ -99,7 +96,8 @@
         (+ 5 ?mv :> ?mod-v)
         (agg ?temp-val :> ?val)
         (pixel-tap ?mod-h ?mod-v ?sample ?line :> true)
-        (p/add-fields dataset m-res "00" nil :> ?dataset ?m-res ?t-res !date))))
+        (p/add-fields dataset m-res "00" nil :> ?dataset ?m-res ?t-res !date)
+        (:distinct false))))
 
 ;; TODO: Make a note that gzipped files can't be unpacked well when
 ;; they exist on S3. They need to be moved over to HDFS for that. I
@@ -117,7 +115,7 @@
   (let [chunkifier (p/chunkify chunk-size)
         src (p/sparse-windower val-gen
                                ["?sample" "?line"]
-                               (m/chunk-dims m-res chunk-size)
+                               (r/chunk-dims m-res chunk-size)
                                "?val"
                                nodata)]
     (<- [?datachunk]
@@ -125,13 +123,14 @@
         (p/window->struct [type] ?window :> ?chunk)
         (io/count-vals ?chunk :> ?count)
         (= ?count chunk-size)
-        (chunkifier ?dataset !date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk))))
+        (chunkifier ?dataset !date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk)
+        (:distinct false))))
 
 (defn static-chunks
   "TODO: DOCS!"
   [m-res chunk-size dataset agg line-tap pix-tap]
   (let [upsample? (>= (-> dataset keyword static-datasets :step)
-                      (wgs84-resolution m-res))]
+                      (r/wgs84-resolution m-res))]
     (-> (if upsample?
           (upsample-modis m-res dataset pix-tap line-tap)
           (downsample-modis m-res dataset pix-tap line-tap agg))

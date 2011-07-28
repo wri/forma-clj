@@ -1,10 +1,10 @@
 (ns forma.presentation.ndvi-filter
-  (:use [forma.matrix.utils :only (logical-replace)]
-        [forma.date-time :only (monthly-msec-range)]
+  (:use [juke.matrix.utils :only (logical-replace)]
+        [juke.utils :only (round-places)]
+        [juke.date-time :only (monthly-msec-range)]
         [forma.trends.filter :only (hp-filter make-reliable)]
         [forma.trends.analysis :only (mosum-prediction)]
-        [clj-time.core :only (date-time)]
-        [clojure.contrib.math :only (round expt)])
+        [clj-time.core :only (date-time)])
   (:require [incanter.charts :as c]
             [incanter.core :as i]))
 
@@ -13,17 +13,6 @@
 ;; slider bar to adjust the smoothing parameter.  We can also show how
 ;; to interpolate across "holes" as determined by the (fake)
 ;; reliability time-series
-
-;; Here are some time conversion functions -- note that Sam is being a
-;; real bitch about them, so we'll probably be moving these bad boys
-;; over to conversion.
-
-(defn round-places
-  "Rounds the supplied number to the supplied number of decimal
-  points, and returns a float representation."
-  [decimals number]
-  (let [factor (expt 10 decimals)]
-    (float (/ (round (* factor number)) factor))))
 
 ;; Create sample NDVI data for a single pixel, so that we can graph
 ;; the filtering techniques on sample data. Also a rain time-series.

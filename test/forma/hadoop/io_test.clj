@@ -1,7 +1,7 @@
 (ns forma.hadoop.io-test
   (:use [forma.hadoop.io] :reload)
   (:use [midje sweet cascalog])
-  (:require [forma.date-time :as date])
+  (:require [juke.date-time :as date])
   (:import [backtype.hadoop.pail Pail]
            [forma.schema ModisChunkLocation]
            [forma.hadoop.pail SplitDataChunkPailStructure]))
@@ -21,9 +21,8 @@
 (fact
   "Tests that the combine neighbors function produces the proper
 textual representation."
-  (let [s "1 1 1 1 0 0 0 0 1.0 1.0 1.0 0 0 0 0 2 1.5 1.0 1.5 1.0 1.5 1.0"]
-    (textify 1 1 1 1
-             (first neighbors)
+  (let [s "0 0 0 0 1.0 1.0 1.0 0 0 0 0 2 1.5 1.0 1.5 1.0 1.5 1.0"]
+    (textify (first neighbors)
              (combine-neighbors neighbors)) => s))
 
 (fact
@@ -79,7 +78,7 @@ textual representation."
                        (fire-series (+ f-start offset)
                                     [(fire-tuple 0 0 0 1)
                                      (fire-tuple 1 1 1 1)]))]
-     (adjust-fires est-map (mk-f-series ?offset)) => [f-start ?series]))
+     (adjust-fires est-map (mk-f-series ?offset)) => [?series]))
  ?offset ?series
  0       (fire-series f-start [(fire-tuple 0 0 0 1) (fire-tuple 1 1 1 1)])
  1       (fire-series f-start [(fire-tuple 0 0 0 1)])

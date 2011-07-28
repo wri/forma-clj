@@ -1,24 +1,25 @@
 (ns forma.hadoop.jobs.forma
   (:use cascalog.api)
   (:require [cascalog.ops :as c]
-            [forma.matrix.walk :as w]
-            [forma.date-time :as date]
+            [juke.matrix.walk :as w]
+            [juke.reproject :as r]
+            [juke.date-time :as date]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
-            [forma.trends.analysis :as a]
-            [forma.source.modis :as modis]))
+            [forma.trends.analysis :as a]))
 
 (defn short-trend-shell
   "a wrapper to collect the short-term trends into a form that can be
   manipulated from within cascalog."
   [{:keys [est-start est-end t-res long-block window]} ts-series]
   (let [ts-start (io/get-start-idx ts-series)
+        new-start (date/datetime->period est-start)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
     [(->> (io/get-vals ts-series)
           (a/collect-short-trend start end long-block window)
           io/to-struct
           io/mk-array-value
-          (io/timeseries-value start))]))
+          (io/timeseries-value new-start))]))
 
 (defn long-trend-shell
   "a wrapper that takes a map of options and attributes of the input
@@ -26,11 +27,12 @@
   t-statistics from the time-series."
   [{:keys [est-start est-end t-res long-block window]} ts-series & cofactors]
   (let [ts-start (io/get-start-idx ts-series)
+        new-start (date/datetime->period est-start)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
     (->> (a/collect-long-trend start end
                                (io/get-vals ts-series)
                                (map io/get-vals cofactors))
-         (apply map (comp (partial io/timeseries-value start)
+         (apply map (comp (partial io/timeseries-value new-start)
                           io/mk-array-value
                           io/to-struct
                           vector)))))
@@ -122,6 +124,6 @@ value, and the aggregate of the neighbors."
         (src ?s-res ?period ?mod-h ?mod-v ?win-col ?win-row ?window)
         (country-src ?s-res ?mod-h ?mod-v ?sample ?line ?country)
         (process-neighbors [neighbors] ?window :> ?win-idx ?val ?neighbor-vals)
-        (modis/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)
+        (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)
         (io/textify ?val ?neighbor-vals :> ?text)
         (:distinct false))))

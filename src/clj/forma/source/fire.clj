@@ -1,9 +1,9 @@
 (ns forma.source.fire
   (:use cascalog.api
-        [forma.date-time :only (convert)])
+        [juke.date-time :only (convert)])
   (:require [clojure.string :as s]
-            [forma.utils :as utils]
-            [forma.source.modis :as m]
+            [juke.utils :as utils]
+            [juke.reproject :as r]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p])
   (:import [forma.schema FireTuple]))
@@ -65,7 +65,8 @@
       (p/mangle [#"\s+"] ?line :> ?datestring _ _ ?s-lat ?s-lon ?s-kelvin _ _ _ ?s-conf)
       (not= "YYYYMMDD" ?datestring)
       (monthly-datestring ?datestring :> ?date)
-      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)))
+      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
+      (:distinct false)))
 
 (defn fire-source-daily
   "Takes a source of textlines, and returns tuples with dataset, date,
@@ -77,7 +78,8 @@
       (src ?line)
       (p/mangle [#","] ?line :> ?s-lat ?s-lon ?s-kelvin _ _ ?datestring _ _ ?s-conf _ _ _)
       (daily-datestring ?datestring :> ?date)
-      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)))
+      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
+      (:distinct false)))
 
 (defn reproject-fires
   "Aggregates fire data at the supplied path by modis pixel at the
@@ -86,7 +88,8 @@
   (<- [?datachunk]
       (p/add-fields m-res :> ?m-res)
       (src ?dataset ?date ?t-res ?lat ?lon ?tuple)
-      (m/latlon->modis ?m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
+      (r/latlon->modis ?m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
       (io/pixel-location ?m-res ?mod-h ?mod-v ?sample ?line :> ?location)
       (io/mk-data-value ?tuple :> ?data-val)
-      (io/mk-chunk ?dataset ?t-res ?date ?location ?data-val :> ?datachunk)))
+      (io/mk-chunk ?dataset ?t-res ?date ?location ?data-val :> ?datachunk)
+      (:distinct false)))

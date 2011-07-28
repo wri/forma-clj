@@ -1,6 +1,6 @@
 (ns forma.hadoop.jobs.preprocess
   (:use cascalog.api
-        [forma.utils :only (defjob)]
+        [juke.utils :only (defmain)]
         [forma.hadoop.pail :only (to-pail)]
         [forma.source.tilesets :only (tile-set)]
         [cascalog.io :only (with-fs-tmp)])
@@ -24,7 +24,7 @@
     (->> (h/modis-chunks subsets chunk-size source)
          (to-pail pail-path))))
 
-(defjob PreprocessModis
+(defmain PreprocessModis
   "See project wiki for example usage."
   [path output-path date & tiles]
   (let [pattern (->> tiles
@@ -48,7 +48,7 @@
       (->> (r/rain-chunks m-res ascii-map chunk-size file-tap pix-tap)
            (to-pail pail-path)))))
 
-(defjob PreprocessRain
+(defmain PreprocessRain
   "See project wiki for example usage."
   [path output-path & countries]
   (let [countries (map read-string countries)]
@@ -66,7 +66,7 @@
       (->> (s/static-chunks m-res chunk-size dataset agg line-tap pix-tap)
            (to-pail pail-path)))))
 
-(defjob PreprocessStatic
+(defmain PreprocessStatic
   "See project wiki for example usage."
   [dataset ascii-path output-path & countries]
   (static-chunker "1000"
@@ -79,7 +79,7 @@
                   ascii-path
                   output-path))
 
-(defjob PreprocessAscii
+(defmain PreprocessAscii
   "TODO: Tidy up. This needs to be combined with PreprocessStatic."
   [dataset ascii-path pail-path & countries]
   (with-fs-tmp [_ tmp-dir]
@@ -102,7 +102,7 @@
 ;; other information. We should probably change this in future to
 ;; retain as much information as possible.
 
-(defjob PreprocessFire
+(defmain PreprocessFire
   "Path for running FORMA fires processing. See the forma-clj wiki for
 more details."
   [type path pail-path]

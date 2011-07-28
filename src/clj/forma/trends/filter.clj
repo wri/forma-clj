@@ -1,9 +1,9 @@
 (ns forma.trends.filter
-  (:use [forma.matrix.utils :only (ones-column
-                                   coll-avg
-                                   variance-matrix
-                                   insert-into-val
-                                   sparse-expander)]
+  (:use [juke.matrix.utils :only (ones-column
+                                  coll-avg
+                                  variance-matrix
+                                  insert-into-val
+                                  sparse-expander)]
         [clojure.contrib.seq :only (positions)])
   (:require [incanter.core :as i]))
 
