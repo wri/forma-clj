@@ -82,7 +82,7 @@
 (defn forma-cluster
   "Generates a FORMA cluster with the supplied number of nodes. We
   pick that reduce capacity based on the recommended 1.2 times the
-  number of tasks times number of nodes"
+  number of tasks times number of nodes."
   [nodecount]
   (let [lib-path (str fw-path "/usr/lib")
         mappers 35
@@ -94,10 +94,13 @@
                    }
                   :base-machine-spec {
                                       ;; :hardware-id "m1.large"
-                                      :hardware-id "m2.4xlarge"
-                                      :image-id "us-east-1/ami-08f40561"
-                                      ;; :key-pair "forma2"
-                                      :spot-price (float 1.50)
+                                      ;; :hardware-id "m2.4xlarge"
+                                      ;; :image-id "us-east-1/ami-08f40561" ; For use with non-cluster-compute
+                                      ;; :spot-price (float 1.50)
+
+                                      :hardware-id "cc1.4xlarge"
+                                      :image-id "us-east-1/ami-1cad5275" ; For use with cluster-compute
+                                      :spot-price (float 0.90)
                                       }
                   :base-props {:hadoop-env {:JAVA_LIBRARY_PATH native-path
                                             :LD_LIBRARY_PATH lib-path}

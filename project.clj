@@ -7,7 +7,8 @@
   :javac-options {:debug "true" :fork "true"}
   :jvm-opts ["-XX:MaxPermSize=128M"]
   :repositories {"conjars" "http://conjars.org/repo/"
-                 "sonatype" "http://oss.sonatype.org/content/repositories/releases/"}
+                 "sonatype" "http://oss.sonatype.org/content/repositories/releases/"
+                 "sonatype-snap" "http://oss.sonatype.org/content/repositories/snapshots/"}
   :dependencies [[org.clojure/clojure "1.2.1"]
                  [org.clojure/clojure-contrib "1.2.0"]
                  [incanter "1.2.3" :exclusions [swank-clojure]]
@@ -21,7 +22,7 @@
                  [backtype/dfs-datastores-cascading "1.0.4" :exclusions [backtype/dfs-datastores]]]
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
                      [pallet-hadoop "0.3.0"]
-                     [org.jclouds/jclouds-all "1.0.0"]
+                     [org.jclouds/jclouds-all "1.1.0-SNAPSHOT"]
                      [org.jclouds.driver/jclouds-jsch "1.0.0"]
                      [org.jclouds.driver/jclouds-log4j "1.0.0"]
                      [log4j/log4j "1.2.14"]
