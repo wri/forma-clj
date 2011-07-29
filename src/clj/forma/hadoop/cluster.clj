@@ -82,11 +82,16 @@
 (defn forma-cluster
   "Generates a FORMA cluster with the supplied number of nodes. We
   pick that reduce capacity based on the recommended 1.2 times the
-  number of tasks times number of nodes."
+  number of tasks times number of nodes.
+
+RECOMMENDED SETTINGS:
+mappers 4, reducers 3 for c1.large
+mappers 35, reducers 27 for m2.4xlarge
+mappers 22, reducers 16 for cc1.4xlarge"
   [nodecount]
   (let [lib-path (str fw-path "/usr/lib")
-        mappers 35
-        reducers 27]
+        mappers 22
+        reducers 16]
     (cluster-spec :private
                   {
                    :jobtracker (node-group [:jobtracker :namenode])
