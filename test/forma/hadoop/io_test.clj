@@ -16,12 +16,12 @@
 ;; ## Various schema tests
 
 (def neighbors [(forma-value nil 1 1 1)
-                (forma-value nil 2 2 2)])
+                (forma-value (fire-tuple 1 1 1 1) 2 2 2)])
 
 (fact
   "Tests that the combine neighbors function produces the proper
 textual representation."
-  (let [s "0 0 0 0 1.0 1.0 1.0 0 0 0 0 2 1.5 1.0 1.5 1.0 1.5 1.0"]
+  (let [s "0 0 0 0 1.0 1.0 1.0 1 1 1 1 2 1.5 1.0 1.5 1.0 1.5 1.0"]
     (textify (first neighbors)
              (combine-neighbors neighbors)) => s))
 

@@ -173,7 +173,7 @@ strings and their integer representations."}
          (:sort ?sub-idx)
          (- ?idx start :> ?start-idx)
          ((c/juxt #'mod #'quot) ?start-idx length :> ?sub-idx ?split-idx)
-         (sparse-expansion [start length empty-val] ?sub-idx ?val :> ?split-vec))))
+         (sparse-expansion [0 length empty-val] ?sub-idx ?val :> ?split-vec))))
 
 ;; ### Generators
 
