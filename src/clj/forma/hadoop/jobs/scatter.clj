@@ -129,3 +129,14 @@
   (?- (hfs-textline output-path)
       (rain-query (split-chunk-tap pail-path ["gadm"])
                   (split-chunk-tap pail-path ["rain"]))))
+
+(defmain GrabTimeseries
+  [ts-pail-path output-path dataset position-seq]
+  (let [positions (vec (read-string position-seq))
+        src (split-chunk-tap ts-pail-path [dataset])
+        extracter (c/comp #'io/get-pos #'io/extract-location)]
+    (?<- (hfs-seqfile output-path)
+         [?ts-chunk]
+         (src _ ?ts-chunk)
+         (extracter ?ts-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line)
+         (positions ?mod-h ?mod-v ?sample ?line :> true))))
