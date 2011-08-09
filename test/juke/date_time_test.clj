@@ -77,6 +77,32 @@ or supplied formats."
   (beginning "32" "2005-12-31") => "2005-12-01"
   (beginning "32" "2011-06-23T22" :date-hour) => "2011-06-01T00")
 
+(facts "diff-in-days tests"
+  "Dates properly span years..."
+  (diff-in-days "2011-12-30" "2012-01-02") => 3
+
+  "And months."
+  (diff-in-days "2011-11-01" "2012-01-02") => 62
+
+  "The two dates must be provided in increasing order."
+  (diff-in-days "2012-01-02" "2011-12-30") => (throws IllegalArgumentException))
+
+(facts "date-offset tests"
+  (date-offset "16" 1 "32" 1) => 15)
+
+(facts "period-span tests."
+  "December of the second year."
+  (period-span "32" 12) => 31
+
+  "Checking that we get proper month lengths for all of 1970 (first 12
+months since the epoch)."
+  (for [month (range 12)]
+    (period-span "32" month)) =>  [31 28 31 30 31 30 31 31 30 31 30 31])
+
+(facts "shift-resolution tests"
+  (shift-resolution "32" "16" 1) => 1
+  (shift-resolution "32" "16" 10) => 19)
+
 (facts "current-period tests."
   (current-period "32") => 431
   (current-period "16") => 825

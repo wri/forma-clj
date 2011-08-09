@@ -191,22 +191,28 @@ in which `string` lies (according to the supplied resolution, `res`)."
        (period->datetime res period format))))
 
 (defn diff-in-days
-  "TODO: Docs and tests."
+  "Returns the difference in ordinal days between the supplied date
+  strings."
   [one-date two-date]
-  (try (->> [one-date two-date]
-            (map #(parse % :year-month-day))
-            (apply time/interval)
-            (in-days))
-       (catch IllegalArgumentException e
-         (- (diff-in-days two-date one-date)))))
+  (->> [one-date two-date]
+       (map #(parse % :year-month-day))
+       (apply time/interval)
+       (in-days)))
 
 (defn date-offset
+  "Returns the difference in ordinal days between the beginnings of
+  the two supplied periods. For example:
+
+ (date-offset \"16\" 1 \"32\" 1) => 15"
   [from-res from-period to-res to-period]
   (diff-in-days (period->datetime from-res from-period)
                 (period->datetime to-res to-period)))
 
 (defn period-span
-  "TODO: Docs and tests."
+  "Returns the length in days of the supplied period at the supplied
+  resolution. For example:
+
+  (period-span \"32\" 11) => 31"
   [t-res pd]
   (->>  [pd (inc pd)]
         (map (partial period->datetime t-res))
