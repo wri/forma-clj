@@ -24,16 +24,26 @@
    "500" 2400
    "1000" 1200})
 
-(defn temporal-res
-  "Returns the temporal resolution of the supplied MODIS short product
-  name."
-  [dataset]
-  (case dataset
-        "MCD45A1" "32"
-        "MOD13Q1" "16"
-        "MOD13A1" "16"
-        "MOD13A2" "16"
-        "MOD13A3" "32"))
+(def
+  ^{:doc "Returns the temporal resolution of the supplied MODIS
+  short product name."}
+  dataset-info
+  {"MCD45A1" {:temporal-res "32"
+              :spatial-res "500"}
+   "MOD13Q1" {:temporal-res "16"
+              :spatial-res "250"}
+   "MOD13A1" {:temporal-res "16"
+              :spatial-res "500"}
+   "MOD13A2" {:temporal-res "16"
+              :spatial-res "1000"}
+   "MOD13A3" {:temporal-res "32"
+              :spatial-res "1000"}})
+
+(defn temporal-res [prod-name]
+  (-> prod-name dataset-info :temporal-res))
+
+(defn spatial-res [prod-name]
+  (-> prod-name dataset-info :spatial-res))
 
 (defn chunk-dims
   "Returns the width and height in pixels of a chunk at the supplied

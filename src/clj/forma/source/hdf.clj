@@ -13,10 +13,11 @@
 
 (ns forma.source.hdf
   (:use cascalog.api
-        [juke.reproject :only (temporal-res tilestring->hv)]
+        [juke.reproject :only (spatial-res temporal-res tilestring->hv)]
         [cascalog.io :only (temp-dir)]
         [clojure.contrib.seq-utils :only (find-first indexed)])
-  (:require [clojure.set :as set]
+  (:require [cascalog.ops :as c]
+            [clojure.set :as set]
             [clojure.contrib.string :as s]
             [forma.hadoop.predicate :as p]
             [forma.hadoop.io :as hadoop.io]
@@ -200,16 +201,13 @@ as a 1-tuple."
   [dataset]
   (map (metadata dataset) meta-keys))
 
-;; From [NASA's MODIS information](http://goo.gl/C28fG), "The MODLAND
-;; Tile ID is an 8 digit integer, such as 51018009, that is used to
-;; specify a gridded product's projection, tile size and horizontal
-;; and vertical tile number."
+;; The MODLAND Tile ID is an 8 digit integer, such as 51018009, that
+;; is used to specify a gridded product's projection, horizontal and
+;; vertical tile number.
 ;;
-;; The first digit is used to identify the projection, while the
-;; second digit is used to specify the tile size. 1 is 1km data (full
-;; tile size) , 2 is quarter size (500m data), and 4 is 16th tile
-;; size, or 250m data. REDD deals with MODIS products from collection
-;; 5, which uses a sinusoial projection.
+;; The first digit is used to identify the projection. REDD deals with
+;; MODIS products from collection 5, which uses a sinusoial
+;; projection.
 ;;
 ;; (We place a pre-condition on split-id to catch any errors resulting
 ;; from a dataset that uses a different projection. This may be
@@ -228,14 +226,13 @@ of a MODIS TileID acts as a key to retrieve this data."
           "4" "250")))
 
 (defn split-id
-  "Returns a sequence containing the resolution and a tilestring,
-  formatted as 'hhhvvv', where h and v refer to the MODIS tile
-  referenced by the supplied TileID. The precondition makes sure that
-  the processed product uses a sinusoial projection."
+  "Returns a sequence containing the modis h and v coordinates, where
+  h and v refer to the MODIS tile referenced by the supplied
+  TileID. The precondition makes sure that the processed product uses
+  a sinusoial projection."
   [tileid]
   {:pre [(= (first tileid) \5)]}
-  (cons (tileid->res tileid)
-        (tilestring->hv (subs tileid 2))))
+  (tilestring->hv (subs tileid 2)))
 
 ;; ### The Chunker!
 ;;
@@ -260,7 +257,7 @@ of a MODIS TileID acts as a key to retrieve this data."
         (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
         (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk)
         (meta-values [keys] ?freetile :> ?productname ?tileid ?date)
-        (temporal-res ?productname :> ?t-res)
-        (split-id ?tileid :> ?s-res ?mod-h ?mod-v)
+        (split-id ?tileid :> ?mod-h ?mod-v)
+        ((c/juxt #'spatial-res #'temporal-res) ?productname :> ?s-res ?t-res)
         (chunkifier ?dataset ?date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk)
         (:distinct false))))

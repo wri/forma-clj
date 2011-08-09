@@ -12,7 +12,7 @@
   "a wrapper to collect the short-term trends into a form that can be
   manipulated from within cascalog."
   [{:keys [est-start est-end t-res long-block window]} ts-series]
-  (let [ts-start (io/get-start-idx ts-series)
+  (let [ts-start  (io/get-start-idx ts-series)
         new-start (date/datetime->period est-start)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
     [(->> (io/get-vals ts-series)
@@ -26,8 +26,8 @@
   time-series (and cofactors) to extract the long-term trends and
   t-statistics from the time-series."
   [{:keys [est-start est-end t-res long-block window]} ts-series & cofactors]
-  (let [ts-start (io/get-start-idx ts-series)
-        new-start (date/datetime->period est-start)
+  (let [ts-start    (io/get-start-idx ts-series)
+        new-start   (date/datetime->period est-start)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
     (->> (a/collect-long-trend start end
                                (io/get-vals ts-series)

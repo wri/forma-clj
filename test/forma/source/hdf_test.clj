@@ -82,15 +82,10 @@ error."
   "SHORTNAME"          "MOD13A3"
   "TileID"             "51003011"})
 
-(fact "tileid->res tests."
-  (tileid->res "51003011") => "1000"
-  (tileid->res "52003011") => "500"
-  (tileid->res "54003011") => "250")
-
 (fact "split-id tests."
-  (split-id "51003011") => ["1000" 3 11]
-  (split-id "52010010") => ["500" 10 10]
-  (split-id "54029009") => ["250" 29 9])
+  (split-id "51003011") => [3 11]
+  (split-id "52010010") => [10 10]
+  (split-id "54029009") => [29 9])
 
 (fact "modis-chunks test. `modis-chunks` is bound to a subquery, which
 is used as a source for the final count aggregator. We check that the
