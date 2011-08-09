@@ -6,6 +6,7 @@
         [forma.hadoop.pail :only (?pail- split-chunk-tap)])
   (:require [cascalog.ops :as c]
             [juke.reproject :as r]
+            [forma.trends.stretch :as stretch]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
             [forma.hadoop.jobs.forma :as forma]
@@ -57,6 +58,7 @@
 (def forma-map
   {:est-start "2005-12-01"
    :est-end "2011-05-01"
+   :s-res "1000"
    :t-res "32"
    :neighbors 1
    :window-dims [600 600]
@@ -65,43 +67,63 @@
    :window 5})
 
 (defn paths-for-dataset
-  [dataset]
-  (for [tile (tile-set :IDN :MYS)]
-    [dataset "1000-32" (apply r/hv->tilestring tile)]))
+  [dataset s-res t-res]
+  (let [res-string (format "%s-%s" s-res t-res)]
+    (for [tile (tile-set :IDN :MYS)]
+      [dataset res-string (apply r/hv->tilestring tile)])))
 
-;; TODO: Rewrite this, so that we only need to give it a sequence of
-;; countries (or tiles), and it'll generate the rest.
+(defn constrained-tap
+  [ts-pail-path dateset s-res t-res tile-seq]
+  (apply split-chunk-tap
+         ts-pail-path
+         (paths-for-dataset "ndvi" s-res t-res)))
+
+(defn adjusted-precl-tap
+  [ts-pail-path s-res base-t-res t-res countries]
+  (let [extracter (c/juxt #'io/extract-location
+                          #'io/extract-chunk-value)
+        combiner (c/comp #'io/mk-data-value
+                         #'stretch/ts-expander)
+        precl-tap (constrained-tap ts-pail-path "precl" s-res base-t-res countries)]
+    (if (= t-res base-t-res)
+      precl-tap
+      (<- [?path ?final-chunk]
+          (precl-tap ?path ?chunk)
+          (extracter ?chunk :> ?location ?series)
+          (combiner base-t-res t-res ?series :> ?new-series)
+          (io/swap-data ?chunk ?new-series :> ?swapped-chunk)
+          (io/set-temporal-res ?swapped-chunk t-res :> ?final-chunk)))))
+
 (defmain RunForma
-  [pail-path ts-pail-path out-path]
-  (?- (hfs-seqfile out-path)
-      (forma/forma-query forma-map
-                         (apply split-chunk-tap
-                                ts-pail-path
-                                (paths-for-dataset "ndvi"))
-                         (split-chunk-tap ts-pail-path ["precl"])
-                         (split-chunk-tap pail-path ["vcf"])
-                         (country-tap (split-chunk-tap pail-path ["gadm"])
-                                      convert-line-src)
-                         (tseries/fire-query pail-path
-                                             "32"
-                                             "2000-11-01"
-                                             "2011-06-01"
-                                             [:IDN :MYS]))))
-
-(defn forma-textline
-  [path pathstr]
-  (hfs-textline path
-                :sink-template pathstr
-                :outfields ["?mod-h" "?mod-v" "?sample" "?line" "?text"]
-                :templatefields ["?s-res" "?country" "?datestring"]
-                :sinkparts 3))
+  "TODO: Rewrite this, so that we only need to give it a sequence of
+  countries (or tiles), and it'll generate the rest."
+  [pail-path ts-pail-path out-path & countries]
+  (let [{:keys [s-res t-res]} forma-map
+        countries (or countries [:IDN :MYS])]
+    (?- (hfs-seqfile out-path)
+        (forma/forma-query forma-map
+                           (constrained-tap ts-pail-path "ndvi" s-res t-res countries)
+                           (adjusted-precl-tap ts-pail-path s-res "32" t-res countries)
+                           (constrained-tap pail-path "vcf" s-res "00" countries)
+                           (country-tap (constrained-tap pail-path "gadm" s-res "00" countries)
+                                        convert-line-src)
+                           (tseries/fire-query pail-path
+                                               t-res
+                                               "2000-11-01"
+                                               "2011-06-01"
+                                               countries)))))
 
 (defmain BucketForma
   [forma-path bucketed-path]
-  (let [forma-fields ["?s-res" "?country" "?datestring"
-                      "?mod-h" "?mod-v" "?sample" "?line" "?text"]
+  (let [template-fields ["?s-res" "?country" "?datestring"]
+        data-fields     ["?mod-h" "?mod-v" "?sample" "?line" "?text"]
+        forma-fields    (concat template-fields data-fields)
         src (hfs-seqfile forma-path)]
-    (?<- (forma-textline bucketed-path "%s/%s/%s/")
+    (?<- (hfs-textline bucketed-path
+                       :sink-template "%s/%s/%s/"
+                       :outfields data-fields
+                       :templatefields template-fields
+                       :sinkparts 3)
          forma-fields
          (src :>> forma-fields)
          ([[103] [158]] ?country :> true))))

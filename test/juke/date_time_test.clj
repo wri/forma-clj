@@ -78,11 +78,6 @@ or supplied formats."
   (beginning "32" "2011-06-23T22" :date-hour) => "2011-06-01T00")
 
 (facts "current-period tests."
-  (jobtag) => "20020101T000000Z"
-  (provided
-    (now) => (date-time 2002))
-
-  (jobtag) => "20051201T131009Z"
   (current-period "32") => 431
   (current-period "16") => 825
 

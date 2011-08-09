@@ -190,6 +190,36 @@ in which `string` lies (according to the supplied resolution, `res`)."
      (let [period (datetime->period res string format)]
        (period->datetime res period format))))
 
+(defn diff-in-days
+  "TODO: Docs and tests."
+  [one-date two-date]
+  (try (->> [one-date two-date]
+            (map #(parse % :year-month-day))
+            (apply time/interval)
+            (in-days))
+       (catch IllegalArgumentException e
+         (- (diff-in-days two-date one-date)))))
+
+(defn date-offset
+  [from-res from-period to-res to-period]
+  (diff-in-days (period->datetime from-res from-period)
+                (period->datetime to-res to-period)))
+
+(defn period-span
+  "TODO: Docs and tests."
+  [t-res pd]
+  (->>  [pd (inc pd)]
+        (map (partial period->datetime t-res))
+        (apply diff-in-days)))
+
+(defn shift-resolution
+  "Takes a period at `from-res`, returns the corresponding period at
+  `to-res`."
+  [from-res to-res period]
+  (->> period
+       (period->datetime from-res)
+       (datetime->period to-res)))
+
 (defn current-period
   "Returns the current time period for the supplied resolution. For
   example:
@@ -198,18 +228,6 @@ in which `string` lies (according to the supplied resolution, `res`)."
     => 495 ;; (on April 27, 2011, this function's birthday!)"
   [res]
   (periodize res (time/now)))
-
-(defn jobtag
-  "Generates a unique string based on the current date and time. For
-  example, on May 11th, 2011:
-
-  (jobtag)
-   => \"20110511T221422Z\"
-
-  `jobtag` is useful for hadoop runs in which data must be bucketed
-  into a unique directory."
-  []
-  (unparse (time/now) :basic-date-time-no-ms))
 
 (defn relative-period
   "convert periods (string) to an integer value that is relative to
