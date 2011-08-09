@@ -55,16 +55,25 @@
 
 ;; ## Forma
 
-(def forma-map
-  {:est-start "2005-12-01"
-   :est-end "2011-05-01"
-   :s-res "1000"
-   :t-res "32"
-   :neighbors 1
-   :window-dims [600 600]
-   :vcf-limit 25
-   :long-block 15
-   :window 5})
+(def forma-run-parameters
+  {:1000-32 {:est-start "2005-12-01"
+             :est-end "2011-05-01"
+             :s-res "1000"
+             :t-res "32"
+             :neighbors 1
+             :window-dims [600 600]
+             :vcf-limit 25
+             :long-block 15
+             :window 5}
+   :1000-16 {:est-start "2005-12-01"
+             :est-end "2011-05-01"
+             :s-res "1000"
+             :t-res "16"
+             :neighbors 1
+             :window-dims [600 600]
+             :vcf-limit 25
+             :long-block 30
+             :window 10}})
 
 (defn paths-for-dataset
   [dataset s-res t-res]
@@ -97,8 +106,8 @@
 (defmain RunForma
   "TODO: Rewrite this, so that we only need to give it a sequence of
   countries (or tiles), and it'll generate the rest."
-  [pail-path ts-pail-path out-path & countries]
-  (let [{:keys [s-res t-res]} forma-map
+  [pail-path ts-pail-path out-path run-key & countries]
+  (let [{:keys [s-res t-res] :as forma-map} (:run-key forma-run-parameters)
         countries (or countries [:IDN :MYS])]
     (?- (hfs-seqfile out-path)
         (forma/forma-query forma-map

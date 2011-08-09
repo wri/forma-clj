@@ -26,7 +26,7 @@
 
 (defmain PreprocessModis
   "See project wiki for example usage."
-  [path output-path date & tiles]
+  [path pail-path date & tiles]
   (let [pattern (->> tiles
                      (map read-string)
                      (apply tile-set)
@@ -36,7 +36,7 @@
                    static/chunk-size
                    path
                    pattern
-                   output-path)))
+                   pail-path)))
 
 (defn rain-chunker
   "Like `modis-chunker`, for NOAA PRECL data files."
@@ -50,13 +50,13 @@
 
 (defmain PreprocessRain
   "See project wiki for example usage."
-  [path output-path & countries]
+  [path pail-path & countries]
   (let [countries (map read-string countries)]
     (rain-chunker "1000"
                   static/chunk-size
                   (apply tile-set countries)
                   path
-                  output-path)))
+                  pail-path)))
 
 (defn static-chunker
   [m-res chunk-size tile-seq dataset agg ascii-path pail-path]

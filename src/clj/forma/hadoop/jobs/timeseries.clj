@@ -68,15 +68,17 @@
 
 (defn tseries-query
   [pail-path]
-  (-> pail-path
-      (pail/split-chunk-tap ["ndvi"] ["reli"] ["qual"] ["evi"])
+  (-> (apply pail/split-chunk-tap pail-path datasets)
       (extract-tseries *missing-val*)))
 
 (defmain DynamicTimeseries
-  "TODO: Process a pattern, here."
-  [source-pail-path ts-pail-path]
-  (->> (tseries-query source-pail-path)
-       (pail/to-pail ts-pail-path)))
+  "TODO: Process a pattern, here"
+  [source-pail-path ts-pail-path s-res t-res & datasets]
+  (let [datasets (or datasets ["ndvi" "reli" "qual" "evi"])]
+    (->> (for [dset datasets]
+           [dset (format "%s-%s" s-res t-res)])
+         (apply tseries-query source-pail-path)
+         (pail/to-pail ts-pail-path))))
 
 ;; #### Fire Time Series Processing
 
