@@ -5,7 +5,8 @@
   :dev-resources-path "dev"
   :marginalia {:javascript ["mathjax/MathJax.js"]}
   :javac-options {:debug "true" :fork "true"}
-  :jvm-opts ["-XX:MaxPermSize=128M"]
+  :jvm-opts ["-XX:MaxPermSize=128M" "-Xms1024M" "-Xmx2048M" "-server"
+             "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n"]
   :repositories {"conjars" "http://conjars.org/repo/"
                  "sonatype" "http://oss.sonatype.org/content/repositories/releases/"
                  "sonatype-snap" "http://oss.sonatype.org/content/repositories/snapshots/"}

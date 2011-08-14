@@ -21,7 +21,7 @@
 (fact
   "Tests that the combine neighbors function produces the proper
 textual representation."
-  (let [s "0 0 0 0 1.0 1.0 1.0 1 1 1 1 2 1.5 1.0 1.5 1.0 1.5 1.0"]
+  (let [s "0\t0\t0\t0\t1.0\t1.0\t1.0\t1\t1\t1\t1\t2\t1.5\t1.0\t1.5\t1.0\t1.5\t1.0"]
     (textify (first neighbors)
              (combine-neighbors neighbors)) => s))
 

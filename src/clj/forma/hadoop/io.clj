@@ -274,7 +274,7 @@ together each entry in the supplied sequence of `FormaValue`s."
          long-mean long-min t-mean t-min] (unpack-neighbor-val neighbor-val)
         [k330 c50 ck fire] (extract-fields fire-val)
         [k330-n c50-n ck-n fire-n] (extract-fields fire-sum)]
-    (join " "
+    (join \tab
           [k330 c50 ck fire s-drop l-drop t-drop
            k330-n c50-n ck-n fire-n
            ct short-mean short-min long-mean long-min t-mean t-min])))
