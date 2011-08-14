@@ -13,7 +13,7 @@
   manipulated from within cascalog."
   [{:keys [est-start est-end t-res long-block window]} ts-series]
   (let [ts-start  (io/get-start-idx ts-series)
-        new-start (date/datetime->period est-start)
+        new-start (date/datetime->period t-res est-start)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
     [(->> (io/get-vals ts-series)
           (a/collect-short-trend start end long-block window)
@@ -27,7 +27,7 @@
   t-statistics from the time-series."
   [{:keys [est-start est-end t-res long-block window]} ts-series & cofactors]
   (let [ts-start    (io/get-start-idx ts-series)
-        new-start   (date/datetime->period est-start)
+        new-start   (date/datetime->period t-res est-start)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
     (->> (a/collect-long-trend start end
                                (io/get-vals ts-series)

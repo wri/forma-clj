@@ -67,7 +67,7 @@
 (def *missing-val* -9999)
 
 (defn tseries-query
-  [pail-path]
+  [pail-path datasets]
   (-> (apply pail/split-chunk-tap pail-path datasets)
       (extract-tseries *missing-val*)))
 
