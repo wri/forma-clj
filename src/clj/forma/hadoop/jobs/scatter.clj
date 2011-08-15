@@ -109,7 +109,7 @@
   [pail-path ts-pail-path out-path run-key & countries]
   (let [{:keys [s-res t-res] :as forma-map} (:run-key forma-run-parameters)
         countries (or countries [:IDN :MYS])]
-    (?- (hfs-seqfile out-path)
+    (?- (hfs-seqfile out-path :sinkmode :replace)
         (forma/forma-query forma-map
                            (constrained-tap ts-pail-path "ndvi" s-res t-res countries)
                            (adjusted-precl-tap ts-pail-path s-res "32" t-res countries)
