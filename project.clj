@@ -47,8 +47,10 @@
 
 (use '[robert.hooke :only [add-hook]]
      '[leiningen.deps :only [deps]]
-     '[leiningen.native-deps :only [native-deps]]
-     '[leiningen.clean :only [clean]])
+     ;; '[leiningen.native-deps :only [native-deps]]
+     '[leiningen.clean :only [clean]]
+     '[leiningen.uberjar :only [uberjar]])
+(require '[leiningen.compile :as c])
 
 (defn append-tasks
   [target-var & tasks-to-add]
@@ -58,4 +60,5 @@
                            (t project)))))
 
 (prepend-tasks #'deps clean)
-(append-tasks #'deps native-deps)
+;; (append-tasks #'deps native-deps)
+(prepend-tasks #'uberjar deps c/compile)
