@@ -12,7 +12,8 @@
             [pallet.resource.package :as package])
   (:import [backtype.hadoop ThriftSerialization]
            [cascading.tuple.hadoop BytesSerialization TupleSerialization]
-           [org.apache.hadoop.io.serializer WritableSerialization JavaSerialization]))
+           [org.apache.hadoop.io.serializer WritableSerialization JavaSerialization])
+  (:gen-class))
 
 ;; ### Job Run
 
@@ -79,34 +80,33 @@
     (exec-script/exec-script
      ((echo ~pam-lims) ">>" "/etc/pam.d/common-session"))))
 
+(defn mk-profile
+  [mappers reducers spot-price ami hardware-id]
+  {:map-tasks mappers
+   :reduce-tasks reducers
+   :image-id ami
+   :hardware-id hardware-id
+   :price spot-price})
+
+(def cluster-profiles [cluster-key]  
+  {"large"           (mk-profile 4 3 0.50 "m1.large" "us-east-1/ami-08f40561")
+   "high-memory"     (mk-profile 30 27 1.50 "m2.4xlarge" "us-east-1/ami-08f40561")
+   "cluster-compute" (mk-profile 22 16 0.80 "cc1.4xlarge" "us-east-1/ami-1cad5275")})
+
 (defn forma-cluster
   "Generates a FORMA cluster with the supplied number of nodes. We
   pick that reduce capacity based on the recommended 1.2 times the
-  number of tasks times number of nodes.
-
-RECOMMENDED SETTINGS:
-mappers 4, reducers 3 for c1.large
-mappers 35, reducers 27 for m2.4xlarge
-mappers 22, reducers 16 for cc1.4xlarge"
-  [nodecount]
+  number of tasks times number of nodes."
+  [cluster-key nodecount]
   (let [lib-path (str fw-path "/usr/lib")
-        mappers 22
-        reducers 16]
+        {:keys [map-tasks reduce-tasks image-id hardware-id]}
+        (cluster-profiles cluster-key)]
     (cluster-spec :private
-                  {
-                   :jobtracker (node-group [:jobtracker :namenode])
-                   :slaves     (slave-group nodecount)
-                   }
-                  :base-machine-spec {
-                                      ;; :hardware-id "m1.large"
-                                      ;; :hardware-id "m2.4xlarge"
-                                      ;; :image-id "us-east-1/ami-08f40561" ; For use with non-cluster-compute
-                                      ;; :spot-price (float 1.50)
-
-                                      :hardware-id "cc1.4xlarge"
-                                      :image-id "us-east-1/ami-1cad5275" ; For use with cluster-compute
-                                      :spot-price (float 0.90)
-                                      }
+                  {:jobtracker (node-group [:jobtracker :namenode])
+                   :slaves     (slave-group nodecount)}
+                  :base-machine-spec {:hardware-id hardware-id
+                                      :image-id image-id
+                                      :spot-price (float price)}
                   :base-props {:hadoop-env {:JAVA_LIBRARY_PATH native-path
                                             :LD_LIBRARY_PATH lib-path}
                                :hdfs-site {:dfs.data.dir "/mnt/dfs/data"
@@ -115,7 +115,8 @@ mappers 22, reducers 16 for cc1.4xlarge"
                                :core-site {:io.serializations serializers
                                            :cascading.serialization.tokens tokens
                                            :fs.s3n.awsAccessKeyId "AKIAJ56QWQ45GBJELGQA"
-                                           :fs.s3n.awsSecretAccessKey "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"}
+                                           :fs.s3n.awsSecretAccessKey
+                                           "6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV"}
                                :mapred-site {:mapred.local.dir "/mnt/hadoop/mapred/local"
                                              :mapred.task.timeout 10000000
                                              :mapred.reduce.tasks (int (* reducers nodecount))
