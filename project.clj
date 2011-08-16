@@ -47,7 +47,6 @@
 
 (use '[robert.hooke :only [add-hook]]
      '[leiningen.deps :only [deps]]
-     '[leiningen.native-deps :only [native-deps]]
      '[leiningen.clean :only [clean]]
      '[leiningen.uberjar :only [uberjar]])
 (require '[leiningen.compile :as c])
@@ -60,5 +59,11 @@
                            (t project)))))
 
 (prepend-tasks #'deps clean)
-(append-tasks #'deps native-deps)
 (prepend-tasks #'uberjar deps c/compile)
+
+(try (use '[leiningen.native-deps :only (native-deps)])
+     (when-let [my-var (resolve 'native-deps)]
+       (append-tasks #'deps @my-var))
+     (catch java.lang.Exception _
+       (println "Run lein deps again to add the required native-deps hook.")))
+
