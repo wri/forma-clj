@@ -66,4 +66,3 @@
        (append-tasks #'deps @my-var))
      (catch java.lang.Exception _
        (println "Run lein deps again to add the required native-deps hook.")))
-
