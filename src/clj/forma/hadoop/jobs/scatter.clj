@@ -125,7 +125,8 @@
 (defn bucket-forma
   "TODO: Get these country numbers turned into codes!"
   [unbucketed-path bucketed-path]
-  (let [template-fields ["?s-res" "?country" "?datestring"]
+  (let [keep-countries [[103] [158]]
+        template-fields ["?s-res" "?country" "?datestring"]
         data-fields     ["?mod-h" "?mod-v" "?sample" "?line" "?text"]
         forma-fields    (concat template-fields data-fields)
         src (hfs-seqfile unbucketed-path)]
@@ -136,7 +137,7 @@
                        :sinkparts 3)
          forma-fields
          (src :>> forma-fields)
-         ([[103] [158]] ?country :> true))))
+         (keep-countries ?country :> true))))
 
 (defmain RunForma
   [pail-path ts-pail-path results-path run-key & countries]
