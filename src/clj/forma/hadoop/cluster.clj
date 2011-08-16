@@ -1,19 +1,19 @@
 (ns forma.hadoop.cluster
-  (:use pallet-hadoop.node
+  (:use [pallet-hadoop.node :exclude (jobtracker-ip)]
         [clojure.string :only (join)]
         [pallet.crate.hadoop :only (hadoop-user)]
         [pallet.extensions :only (def-phase-fn phase)])
   (:require [forma.hadoop.environment :as env]
             [pallet.script :as script]
             [pallet.stevedore :as stevedore]
+            [pallet.compute :only (primary-ip nodes-by-tag nodes)]
             [pallet.action.exec-script :as exec-script]
             [pallet.resource.remote-directory :as rd]
             [pallet.resource.directory :as d]
             [pallet.resource.package :as package])
   (:import [backtype.hadoop ThriftSerialization]
            [cascading.tuple.hadoop BytesSerialization TupleSerialization]
-           [org.apache.hadoop.io.serializer WritableSerialization JavaSerialization])
-  (:gen-class))
+           [org.apache.hadoop.io.serializer WritableSerialization JavaSerialization]))
 
 ;; ### Job Run
 
@@ -88,7 +88,7 @@
    :hardware-id hardware-id
    :price spot-price})
 
-(def cluster-profiles [cluster-key]  
+(def cluster-profiles
   {"large"           (mk-profile 4 3 0.50 "m1.large" "us-east-1/ami-08f40561")
    "high-memory"     (mk-profile 30 27 1.50 "m2.4xlarge" "us-east-1/ami-08f40561")
    "cluster-compute" (mk-profile 22 16 0.80 "cc1.4xlarge" "us-east-1/ami-1cad5275")})
@@ -98,9 +98,10 @@
   pick that reduce capacity based on the recommended 1.2 times the
   number of tasks times number of nodes."
   [cluster-key nodecount]
+  {:pre [(not (nil? cluster-key))]}
   (let [lib-path (str fw-path "/usr/lib")
-        {:keys [map-tasks reduce-tasks image-id hardware-id]}
-        (cluster-profiles cluster-key)]
+        {:keys [map-tasks reduce-tasks image-id hardware-id price]}
+        (cluster-profiles (or cluster-key "high-memory"))]
     (cluster-spec :private
                   {:jobtracker (node-group [:jobtracker :namenode])
                    :slaves     (slave-group nodecount)}
@@ -119,9 +120,9 @@
                                            "6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV"}
                                :mapred-site {:mapred.local.dir "/mnt/hadoop/mapred/local"
                                              :mapred.task.timeout 10000000
-                                             :mapred.reduce.tasks (int (* reducers nodecount))
-                                             :mapred.tasktracker.map.tasks.maximum mappers
-                                             :mapred.tasktracker.reduce.tasks.maximum reducers
+                                             :mapred.reduce.tasks (int (* reduce-tasks nodecount))
+                                             :mapred.tasktracker.map.tasks.maximum map-tasks
+                                             :mapred.tasktracker.reduce.tasks.maximum reduce-tasks
                                              :mapred.reduce.max.attempts 12
                                              :mapred.map.max.attempts 20
                                              :mapred.map.tasks.speculative.execution false
@@ -132,22 +133,27 @@
                                              :mapred.child.env (str "LD_LIBRARY_PATH="
                                                                     lib-path)}})))
 
-(defn create-cluster
-  [node-count]
-  (let [cluster (forma-cluster node-count)]
-    (do
-      (boot-cluster cluster
-                    :compute env/ec2-service
-                    :environment env/remote-env)
-      (lift-cluster cluster
-                    :phase (phase config-redd (raise-file-limits 90000))
-                    :compute env/ec2-service
-                    :environment env/remote-env)
-      (start-cluster cluster
-                     :compute env/ec2-service
-                     :environment env/remote-env))))
+(defn jobtracker-ip
+  [node-type]
+  (let [{:keys [nodedefs ip-type]} (forma-cluster node-type 0)
+        [jt-tag] (roles->tags [:jobtracker] nodedefs)]
+    (master-ip env/ec2-service jt-tag ip-type)))
 
-(defn destroy-cluster []
-  (kill-cluster (forma-cluster 0)
+(defn create-cluster
+  [node-type node-count]
+  (let [cluster (forma-cluster node-type node-count)]
+    (do (boot-cluster cluster
+                      :compute env/ec2-service
+                      :environment env/remote-env)
+        (lift-cluster cluster
+                      :phase (phase config-redd (raise-file-limits 90000))
+                      :compute env/ec2-service
+                      :environment env/remote-env)
+        (start-cluster cluster
+                       :compute env/ec2-service
+                       :environment env/remote-env))))
+
+(defn destroy-cluster [node-type]
+  (kill-cluster (forma-cluster node-type 0)
                 :compute env/ec2-service
                 :environment env/remote-env))

@@ -7,8 +7,8 @@
   :javac-options {:debug "true" :fork "true"}
   :jvm-opts ["-XX:MaxPermSize=128M" "-Xms1024M" "-Xmx2048M" "-server"
              "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n"]
-  :repositories {"sonatype" "http://oss.sonatype.org/content/repositories/releases/"
-                 "sonatype-snaps" "http://oss.sonatype.org/content/repositories/snapshots/"
+  :repositories {"releases" "http://oss.sonatype.org/content/repositories/releases/"
+                 "snapshots" "http://oss.sonatype.org/content/repositories/snapshots/"
                  "conjars" "http://conjars.org/repo/"}
   :dependencies [[org.clojure/clojure "1.2.1"]
                  [org.clojure/clojure-contrib "1.2.0"]
@@ -25,7 +25,7 @@
   :native-path "lib/ext/native:lib/native:lib/dev/native"
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
                      [redd/native-deps "1.0.7"]
-                     [pallet-hadoop "0.3.0"]
+                     [pallet-hadoop "0.3.2"]
                      [org.jclouds/jclouds-all "1.0.0"]
                      [org.jclouds.driver/jclouds-jsch "1.0.0"]
                      [org.jclouds.driver/jclouds-log4j "1.0.0"]
@@ -47,7 +47,7 @@
 
 (use '[robert.hooke :only [add-hook]]
      '[leiningen.deps :only [deps]]
-     ;; '[leiningen.native-deps :only [native-deps]]
+     '[leiningen.native-deps :only [native-deps]]
      '[leiningen.clean :only [clean]]
      '[leiningen.uberjar :only [uberjar]])
 (require '[leiningen.compile :as c])
@@ -60,5 +60,5 @@
                            (t project)))))
 
 (prepend-tasks #'deps clean)
-;; (append-tasks #'deps native-deps)
+(append-tasks #'deps native-deps)
 (prepend-tasks #'uberjar deps c/compile)
