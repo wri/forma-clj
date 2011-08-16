@@ -17,7 +17,8 @@
    `(do (println (str (format "Create cluster of %s instances and %d nodes."
                               ~node-type ~node-count)))
         (forma.hadoop.cluster/create-cluster ~node-type ~node-count)
-        (println "Cluster created! Hit Control-C to exit."))))
+        (println "Cluster created!")
+        (println "Hit Control-C to exit."))))
 
 (defn destroy-cluster
   [project node-type]
@@ -25,7 +26,8 @@
    project
    `(do (println "Running destroy-cluster.")
         (forma.hadoop.cluster/destroy-cluster ~node-type)
-        (println "Cluster destroyed! Hit Control-C to exit."))))
+        (println "Cluster destroyed!")
+        (println "Hit Control-C to exit."))))
 
 (defn show-jobtracker-ip
   [project node-type]
@@ -33,7 +35,8 @@
    project
    `(do (if-let [jobtracker-ip# (forma.hadoop.cluster/jobtracker-ip ~node-type)]
           (println "The current jobtracker IP is " jobtracker-ip#)
-          (println "Sorry, no cluster seems to be running at the moment.")))))
+          (println "Sorry, no cluster seems to be running at the moment.")
+          (println "Hit Control-C to exit.")))))
 
 (defn execute-jar
   [project node-type & args]
@@ -45,7 +48,8 @@
      project
      `(do (let [jobtracker-ip# (forma.hadoop.cluster/jobtracker-ip ~node-type)]
             (println "Pretending to run some shit.")
-            (comment "scp uberjar up to jobtracker ip."))))))
+            (comment "scp uberjar up to jobtracker ip.")
+            (println "Hit Control-C to exit."))))))
 
 (defn cluster
   "Start or destroy a pallet-hadoop cluster.
@@ -61,8 +65,3 @@
                            "jobtracker-ip" show-jobtracker-ip
                            "execute" execute-jar)]
        (apply task-func project args))))
-
-;; Gotta figure out native deps in leiningen.
-
-
-
