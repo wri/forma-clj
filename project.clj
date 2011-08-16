@@ -62,7 +62,7 @@
 (prepend-tasks #'uberjar deps c/compile)
 
 (try (use '[leiningen.native-deps :only (native-deps)])
-     (when-let [my-var (resolve 'native-deps)]
-       (append-tasks #'deps @my-var))
+     (when-let [native (resolve 'native-deps)]
+       (append-tasks #'deps @native))
      (catch java.lang.Exception _
        (println "Run lein deps again to add the required native-deps hook.")))
