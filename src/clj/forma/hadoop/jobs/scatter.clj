@@ -56,24 +56,24 @@
 ;; ## Forma
 
 (def forma-run-parameters
-  {:1000-32 {:est-start "2005-12-01"
-             :est-end "2011-05-01"
-             :s-res "1000"
-             :t-res "32"
-             :neighbors 1
-             :window-dims [600 600]
-             :vcf-limit 25
-             :long-block 15
-             :window 5}
-   :1000-16 {:est-start "2005-12-01"
-             :est-end "2011-05-01"
-             :s-res "1000"
-             :t-res "16"
-             :neighbors 1
-             :window-dims [600 600]
-             :vcf-limit 25
-             :long-block 30
-             :window 10}})
+  {"1000-32" {:est-start "2005-12-01"
+              :est-end "2011-05-01"
+              :s-res "1000"
+              :t-res "32"
+              :neighbors 1
+              :window-dims [600 600]
+              :vcf-limit 25
+              :long-block 15
+              :window 5}
+   "1000-16" {:est-start "2005-12-01"
+              :est-end "2011-05-01"
+              :s-res "1000"
+              :t-res "16"
+              :neighbors 1
+              :window-dims [600 600]
+              :vcf-limit 25
+              :long-block 30
+              :window 10}})
 
 (defn paths-for-dataset
   [dataset s-res t-res tile-seq]
@@ -106,21 +106,22 @@
           (io/set-temporal-res ?swapped-chunk t-res :> ?final-chunk)))))
 
 (defn process-forma
-  "TODO: Make sure run-key works right."
   [pail-path ts-pail-path out-path run-key country-seq]
   (let [{:keys [s-res t-res] :as forma-map} (forma-run-parameters run-key)]
-    (?- (hfs-seqfile out-path :sinkmode :replace)
-        (forma/forma-query forma-map
-                           (constrained-tap ts-pail-path "ndvi" s-res t-res country-seq)
-                           (adjusted-precl-tap ts-pail-path s-res "32" t-res country-seq)
-                           (constrained-tap pail-path "vcf" s-res "00" country-seq)
-                           (country-tap (constrained-tap pail-path "gadm" s-res "00" country-seq)
-                                        convert-line-src)
-                           (tseries/fire-query pail-path
-                                               t-res
-                                               "2000-11-01"
-                                               "2011-06-01"
-                                               country-seq)))))
+    (if (nil? forma-map)
+      (throw (IllegalArgumentException. (str run-key " is not a valid run key!")))
+      (?- (hfs-seqfile out-path :sinkmode :replace)
+          (forma/forma-query forma-map
+                             (constrained-tap ts-pail-path "ndvi" s-res t-res country-seq)
+                             (adjusted-precl-tap ts-pail-path s-res "32" t-res country-seq)
+                             (constrained-tap pail-path "vcf" s-res "00" country-seq)
+                             (country-tap (constrained-tap pail-path "gadm" s-res "00" country-seq)
+                                          convert-line-src)
+                             (tseries/fire-query pail-path
+                                                 t-res
+                                                 "2000-11-01"
+                                                 "2011-06-01"
+                                                 country-seq))))))
 
 (defn bucket-forma
   "TODO: Get these country numbers turned into codes!"
@@ -139,9 +140,11 @@
          (src :>> forma-fields)
          (keep-countries ?country :> true))))
 
+;; TODO: call read-string on countries.
 (defmain RunForma
   [pail-path ts-pail-path results-path run-key & countries]
-  (let [countries (or countries [:IDN :MYS])
+  (let [countries (->> (or countries [":IDN" ":MYS"])
+                       (map read-string))
         temp-path "s3n://formares/unbucketed"]
     (process-forma pail-path ts-pail-path temp-path run-key countries)
     (bucket-forma temp-path results-path)))
