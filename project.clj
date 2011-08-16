@@ -35,6 +35,7 @@
                      [clojure-source "1.2.0"]
                      [lein-marginalia "0.6.0"]
                      [midje "1.2-alpha3"]
+                     [lein-midje "1.0.3"]
                      [midje-cascalog "0.1.0"]]
   :aot [
         forma.hadoop.pail
@@ -59,10 +60,10 @@
                            (t project)))))
 
 (prepend-tasks #'deps clean)
-(prepend-tasks #'uberjar deps c/compile)
+(prepend-tasks #'uberjar deps)
 
 (try (use '[leiningen.native-deps :only (native-deps)])
      (when-let [native (resolve 'native-deps)]
-       (append-tasks #'deps @native))
+       (append-tasks #'deps @native c/compile))
      (catch java.lang.Exception _
-       (println "Run lein deps again to add the required native-deps hook.")))
+       (println "Run lein deps again to activate the required native-deps and compile hooks.")))
