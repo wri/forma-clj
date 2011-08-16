@@ -76,24 +76,26 @@
              :window 10}})
 
 (defn paths-for-dataset
-  [dataset s-res t-res]
+  [dataset s-res t-res tile-seq]
   (let [res-string (format "%s-%s" s-res t-res)]
-    (for [tile (tile-set :IDN :MYS)]
+    (for [tile tile-seq]
       [dataset res-string (apply r/hv->tilestring tile)])))
 
 (defn constrained-tap
-  [ts-pail-path dateset s-res t-res tile-seq]
-  (apply split-chunk-tap
-         ts-pail-path
-         (paths-for-dataset "ndvi" s-res t-res)))
+  [ts-pail-path dataset s-res t-res country-seq]
+  (->> (apply tile-set country-seq)
+       (paths-for-dataset dataset s-res t-res)
+       (apply split-chunk-tap ts-pail-path)))
 
 (defn adjusted-precl-tap
-  [ts-pail-path s-res base-t-res t-res countries]
+  "Document... returns a tap that adjusts for the incoming
+  resolution."
+  [ts-pail-path s-res base-t-res t-res country-seq]
   (let [extracter (c/juxt #'io/extract-location
                           #'io/extract-chunk-value)
         combiner (c/comp #'io/mk-data-value
                          #'stretch/ts-expander)
-        precl-tap (constrained-tap ts-pail-path "precl" s-res base-t-res countries)]
+        precl-tap (constrained-tap ts-pail-path "precl" s-res base-t-res country-seq)]
     (if (= t-res base-t-res)
       precl-tap
       (<- [?path ?final-chunk]
@@ -103,31 +105,30 @@
           (io/swap-data ?chunk ?new-series :> ?swapped-chunk)
           (io/set-temporal-res ?swapped-chunk t-res :> ?final-chunk)))))
 
-(defmain RunForma
-  "TODO: Rewrite this, so that we only need to give it a sequence of
-  countries (or tiles), and it'll generate the rest."
-  [pail-path ts-pail-path out-path run-key & countries]
-  (let [{:keys [s-res t-res] :as forma-map} (:run-key forma-run-parameters)
-        countries (or countries [:IDN :MYS])]
+(defn process-forma
+  "TODO: Make sure run-key works right."
+  [pail-path ts-pail-path out-path run-key country-seq]
+  (let [{:keys [s-res t-res] :as forma-map} (forma-run-parameters run-key)]
     (?- (hfs-seqfile out-path :sinkmode :replace)
         (forma/forma-query forma-map
-                           (constrained-tap ts-pail-path "ndvi" s-res t-res countries)
-                           (adjusted-precl-tap ts-pail-path s-res "32" t-res countries)
-                           (constrained-tap pail-path "vcf" s-res "00" countries)
-                           (country-tap (constrained-tap pail-path "gadm" s-res "00" countries)
+                           (constrained-tap ts-pail-path "ndvi" s-res t-res country-seq)
+                           (adjusted-precl-tap ts-pail-path s-res "32" t-res country-seq)
+                           (constrained-tap pail-path "vcf" s-res "00" country-seq)
+                           (country-tap (constrained-tap pail-path "gadm" s-res "00" country-seq)
                                         convert-line-src)
                            (tseries/fire-query pail-path
                                                t-res
                                                "2000-11-01"
                                                "2011-06-01"
-                                               countries)))))
+                                               country-seq)))))
 
-(defmain BucketForma
-  [forma-path bucketed-path]
+(defn bucket-forma
+  "TODO: Get these country numbers turned into codes!"
+  [unbucketed-path bucketed-path]
   (let [template-fields ["?s-res" "?country" "?datestring"]
         data-fields     ["?mod-h" "?mod-v" "?sample" "?line" "?text"]
         forma-fields    (concat template-fields data-fields)
-        src (hfs-seqfile forma-path)]
+        src (hfs-seqfile unbucketed-path)]
     (?<- (hfs-textline bucketed-path
                        :sink-template "%s/%s/%s/"
                        :outfields data-fields
@@ -136,6 +137,13 @@
          forma-fields
          (src :>> forma-fields)
          ([[103] [158]] ?country :> true))))
+
+(defmain RunForma
+  [pail-path ts-pail-path results-path run-key & countries]
+  (let [countries (or countries [:IDN :MYS])
+        temp-path "s3n://formares/unbucketed"]
+    (process-forma pail-path ts-pail-path temp-path run-key countries)
+    (bucket-forma temp-path results-path)))
 
 ;; ## Rain Processing, for Dan
 ;;
