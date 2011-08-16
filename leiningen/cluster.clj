@@ -12,13 +12,14 @@
 
 (defn create-cluster
   [project node-type node-count]
-  (cluster-eval
-   project
-   `(do (println (str (format "Create cluster of %s instances and %d nodes."
-                              ~node-type ~node-count)))
-        (forma.hadoop.cluster/create-cluster ~node-type ~node-count)
-        (println "Cluster created!")
-        (println "Hit Control-C to exit."))))
+  (let [node-count (read-string node-count)]
+    (cluster-eval
+     project
+     `(do (println (str (format "Creating cluster of %s instances and %d nodes."
+                                ~node-type ~node-count)))
+          (forma.hadoop.cluster/create-cluster ~node-type ~node-count)
+          (println "Cluster created!")
+          (println "Hit Control-C to exit.")))))
 
 (defn destroy-cluster
   [project node-type]

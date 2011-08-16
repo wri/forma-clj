@@ -89,9 +89,9 @@
    :price spot-price})
 
 (def cluster-profiles
-  {"large"           (mk-profile 4 3 0.50 "m1.large" "us-east-1/ami-08f40561")
-   "high-memory"     (mk-profile 30 27 1.50 "m2.4xlarge" "us-east-1/ami-08f40561")
-   "cluster-compute" (mk-profile 22 16 0.80 "cc1.4xlarge" "us-east-1/ami-1cad5275")})
+  {"large"           (mk-profile 4 3 0.50 "us-east-1/ami-08f40561" "m1.large")
+   "high-memory"     (mk-profile 30 27 1.50 "us-east-1/ami-08f40561" "m2.4xlarge")
+   "cluster-compute" (mk-profile 22 16 0.80 "us-east-1/ami-1cad5275" "cc1.4xlarge")})
 
 (defn forma-cluster
   "Generates a FORMA cluster with the supplied number of nodes. We

@@ -26,7 +26,7 @@
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
                      [redd/native-deps "1.0.7"]
                      [pallet-hadoop "0.3.2"]
-                     [org.jclouds/jclouds-all "1.0.0"]
+                     [org.jclouds/jclouds-allcompute "1.0.0"]
                      [org.jclouds.driver/jclouds-jsch "1.0.0"]
                      [org.jclouds.driver/jclouds-log4j "1.0.0"]
                      [log4j/log4j "1.2.14"]
