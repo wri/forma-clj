@@ -129,25 +129,11 @@
         (query ?name ?location ?fire-series)
         (io/mk-chunk ?name t-res nil ?location ?fire-series :> ?chunk))))
 
-;; TODO: Think of converting this to https://gist.github.com/1102111,
-;; and cutting fire-query totally out of the loop.
-
 (defn fire-query
+  "Returns a source of fire timeseries data chunk objects."
   [source-pail-path t-res start end tile-seq]
   (let [tap (apply pail/split-chunk-tap
                    source-pail-path
                    (for [tile (apply tile-set tile-seq)]
                      ["fire" "1000-01" (apply r/hv->tilestring tile)]))]
     (create-fire-series tap t-res start end)))
-
-(defmain FireTimeseries
-  "TODO: Note that currently, as of july 21st, we have fires data
-through July 9th or so. So, our ending date should by 2011-06-01."
-  ([source-pail-path ts-pail-path]
-     (FireTimeseries-main source-pail-path
-                          ts-pail-path
-                          "32" "2011-06-01" :IDN :MYS))
-  ([source-pail-path ts-pail-path t-res end & countries]
-     (-> source-pail-path
-         (fire-query t-res "2000-11-01" end (map read-string countries))
-         (->> (pail/to-pail ts-pail-path)))))
