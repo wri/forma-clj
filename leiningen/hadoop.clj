@@ -23,8 +23,7 @@
         (pallet.core/lift (forma.hadoop.cluster/master-nodeset ~node-type)
                           :phase (pallet.phase/phase-fn
                                   (pallet.crate.hadoop/hadoop-command
-                                   ;;"jar" ~dest-path
-                                   ~@args))
+                                   "jar" ~dest-path ~@args))
                           :compute forma.hadoop.environment/ec2-service
                           :environment forma.hadoop.environment/remote-env)
         (println "Your job's complete. Kill with Ctrl-C."))
