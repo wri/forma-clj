@@ -2,8 +2,7 @@
   (:use [clojure.string :only (join)]
         [clojure.contrib.command-line :only (with-command-line)]
         [pallet-hadoop.node :exclude (jobtracker-ip)]
-        [pallet.crate.hadoop :only (hadoop-user)]
-        
+        [pallet.crate.hadoop :only (hadoop-user)]        
         [pallet.extensions :only (def-phase-fn phase)])
   (:require [pallet.execute :as execute]
             [forma.hadoop.environment :as env]
@@ -36,7 +35,7 @@
 (def fw-path "/usr/local/fwtools")
 (def native-path "/home/hadoop/native")
 
-(def serializers
+(def serializations
   (join "," (for [cls [ThriftSerialization BytesSerialization
                        TupleSerialization WritableSerialization
                        JavaSerialization]]
@@ -92,7 +91,7 @@
 
 (def cluster-profiles
   {"large"           (mk-profile 4 3 0.50 "us-east-1/ami-08f40561" "m1.large")
-   "high-memory"     (mk-profile 30 27 1.50 "us-east-1/ami-08f40561" "m2.4xlarge")
+   "high-memory"     (mk-profile 30 22 1.50 "us-east-1/ami-08f40561" "m2.4xlarge")
    "cluster-compute" (mk-profile 22 16 0.80 "us-east-1/ami-1cad5275" "cc1.4xlarge")})
 
 (defn forma-cluster
@@ -115,7 +114,7 @@
                                :hdfs-site {:dfs.data.dir "/mnt/dfs/data"
                                            :dfs.name.dir "/mnt/dfs/name"
                                            :dfs.datanode.max.xcievers 5096}
-                               :core-site {:io.serializations serializers
+                               :core-site {:io.serializations serializations
                                            :cascading.serialization.tokens tokens
                                            :fs.s3n.awsAccessKeyId "AKIAJ56QWQ45GBJELGQA"
                                            :fs.s3n.awsSecretAccessKey
@@ -189,17 +188,59 @@
   (println "Cluster destroyed!")
   (println "Hit Ctrl-C to exit."))
 
+(defn parse-emr-config
+  [conf-map]
+  (->> (mapcat conf-map [:mapred-site :core-site :hdfs-site])
+       (map (fn [[k v]] (format "-s,%s=%s" (name k) v)))
+       (join ",")
+       (format "\"%s\"")))
+
+(defn boot-emr!
+  [node-type node-count]
+  (let [{:keys [base-props base-machine-spec]} (forma-cluster node-type node-count)
+        {type :hardware-id} base-machine-spec]
+    (execute/local-script
+     (elastic-mapreduce --create --alive
+                        --instance-group master
+                        --instance-type ~type
+                        --instance-count 1
+                        --bid-price ~(:spot-price base-machine-spec)
+                        
+                        --instance-group core
+                        --instance-type ~type
+                        --instance-count ~node-count
+                        --bid-price ~(:spot-price base-machine-spec)
+                        --enable-debugging
+
+                        --bootstrap-action
+                        s3://elasticmapreduce/bootstrap-actions/configurations/latest/memory-intensive
+
+                        --bootstrap-action
+                        s3://elasticmapreduce/bootstrap-actions/add-swap
+                        --args 2048
+                        
+                        --bootstrap-action
+                        s3://elasticmapreduce/bootstrap-actions/configure-hadoop
+                        --args ~(parse-emr-config base-props)
+
+                        --bootstrap-action
+                        s3://reddconfig/bootstrap-actions/redd.sh))))
+
 (defn -main [& args]
   (with-command-line args
     "Provisioning tool for Hadoop clusters."
     [[start? "Start Cluster?"]
      [stop? "Shutdown Cluster?"]
+     [emr? "Boot emr?"]
      [jobtracker-ip? "Print jobtracker IP address?"]
      [type "Cluster name" "high-memory"]
      [size "Cluster size"]]
     (cond start? (if-not size
                    (println "Please define a cluster size.")
                    (create-cluster! type size))
+          emr? (if-not size
+                 (println "Please define a cluster size.")
+                 (boot-emr! type size))
           stop? (destroy-cluster! type)
           jobtracker-ip? (print-jobtracker-ip type)
           :else (println "Jeez, give me a fucking option, will you?"))))
