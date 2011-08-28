@@ -32,6 +32,7 @@
                          :owner hadoop-user
                          :group hadoop-user)))
 
+(def redd-config-path "s3://reddconfig/bootstrap-actions/config.xml")
 (def fw-path "/usr/local/fwtools")
 (def native-path "/home/hadoop/native")
 
@@ -136,10 +137,11 @@
 
 (defn jobtracker-ip
   [node-type]
-  (env/when-ec2-service [service]
-    (let [{defs :nodedefs} (forma-cluster node-type 0)
-          [jt-tag] (roles->tags [:jobtracker] defs)]
-      (master-ip service jt-tag :public))))
+  (env/when-ec2-service
+   [service]
+   (let [{defs :nodedefs} (forma-cluster node-type 0)
+         [jt-tag] (roles->tags [:jobtracker] defs)]
+     (master-ip service jt-tag :public))))
 
 (defn master-nodeset [node-type]
   (let [cluster (forma-cluster node-type 0)
@@ -163,40 +165,52 @@
 
 (defn create-cluster!
   [node-type node-count]
-  (env/when-ec2-service [service]
-    (let [cluster (forma-cluster node-type node-count)]
-      (println
-       (format "Creating cluster of %s instances and %d nodes."
-               node-type node-count))
-      (boot-cluster cluster
+  (env/when-ec2-service
+   [service]
+   (let [cluster (forma-cluster node-type node-count)]
+     (println
+      (format "Creating cluster of %s instances and %d nodes."
+              node-type node-count))
+     (boot-cluster cluster
+                   :compute service
+                   :environment env/remote-env)
+     (lift-cluster cluster
+                   :phase (phase config-redd (raise-file-limits 90000))
+                   :compute service
+                   :environment env/remote-env)
+     (start-cluster cluster
                     :compute service
                     :environment env/remote-env)
-      (lift-cluster cluster
-                    :phase (phase config-redd (raise-file-limits 90000))
-                    :compute service
-                    :environment env/remote-env)
-      (start-cluster cluster
-                     :compute service
-                     :environment env/remote-env)
-      (println "Cluster created!")
-      (println "Hit Ctrl-C to exit."))))
+     (println "Cluster created!")
+     (println "Hit Ctrl-C to exit."))))
 
 (defn destroy-cluster!
   [node-type]
-  (env/when-ec2-service [service]
-    (println "Destroying cluster.")
-    (kill-cluster (forma-cluster node-type 0)
-                  :compute service
-                  :environment env/remote-env)
-    (println "Cluster destroyed!")
-    (println "Hit Ctrl-C to exit.")))
+  (env/when-ec2-service
+   [service]
+   (println "Destroying cluster.")
+   (kill-cluster (forma-cluster node-type 0)
+                 :compute service
+                 :environment env/remote-env)
+   (println "Cluster destroyed!")
+   (println "Hit Ctrl-C to exit.")))
 
 (defn parse-emr-config
   [conf-map]
-  (->> (mapcat conf-map [:mapred-site :core-site :hdfs-site])
-       (map (fn [[k v]] (format "-s,%s=%s" (name k) v)))
-       (join ",")
-       (format "\"%s\"")))
+  (let [bad-set #{:io.serializations
+                  :cascading.serialization.tokens
+                  :fs.s3n.awsAccessKeyId
+                  :fs.s3n.awsSecretAccessKey
+                  :dfs.data.dir
+                  :dfs.name.dir
+                  :mapred.local.dir}]
+    (->> (mapcat conf-map [:mapred-site :core-site :hdfs-site])
+         (map (fn [[k v]]
+                (when-not (bad-set k)
+                  (format "-s,%s=%s" (name k) v))))
+         (filter identity)
+         (join ",")
+         (format "\"--core-config-file,%s,%s\"" redd-config-path))))
 
 (defn boot-emr!
   [node-type node-count]
@@ -238,12 +252,13 @@
      [jobtracker-ip? "Print jobtracker IP address?"]
      [type "Cluster name" "high-memory"]
      [size "Cluster size"]]
-    (cond start? (if-not size
+    (let [size (Integer/parseInt size)]
+      (cond start? (if-not size
+                     (println "Please define a cluster size.")
+                     (create-cluster! type size))
+            emr? (if-not size
                    (println "Please define a cluster size.")
-                   (create-cluster! type size))
-          emr? (if-not size
-                 (println "Please define a cluster size.")
-                 (boot-emr! type size))
-          stop? (destroy-cluster! type)
-          jobtracker-ip? (print-jobtracker-ip type)
-          :else (println "Jeez, give me a fucking option, will you?"))))
+                   (boot-emr! type size))
+            stop? (destroy-cluster! type)
+            jobtracker-ip? (print-jobtracker-ip type)
+            :else (println "Jeez, give me a fucking option, will you?")))))
