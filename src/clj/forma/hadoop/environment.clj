@@ -1,5 +1,5 @@
 (ns forma.hadoop.environment
-  (:use [pallet.resource :only (phase)]
+  (:use [pallet.phase :only (phase-fn)]
         [pallet.resource.package :only (package-manager)]
         [pallet.compute.vmfest :only (parallel-create-nodes)])
   (:require [pallet.compute :as compute]
@@ -32,7 +32,7 @@
   (merge remote-env
          {:proxy local-proxy
           :phases {:bootstrap
-                   (phase
+                   (phase-fn
                     (package-manager
                      :configure :proxy local-proxy))}}))
 

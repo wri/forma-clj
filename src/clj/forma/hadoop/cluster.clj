@@ -1,12 +1,14 @@
 (ns forma.hadoop.cluster
-  (:use [pallet-hadoop.node :exclude (jobtracker-ip)]
-        [clojure.string :only (join)]
+  (:use [clojure.string :only (join)]
+        [clojure.contrib.command-line :only (with-command-line)]
+        [pallet-hadoop.node :exclude (jobtracker-ip)]
         [pallet.crate.hadoop :only (hadoop-user)]
+        
         [pallet.extensions :only (def-phase-fn phase)])
-  (:require [forma.hadoop.environment :as env]
+  (:require [pallet.execute :as execute]
+            [forma.hadoop.environment :as env]
             [pallet.script :as script]
-            [pallet.stevedore :as stevedore]
-            [pallet.compute :only (primary-ip nodes-by-tag nodes)]
+            [pallet.stevedore :as stevedore]    
             [pallet.action.exec-script :as exec-script]
             [pallet.resource.remote-directory :as rd]
             [pallet.resource.directory :as d]
@@ -135,14 +137,37 @@
 
 (defn jobtracker-ip
   [node-type]
-  (let [{:keys [nodedefs]} (forma-cluster node-type 0)
-        [jt-tag] (roles->tags [:jobtracker] nodedefs)]
+  (let [{defs :nodedefs} (forma-cluster node-type 0)
+        [jt-tag] (roles->tags [:jobtracker] defs)]
     (master-ip env/ec2-service jt-tag :public)))
 
-(defn create-cluster
+(defn master-nodeset [node-type]
+  (let [cluster (forma-cluster node-type 0)
+        [jt-tag] (roles->tags [:jobtracker] (:nodedefs cluster))]
+    (some #(when (= jt-tag (:group-name %)) %)
+          (cluster->node-set cluster))))
+
+(defn scp-uberjar
+  [standalone-filepath dest-path ip-or-dns]
+  (execute/local-script
+   (scp ~standalone-filepath ~(str ip-or-dns ":" dest-path))))
+
+;; Lein Run functions!
+
+(defn print-jobtracker-ip
+  [node-type]
+  (println (if-let [ip (jobtracker-ip node-type)]
+             (format "The current jobtracker IP is %s." ip)
+             "Sorry, no cluster seems to be running at the moment."))
+  (println "Hit Ctrl-C to exit."))
+
+(defn create-cluster!
   [node-type node-count]
   (let [cluster (forma-cluster node-type node-count)]
-    (do (boot-cluster cluster
+    (do (println
+         (format "Creating cluster of %s instances and %d nodes."
+                 node-type node-count))
+        (boot-cluster cluster
                       :compute env/ec2-service
                       :environment env/remote-env)
         (lift-cluster cluster
@@ -151,9 +176,30 @@
                       :environment env/remote-env)
         (start-cluster cluster
                        :compute env/ec2-service
-                       :environment env/remote-env))))
+                       :environment env/remote-env)
+        (println "Cluster created!")
+        (println "Hit Ctrl-C to exit."))))
 
-(defn destroy-cluster [node-type]
+(defn destroy-cluster!
+  [node-type]
+  (println "Destroying cluster.")
   (kill-cluster (forma-cluster node-type 0)
                 :compute env/ec2-service
-                :environment env/remote-env))
+                :environment env/remote-env)
+  (println "Cluster destroyed!")
+  (println "Hit Ctrl-C to exit."))
+
+(defn -main [& args]
+  (with-command-line args
+    "Provisioning tool for Hadoop clusters."
+    [[start? "Start Cluster?"]
+     [stop? "Shutdown Cluster?"]
+     [jobtracker-ip? "Print jobtracker IP address?"]
+     [type "Cluster name" "high-memory"]
+     [size "Cluster size"]]
+    (cond start? (if-not size
+                   (println "Please define a cluster size.")
+                   (create-cluster! type size))
+          stop? (destroy-cluster! type)
+          jobtracker-ip? (print-jobtracker-ip type)
+          :else (println "Jeez, give me a fucking option, will you?"))))
