@@ -221,12 +221,12 @@
                         --instance-group master
                         --instance-type ~type
                         --instance-count 1
-                        --bid-price ~(:spot-price base-machine-spec)
+                        ;; --bid-price ~(:spot-price base-machine-spec)
                         
                         --instance-group core
                         --instance-type ~type
                         --instance-count ~node-count
-                        --bid-price ~(:spot-price base-machine-spec)
+                        ;; --bid-price ~(:spot-price base-machine-spec)
                         --enable-debugging
 
                         --bootstrap-action
