@@ -70,5 +70,8 @@
   (?pail- (split-chunk-tap pail-path)
           query))
 
-(defn consolidate [pail-path]
+(defmain consolidate [pail-path]
   (.consolidate (Pail. pail-path)))
+
+(defmain absorb [from-pail to-pail]
+  (.absorb (Pail. to-pail) (Pail. from-pail)))
