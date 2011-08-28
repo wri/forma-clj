@@ -138,7 +138,7 @@
   [node-type]
   (let [{defs :nodedefs} (forma-cluster node-type 0)
         [jt-tag] (roles->tags [:jobtracker] defs)]
-    (master-ip env/ec2-service jt-tag :public)))
+    (master-ip (env/mk-ec2-service) jt-tag :public)))
 
 (defn master-nodeset [node-type]
   (let [cluster (forma-cluster node-type 0)
@@ -162,31 +162,33 @@
 
 (defn create-cluster!
   [node-type node-count]
-  (let [cluster (forma-cluster node-type node-count)]
+  (let [service (env/mk-ec2-service)
+        cluster (forma-cluster node-type node-count)]
     (do (println
          (format "Creating cluster of %s instances and %d nodes."
                  node-type node-count))
         (boot-cluster cluster
-                      :compute env/ec2-service
+                      :compute service
                       :environment env/remote-env)
         (lift-cluster cluster
                       :phase (phase config-redd (raise-file-limits 90000))
-                      :compute env/ec2-service
+                      :compute service
                       :environment env/remote-env)
         (start-cluster cluster
-                       :compute env/ec2-service
+                       :compute service
                        :environment env/remote-env)
         (println "Cluster created!")
         (println "Hit Ctrl-C to exit."))))
 
 (defn destroy-cluster!
   [node-type]
-  (println "Destroying cluster.")
-  (kill-cluster (forma-cluster node-type 0)
-                :compute env/ec2-service
-                :environment env/remote-env)
-  (println "Cluster destroyed!")
-  (println "Hit Ctrl-C to exit."))
+  (let [service (env/mk-ec2-service)]
+    (println "Destroying cluster.")
+    (kill-cluster (forma-cluster node-type 0)
+                  :compute service
+                  :environment env/remote-env)
+    (println "Cluster destroyed!")
+    (println "Hit Ctrl-C to exit.")))
 
 (defn parse-emr-config
   [conf-map]
