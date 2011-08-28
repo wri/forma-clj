@@ -13,3 +13,4 @@ autodoc
 .classpath
 .settings/
 .project
+native/
