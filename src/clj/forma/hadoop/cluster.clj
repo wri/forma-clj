@@ -135,9 +135,9 @@
 
 (defn jobtracker-ip
   [node-type]
-  (let [{:keys [nodedefs ip-type]} (forma-cluster node-type 0)
+  (let [{:keys [nodedefs]} (forma-cluster node-type 0)
         [jt-tag] (roles->tags [:jobtracker] nodedefs)]
-    (master-ip env/ec2-service jt-tag ip-type)))
+    (master-ip env/ec2-service jt-tag :public)))
 
 (defn create-cluster
   [node-type node-count]

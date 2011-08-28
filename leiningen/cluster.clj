@@ -35,9 +35,9 @@
   (cluster-eval
    project
    `(do (if-let [jobtracker-ip# (forma.hadoop.cluster/jobtracker-ip ~node-type)]
-          (println "The current jobtracker IP is " jobtracker-ip#)
-          (println "Sorry, no cluster seems to be running at the moment.")
-          (println "Hit Control-C to exit.")))))
+          (println "The current jobtracker IP is" jobtracker-ip#)
+          (println "Sorry, no cluster seems to be running at the moment."))
+        (println "Hit Control-C to exit."))))
 
 (defn execute-jar
   [project node-type & args]

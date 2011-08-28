@@ -4,3 +4,22 @@ Introduction: FORMA meets Hadoop.
 FORMA's making it happen in 2011. Clojure, Cascalog, Hadoop... What the hell? Head to the [Project Wiki](https://github.com/sritchie/forma-clj/wiki) for more details.
 
 For project task management, use the [Pivotal Tracker](https://www.pivotaltracker.com/projects/185565).
+
+;; TODO: Run the hansen and vcf special dataset stuff, for diff
+;; between big-set and little-set.
+;;
+;; TODO: Run the ecoid special dataset stuff.
+;;
+;; TODO: Re-run all timeseries -- might have to jack up the open file
+;; limit.
+;;
+;; TODO: Re-run forma for more countries!
+
+;; :BGD :LAO :IDN :IND :MMR :MYS :PHL :THA :VNM :BOL :CHN :CIV
+
+;; hadoop jar /home/danhammer/forma.jar
+;; forma.hadoop.jobs.preprocess.PreprocessAscii "border"
+;; /user/hadoop/border.txt s3n://pailbucket/rawstore/ "[11 10]" "[12
+;; 11]" "[11 11]" "[30 7]" "[27 5]" "[28 6]" "[29 7]" "[27 6]" "[28
+;; 7]" "[26 6]" "[27 7]" "[24 5]" "[25 6]" "[26 7]" "[24 6]" "[25 7]"
+;; "[24 7]" "[25 8]" "[17 8]" "[11 9]" "[12 10]"

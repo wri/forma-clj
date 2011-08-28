@@ -60,7 +60,6 @@
                            (t project)))))
 
 (prepend-tasks #'deps clean)
-(prepend-tasks #'uberjar deps)
 
 (try (use '[leiningen.native-deps :only (native-deps)])
      (when-let [native (resolve 'native-deps)]
