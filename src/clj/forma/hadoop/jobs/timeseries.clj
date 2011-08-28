@@ -1,6 +1,6 @@
 (ns forma.hadoop.jobs.timeseries
   (:use cascalog.api
-        [juke.utils :only (defmain running-sum)]
+        [juke.utils :only (running-sum)]
         [juke.matrix.utils :only (sparse-expander)]
         [forma.source.tilesets :only (tile-set)])
   (:require [cascalog.ops :as c]

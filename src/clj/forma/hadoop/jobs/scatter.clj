@@ -1,7 +1,6 @@
 (ns forma.hadoop.jobs.scatter
   "Namespace for arbitrary queries."
   (:use cascalog.api
-        [juke.utils :only (defmain)]
         [forma.source.tilesets :only (tile-set)]
         [forma.hadoop.pail :only (?pail- split-chunk-tap)])
   (:require [cascalog.ops :as c]

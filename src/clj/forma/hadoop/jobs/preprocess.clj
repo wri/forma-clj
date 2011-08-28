@@ -1,6 +1,5 @@
 (ns forma.hadoop.jobs.preprocess
   (:use cascalog.api
-        [juke.utils :only (defmain)]
         [forma.hadoop.pail :only (to-pail)]
         [forma.source.tilesets :only (tile-set)]
         [cascalog.io :only (with-fs-tmp)])
