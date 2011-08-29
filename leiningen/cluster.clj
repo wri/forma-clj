@@ -15,29 +15,19 @@
   (let [node-count (read-string node-count)]
     (cluster-eval
      project
-     `(do (println (format "Creating cluster of %s instances and %d nodes."
-                           ~node-type ~node-count))
-          (forma.hadoop.cluster/create-cluster! ~node-type ~node-count)
-          (println "Cluster created!")
-          (println "Hit Control-C to exit.")))))
+     `(forma.hadoop.cluster/create-cluster! ~node-type ~node-count))))
 
 (defn destroy-cluster
   [project node-type]
   (cluster-eval
    project
-   `(do (println "Running destroy-cluster.")
-        (forma.hadoop.cluster/destroy-cluster! ~node-type)
-        (println "Cluster destroyed!")
-        (println "Hit Control-C to exit."))))
+   `(forma.hadoop.cluster/destroy-cluster! ~node-type)))
 
 (defn show-jobtracker-ip
   [project node-type]
   (cluster-eval
    project
-   `(do (if-let [jobtracker-ip# (forma.hadoop.cluster/jobtracker-ip ~node-type)]
-          (println "The current jobtracker IP is" jobtracker-ip#)
-          (println "Sorry, no cluster seems to be running at the moment."))
-        (println "Hit Control-C to exit."))))
+   `(forma.hadoop.cluster/print-jobtracker-ip ~node-type)))
 
 (defn execute-jar
   [project node-type & args]
