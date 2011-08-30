@@ -48,7 +48,11 @@
    vcf :: vegetation continuous field index, derived from MODIS
    products for the year 2000, found [here](http://goo.gl/KW8y1), and
    used to define the extent of the sample area, given by the Forest
-   Cover Loss Hotspots training data set."}
+   Cover Loss Hotspots training data set.
+
+   border :: distance in meters to a coastline, defined by the border
+   of land and large body of water.  Projected in MODIS coordinates
+   (927m resolution)." }
   static-datasets
   {:precl  {:corner [0 -90]
             :travel [+ +]
