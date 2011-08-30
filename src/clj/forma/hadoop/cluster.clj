@@ -72,7 +72,7 @@
   "Raises file descriptor limits on all machines to the specified
   limit."
   [lim]
-  (let [command  #(join " " [hadoop-user % "nofile" 65000])
+  (let [command  #(join " " [hadoop-user % "nofile" lim])
         path "/etc/security/limits.conf"
         pam-lims "session required  pam_limits.so"]
     (exec-script/exec-script
@@ -91,7 +91,7 @@
    :price spot-price})
 
 (def cluster-profiles
-  {"large"           (mk-profile 4 3 0.50 "us-east-1/ami-08f40561" "m1.large")
+  {"large"           (mk-profile 4 2 0.50 "us-east-1/ami-08f40561" "m1.large")
    "high-memory"     (mk-profile 30 24 1.50 "us-east-1/ami-08f40561" "m2.4xlarge")
    "cluster-compute" (mk-profile 22 16 0.80 "us-east-1/ami-1cad5275" "cc1.4xlarge")})
 
@@ -136,8 +136,7 @@
                                              :mapred.job.reuse.jvm.num.tasks 20
                                              :mapred.map.tasks.speculative.execution false
                                              :mapred.reduce.tasks.speculative.execution false
-                                             :mapred.map.output.compression.codec "com.hadoop.compression.lzo.LzoCodec"
-                                             :mapred.output.compression.codec "org.apache.hadoop.io.compress.GzipCodec"
+                                             :mapred.output.direct.NativeS3FileSystem true
                                              :mapred.child.java.opts (str "-Djava.library.path="
                                                                           native-path
                                                                           " -Xms1024m -Xmx1024m")
@@ -184,7 +183,7 @@
                    :compute service
                    :environment env/remote-env)
      (lift-cluster cluster
-                   :phase (phase config-redd (raise-file-limits 90000))
+                   :phase (phase config-redd (raise-file-limits 100000))
                    :compute service
                    :environment env/remote-env)
      (start-cluster cluster
@@ -230,7 +229,6 @@
                         --instance-group master
                         --instance-type ~type
                         --instance-count 1
-                        --bid-price ~(:spot-price base-machine-spec)
                         
                         --instance-group core
                         --instance-type ~type
