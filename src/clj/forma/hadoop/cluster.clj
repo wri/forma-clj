@@ -92,7 +92,7 @@
 
 (def cluster-profiles
   {"large"           (mk-profile 4 3 0.50 "us-east-1/ami-08f40561" "m1.large")
-   "high-memory"     (mk-profile 30 22 1.50 "us-east-1/ami-08f40561" "m2.4xlarge")
+   "high-memory"     (mk-profile 30 24 1.50 "us-east-1/ami-08f40561" "m2.4xlarge")
    "cluster-compute" (mk-profile 22 16 0.80 "us-east-1/ami-1cad5275" "cc1.4xlarge")})
 
 (defn forma-cluster
@@ -114,21 +114,30 @@
                                             :LD_LIBRARY_PATH lib-path}
                                :hdfs-site {:dfs.data.dir "/mnt/dfs/data"
                                            :dfs.name.dir "/mnt/dfs/name"
-                                           :dfs.datanode.max.xcievers 5096}
+                                           :dfs.datanode.max.xcievers 5096
+                                           :dfs.namenode.handler.count 20
+                                           :dfs.block.size 134217728
+                                           :dfs.support.append true}
                                :core-site {:io.serializations serializations
                                            :cascading.serialization.tokens tokens
                                            :fs.s3n.awsAccessKeyId "AKIAJ56QWQ45GBJELGQA"
                                            :fs.s3n.awsSecretAccessKey
                                            "6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV"}
-                               :mapred-site {:mapred.local.dir "/mnt/hadoop/mapred/local"
+                               :mapred-site {:io.sort.mb 200
+                                             :io.sort.factor 40
+                                             :mapred.reduce.parallel.copies 20
+                                             :mapred.local.dir "/mnt/hadoop/mapred/local"
                                              :mapred.task.timeout 10000000
                                              :mapred.reduce.tasks (int (* reduce-tasks nodecount))
                                              :mapred.tasktracker.map.tasks.maximum map-tasks
                                              :mapred.tasktracker.reduce.tasks.maximum reduce-tasks
                                              :mapred.reduce.max.attempts 12
                                              :mapred.map.max.attempts 20
+                                             :mapred.job.reuse.jvm.num.tasks 20
                                              :mapred.map.tasks.speculative.execution false
                                              :mapred.reduce.tasks.speculative.execution false
+                                             :mapred.map.output.compression.codec "com.hadoop.compression.lzo.LzoCodec"
+                                             :mapred.output.compression.codec "org.apache.hadoop.io.compress.GzipCodec"
                                              :mapred.child.java.opts (str "-Djava.library.path="
                                                                           native-path
                                                                           " -Xms1024m -Xmx1024m")
@@ -221,12 +230,12 @@
                         --instance-group master
                         --instance-type ~type
                         --instance-count 1
-                        ;; --bid-price ~(:spot-price base-machine-spec)
+                        --bid-price ~(:spot-price base-machine-spec)
                         
                         --instance-group core
                         --instance-type ~type
                         --instance-count ~node-count
-                        ;; --bid-price ~(:spot-price base-machine-spec)
+                        --bid-price ~(:spot-price base-machine-spec)
                         --enable-debugging
 
                         --bootstrap-action

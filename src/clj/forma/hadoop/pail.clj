@@ -54,8 +54,7 @@
   (let [pail (Pail. pail-path)]
     (with-fs-tmp [_ tmp]
       (?- (tap tmp) query)
-      (.absorb pail (Pail. tmp))
-      (.consolidate pail))))
+      (.absorb pail (Pail. tmp)))))
 
 (defmacro ?pail-
   "Executes the supplied query into the pail located at the supplied
