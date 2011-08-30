@@ -17,7 +17,7 @@
      project
      `(do (println (format "Creating cluster of %s instances and %d nodes."
                            ~node-type ~node-count))
-          (forma.hadoop.cluster/create-cluster ~node-type ~node-count)
+          (forma.hadoop.cluster/create-cluster! ~node-type ~node-count)
           (println "Cluster created!")
           (println "Hit Control-C to exit.")))))
 
@@ -26,7 +26,7 @@
   (cluster-eval
    project
    `(do (println "Running destroy-cluster.")
-        (forma.hadoop.cluster/destroy-cluster ~node-type)
+        (forma.hadoop.cluster/destroy-cluster! ~node-type)
         (println "Cluster destroyed!")
         (println "Hit Control-C to exit."))))
 
