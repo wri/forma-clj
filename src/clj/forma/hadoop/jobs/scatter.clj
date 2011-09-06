@@ -109,7 +109,7 @@
   (let [{:keys [s-res t-res] :as forma-map} (forma-run-parameters run-key)]
     (if-not forma-map
       (throw (IllegalArgumentException. (str run-key " is not a valid run key!")))
-      (?- (hfs-seqfile out-path)
+      (?- (hfs-seqfile out-path :sinkmode :replace)
           (forma/forma-query forma-map
                              (constrained-tap ts-pail-path "ndvi" s-res t-res country-seq)
                              (adjusted-precl-tap ts-pail-path s-res "32" t-res country-seq)

@@ -100,6 +100,7 @@
         (p/struct-index ?start ?forma-series :> ?period ?forma-val)
         (:distinct false))))
 
+;; TODO: Filter identity, instead of complement nil
 (defmapcatop [process-neighbors [num-neighbors]]
   "Processes all neighbors... Returns the index within the chunk, the
 value, and the aggregate of the neighbors."
