@@ -133,8 +133,8 @@
 strings and their integer representations."}
   converter
   (<- [?textline :> ?country ?admin]
-      (mangle #"," ?textline :> ?country-s ?admin-s)
-      (u/strings->ints ?country-s ?admin-s :> ?country ?admin)))
+      (mangle #"," ?textline :> ?country ?admin-s)
+      (u/strings->ints ?admin-s :> ?admin)))
 
 (def blossom-chunk
   (<- [?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val]

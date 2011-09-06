@@ -56,7 +56,7 @@
 
 (def forma-run-parameters
   {"1000-32" {:est-start "2005-12-01"
-              :est-end "2011-05-01"
+              :est-end "2011-07-01"
               :s-res "1000"
               :t-res "32"
               :neighbors 1
@@ -65,7 +65,7 @@
               :long-block 15
               :window 5}
    "1000-16" {:est-start "2005-12-01"
-              :est-end "2011-05-01"
+              :est-end "2011-07-01"
               :s-res "1000"
               :t-res "16"
               :neighbors 1
@@ -107,9 +107,9 @@
 (defn process-forma
   [pail-path ts-pail-path out-path run-key country-seq]
   (let [{:keys [s-res t-res] :as forma-map} (forma-run-parameters run-key)]
-    (if (nil? forma-map)
+    (if-not forma-map
       (throw (IllegalArgumentException. (str run-key " is not a valid run key!")))
-      (?- (hfs-seqfile out-path :sinkmode :replace)
+      (?- (hfs-seqfile out-path)
           (forma/forma-query forma-map
                              (constrained-tap ts-pail-path "ndvi" s-res t-res country-seq)
                              (adjusted-precl-tap ts-pail-path s-res "32" t-res country-seq)
@@ -122,22 +122,29 @@
                                                  "2011-06-01"
                                                  country-seq))))))
 
+;; [[103] [158]]
+
 (defn bucket-forma
-  "TODO: Get these country numbers turned into codes!"
-  [unbucketed-path bucketed-path]
-  (let [keep-countries [[103] [158]]
+  "TODO: Get these country numbers turned into codes! Then uncomment
+  code below, and remove that final `src`. Accept countries to
+  bucket "
+  [unbucketed-path bucketed-path & country-num-seq]
+  (let [keep-countries (into [] (map vector country-num-seq))
         template-fields ["?s-res" "?country" "?datestring"]
         data-fields     ["?mod-h" "?mod-v" "?sample" "?line" "?text"]
         forma-fields    (concat template-fields data-fields)
         src (hfs-seqfile unbucketed-path)]
-    (?<- (hfs-textline bucketed-path
-                       :sink-template "%s/%s/%s/"
-                       :outfields data-fields
-                       :templatefields template-fields
-                       :sinkparts 3)
-         forma-fields
-         (src :>> forma-fields)
-         (keep-countries ?country :> true))))
+    (?- (hfs-textline bucketed-path
+                      :sink-template "%s/%s/%s/"
+                      :outfields data-fields
+                      :templatefields template-fields
+                      :sinkparts 3
+                      :sinkmode :replace)
+        (if country-num-seq
+          (<- forma-fields
+              (src :>> forma-fields)
+              (keep-countries ?country :> true))
+          (name-vars src forma-fields)))))
 
 ;; TODO: call read-string on countries.
 (defmain RunForma
@@ -146,6 +153,10 @@
                        (map read-string))
         temp-path "s3n://formares/unbucketed"]
     (process-forma pail-path ts-pail-path temp-path run-key countries)
+    (bucket-forma temp-path results-path)))
+
+(defmain BucketForma [results-path]
+  (let [temp-path "s3n://formares/unbucketed"]
     (bucket-forma temp-path results-path)))
 
 ;; ## Rain Processing, for Dan
