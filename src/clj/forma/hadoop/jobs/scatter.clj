@@ -122,31 +122,30 @@
                                                  "2011-06-01"
                                                  country-seq))))))
 
-;; [[103] [158]]
-
+;; TODO: Note that if we go from tap to tap, we have no reducers
+;; involved.
 (defn bucket-forma
   "TODO: Get these country numbers turned into codes! Then uncomment
   code below, and remove that final `src`. Accept countries to
   bucket "
-  [unbucketed-path bucketed-path & country-num-seq]
-  (let [keep-countries (into [] (map vector country-num-seq))
+  [unbucketed-path bucketed-path country-code-seq]
+  (let [keep-countries (into [] (map vector country-code-seq))
         template-fields ["?s-res" "?country" "?datestring"]
         data-fields     ["?mod-h" "?mod-v" "?sample" "?line" "?text"]
         forma-fields    (concat template-fields data-fields)
         src (hfs-seqfile unbucketed-path)]
     (?- (hfs-textline bucketed-path
-                      :sink-template "%s/%s/%s/"
+                      :sinkmode :replace
+                      :sink-template "%s/%s/"
                       :outfields data-fields
                       :templatefields template-fields
-                      :sinkparts 3
-                      :sinkmode :replace)
-        (if country-num-seq
+                      :sinkparts 3)
+        (if country-code-seq
           (<- forma-fields
               (src :>> forma-fields)
               (keep-countries ?country :> true))
           (name-vars src forma-fields)))))
 
-;; TODO: call read-string on countries.
 (defmain RunForma
   [pail-path ts-pail-path results-path run-key & countries]
   (let [countries (->> (or countries [":IDN" ":MYS"])
@@ -155,9 +154,8 @@
     (process-forma pail-path ts-pail-path temp-path run-key countries)
     (bucket-forma temp-path results-path)))
 
-(defmain BucketForma [results-path]
-  (let [temp-path "s3n://formares/unbucketed"]
-    (bucket-forma temp-path results-path)))
+(defmain BucketForma [source-path results-path & codes]
+  (bucket-forma source-path results-path codes))
 
 ;; ## Rain Processing, for Dan
 ;;
