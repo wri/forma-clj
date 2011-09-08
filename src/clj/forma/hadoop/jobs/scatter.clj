@@ -39,6 +39,7 @@
                                              ["ecoid"] ["gadm"]
                                              ["border"]])]
     (?<- (hfs-textline out-path
+                       :sinkmode :replace
                        :sinkparts 3
                        :sink-template "%s/")
          [?country ?lat ?lon ?mod-h ?mod-v ?sample ?line ?hansen ?ecoid ?vcf ?gadm ?border]
@@ -53,7 +54,6 @@
          (>= ?vcf 25))))
 
 ;; ## Forma
-
 (def forma-run-parameters
   {"1000-32" {:est-start "2005-12-01"
               :est-end "2011-07-01"
@@ -136,7 +136,7 @@
         src (hfs-seqfile unbucketed-path)]
     (?- (hfs-textline bucketed-path
                       :sinkmode :replace
-                      :sink-template "%s/%s/"
+                      :sink-template "%s/%s/%s/"
                       :outfields data-fields
                       :templatefields template-fields
                       :sinkparts 3)
@@ -156,6 +156,23 @@
 
 (defmain BucketForma [source-path results-path & codes]
   (bucket-forma source-path results-path codes))
+
+(defmapop [find-first [re]]
+  [s]
+  (re-find re s))
+
+(defmain BucketCountry
+  [source-path dest-path]
+  (let [src (hfs-textline source-path)]
+    (?<- (hfs-textline dest-path
+                       :sinkmode :replace
+                       :sink-template "%s/"
+                       :templatefields ["?datestring"]
+                       :outfields ["?text"]
+                       :sinkparts 3)
+         [?datestring ?text]
+         (src ?text)
+         (find-first [#"[^\s]+"] ?text :> ?datestring))))
 
 ;; ## Rain Processing, for Dan
 ;;
