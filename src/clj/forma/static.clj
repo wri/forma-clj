@@ -52,7 +52,7 @@
 
    border :: distance in meters to a coastline, defined by the border
    of land and large body of water.  Projected in MODIS coordinates
-   (927m resolution)." }
+   (463m resolution)." }
   static-datasets
   {:precl  {:corner [0 -90]
             :travel [+ +]
@@ -74,7 +74,7 @@
             :travel [+ -]
             :step 0.0041752289295106
             :nodata -9999}
-   :border {:corner [-179.99999462934 83.633012904186558]
+   :border {:corner [ -179.999988445 40.1690038607]
             :travel [+ -]
-            :step 0.00833333333333
-            :nodata 0}})
+            :step 0.0041666667
+            :nodata -9999}})
