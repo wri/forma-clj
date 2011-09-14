@@ -63,10 +63,11 @@
    border :: index from 1-20 representing 500m increments of distance
    to a coastline as defined by the GADM Level 0 dataset available at 
    GADM.org. Coastlines are defined as the border between land and large
-   bodies of water. Land is defined by the polygon of country boundaries.
-   Projected World Sinusoidal for distance calculations with ~463m 
-   resolution. Then reprojected WGS84 with .0083333 resolution for 
-   conversion to ascii grid, with bilinear interpolation of pixel values."}
+   bodies of water (water is 0, undefined -9999). Land is defined by the 
+   polygon of country boundaries. Projected World Sinusoidal for distance 
+   calculations with ~463m resolution. Then reprojected WGS84 with 
+   .0083333 resolution for conversion to ascii grid, with bilinear 
+   interpolation of pixel values."}
   static-datasets
   {:precl  {:corner [0 -90]
             :travel [+ +]
