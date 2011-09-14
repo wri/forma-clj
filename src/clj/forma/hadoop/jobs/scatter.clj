@@ -39,7 +39,6 @@
                                              ["ecoid"] ["gadm"]
                                              ["border"]])]
     (?<- (hfs-textline out-path
-                       :sinkmode :replace
                        :sinkparts 3
                        :sink-template "%s/")
          [?country ?lat ?lon ?mod-h ?mod-v ?sample ?line ?hansen ?ecoid ?vcf ?gadm ?border]
@@ -154,7 +153,8 @@
     (process-forma pail-path ts-pail-path temp-path run-key countries)
     (bucket-forma temp-path results-path)))
 
-(defmain BucketForma [source-path results-path & codes]
+(defmain BucketForma
+  [source-path results-path & codes]
   (bucket-forma source-path results-path codes))
 
 (defmapop [find-first [re]]
