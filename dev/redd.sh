@@ -12,10 +12,15 @@ sources=/etc/apt/sources.list
 sudo apt-get -y --force-yes install screen
 
 # Install HFD4
-sudo chown hadoop $sources
-echo "deb http://us-east-1.ec2.archive.ubuntu.com/ubuntu maverick universe  multiverse" > $sources
+
+#Not sure about these...
+# sudo chown hadoop $sources
+# echo "deb http://us-east-1.ec2.archive.ubuntu.com/ubuntu maverick universe  multiverse" > $sources
 sudo apt-get update
-sudo apt-get install -y --force-yes libhdf4-dev
+# sudo apt-get install -y --force-yes libhdf4-dev
+
+# Should work on Lenny, on current EMR.
+sudo apt-get install -y --force-yes libhdf4g-dev
 
 # FWTOOLS
 wget -S -T 10 -t 5 http://$bucket.s3.amazonaws.com/$fwtools
