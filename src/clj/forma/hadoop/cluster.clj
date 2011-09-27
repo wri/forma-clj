@@ -259,7 +259,7 @@
      [jobtracker-ip? "Print jobtracker IP address?"]
      [type "Cluster name" "high-memory"]
      [size "Cluster size"]]
-    (let [size (Integer/parseInt size)]
+    (let [size (when size (Integer/parseInt size))]
       (cond start? (if-not size
                      (println "Please define a cluster size.")
                      (create-cluster! type size))
@@ -268,4 +268,4 @@
                    (boot-emr! type size))
             stop? (destroy-cluster! type)
             jobtracker-ip? (print-jobtracker-ip type)
-            :else (println "Jeez, give me a fucking option, will you?")))))
+            :else (println "Jeez, give me a fucking option, will you'NT?")))))
