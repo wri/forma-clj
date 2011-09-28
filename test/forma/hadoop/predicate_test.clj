@@ -18,7 +18,7 @@
 (cascalog.io/with-fs-tmp [_ tmp]
   (tabular
    (fact?- "Tests of generation off of a series of sequences, be they
-   data structure or lazy."
+            data structure or lazy."
            ?seq (lazy-generator tmp ?seq))
    ?seq
    [[10] [2] [4] [3]]

@@ -19,9 +19,8 @@
                  [commons-lang "2.6"]   ;required for thrift
                  [cascalog "1.8.1"]
                  [backtype/cascading-thrift "0.1.0" :exclusions [backtype/thriftjava]]
-                 [redd/dfs-datastores "1.0.4"]
-                 [backtype/dfs-datastores-cascading "1.0.4"
-                  :exclusions [backtype/dfs-datastores]]]
+                 [backtype/dfs-datastores "1.0.5"]
+                 [backtype/dfs-datastores-cascading "1.0.4"]]
   :native-dependencies [[org.clojars.sritchie09/gdal-java-native "1.8.0"]]
   :native-path "lib/ext/native:lib/native:lib/dev/native"
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
