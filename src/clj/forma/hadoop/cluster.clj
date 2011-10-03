@@ -91,7 +91,7 @@
    :price spot-price})
 
 (def cluster-profiles
-  {"large"           (mk-profile 4 2 0.50 "us-east-1/ami-08f40561" "m1.large")
+  {"large"           (mk-profile 4 2 1.20 "us-east-1/ami-08f40561" "m1.large")
    "high-memory"     (mk-profile 30 24 1.50 "us-east-1/ami-08f40561" "m2.4xlarge")
    "cluster-compute" (mk-profile 22 16 1.20 "us-east-1/ami-1cad5275" "cc1.4xlarge")})
 
