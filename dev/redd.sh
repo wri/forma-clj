@@ -13,22 +13,21 @@ sources=/etc/apt/sources.list
 sudo apt-get -y --force-yes install screen
 
 # Install HFD4
-sudo aptitude update
-sudo aptitude safe-upgrade -y
-sudo aptitude install expect
+# sudo aptitude update
+# sudo aptitude install expect
 
-VAR=$(expect -c '
-spawn sudo aptitude install -y libc-bin
-expect "Services to restart for GNU libc library upgrade:"
-send "\r"
-expect "Current status:"
-send "\r"
-expect eof
-')
-echo "$VAR"
-echo "Sleeping for 5 seconds..."
-sleep 5
-sudo aptitude install -y libhdf4-dev
+# VAR=$(expect -c '
+# spawn sudo aptitude install -y libc-bin
+# expect "Services to restart for GNU libc library upgrade:"
+# send "\r"
+# expect "Current status:"
+# send "\r"
+# expect eof
+# ')
+# echo "$VAR"
+# echo "Sleeping for 5 seconds..."
+# sleep 5
+# sudo aptitude install -y libhdf4-dev
 
 # FWTOOLS
 wget -S -T 10 -t 5 http://$bucket.s3.amazonaws.com/$fwtools
@@ -49,3 +48,5 @@ echo "export JAVA_LIBRARY_PATH=/home/hadoop/native:\$JAVA_LIBRARY_PATH" >> /home
 # Add to bashrc, for good measure.
 echo "export LD_LIBRARY_PATH=/usr/local/fwtools/usr/lib:\$LD_LIBRARY_PATH" >> /home/hadoop/.bashrc
 echo "export JAVA_LIBRARY_PATH=/home/hadoop/native:\$JAVA_LIBRARY_PATH" >> /home/hadoop/.bashrc
+
+exit 0

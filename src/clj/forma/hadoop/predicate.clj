@@ -255,4 +255,5 @@ I recommend wrapping queries that use this tap with
              (fn [src]
                (construct (swap-syms gen [inpos val] [outpos outval])
                           [[src :>> (get-out-fields gen)]
-                           [aggr inpos val :> outpos outval]]))))))
+                           [aggr inpos val :> outpos outval]
+                           [:distinct false]]))))))

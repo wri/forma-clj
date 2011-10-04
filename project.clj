@@ -41,6 +41,7 @@
         forma.hadoop.pail
         forma.hadoop.jobs.scatter
         forma.hadoop.jobs.preprocess
+        forma.hadoop.jobs.modis
         forma.hadoop.jobs.timeseries
         ])
 

@@ -140,11 +140,12 @@
   `pix-tap`. Cascalog does the heavy lifting here, simply because of
   the common name between the generated and supplied `?row` and `?col`
   fields. Powerful stuff!"
-  [m-res {:keys [step] :as ascii-map} file-tap pix-tap]
+  [m-res {:keys [step nodata] :as ascii-map} file-tap pix-tap]
   (let [rain-vals (rain-values step file-tap)
         mod-coords ["?mod-h" "?mod-v" "?sample" "?line"]]
     (<- [?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val]
         (rain-vals !date ?row ?col ?val)
+        (not= ?val nodata)
         (pix-tap :>> mod-coords)
         (p/add-fields "precl" "32" m-res :> ?dataset ?t-res ?m-res)
         (r/wgs84-indexer :<< (into [m-res ascii-map] mod-coords) :> ?row ?col)
