@@ -14,10 +14,10 @@
   :dependencies [[org.clojure/clojure "1.2.1"]
                  [org.clojure/clojure-contrib "1.2.0"]
                  [incanter "1.2.3" :exclusions [swank-clojure]]
-                 [clj-time "0.3.0"]
+                 [clj-time "0.3.1"]
                  [redd/thrift "0.5.0"]
                  [commons-lang "2.6"]   ;required for thrift
-                 [cascalog "1.8.1"]
+                 [cascalog "1.8.2"]
                  [backtype/cascading-thrift "0.1.0" :exclusions [backtype/thriftjava]]
                  [backtype/dfs-datastores "1.0.5"]
                  [backtype/dfs-datastores-cascading "1.0.4"]]
@@ -33,10 +33,9 @@
                      [vmfest/vmfest "0.2.2"]
                      [swank-clojure "1.4.0-SNAPSHOT"]
                      [clojure-source "1.2.0"]
-                     [lein-marginalia "0.6.0"]
-                     [midje "1.2-alpha3"]
-                     [lein-midje "1.0.3"]
-                     [midje-cascalog "0.2.0"]]
+                     [lein-marginalia "0.6.1"]
+                     [lein-midje "1.0.4"]
+                     [midje-cascalog "0.3.0"]]
   :aot [
         forma.hadoop.pail
         forma.hadoop.jobs.scatter
@@ -67,4 +66,5 @@
      (when-let [native (resolve 'native-deps)]
        (append-tasks #'deps @native c/compile))
      (catch java.lang.Exception _
-       (println "Run lein deps again to activate the required native-deps and compile hooks.")))
+       (println "Run lein deps again to activate the
+                 required native-deps and compile hooks.")))
