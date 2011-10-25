@@ -55,7 +55,7 @@
 ;; ## Forma
 (def forma-run-parameters
   {"1000-32" {:est-start "2005-12-01"
-              :est-end "2011-07-01"
+              :est-end "2011-08-01"
               :s-res "1000"
               :t-res "32"
               :neighbors 1
@@ -64,7 +64,7 @@
               :long-block 15
               :window 5}
    "1000-16" {:est-start "2005-12-01"
-              :est-end "2011-07-01"
+              :est-end "2011-08-01"
               :s-res "1000"
               :t-res "16"
               :neighbors 1
@@ -129,20 +129,21 @@
   bucket "
   [unbucketed-path bucketed-path country-code-seq]
   (let [keep-countries (into [] (map vector country-code-seq))
-        template-fields ["?s-res" "?country" "?datestring"]
-        data-fields     ["?mod-h" "?mod-v" "?sample" "?line" "?text"]
+        template-fields ["?s-res" "?country"]
+        data-fields     ["?datestring" "?mod-h" "?mod-v" "?sample" "?line" "?text"]
         forma-fields    (concat template-fields data-fields)
         src (hfs-seqfile unbucketed-path)]
     (?- (hfs-textline bucketed-path
                       :sinkmode :replace
-                      :sink-template "%s/%s/%s/"
+                      :sink-template "%s/%s/"
                       :outfields data-fields
                       :templatefields template-fields
                       :sinkparts 3)
         (if country-code-seq
           (<- forma-fields
               (src :>> forma-fields)
-              (keep-countries ?country :> true))
+              (keep-countries ?country :> true)
+              (:distinct false))
           (name-vars src forma-fields)))))
 
 (defmain RunForma
@@ -151,7 +152,7 @@
                        (map read-string))
         temp-path "s3n://formares/unbucketed"]
     (process-forma pail-path ts-pail-path temp-path run-key countries)
-    (bucket-forma temp-path results-path)))
+    (bucket-forma temp-path results-path (map name countries))))
 
 (defmain BucketForma
   [source-path results-path & codes]
