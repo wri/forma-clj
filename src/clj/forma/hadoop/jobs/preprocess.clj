@@ -5,44 +5,18 @@
         [cascalog.io :only (with-fs-tmp)])
   (:require [forma.hadoop.predicate :as p]
             [forma.hadoop.io :as io]
-            [forma.source.hdf :as h]
             [forma.source.rain :as r]
             [forma.source.fire :as f]
             [forma.source.static :as s]
             [forma.static :as static]
             [cascalog.ops :as c]))
 
-(defn modis-chunker
-  "Cascalog job that takes set of dataset identifiers, a chunk size, a
-  directory containing MODIS HDF files, or a link directly to such a
-  file, and an output dir, harvests tuples out of the HDF files, and
-  sinks them into a custom directory structure inside of
-  `output-dir`."
-  [subsets chunk-size in-path pattern pail-path]
-  (let [source (io/hfs-wholefile in-path :source-pattern pattern)]
-    (->> (h/modis-chunks subsets chunk-size source)
-         (to-pail pail-path))))
-
-(defmain PreprocessModis
-  "See project wiki for example usage."
-  [path pail-path date & tiles]
-  (let [pattern (->> tiles
-                     (map read-string)
-                     (apply tile-set)
-                     (apply io/tiles->globstring)
-                     (str date "/"))]
-    (modis-chunker static/forma-subsets
-                   static/chunk-size
-                   path
-                   pattern
-                   pail-path)))
-
 (defn rain-chunker
   "Like `modis-chunker`, for NOAA PRECL data files."
   [m-res chunk-size tile-seq path pail-path]
   (with-fs-tmp [fs tmp-dir]
-    (let [file-tap (io/hfs-wholefile path)
-          pix-tap (p/pixel-generator tmp-dir m-res tile-seq)
+    (let [file-tap  (io/hfs-wholefile path)
+          pix-tap   (p/pixel-generator tmp-dir m-res tile-seq)
           ascii-map (:precl static/static-datasets)]
       (->> (r/rain-chunks m-res ascii-map chunk-size file-tap pix-tap)
            (to-pail pail-path)))))

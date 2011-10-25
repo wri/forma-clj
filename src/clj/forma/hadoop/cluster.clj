@@ -106,10 +106,9 @@
         (cluster-profiles (or cluster-key "high-memory"))]
     (cluster-spec :private
                   {:jobtracker (node-group [:jobtracker :namenode])
-                   :slaves     (slave-group nodecount)}
+                   :slaves     (slave-group nodecount :spec {:spot-price (float price)})}
                   :base-machine-spec {:hardware-id hardware-id
-                                      :image-id image-id
-                                      :spot-price (float price)}
+                                      :image-id image-id}
                   :base-props {:hadoop-env {:JAVA_LIBRARY_PATH native-path
                                             :LD_LIBRARY_PATH lib-path}
                                :hdfs-site {:dfs.data.dir "/mnt/dfs/data"
@@ -221,11 +220,13 @@
          (format "\"--core-config-file,%s,%s\"" redd-config-path))))
 
 (defn boot-emr!
-  [node-type node-count]
+  "TODO: Fix the way we get spot-price here."
+  [node-type node-count name]
   (let [{:keys [base-props base-machine-spec]} (forma-cluster node-type node-count)
         {type :hardware-id} base-machine-spec]
     (execute/local-script
      (elastic-mapreduce --create --alive
+                        --name ~(str "forma-" name)
                         --instance-group master
                         --instance-type ~type
                         --instance-count 1
@@ -233,7 +234,7 @@
                         --instance-group core
                         --instance-type ~type
                         --instance-count ~node-count
-                        --bid-price ~(:spot-price base-machine-spec)
+                        --bid-price  1.20 ;;~(:spot-price base-machine-spec)
                         --enable-debugging
 
                         --bootstrap-action
@@ -258,14 +259,15 @@
      [emr? "Boot emr?"]
      [jobtracker-ip? "Print jobtracker IP address?"]
      [type "Cluster name" "high-memory"]
-     [size "Cluster size"]]
+     [size "Cluster size"]
+     [name "Cluster name" "dev"]]
     (let [size (when size (Integer/parseInt size))]
       (cond start? (if-not size
                      (println "Please define a cluster size.")
                      (create-cluster! type size))
             emr? (if-not size
                    (println "Please define a cluster size.")
-                   (boot-emr! type size))
+                   (boot-emr! type size name))
             stop? (destroy-cluster! type)
             jobtracker-ip? (print-jobtracker-ip type)
             :else (println "Jeez, give me a fucking option, will you'NT?")))))
