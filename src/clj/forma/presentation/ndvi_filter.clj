@@ -6,7 +6,8 @@
         [forma.trends.analysis :only (mosum-prediction)]
         [clj-time.core :only (date-time)])
   (:require [incanter.charts :as c]
-            [incanter.core :as i]))
+            [incanter.core :as i]
+            [clj-time.core :as time]))
 
 ;; This is a presentation to show how the filtering techniques work on
 ;; time-series data.  We can show the Hodrick-Prescott filter with a
@@ -208,3 +209,48 @@
       [0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5]
       [0.01 0.025 0.05 0.1 0.15 0.2]]
      ["h-p filter parameter" "h" "p-value"])))
+
+
+;; Draw graphs for slide presentation
+
+(def forma-range
+  (monthly-msec-range (date-time 2000 2)
+                      (date-time 2010 12)))
+
+(defn bi-interpolate
+  [coll]
+  (let [intervening-val (map #(/ (+ %1 %2) 2)
+                             coll
+                             (drop 1 coll))]
+    (concat (interleave coll intervening-val) [(last coll)])))
+
+(def bimonth-intervals
+  (monthly-msec-range (date-time 2003 5)
+                      (date-time 2011 8)))
+
+
+(def bfast-range (bi-interpolate bimonth-intervals))
+
+(def plot-breaks
+  (doto (c/time-series-plot bfast-range
+                      Yt
+                      :title ""
+                      :x-label ""
+                      :y-label "NDVI Value"
+                      :legend false
+                      :series-label "NDVI")
+    (c/set-stroke-color java.awt.Color/BLUE)))
+
+(defn add-deseasonal
+  []
+  (c/add-lines plot-breaks bfast-range
+                Vt))
+
+(defn add-break
+  []
+  (c/add-lines plot-breaks bfast-range
+               (:series (mosum-prediction (i/matrix (hp-filter Yt 10))
+                                          (i/bind-columns (repeat (count Yt) 1)
+                                                          ti)
+                                          0.05
+                                          0.05))))
