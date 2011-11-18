@@ -14,7 +14,7 @@
 
 (defn mk-ec2-service [] (compute/service :aws))
 
-(defmacro when-ec2-service
+(defmacro with-ec2-service
   "Binds the result of (env/mk-ec2-service) to the supplied `sym`, and
   makes it available to all forms. If the ec2-service can't be
   generated, skips forms and throws an error."

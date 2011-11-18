@@ -144,11 +144,10 @@
 
 (defn jobtracker-ip
   [node-type]
-  (env/when-ec2-service
-   [service]
-   (let [{defs :nodedefs} (forma-cluster node-type 0)
-         [jt-tag] (roles->tags [:jobtracker] defs)]
-     (master-ip service jt-tag :public))))
+  (env/with-ec2-service [service]
+    (let [{defs :nodedefs} (forma-cluster node-type 0)
+          [jt-tag] (roles->tags [:jobtracker] defs)]
+      (master-ip service jt-tag :public))))
 
 (defn master-nodeset [node-type]
   (let [cluster (forma-cluster node-type 0)
@@ -172,35 +171,33 @@
 
 (defn create-cluster!
   [node-type node-count]
-  (env/when-ec2-service
-   [service]
-   (let [cluster (forma-cluster node-type node-count)]
-     (println
-      (format "Creating cluster of %s instances and %d nodes."
-              node-type node-count))
-     (boot-cluster cluster
-                   :compute service
-                   :environment env/remote-env)
-     (lift-cluster cluster
-                   :phase (phase config-redd (raise-file-limits 100000))
-                   :compute service
-                   :environment env/remote-env)
-     (start-cluster cluster
+  (env/with-ec2-service [service]
+    (let [cluster (forma-cluster node-type node-count)]
+      (println
+       (format "Creating cluster of %s instances and %d nodes."
+               node-type node-count))
+      (boot-cluster cluster
                     :compute service
                     :environment env/remote-env)
-     (println "Cluster created!")
-     (println "Hit Ctrl-C to exit."))))
+      (lift-cluster cluster
+                    :phase (phase config-redd (raise-file-limits 100000))
+                    :compute service
+                    :environment env/remote-env)
+      (start-cluster cluster
+                     :compute service
+                     :environment env/remote-env)
+      (println "Cluster created!")
+      (println "Hit Ctrl-C to exit."))))
 
 (defn destroy-cluster!
   [node-type]
-  (env/when-ec2-service
-   [service]
-   (println "Destroying cluster.")
-   (kill-cluster (forma-cluster node-type 0)
-                 :compute service
-                 :environment env/remote-env)
-   (println "Cluster destroyed!")
-   (println "Hit Ctrl-C to exit.")))
+  (env/with-ec2-service [service]
+    (println "Destroying cluster.")
+    (kill-cluster (forma-cluster node-type 0)
+                  :compute service
+                  :environment env/remote-env)
+    (println "Cluster destroyed!")
+    (println "Hit Ctrl-C to exit.")))
 
 (defn parse-emr-config
   [conf-map]
