@@ -24,5 +24,4 @@
         (let [num-days (date/period-span target-res pd)]
           (recur more
                  (drop num-days day-seq)
-                 (conj result (coll-avg (do (prn (take num-days day-seq))
-                                            (take num-days day-seq))))))))))
+                 (conj result (coll-avg (take num-days day-seq)))))))))
