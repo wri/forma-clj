@@ -59,12 +59,12 @@
                          (doseq [t tasks-to-add]
                            (t project)))))
 
-(prepend-tasks #'deps clean)
-(prepend-tasks #'uberjar c/compile)
+;; (prepend-tasks #'deps clean)
+;; (prepend-tasks #'uberjar c/compile)
 
 (try (use '[leiningen.native-deps :only (native-deps)])
      (when-let [native (resolve 'native-deps)]
-       (append-tasks #'deps @native c/compile))
+       (append-tasks #'deps @native))
      (catch java.lang.Exception _
        (println "Run lein deps again to activate the
                  required native-deps and compile hooks.")))
