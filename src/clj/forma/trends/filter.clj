@@ -1,11 +1,7 @@
 (ns forma.trends.filter
-  (:use [forma.matrix.utils :only (ones-column
-                                  coll-avg
-                                  variance-matrix
-                                  insert-into-val
-                                  sparse-expander)]
-        [clojure.contrib.seq :only (positions)])
-  (:require [incanter.core :as i]))
+  (:use [forma.utils :only (positions)])
+  (:require  [forma.matrix.utils :only u]
+             [incanter.core :as i]))
 
 ;; TODODAN: What does it mean to clean and deseasonalize timeseries?
 ;; Give some wikipedia references.
@@ -32,7 +28,7 @@
   "create a matrix of [num-months]x11 of monthly dummies, where
   [num-months] indicates the number of months in the time-series"
   [num-months]
-  (i/bind-columns (ones-column num-months)
+  (i/bind-columns (u/ones-column num-months)
                   (seasonal-rows num-months)))
 
 ;; TODODAN: What does deseasonalize mean? Describe the inputs and
@@ -45,9 +41,9 @@
   a vector the same length of the original time-series, with desea-
   sonalized values."
   [ts]
-  (let [avg-seq (repeat (count ts) (coll-avg ts))
+  (let [avg-seq (repeat (count ts) (u/coll-avg ts))
         X    (seasonal-matrix (count ts))
-        fix  (i/mmult (variance-matrix X)
+        fix  (i/mmult (u/variance-matrix X)
                       (i/trans X)
                       ts)
         adj  (i/mmult (i/sel X :except-cols 0)
@@ -67,9 +63,9 @@
   (let [[first second :as but-2]
         (for [x (range (- T 2))
               :let [idx (if (>= x 2) (- x 2) 0)]]
-          (insert-into-val 0 idx T (cond (= x 0)  [1 -2 1]
-                                         (= x 1)  [-2 5 -4 1]
-                                         :else [1 -4 6 -4 1])))]
+          (u/insert-into-val 0 idx T (cond (= x 0)  [1 -2 1]
+                                           (= x 1)  [-2 5 -4 1]
+                                           :else [1 -4 6 -4 1])))]
     (->> [second first]
          (map reverse)
          (concat but-2)
@@ -152,7 +148,7 @@
   `neutralize-ends` will return the original time-series. `bad-set` is a set of
   `reli-coll` values that indicate unreliable pixels."
   [bad-set reli-coll val-coll]
-  (let [avg (act-on-good coll-avg
+  (let [avg (act-on-good u/coll-avg
                          (mask bad-set reli-coll val-coll))]
     (replace-index-set (bad-ends bad-set reli-coll)
                        avg

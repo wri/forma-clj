@@ -4,8 +4,8 @@
   (:require [cascalog.ops :as c]
             [forma.reproject :as r]
             [forma.hadoop.io :as io]
-            [forma.hadoop.predicate :as p]
-            [clojure.contrib.duck-streams :as duck]))
+            [clojure.java.io :as java.io]
+            [forma.hadoop.predicate :as p]))
 
 ;; ### Preprocessing
 ;;
@@ -24,13 +24,13 @@
   originally written to clean an ASCII raster file for input into the
   sampling functions."
   [base-path old-file-name new-file-name num-drop]
-  (let [old-file (str base-path old-file-name)
-        new-file (str base-path new-file-name)]
-    (duck/with-out-writer new-file
-      (doseq [line (drop num-drop
-                         (map-indexed
-                          (fn [idx line] (str (- idx num-drop) " " line))
-                          (duck/read-lines old-file)))]
+  (with-open [reader (java.io/reader (str base-path old-file-name))
+              writer (java.io/writer (str base-path new-file-name))]
+    (binding [*out* writer]
+      (doseq [line (->> rdr
+                        (map-indexed (fn [idx line]
+                                       (str (- idx num-drop) " " line)))
+                        (drop num-drop))]
         (println line)))))
 
 ;; ### Sampling

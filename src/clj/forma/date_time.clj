@@ -3,8 +3,7 @@
 ;; proper temporal comparison of two unrelated datasets.
 
 (ns forma.date-time
-  (:use [clj-time.core :only (date-time month year)]
-        [clojure.contrib.def :only (defnk)])
+  (:use [clj-time.core :only (date-time month year)])
   (:require [clj-time.core :as time]
             [clj-time.format :as f]))
 
@@ -31,7 +30,7 @@
       (parse from-format)
       (unparse to-format)))
 
-(defnk within-dates?
+(defn within-dates?
   "Returns true if the supplied datestring `dt` falls within the dates
   described by start and start end (exclusive)`, false otherwise. the
   `:format` keyword argument can be used to specify the format of the
@@ -41,7 +40,8 @@
   For example:
     (within? \"2005-12-01\" \"2011-01-02\" \"2011-01-01\")
     ;=> true"
-  [start end dt :format :year-month-day]
+  [start end dt & {:keys [format]
+                   :or {format :year-month-day}}]
   (let [[start end dt] (map #(parse % format) [start end dt])]
     (time/within? (time/interval start end) dt)))
 
@@ -92,7 +92,7 @@
   "Returns the ordinal day index of a given date."
   [dt]
   (in-days
-   (time/interval (date-time (year dt))
+   (time/interval (time/date-time (year dt))
                   dt)))
 
 ;; the `ordinal` function complements the other "date-piece" functions

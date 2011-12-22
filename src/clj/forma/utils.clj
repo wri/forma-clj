@@ -1,6 +1,6 @@
 (ns forma.utils
-  (:use [clojure.contrib.math :only (round expt)])
-  (:require [clojure.contrib.io :as io])
+  (:use [clojure.math.numeric-tower :only (round expt)])
+  (:require [clojure.java.io :as io])
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]))
 
@@ -55,6 +55,13 @@
   {:pre [(not (empty? coll)), (even? (count coll))]}
   [(take-nth 2 coll) (take-nth 2 (rest coll))])
 
+(defn find-first
+  "Returns the first item of coll for which (pred item) returns logical true.
+  Consumes sequences up to the first match, will consume the entire sequence
+  and return nil if no match is found."
+  [pred coll]
+  (first (filter pred coll)))
+
 (defn scale
   "Returns a collection obtained by scaling each number in `coll` by
   the supplied number `fact`."
@@ -87,6 +94,12 @@
               (reduce (partial map +))
               (apply /))))
 
+(defn positions
+  "Returns a lazy sequence containing the positions at which pred
+   is true for items in coll."
+  [pred coll]
+  (for [[idx elt] (map-indexed vector coll) :when (pred elt)] idx))
+
 (defn trim-seq
   "Trims a sequence with initial value indexed at x0 to fit within
   bottom (inclusive) and top (exclusive). For example:
@@ -99,10 +112,20 @@
 
 ;; ## IO Utils
 
+(defn delete-dir
+  "Delete file f. If it's a directory, recursively delete all its contents.
+Raise an exception if any deletion fails unless silently is true."
+  [f & [silently]]
+  (let [f (file f)]
+    (if (.isDirectory f)
+      (doseq [child (.listFiles f)]
+        (delete-dir child silently)))
+    (io/delete-file f silently)))
+
 (defn input-stream
   "Attempts to coerce the given argument to an InputStream, with
 automatic flipping to `GZipInputStream` if appropriate for the
-supplied input. see `clojure.contrib.io/input-stream` for guidance on
+supplied input. see `clojure.java.io/input-stream` for guidance on
 valid arguments."
   ([arg] (input-stream arg nil))
   ([arg default-bufsize]
@@ -150,7 +173,7 @@ valid arguments."
   (let [val (read-string x)]
     (if (number? val)
       val
-      (throw-illegal "We can only liberate numbers, here!"))))
+      (throw-illegal "You can only liberate numbers!"))))
 
 ;; ## Byte Manipulation
 

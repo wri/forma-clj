@@ -1,6 +1,7 @@
 (ns forma.hadoop.cluster
-  (:use [clojure.string :only (join)]
-        [clojure.contrib.command-line :only (with-command-line)]
+  (:use clojure.tools.cli
+        forma.hadoop.cluster.cli
+        [clojure.string :only (join)]
         [pallet-hadoop.node :exclude (jobtracker-ip)]
         [pallet.crate.hadoop :only (hadoop-user)]        
         [pallet.extensions :only (def-phase-fn phase)])
@@ -104,43 +105,44 @@
   (let [lib-path (str fw-path "/usr/lib")
         {:keys [map-tasks reduce-tasks image-id hardware-id price]}
         (cluster-profiles (or cluster-key "high-memory"))]
-    (cluster-spec :private
-                  {:jobtracker (node-group [:jobtracker :namenode])
-                   :slaves     (slave-group nodecount :spec {:spot-price (float price)})}
-                  :base-machine-spec {:hardware-id hardware-id
-                                      :image-id image-id}
-                  :base-props {:hadoop-env {:JAVA_LIBRARY_PATH native-path
-                                            :LD_LIBRARY_PATH lib-path}
-                               :hdfs-site {:dfs.data.dir "/mnt/dfs/data"
-                                           :dfs.name.dir "/mnt/dfs/name"
-                                           :dfs.datanode.max.xcievers 5096
-                                           :dfs.namenode.handler.count 20
-                                           :dfs.block.size 134217728
-                                           :dfs.support.append true}
-                               :core-site {:io.serializations serializations
-                                           :cascading.serialization.tokens tokens
-                                           :fs.s3n.awsAccessKeyId "AKIAJ56QWQ45GBJELGQA"
-                                           :fs.s3n.awsSecretAccessKey
-                                           "6L7JV5+qJ9yXz1E30e3qmm4Yf7E1Xs4pVhuEL8LV"}
-                               :mapred-site {:io.sort.mb 200
-                                             :io.sort.factor 40
-                                             :mapred.reduce.parallel.copies 20
-                                             :mapred.local.dir "/mnt/hadoop/mapred/local"
-                                             :mapred.task.timeout 10000000
-                                             :mapred.reduce.tasks (int (* reduce-tasks nodecount))
-                                             :mapred.tasktracker.map.tasks.maximum map-tasks
-                                             :mapred.tasktracker.reduce.tasks.maximum reduce-tasks
-                                             :mapred.reduce.max.attempts 12
-                                             :mapred.map.max.attempts 20
-                                             :mapred.job.reuse.jvm.num.tasks 20
-                                             :mapred.map.tasks.speculative.execution false
-                                             :mapred.reduce.tasks.speculative.execution false
-                                             :mapred.output.direct.NativeS3FileSystem true
-                                             :mapred.child.java.opts (str "-Djava.library.path="
-                                                                          native-path
-                                                                          " -Xms1024m -Xmx1024m")
-                                             :mapred.child.env (str "LD_LIBRARY_PATH="
-                                                                    lib-path)}})))
+    (cluster-spec
+     :private
+     {:jobtracker (node-group [:jobtracker :namenode])
+      :slaves     (slave-group nodecount :spec {:spot-price (float price)})}
+     :base-machine-spec {:hardware-id hardware-id
+                         :image-id image-id}
+     :base-props {:hadoop-env {:JAVA_LIBRARY_PATH native-path
+                               :LD_LIBRARY_PATH lib-path}
+                  :hdfs-site {:dfs.data.dir "/mnt/dfs/data"
+                              :dfs.name.dir "/mnt/dfs/name"
+                              :dfs.datanode.max.xcievers 5096
+                              :dfs.namenode.handler.count 20
+                              :dfs.block.size 134217728
+                              :dfs.support.append true}
+                  :core-site {:io.serializations serializations
+                              :cascading.serialization.tokens tokens
+                              :fs.s3n.awsAccessKeyId "AKIAJ56QWQ45GBJELGQA"
+                              :fs.s3n.awsSecretAccessKey
+                              "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"}
+                  :mapred-site {:io.sort.mb 200
+                                :io.sort.factor 40
+                                :mapred.reduce.parallel.copies 20
+                                :mapred.local.dir "/mnt/hadoop/mapred/local"
+                                :mapred.task.timeout 10000000
+                                :mapred.reduce.tasks (int (* reduce-tasks nodecount))
+                                :mapred.tasktracker.map.tasks.maximum map-tasks
+                                :mapred.tasktracker.reduce.tasks.maximum reduce-tasks
+                                :mapred.reduce.max.attempts 12
+                                :mapred.map.max.attempts 20
+                                :mapred.job.reuse.jvm.num.tasks 20
+                                :mapred.map.tasks.speculative.execution false
+                                :mapred.reduce.tasks.speculative.execution false
+                                :mapred.output.direct.NativeS3FileSystem true
+                                :mapred.child.java.opts (str "-Djava.library.path="
+                                                             native-path
+                                                             " -Xms1024m -Xmx1024m")
+                                :mapred.child.env (str "LD_LIBRARY_PATH="
+                                                       lib-path)}})))
 
 (defn jobtracker-ip
   [node-type]
@@ -248,23 +250,44 @@
                         --bootstrap-action
                         s3://reddconfig/bootstrap-actions/redd.sh))))
 
-(defn -main [& args]
-  (with-command-line args
-    "Provisioning tool for Hadoop clusters."
-    [[start? "Start Cluster?"]
-     [stop? "Shutdown Cluster?"]
-     [emr? "Boot emr?"]
-     [jobtracker-ip? "Print jobtracker IP address?"]
-     [type "Cluster name" "high-memory"]
-     [size "Cluster size"]
-     [name "Cluster name" "dev"]]
-    (let [size (when size (Integer/parseInt size))]
-      (cond start? (if-not size
-                     (println "Please define a cluster size.")
-                     (create-cluster! type size))
-            emr? (if-not size
-                   (println "Please define a cluster size.")
-                   (boot-emr! type size name))
-            stop? (destroy-cluster! type)
-            jobtracker-ip? (print-jobtracker-ip type)
-            :else (println "Jeez, give me a fucking option, will you'NT?")))))
+(defn cli-interface
+  [parser validator func]
+  (fn [& args]
+    (let [arg-map (-> args parser validator)]
+      (if-let [e-seq (:_errors arg-map)]
+        (v/print-errors e-seq)
+        (func arg-map)))))
+
+(defn parse-hadoop-args [args]
+  (cli args
+       (optional ["-n" "--name" "Name of cluster." :default "dev"])
+       (optional ["-t" "--type" "Type  cluster." :default "high-memory"])
+       (optional ["-s" "--size" "Size of cluster."] #(Long. ))
+       (optional ["--jobtracker-ip" "Print jobtracker IP address?"])
+       (optional ["--start" "Provisions supplied hosts."])
+       (optional ["--stop" "Destroys cluster (kill services, delete layouts)."])
+       (optional ["--emr" "Attach to storm cluster."])))
+
+(defn size-present?
+  "This step checks that, if `start` or `emr` exist in the arg map,
+  they're accompanied by a size. If this passes, the function acts as
+  identity, else an error is added to the map."
+  [{:keys [start emr size] :as m}]
+  (cond (and start (not size)) (add-error m "Start requires a name.")
+        (and emr   (not size)) (add-error m "EMR requires a name.")
+        :else m))
+
+(def hadoop-validator
+  (v/build-validator
+   (v/just-one? :start :stop :emr :jobtracker-ip)
+   (size-present?)))
+
+(def -main
+  (cli-interface parse-hadoop-args
+                 hadoop-validator
+                 (fn [{:keys [name type size] :as m}]
+                   (condp (flip get) m
+                     :start (create-cluster! type size)
+                     :stop  (destroy-cluster! type)
+                     :jobtracker-ip (print-jobtracker-ip type)
+                     (println "Please provide an option!")))))

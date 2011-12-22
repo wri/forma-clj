@@ -1,8 +1,7 @@
 (ns forma.trends.analysis
   (:use [forma.matrix.utils :only (variance-matrix coll-avg)]
-        [forma.trends.filter :only (deseasonalize make-reliable hp-filter)]
-        [clojure.contrib.seq :only (positions)]
-        [clojure.contrib.math :only (sqrt floor abs round expt)])
+        [clojure.math.numeric-tower :only (sqrt floor abs)]
+        [forma.trends.filter :only (deseasonalize make-reliable hp-filter)])
   (:require [forma.utils :as utils]
             [incanter.core :as i]
             [incanter.stats :as s]))
@@ -180,7 +179,7 @@
 ;; BFAST-Lite
 
 (defn cumsum
-" compute the running, cumulative sum of a vector. intended to
+  " compute the running, cumulative sum of a vector. intended to
   replicate the cumsum function in R.
   
   Example:
@@ -194,7 +193,7 @@
 ;; the same.
 
 (defn xproduct
-" cross-product of a matrix `X`
+  " cross-product of a matrix `X`
 
   Example:
   (xproduct (i/matrix (range 9) 3))
@@ -215,7 +214,7 @@
                (vector product)))))
 
 (defn outer-product
-" calculate the outer product of two vectors
+  " calculate the outer product of two vectors
 
   Example:
   (outer-product [1 2 3] [1 2 3])
@@ -244,7 +243,7 @@
       (i/sel mat :rows (range (inc i))))))
 
 (defn grab-rows
-" grab a range of rows from a matrix. if two arguments are given, then
+  " grab a range of rows from a matrix. if two arguments are given, then
   `grab-rows` grabs all rows upto `end-idx`.  if three arguments are
   given the function will grab rows in between the start and ending
   index.  `mat` is the last argument to allow for the function to be
@@ -263,7 +262,7 @@
      (i/sel mat :rows (range start-idx end-idx))))
 
 (defn regression-coefs
-" create a matrix of regression coefficients from regressing yvec onto
+  " create a matrix of regression coefficients from regressing yvec onto
   Xmat; mainly used for linear prediction.
 
   Example:
@@ -280,7 +279,7 @@
       i/matrix))
 
 (defn linear-predict
-" prediction of y-values from a linear model, for all y values in `yvec`.
+  " prediction of y-values from a linear model, for all y values in `yvec`.
 
   Example:
 
@@ -297,35 +296,32 @@
   (i/mmult Xmat (regression-coefs yvec Xmat)))
 
 (defn first-index
-" get the first index within `coll` where the value satisfies `pred`.
+  " get the first index within `coll` where the value satisfies `pred`.
 
   Example:
   (first-index #(> % 2) [0 1 2 8 8 8 8])
-  => 3
-"
+  => 3"
   [pred coll]
-  (first (positions pred coll)))
+  (first (utils/positions pred coll)))
 
 (defn scaled-sum
-" sum a vector and scale-down by `scalar`
+  " sum a vector and scale-down by `scalar`
 
   Example:
 
   (scaled-sum 2 [1 2 3])
-  => 3
-"
+  => 3"
   [scalar coll]
   (-> (reduce + coll)
       (/ scalar)))
 
 (defn num->key
-" turn a number into a keyword for lookup in a map.
+  " turn a number into a keyword for lookup in a map.
 
   Example:
 
   (num->key 0.05) => :0.05
-  (num->key 0.40) => :0.4
-"
+  (num->key 0.40) => :0.4"
   [n]
   (keyword (str n)))
 
@@ -358,7 +354,7 @@
         (/ (sqrt (inc projection))))))
 
 (defn recresid-series
-" calcuate recursive residuals for a full set of observations.
+  " calcuate recursive residuals for a full set of observations.
 
   Example *test*:
 
@@ -374,7 +370,7 @@
      (range start end))))
 
 (defn recresid-sd
-" standard deviation of recursive residual process, found on page 2 of
+  " standard deviation of recursive residual process, found on page 2 of
   the following citation.
 
   Zeilis, A. (2000) p Values and Alternative Boundaries for CUSUM
@@ -420,7 +416,7 @@
    :0.5  {:0.2 2.2255 :0.15 2.3668 :0.1 2.5505 :0.05 2.8334 :0.025 3.0737 :0.01 3.3912}})
 
 (defn mosum-efp
-" the recursive, moving-sum Empirical Fluctuation Process (MOSUM
+  " the recursive, moving-sum Empirical Fluctuation Process (MOSUM
   process), as found in the strucchange package in R, equation 10 in
   the following citation.  Window is equivalent to the `h` parameter
   in strucchange's efp function.  This parameter represents the
@@ -444,7 +440,7 @@
         sub-length (floor (* tau window))
         [series sd] ((juxt recresid-series recresid-sd) yvec Xmat)]
     (pmap (partial scaled-sum (* (sqrt sub-length) sd))
-         (partition sub-length 1 series))))
+          (partition sub-length 1 series))))
 
 (defn min-mosum-test-statistic
   "collect the absolute value of the most negative value within a
@@ -453,7 +449,7 @@
   (abs (reduce min efp-series)))
 
 (defn get-crit-value
-" lookup a critical value based on the window size and significance
+  " lookup a critical value based on the window size and significance
   level.
 
   Example:
@@ -478,29 +474,35 @@
 
 ;; TODO: get the break for the largest-break, not just the first
 ;; significant break.
+;;
+;; TODO:
+;;
+;; [row col] ((juxt first second) (i/dim Xmat))
+;;
+;; is just:
+;;
+;; [row col] (i/dim Xmat)
 
 (defn mosum-break-idx
-" calculate the period with the first significant downward break in
+  " calculate the period with the first significant downward break in
   a empirical fluctuation process.  If there is no significant break,
   then function will return `nil`.
 
   Example:
 
   (mosum-break-idx y X 0.05 0.05) => 111.0
-  (mosum-break-idx (range (i/nrow X)) X 0.05 0.05) => nil  
-"
+  (mosum-break-idx (range (i/nrow X)) X 0.05 0.05) => nil"
   [yvec Xmat window sig-level]
   (let [neg-crit-value (- (get-crit-value window sig-level))
         [row col] ((juxt first second) (i/dim Xmat))
-        offset (->> row (* window) (floor) (+ col))
+        offset (-> row (* window) floor (+ col))
         efp-break (first-index #(<= % neg-crit-value)
                                (mosum-efp yvec Xmat window))]
-    (if (nil? efp-break)
-      nil
+    (when efp-break
       (+ offset efp-break))))
 
 (defn trend-break-magnitude
-" Calculate the magnitude of the breaks associated with a piecewise
+  " Calculate the magnitude of the breaks associated with a piecewise
   linear regression on a time-series broken at period `break-idx`. The
   equation is given in equation (2) of the following citation.
 
@@ -510,8 +512,7 @@
 
   Vesserbelt et al. (2009) Detecting trend and seasonal changes in
   satellite image time series. Remote Sensing of the Environment;
-  found [here](http://goo.gl/y3y1m) on May 31, 2011.
-"
+  found [here](http://goo.gl/y3y1m) on May 31, 2011."
   [yvec Xmat break-idx]
   (let [xx (map i/matrix (split-at break-idx Xmat))
         yy (map i/matrix (split-at break-idx yvec))
@@ -520,10 +521,9 @@
     (+ alpha (* beta break-idx))))
 
 (defn mosum-prediction
-" returns a transformed time-series of linear predictions over the
+  " returns a transformed time-series of linear predictions over the
   time-series given by `yvec`, broken at the index of the first
-  significant break.
-"
+  significant break."
   [yvec Xmat window sig-level]
   (let [break-idx (mosum-break-idx yvec Xmat window sig-level)
         break-map {:break break-idx}]
@@ -547,7 +547,7 @@
     (subvec coll (dec break-idx) (inc break-idx))))
 
 (defn downshift-magnitude
-" Get the magnitude of the first significant drop in the
+  " Get the magnitude of the first significant drop in the
   MOSUM-analyzed series.
 
   Example:
@@ -555,11 +555,9 @@
   (downshift-magnitude Y X 0.05 0.05) => 0.42154130130818857
 
   Note that the example is not meant to show an actual value, just
-  what the output should look like.
-"
+  what the output should look like."
   [yvec Xmat window sig-level]
   (let [predict-map (mosum-prediction yvec Xmat window sig-level)
         [series break] ((juxt :series :break) predict-map)]
-    (if (nil? break)
-      nil
+    (when break
       (apply - (ends-at-split series break)))))

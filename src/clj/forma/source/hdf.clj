@@ -14,14 +14,13 @@
 (ns forma.source.hdf
   (:use cascalog.api
         [forma.reproject :only (spatial-res temporal-res tilestring->hv)]
-        [cascalog.io :only (temp-dir)]
-        [clojure.contrib.seq-utils :only (find-first indexed)])
+        [forma.utils :only (delete-dir)]
+        [cascalog.io :only (temp-dir)])
   (:require [cascalog.ops :as c]
             [clojure.set :as set]
-            [clojure.contrib.string :as s]
             [forma.hadoop.predicate :as p]
             [forma.hadoop.io :as hadoop.io]
-            [clojure.contrib.io :as contrib.io])
+            [clojure.java.io :as java.io])
   (:import [org.gdal.gdal gdal Dataset Band]
            [org.gdal.gdalconst gdalconstConstants]))
 
@@ -113,8 +112,8 @@
   dataset at a given filepath."
   [hdf-path]
   (with-gdal-open [dataset (str hdf-path)]
-    (for [[k v] (metadata dataset "SUBDATASETS")
-          :when (s/substring? "_NAME" k)]
+    (for [[^String k v] (metadata dataset "SUBDATASETS")
+          :when (.contains k "_NAME")]
       v)))
 
 (defn subdataset-key
@@ -122,8 +121,8 @@
   any of the values of the `modis-subsets` map can be found as
   substrings. If we find one, we return the associated key, cast to a
   string -- 'ndvi', for example."
-  [path]
-  (find-first #(s/substring? (% modis-subsets) path)
+  [^String path]
+  (find-first #(.contains path (% modis-subsets))
               (keys modis-subsets)))
 
 (defn dataset-filter
@@ -131,18 +130,18 @@
    SUBDATASETS metadata dictionary against the supplied collection of
    acceptable dataset keys."
   [good-keys]
-  (fn [name]
+  (fn [^String name]
     {:pre [(set/subset? good-keys modis-subsets)]}
     (->> good-keys
          (map modis-subsets)
-         (some #(s/substring? % name)))))
+         (some #(.contains name %)))))
 
 (defn make-subdataset
   "Accepts a filepath from the SUBDATASETS dictionary of a MODIS Dataset,
  and returns a 2-tuple consisting of the modis-subsets key (\"ndvi\")
   and a gdal.Dataset object representing the unpacked MODIS data."
   [path]
-  [(s/as-str (subdataset-key path)) (gdal/Open path)])
+  [(name (subdataset-key path)) (gdal/Open path)])
 
 ;; This is the first real "director" function; cascalog calls feeds
 ;; `BytesWritable` objects into `unpack-modis` and receives individual
@@ -158,12 +157,12 @@ as a 1-tuple."
   ([] (temp-dir "hdf"))
   ([tdir stream]
      (let [bytes (hadoop.io/get-bytes stream)
-           temp-hdf (contrib.io/file tdir (hadoop.io/hash-str stream))]
-       (do (contrib.io/copy bytes temp-hdf)
+           temp-hdf (java.io/file tdir (hadoop.io/hash-str stream))]
+       (do (java.io/copy bytes temp-hdf)
            (->> (subdataset-names temp-hdf)
                 (filter (dataset-filter to-keep))
                 (map make-subdataset)))))
-  ([tdir] (contrib.io/delete-file-recursively tdir)))
+  ([tdir] (delete-dir tdir)))
 
 ;; ### Raster Chunking
 ;;
@@ -186,7 +185,7 @@ as a 1-tuple."
     (->> ret
          (partition chunk-size)
          (map hadoop.io/to-struct)
-         indexed)))
+         (map-indexed vector))))
 
 ;; ### Metadata Parsing
 ;;
