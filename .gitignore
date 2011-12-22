@@ -14,3 +14,4 @@ autodoc
 .settings/
 .project
 native/
+.lein-deps-sum
