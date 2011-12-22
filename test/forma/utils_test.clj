@@ -1,5 +1,5 @@
-(ns juke.utils-test
-  (:use juke.utils
+(ns forma.utils-test
+  (:use forma.utils
         midje.sweet)
   (:require [forma.testing :as t])
   (:import  [java.io InputStream]

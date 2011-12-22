@@ -1,7 +1,7 @@
 (ns forma.trends.stretch
-  (:use [juke.matrix.utils :only (coll-avg)])
+  (:use [forma.matrix.utils :only (coll-avg)])
   (:require [forma.hadoop.io :as io]
-            [juke.date-time :as date]))
+            [forma.date-time :as date]))
 
 (defn ts-expander
   "`xs` must be a sequence of 2-tuples of the form `[period, val]`."

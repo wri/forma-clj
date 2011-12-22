@@ -1,5 +1,5 @@
-(ns juke.matrix.walk-test
-  (:use [juke.matrix.walk] :reload)
+(ns forma.matrix.walk-test
+  (:use [forma.matrix.walk] :reload)
   (:use midje.sweet))
 
 (def little-matrix [[0 1 2]

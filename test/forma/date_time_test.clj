@@ -1,5 +1,5 @@
-(ns juke.date-time-test
-  (:use [juke.date-time] :reload)
+(ns forma.date-time-test
+  (:use [forma.date-time] :reload)
   (:use midje.sweet
         [clj-time.core :only (now date-time month interval)]))
 

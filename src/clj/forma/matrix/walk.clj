@@ -1,7 +1,7 @@
-(ns juke.matrix.walk
+(ns forma.matrix.walk
   (:use cascalog.api
-        [juke.utils :only (nth-in)]
-        [juke.matrix.utils :only (insert-into-val
+        [forma.utils :only (nth-in)]
+        [forma.matrix.utils :only (insert-into-val
                                   insert-at)]))
 
 (defn walk-matrix

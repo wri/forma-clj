@@ -1,4 +1,4 @@
-(ns juke.utils
+(ns forma.utils
   (:use [clojure.contrib.math :only (round expt)])
   (:require [clojure.contrib.io :as io])
   (:import  [java.io InputStream]

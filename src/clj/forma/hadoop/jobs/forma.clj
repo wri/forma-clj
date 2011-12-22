@@ -1,9 +1,9 @@
 (ns forma.hadoop.jobs.forma
   (:use cascalog.api)
   (:require [cascalog.ops :as c]
-            [juke.matrix.walk :as w]
-            [juke.reproject :as r]
-            [juke.date-time :as date]
+            [forma.matrix.walk :as w]
+            [forma.reproject :as r]
+            [forma.date-time :as date]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
             [forma.trends.analysis :as a]))

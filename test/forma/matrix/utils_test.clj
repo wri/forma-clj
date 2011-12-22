@@ -1,5 +1,5 @@
-(ns juke.matrix.utils-test
-  (:use juke.matrix.utils
+(ns forma.matrix.utils-test
+  (:use forma.matrix.utils
         midje.sweet)
   (:require [incanter.core :as i]))
 

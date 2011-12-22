@@ -1,7 +1,7 @@
 (ns forma.presentation.ndvi-filter
-  (:use [juke.matrix.utils :only (logical-replace)]
-        [juke.utils :only (round-places)]
-        [juke.date-time :only (monthly-msec-range)]
+  (:use [forma.matrix.utils :only (logical-replace)]
+        [forma.utils :only (round-places)]
+        [forma.date-time :only (monthly-msec-range)]
         [forma.trends.filter :only (hp-filter make-reliable)]
         [forma.trends.analysis :only (mosum-prediction)]
         [clj-time.core :only (date-time)])

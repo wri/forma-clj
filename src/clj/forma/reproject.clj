@@ -2,9 +2,9 @@
 ;; (lat, lon) dataset at arbitrary resolution into the MODIS
 ;; sinusoidal grid at arbitrary resolution.
 
-(ns juke.reproject
-  (:use [juke.matrix.utils :only (idx->rowcol)])
-  (:require [juke.utils :as u]))
+(ns forma.reproject
+  (:use [forma.matrix.utils :only (idx->rowcol)])
+  (:require [forma.utils :as u]))
 
 ;; From the [user's guide](http://goo.gl/uoi8p) to MODIS product MCD45
 ;; (burned area): "The MODIS data are re-projected using an equiareal

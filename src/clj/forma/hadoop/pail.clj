@@ -1,7 +1,7 @@
 (ns forma.hadoop.pail
   (:use cascalog.api
         [cascalog.io :only (with-fs-tmp)]
-        [juke.reproject :only (hv->tilestring)])
+        [forma.reproject :only (hv->tilestring)])
   (:import [forma.schema DataChunk FireTuple FormaValue
             LocationProperty LocationPropertyValue
             ModisPixelLocation DataValue]

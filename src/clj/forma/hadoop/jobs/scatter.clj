@@ -4,7 +4,7 @@
         [forma.source.tilesets :only (tile-set)]
         [forma.hadoop.pail :only (?pail- split-chunk-tap)])
   (:require [cascalog.ops :as c]
-            [juke.reproject :as r]
+            [forma.reproject :as r]
             [forma.trends.stretch :as stretch]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]

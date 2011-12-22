@@ -3,7 +3,7 @@
         cascalog.api
         [midje sweet cascalog])
   (:require [forma.hadoop.io :as io]
-            [juke.date-time :as d]))
+            [forma.date-time :as d]))
 
 (defn test-chunks
   "Returns a sample input to the timeseries creation buffer, or a

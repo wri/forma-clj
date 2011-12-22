@@ -2,7 +2,7 @@
   (:use cascalog.api
         [forma.static :only (static-datasets)])
   (:require [cascalog.ops :as c]
-            [juke.reproject :as r]
+            [forma.reproject :as r]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
             [clojure.contrib.duck-streams :as duck]))

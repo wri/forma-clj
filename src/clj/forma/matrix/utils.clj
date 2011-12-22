@@ -1,6 +1,6 @@
-(ns juke.matrix.utils
+(ns forma.matrix.utils
   "Useful general functions for matrix operations or filters."
-  (:use [juke.utils :only (thrush)])
+  (:use [forma.utils :only (thrush)])
   (:require [incanter.core :as i]))
 
 ;; The first functions should be very simple functions used as

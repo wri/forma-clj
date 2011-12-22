@@ -9,8 +9,8 @@
 
 (ns forma.source.rain
   (:use cascalog.api)
-  (:require [juke.reproject :as r]
-            [juke.utils :as u]
+  (:require [forma.reproject :as r]
+            [forma.utils :as u]
             [forma.hadoop.io :as io]
             [forma.source.static :as static]
             [forma.hadoop.predicate :as p]

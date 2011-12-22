@@ -1,9 +1,9 @@
 (ns forma.source.fire
   (:use cascalog.api
-        [juke.date-time :only (convert)])
+        [forma.date-time :only (convert)])
   (:require [clojure.string :as s]
-            [juke.utils :as utils]
-            [juke.reproject :as r]
+            [forma.utils :as utils]
+            [forma.reproject :as r]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p])
   (:import [forma.schema FireTuple]))

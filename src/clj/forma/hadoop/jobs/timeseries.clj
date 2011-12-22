@@ -1,11 +1,11 @@
 (ns forma.hadoop.jobs.timeseries
   (:use cascalog.api
-        [juke.utils :only (running-sum)]
-        [juke.matrix.utils :only (sparse-expander)]
+        [forma.utils :only (running-sum)]
+        [forma.matrix.utils :only (sparse-expander)]
         [forma.source.tilesets :only (tile-set)])
   (:require [cascalog.ops :as c]
-            [juke.reproject :as r]
-            [juke.date-time :as date]
+            [forma.reproject :as r]
+            [forma.date-time :as date]
             [forma.hadoop.pail :as pail]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]))

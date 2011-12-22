@@ -2,7 +2,7 @@
 ;; periods, as measured from some reference date. This allows for
 ;; proper temporal comparison of two unrelated datasets.
 
-(ns juke.date-time
+(ns forma.date-time
   (:use [clj-time.core :only (date-time month year)]
         [clojure.contrib.def :only (defnk)])
   (:require [clj-time.core :as time]

@@ -1,5 +1,5 @@
 (ns forma.trends.filter
-  (:use [juke.matrix.utils :only (ones-column
+  (:use [forma.matrix.utils :only (ones-column
                                   coll-avg
                                   variance-matrix
                                   insert-into-val
