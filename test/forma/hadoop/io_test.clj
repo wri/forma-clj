@@ -36,12 +36,12 @@ textual representation."
 
 (tabular
  (fact "count-vals test."
-   (count-vals ?thriftable) => ?n
-   ?n ?thriftable
-   2  [1 2]
-   3  (int-struct [1 3 2])
-   1  (int-struct [1])
-   3  (int-struct [5.4 32 12.0])))
+   (count-vals ?thriftable) => ?n)
+ ?n ?thriftable
+ 2  [1 2]
+ 3  (int-struct [1 3 2])
+ 1  (int-struct [1])
+ 3  (int-struct [5.4 32 12.0]))
 
 (fact "struct-edges tests."
   (struct-edges [ 0 [1 2 3 4] 1 [2 3 4 5]]) => [1 4]

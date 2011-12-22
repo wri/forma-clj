@@ -13,11 +13,11 @@
                  "conjars" "http://conjars.org/repo/"}
   :dependencies [[org.clojure/clojure "1.2.1"]
                  [org.clojure/clojure-contrib "1.2.0"]
-                 [incanter "1.2.3" :exclusions [swank-clojure]]
+                 
                  [clj-time "0.3.1"]
                  [redd/thrift "0.5.0"]
-                 [cascalog "1.8.3"]
                  [commons-lang "2.6"]   ;required for thrift
+                 [cascalog "1.8.5-SNAPSHOT"]
                  [backtype/cascading-thrift "0.1.0" :exclusions [backtype/thriftjava]]
                  [backtype/dfs-datastores "1.0.5"]
                  [backtype/dfs-datastores-cascading "1.0.5"]]
@@ -29,12 +29,9 @@
                      [org.jclouds.provider/aws-ec2 "1.0.0"]
                      [org.jclouds.driver/jclouds-jsch "1.0.0"]
                      [org.jclouds.driver/jclouds-log4j "1.0.0"]
+                     [incanter "1.2.3" :exclusions [swank-clojure]]
                      [log4j/log4j "1.2.14"]
-                     [vmfest/vmfest "0.2.2"]
-                     [swank-clojure "1.4.0-SNAPSHOT"]
-                     [clojure-source "1.2.0"]
-                     [lein-marginalia "0.6.1"]
-                     [lein-midje "1.0.4"]
+                     [vmfest/vmfest "0.2.2"]                     
                      [midje-cascalog "0.3.0"]]
   :aot [
         forma.hadoop.pail

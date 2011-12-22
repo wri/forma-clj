@@ -3,7 +3,19 @@ Introduction: FORMA meets Hadoop.
 
 FORMA's making it happen in 2011. Clojure, Cascalog, Hadoop... What the hell? Head to the [Project Wiki](https://github.com/sritchie/forma-clj/wiki) for more details.
 
+## Setting Up
+
+```bash
+lein plugin install swank-clojure "1.4.0-SNAPSHOT"
+lein plugin install lein-marginalia "0.6.1"
+lein plugin install lein-midje "1.0.7"
+```
+
+## Issues and Tasks
+
 For project task management, use the [Pivotal Tracker](https://www.pivotaltracker.com/projects/185565).
+
+## Other
 
 ;; TODO: Run the hansen and vcf special dataset stuff, for diff
 ;; between big-set and little-set.
