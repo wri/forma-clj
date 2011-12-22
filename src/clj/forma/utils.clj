@@ -112,16 +112,6 @@
 
 ;; ## IO Utils
 
-(defn delete-dir
-  "Delete file f. If it's a directory, recursively delete all its contents.
-Raise an exception if any deletion fails unless silently is true."
-  [f & [silently]]
-  (let [f (file f)]
-    (if (.isDirectory f)
-      (doseq [child (.listFiles f)]
-        (delete-dir child silently)))
-    (io/delete-file f silently)))
-
 (defn input-stream
   "Attempts to coerce the given argument to an InputStream, with
 automatic flipping to `GZipInputStream` if appropriate for the

@@ -8,10 +8,11 @@
 ;;     [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk-pix]
 
 (ns forma.source.rain
-  (:use cascalog.api)
+  (:use cascalog.api
+        [forma.hadoop.io :only (to-struct)])
   (:require [forma.reproject :as r]
             [forma.utils :as u]
-            [forma.hadoop.io :as io]
+            [cascalog.io :as io]
             [forma.source.static :as static]
             [forma.hadoop.predicate :as p]
             [clojure.string :as s])
@@ -81,7 +82,7 @@
   sequence of 2-tuples, in the form of (month, data). Assumes that
   binary files are packaged as hadoop BytesWritable objects."
   [stream]
-  (let [bytes (io/get-bytes stream)
+  (let [bytes        (io/get-bytes stream)
         rainbuf-size (* 24 (floats-for-step 0.5))]
     (->> (u/input-stream bytes rainbuf-size)
          (rain-tuples step))))
@@ -119,7 +120,7 @@
     (->> coll
          (partition row-length)
          (map-indexed (fn [idx xs]
-                        [idx (io/to-struct xs)])))))
+                        [idx (to-struct xs)])))))
 
 (defn rain-values
   "Generates a cascalog subquery from the supplied WGS84 step size and

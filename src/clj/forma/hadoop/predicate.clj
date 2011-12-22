@@ -71,8 +71,8 @@
   `forma.schema.IntArray`."
   [window]
   (let [wrap (case type
-                   :double io/double-struct
-                   :int io/int-struct)]
+               :double io/double-struct
+               :int io/int-struct)]
     [(-> window flatten wrap)]))
 
 ;; #### Defmapcatops
@@ -104,8 +104,8 @@
   `(defaggregateop ~name
      ([] 0)
      ([count# ~@vals] (if (~pred ~@vals)
-                      (inc count#)
-                      count#))
+                        (inc count#)
+                        count#))
      ([count#] [count#])))
 
 (defpredsummer [filtered-count [limit]]

@@ -18,8 +18,7 @@
             LocationPropertyValue DataValue ArrayValue TimeSeries
             ModisPixelLocation ModisChunkLocation]
            [java.util ArrayList]
-           [cascading.tuple Fields]
-           [org.apache.hadoop.io BytesWritable]))
+           [cascading.tuple Fields]))
 
 ;; ## Custom File Input
 ;;
@@ -139,30 +138,6 @@
                     :else x)))
        (join "/")))
 
-;; ## BytesWritable Interaction
-;;
-;; For schemes that specifically deal with Hadoop BytesWritable
-;; objects, we provide the following methods to abstract away the
-;; confusing java details. (For example, while a BytesWritable object
-;; wraps a byte array, not all of the bytes returned by the getBytes
-;; method are valid. As mentioned in the
-;; [documentation](http://goo.gl/3qzyc), "The data is only valid
-;; between 0 and getLength() - 1.")
-
-(defn hash-str
-  "Generates a unique identifier for the supplied BytesWritable
-  object. Useful as a filename, when worried about clashes."
-  [^BytesWritable bytes]
-  (-> bytes .hashCode Math/abs str))
-
-(defn get-bytes
-  "Extracts a byte array from a Hadoop BytesWritable object. As
-  mentioned in the [BytesWritable javadoc](http://goo.gl/cjjlD), only
-  the first N bytes are valid, where N = `(.getLength byteswritable)`."
-  [^BytesWritable bytes]
-  (byte-array (.getLength bytes)
-              (.getBytes bytes)))
-
 ;; ## Thrift Wrappers
 
 (defn list-of
@@ -182,6 +157,7 @@
 
 ;; TODO: Add this extract fields business to the protocol below, and
 ;; implement it for this and the forma value extraction.
+
 (defn extract-fields
   "Returns a vector containing the value of the `temp330`, `conf50`,
   `bothPreds` and `count` fields of the supplied `FireTuple` thrift
@@ -376,9 +352,8 @@ together each entry in the supplied sequence of `FormaValue`s."
   within bottom (inclusive) and top (exclusive). For example:
 
     (trim-struct 0 2 0 [1 2 3]) => (to-struct [0 1 2])"
-  [bottom top x0 seq]
-  (->> seq
-       (get-vals)
+  [bottom top x0 xs]
+  (->> (get-vals xs)
        (u/trim-seq bottom top x0)
        (to-struct)))
 
@@ -563,5 +538,6 @@ together each entry in the supplied sequence of `FormaValue`s."
                           data-value
                           t-res)]
     (if date
-      (doto chunk (.setDate date))
+      (doto chunk
+        (.setDate date))
       chunk)))

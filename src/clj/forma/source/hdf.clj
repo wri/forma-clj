@@ -13,14 +13,14 @@
 
 (ns forma.source.hdf
   (:use cascalog.api
-        [forma.reproject :only (spatial-res temporal-res tilestring->hv)]
-        [forma.utils :only (delete-dir)]
-        [cascalog.io :only (temp-dir)])
+        [cascalog.util :only (uuid)]
+        [forma.hadoop.io :only (to-struct)]
+        [forma.reproject :only (spatial-res temporal-res tilestring->hv)])
   (:require [cascalog.ops :as c]
+            [cascalog.io :as io]
             [clojure.set :as set]
-            [forma.hadoop.predicate :as p]
-            [forma.hadoop.io :as hadoop.io]
-            [clojure.java.io :as java.io])
+            [clojure.java.io :as java.io]
+            [forma.hadoop.predicate :as p])
   (:import [org.gdal.gdal gdal Dataset Band]
            [org.gdal.gdalconst gdalconstConstants]))
 
@@ -154,15 +154,15 @@ disk. This byte array is processed with gdal. On teardown, the temp
 directory is destroyed. Function returns the decompressed MODIS file
 as a 1-tuple."
   {:stateful true}
-  ([] (temp-dir "hdf"))
+  ([] (io/temp-dir "hdf"))
   ([tdir stream]
-     (let [bytes (hadoop.io/get-bytes stream)
-           temp-hdf (java.io/file tdir (hadoop.io/hash-str stream))]
-       (do (java.io/copy bytes temp-hdf)
-           (->> (subdataset-names temp-hdf)
-                (filter (dataset-filter to-keep))
-                (map make-subdataset)))))
-  ([tdir] (delete-dir tdir)))
+     (let [bytes    (io/get-bytes stream)
+           temp-hdf (java.io/file tdir (uuid))]
+       (java.io/copy bytes temp-hdf)
+       (->> (subdataset-names temp-hdf)
+            (filter (dataset-filter to-keep))
+            (map make-subdataset))))
+  ([tdir] (io/delete-file-recursively tdir)))
 
 ;; ### Raster Chunking
 ;;
@@ -184,7 +184,7 @@ as a 1-tuple."
     (.ReadRaster band 0 0 width height ret)
     (->> ret
          (partition chunk-size)
-         (map hadoop.io/to-struct)
+         (map to-struct)
          (map-indexed vector))))
 
 ;; ### Metadata Parsing
