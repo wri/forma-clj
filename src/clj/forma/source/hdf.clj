@@ -19,6 +19,7 @@
   (:require [cascalog.ops :as c]
             [cascalog.io :as io]
             [clojure.set :as set]
+            [forma.utils :as u]
             [clojure.java.io :as java.io]
             [forma.hadoop.predicate :as p])
   (:import [org.gdal.gdal gdal Dataset Band]
@@ -122,8 +123,8 @@
   substrings. If we find one, we return the associated key, cast to a
   string -- 'ndvi', for example."
   [^String path]
-  (find-first #(.contains path (% modis-subsets))
-              (keys modis-subsets)))
+  (u/find-first #(.contains path (% modis-subsets))
+                (keys modis-subsets)))
 
 (defn dataset-filter
   "Generates a predicate function that checks a name from the

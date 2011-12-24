@@ -248,7 +248,7 @@
                         --args ~(parse-emr-config base-props)
 
                         --bootstrap-action
-                        s3://reddconfig/bootstrap-actions/redd.sh))))
+                        s3://reddconfig/bootstrap-actions/forma_bootstrap.sh))))
 
 (defn cli-interface
   [parser validator func]

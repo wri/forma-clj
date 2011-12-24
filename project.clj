@@ -16,16 +16,15 @@
                  [incanter/incanter-core "1.3.0-SNAPSHOT"]
                  [clj-time "0.3.3"]
                  [redd/thrift "0.5.0"]
+                 [forma/gdal "1.8.0"]
                  [commons-lang "2.6"]   ;required for thrift
                  [cascalog "1.8.5-SNAPSHOT"]
-                 [backtype/cascading-thrift "0.1.0" :exclusions [backtype/thriftjava]]
+                 [backtype/cascading-thrift "0.1.0"
+                  :exclusions [backtype/thriftjava]]
                  [backtype/dfs-datastores "1.0.5"]
                  [backtype/dfs-datastores-cascading "1.0.5"]]
-  :native-path "lib/ext/native:lib/native:lib/dev/native"
-  :native-dependencies [[org.clojars.sritchie09/gdal-java-native "1.8.0"]]
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
                      [incanter/incanter-charts "1.3.0-SNAPSHOT"]
-                     [redd/native-deps "1.0.7"]
                      [pallet-hadoop "0.3.2"]
                      [org.jclouds.provider/aws-ec2 "1.0.0"]
                      [org.jclouds.driver/jclouds-jsch "1.0.0"]
@@ -40,28 +39,3 @@
         forma.hadoop.jobs.modis
         forma.hadoop.jobs.timeseries
         ])
-
-;; Robert Hooke!
-
-(use '[robert.hooke :only [add-hook]]
-     '[leiningen.deps :only [deps]]
-     '[leiningen.clean :only [clean]]
-     '[leiningen.uberjar :only [uberjar]])
-(require '[leiningen.compile :as c])
-
-(defn append-tasks
-  [target-var & tasks-to-add]
-  (add-hook target-var (fn [target project & args]
-                         (apply target project args)
-                         (doseq [t tasks-to-add]
-                           (t project)))))
-
-;; (prepend-tasks #'deps clean)
-;; (prepend-tasks #'uberjar c/compile)
-
-(try (use '[leiningen.native-deps :only (native-deps)])
-     (when-let [native (resolve 'native-deps)]
-       (append-tasks #'deps @native))
-     (catch java.lang.Exception _
-       (println "Run lein deps again to activate the
-                 required native-deps and compile hooks.")))

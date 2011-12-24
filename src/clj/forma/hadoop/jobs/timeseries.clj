@@ -64,7 +64,7 @@
         (io/mk-chunk ?name ?t-res nil ?pix-location ?timeseries :> ?chunk)
         (:distinct false))))
 
-(def *missing-val* -9999)
+(def ^:dynamic *missing-val* -9999)
 
 (defn tseries-query
   [pail-path datasets]

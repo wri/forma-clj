@@ -1,6 +1,6 @@
 (ns forma.trends.filter
   (:use [forma.utils :only (positions)])
-  (:require  [forma.matrix.utils :only u]
+  (:require  [forma.matrix.utils :as u]
              [incanter.core :as i]))
 
 ;; TODODAN: What does it mean to clean and deseasonalize timeseries?

@@ -27,7 +27,7 @@
   (with-open [reader (java.io/reader (str base-path old-file-name))
               writer (java.io/writer (str base-path new-file-name))]
     (binding [*out* writer]
-      (doseq [line (->> rdr
+      (doseq [line (->> reader
                         (map-indexed (fn [idx line]
                                        (str (- idx num-drop) " " line)))
                         (drop num-drop))]
