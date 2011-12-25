@@ -48,6 +48,7 @@ Added integration for booting spot emr clusters, based on our usual configuratio
 # Line Counting
 
 ```bash
+# This needs Homebrew: http://mxcl.github.com/homebrew/
 brew install cloc
 
 # Source Lines of Code:
