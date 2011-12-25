@@ -11,6 +11,10 @@ lein plugin install lein-marginalia "0.6.1"
 lein plugin install lein-midje "1.0.7"
 ```
 
+## Deploying
+
+See the [forma-deploy](https://github.com/sritchie/forma-deploy) project.
+
 ## Issues and Tasks
 
 For project task management, use the [Pivotal Tracker](https://www.pivotaltracker.com/projects/185565).
