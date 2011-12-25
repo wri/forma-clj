@@ -44,3 +44,15 @@ For project task management, use the [Pivotal Tracker](https://www.pivotaltracke
 # EMR Integration #
 
 Added integration for booting spot emr clusters, based on our usual configurations. I think these will work with gdal as well. This is nice, as it'll give us cluster compute support, and bump the number of machines we can use way up.
+
+# Line Counting
+
+```bash
+brew install cloc
+
+# Source Lines of Code:
+cloc src/ --force-lang="lisp",clj
+
+# Test Lines of Code
+cloc test/ --force-lang="lisp",clj
+```
