@@ -143,12 +143,12 @@
 
 (def plot3
   (doto (c/time-series-plot forma-range
-                      ndvi
-                      :title ""
-                      :x-label ""
-                      :y-label ""
-                      :legend true
-                      :series-label "NDVI")
+                            ndvi
+                            :title ""
+                            :x-label ""
+                            :y-label ""
+                            :legend true
+                            :series-label "NDVI")
     (c/set-stroke-color java.awt.Color/green)))
 
 
@@ -233,21 +233,19 @@
 
 (def plot-breaks
   (doto (c/time-series-plot bfast-range
-                      Yt
-                      :title ""
-                      :x-label ""
-                      :y-label "NDVI Value"
-                      :legend false
-                      :series-label "NDVI")
+                            Yt
+                            :title ""
+                            :x-label ""
+                            :y-label "NDVI Value"
+                            :legend false
+                            :series-label "NDVI")
     (c/set-stroke-color java.awt.Color/BLUE)))
 
-(defn add-deseasonal
-  []
+(defn add-deseasonal []
   (c/add-lines plot-breaks bfast-range
-                Vt))
+               Vt))
 
-(defn add-break
-  []
+(defn add-break []
   (c/add-lines plot-breaks bfast-range
                (:series (mosum-prediction (i/matrix (hp-filter Yt 10))
                                           (i/bind-columns (repeat (count Yt) 1)
