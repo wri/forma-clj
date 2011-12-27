@@ -3,6 +3,7 @@
         [forma.date-time :only (convert)])
   (:require [clojure.string :as s]
             [forma.utils :as utils]
+            [forma.schema :as schema]
             [forma.reproject :as r]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p])
@@ -16,8 +17,15 @@
 ;; the subsets of the total that satisfy certain conditions, such as
 ;; `Temp > 330 Kelvin`, `Confidence > 50`, or both at once. We
 ;; abstract this complication away by wrapping up each of these into a
+;; clojure map. For example:
+;;
+;;    {:temp-330 1
+;;     :conf-50 1
+;;     :both-preds 1
+;;     :count 2}
+;;
 ;; compound value, represented as a `FireTuple` thrift object. We wrap
-;; up collections of `FireTuple` objects in a `FireSeries` thrift
+;; up collections of fire maps into a `FireSeries` thrift
 ;; object.
 
 ;; ### Fire Predicates
@@ -43,7 +51,7 @@
       (p/filtered-count [330] ?kelvin :> ?temp-330)
       (p/filtered-count [50] ?conf :> ?conf-50)
       (p/bi-filtered-count [50 330] ?conf ?kelvin :> ?both-preds)
-      (io/fire-tuple ?temp-330 ?conf-50 ?both-preds ?count :> ?tuple)))
+      (schema/fire-value ?temp-330 ?conf-50 ?both-preds ?count :> ?tuple)))
 
 ;; ## Fire Queries
 
@@ -90,6 +98,5 @@
       (src ?dataset ?date ?t-res ?lat ?lon ?tuple)
       (r/latlon->modis ?m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
       (io/pixel-location ?m-res ?mod-h ?mod-v ?sample ?line :> ?location)
-      (io/mk-data-value ?tuple :> ?data-val)
-      (io/mk-chunk ?dataset ?t-res ?date ?location ?data-val :> ?datachunk)
+      (io/mk-chunk ?dataset ?t-res ?date ?location ?tuple :> ?datachunk)
       (:distinct false)))

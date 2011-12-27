@@ -31,47 +31,27 @@
   [line]
   (s/split line re))
 
-;; TODO: Note that this currently forces int-structs on everything. Do
-;; we want to have some way to choose?
 (defn liberate
   "Takes a line with an index as the first value and numbers as the
   rest, and converts it into a 2-tuple formatted as `[idx, row-vals]`,
-  where `row-vals` are sealed inside an instance of
-  `forma.schema.IntArray`.
+  where `row-vals` are sealed inside a clojure vector.
 
   Example usage:
 
     (liberate \"1 12 13 14 15\")
-    ;=> [1 #<IntArray IntArray(ints:[12, 13, 14, 15])>"
+    ;=> [1 [12 13 14 15]]"
   [line]
   (let [[idx & row-vals] (map u/read-numbers
                               (s/split line #"\s+"))]
-    [idx (io/int-struct row-vals)]))
+    [idx (vec row-vals)]))
 
-(defmapop [window->array [type]]
-  "Converts nested clojure vectors into an array of the
-  supplied type. For example:
+(defmapop flatten-window
+  "Flattens a window of nested clojure vectors into a single
+  vector. For example:
 
-    (window->array [Integer/TYPE] ?chunk :> ?int-chunk)
-
-  flattens the chunk and returns an integer array."
+    (flatten-window ?chunk :> ?vector)"
   [window]
-  [(into-array type (flatten window))])
-
-(defmapop [window->struct [type]]
-  "Converts a window of nested clojure vectors into an Thrift
-  struct object designed to hold numbers of the supplied
-  type. Supported types are `:int` and `:double`. For example:
-
-    (window->struct [:int] ?chunk :> ?int-chunk)
-
-  flattens the chunk and returns an instance of
-  `forma.schema.IntArray`."
-  [window]
-  (let [wrap (case type
-               :double io/double-struct
-               :int io/int-struct)]
-    [(-> window flatten wrap)]))
+  [(into [] (flatten window))])
 
 ;; #### Defmapcatops
 
@@ -116,11 +96,11 @@
 (defpredsummer full-count
   [val] identity)
 
-(defmapcatop struct-index
-  [idx-0 struct]
+(defmapcatop index
+  [idx-0 xs]
   (map-indexed (fn [idx val]
                  [(+ idx idx-0) val])
-               (io/get-vals struct)))
+               xs))
 
 
 ;; ### Predicate Macros
@@ -138,14 +118,13 @@
   (<- [?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val]
       ((c/juxt #'io/extract-chunk-value
                #'io/extract-location) ?chunk :> ?static-chunk ?location)
-      (struct-index 0 ?static-chunk :> ?pix-idx ?val)
+      (index 0 ?static-chunk :> ?pix-idx ?val)
       (io/expand-pos ?location ?pix-idx :> ?s-res ?mod-h ?mod-v ?sample ?line)))
 
 (defn chunkify [chunk-size]
   (<- [?dataset !date ?s-res ?t-res ?mh ?mv ?chunkid ?chunk :> ?datachunk]
       (io/chunk-location ?s-res ?mh ?mv ?chunkid chunk-size :> ?location)
-      (io/mk-data-value ?chunk :> ?data-val)
-      (io/mk-chunk ?dataset ?t-res !date ?location ?data-val :> ?datachunk)))
+      (io/mk-chunk ?dataset ?t-res !date ?location ?chunk :> ?datachunk)))
 
 (def break
   "Takes a source of textlines representing rows of a gridded
@@ -153,7 +132,7 @@
   source of `row`, `col` and `val`."
   (<- [?line :> ?row ?col ?val]
       (liberate ?line :> ?row ?row-struct)
-      (struct-index 0 ?row-struct :> ?col ?val)))
+      (index 0 ?row-struct :> ?col ?val)))
 
 (defn vals->sparsevec
   "Returns an aggregating predicate macro that stitches values into a

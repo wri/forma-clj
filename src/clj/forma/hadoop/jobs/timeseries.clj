@@ -7,6 +7,7 @@
             [forma.reproject :as r]
             [forma.date-time :as date]
             [forma.hadoop.pail :as pail]
+            [forma.schema :as schema]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]))
 
@@ -14,23 +15,19 @@
   "Takes in a number of `<t-period, modis-chunk>` tuples,
   sorted by time period, and transposes these into (n = chunk-size)
   4-tuples, formatted as `<pixel-idx, start, end, t-series>`, where
-  the `t-series` field is represented by an instance of
-  `forma.schema.DoubleArray`.
+  the `t-series` field is represented by a vector.
 
   Entering chunks should be sorted by `t-period` in ascending
-  order. `modis-chunk` tuple fields must be vectors or instances of
-  `forma.schema.DoubleArray` or `forma.schema.IntArray`, as dictated
-  by the Thriftable interface in `forma.hadoop.io`."
+  order. `modis-chunk` tuple fields must be vectors."
   [tuples]
   (let [[periods [val]] (apply map vector tuples)
         [fp lp] ((juxt first peek) periods)
-        missing-struct (io/to-struct (repeat (io/count-vals val) missing-val))
-        chunks (sparse-expander missing-struct tuples :start fp)
+        missing-vec (into [] (repeat (count val) missing-val))
+        chunks (sparse-expander missing-vec tuples :start fp)
         tupleize (comp (partial vector fp lp)
-                       io/to-struct
+                       vec
                        vector)]
     (->> chunks
-         (map io/get-vals)
          (apply map tupleize)
          (map-indexed cons))))
 
@@ -53,11 +50,11 @@
   (let [mk-tseries (form-tseries missing-val)
         series-src (<- [?name ?t-res ?location ?pix-idx ?timeseries]
                        (chunk-source _ ?chunk)
-                       (io/extract-ts-data ?chunk :> ?name ?t-res ?date ?location ?datachunk)
-                       (mk-tseries ?t-res ?date ?datachunk :> ?pix-idx ?start ?end ?tseries)
-                       (io/mk-array-value ?tseries :> ?series-val)
-                       ((c/comp #'io/mk-data-value
-                                #'io/timeseries-value) ?start ?end ?series-val :> ?timeseries))]
+                       (io/extract-ts-data ?chunk
+                                           :> ?name ?t-res ?date ?location ?datachunk)
+                       (mk-tseries ?t-res ?date ?datachunk
+                                   :> ?pix-idx ?start ?end ?tseries)
+                       (schema/timeseries-value ?start ?end ?tseries :> ?timeseries))]
     (<- [?chunk]
         (series-src ?name ?t-res ?location ?pix-idx ?timeseries)
         (io/chunkloc->pixloc ?location ?pix-idx :> ?pix-location)
@@ -86,17 +83,17 @@
   " Aggregates a number of firetuples by adding up the values
   of each `FireTuple` property."
   ([] [0 0 0 0])
-  ([state tuple] (map + state (io/extract-fields tuple)))
-  ([state] [(apply io/fire-tuple state)]))
+  ([state tuple] (map + state (schema/extract-fields tuple)))
+  ([state] [(apply schema/fire-value state)]))
 
 
 (defmapop running-fire-sum
   "Special case of `running-sum` for `FireTuple` thrift objects."
   [start tseries]
-  (let [empty (io/fire-tuple 0 0 0 0)]
+  (let [empty (schema/fire-value 0 0 0 0)]
     (->> tseries
-         (running-sum [] empty io/add-fires)
-         (io/fire-series start))))
+         (running-sum [] empty schema/add-fires)
+         (schema/timeseries-value start))))
 
 (defn aggregate-fires
   "Converts the datestring into a time period based on the supplied
@@ -117,14 +114,13 @@
   [src t-res start end]
   (let [[start end]     (map (partial date/datetime->period t-res) [start end])
         length          (inc (- end start))
-        mk-fire-tseries (p/vals->sparsevec start length (io/fire-tuple 0 0 0 0))
+        mk-fire-tseries (p/vals->sparsevec start length (schema/fire-value 0 0 0 0))
         series-src      (aggregate-fires src t-res)
         query (<- [?name ?location ?fire-series]
                   (series-src ?name ?datestring ?location ?tuple)
                   (date/datetime->period t-res ?datestring :> ?tperiod)
                   (mk-fire-tseries ?tperiod ?tuple :> _ ?tseries)
-                  ((c/comp #'io/mk-data-value
-                           running-fire-sum) start ?tseries :> ?fire-series))]
+                  (running-fire-sum start ?tseries :> ?fire-series))]
     (<- [?chunk]
         (query ?name ?location ?fire-series)
         (io/mk-chunk ?name t-res nil ?location ?fire-series :> ?chunk))))

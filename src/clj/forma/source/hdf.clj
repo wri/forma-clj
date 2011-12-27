@@ -14,14 +14,13 @@
 (ns forma.source.hdf
   (:use cascalog.api
         [cascalog.util :only (uuid)]
-        [forma.hadoop.io :only (to-struct)]
         [forma.reproject :only (spatial-res temporal-res tilestring->hv)])
-  (:require [cascalog.ops :as c]
-            [cascalog.io :as io]
-            [clojure.set :as set]
+  (:require [clojure.set :as set]
             [forma.utils :as u]
-            [clojure.java.io :as java.io]
-            [forma.hadoop.predicate :as p])
+            [forma.hadoop.predicate :as p]
+            [cascalog.ops :as c]
+            [cascalog.io :as io]
+            [clojure.java.io :as java.io])
   (:import [org.gdal.gdal gdal Dataset Band]
            [org.gdal.gdalconst gdalconstConstants]))
 
@@ -171,10 +170,9 @@ as a 1-tuple."
 ;;number of datasets processed.
 
 (defmapcatop [raster-chunks [chunk-size]]  
-  "Unpacks the data inside of a MODIS band and partitions it
-  into chunks sized according to the supplied value. Specifically,
-  returns a lazy sequence of 2-tuples of the form `[chunk-index,
-  forma.schema.IntArray]`."
+  "Unpacks the data inside of a MODIS band and partitions it into
+  chunks sized according to the supplied value. Specifically, returns
+  a lazy sequence of 2-tuples of the form `[chunk-index, vector]`."
   [^Dataset data]
   (let [^Band band (.GetRasterBand data 1)
         width (.GetXSize band)
@@ -183,8 +181,8 @@ as a 1-tuple."
     (.ReadRaster band 0 0 width height ret)
     (->> ret
          (partition chunk-size)
-         (map to-struct)
-         (map-indexed vector))))
+         (map-indexed (fn [idx xs]
+                        [idx (vec xs)])))))
 
 ;; ### Metadata Parsing
 ;;
@@ -257,5 +255,6 @@ of a MODIS TileID acts as a key to retrieve this data."
         (meta-values [keys] ?freetile :> ?productname ?tileid ?date)
         (split-id ?tileid :> ?mod-h ?mod-v)
         ((c/juxt #'spatial-res #'temporal-res) ?productname :> ?s-res ?t-res)
-        (chunkifier ?dataset ?date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk)
+        (chunkifier ?dataset ?date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk
+                    :> ?datachunk)
         (:distinct false))))

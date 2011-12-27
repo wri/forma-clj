@@ -4,6 +4,7 @@
         [forma.source.tilesets :only (tile-set)]
         [forma.hadoop.pail :only (?pail- split-chunk-tap)])
   (:require [cascalog.ops :as c]
+            [forma.utils :only (throw-illegal)]
             [forma.reproject :as r]
             [forma.trends.stretch :as stretch]
             [forma.hadoop.io :as io]
@@ -15,9 +16,9 @@
   (hfs-textline "s3n://modisfiles/ascii/admin-map.csv"))
 
 (defn static-tap
-  "Accepts a source of DataChunks containing DoubleArrays or IntArrays
-  as values, and returns a new query with all relevant spatial
-  information plus the actual value."
+  "Accepts a source of DataChunks containing vectors as values, and
+  returns a new query with all relevant spatial information plus the
+  actual value."
   [chunk-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?val]
       (chunk-src _ ?chunk)
@@ -91,35 +92,32 @@
   [ts-pail-path s-res base-t-res t-res country-seq]
   (let [extracter (c/juxt #'io/extract-location
                           #'io/extract-chunk-value)
-        combiner (c/comp #'io/mk-data-value
-                         #'stretch/ts-expander)
         precl-tap (constrained-tap ts-pail-path "precl" s-res base-t-res country-seq)]
     (if (= t-res base-t-res)
       precl-tap
       (<- [?path ?final-chunk]
           (precl-tap ?path ?chunk)
           (extracter ?chunk :> ?location ?series)
-          (combiner base-t-res t-res ?series :> ?new-series)
+          (stretch/ts-expander base-t-res t-res ?series :> ?new-series)
           (io/swap-data ?chunk ?new-series :> ?swapped-chunk)
           (io/set-temporal-res ?swapped-chunk t-res :> ?final-chunk)))))
 
 (defn process-forma
   [pail-path ts-pail-path out-path run-key country-seq]
   (let [{:keys [s-res t-res] :as forma-map} (forma-run-parameters run-key)]
-    (if-not forma-map
-      (throw (IllegalArgumentException. (str run-key " is not a valid run key!")))
-      (?- (hfs-seqfile out-path :sinkmode :replace)
-          (forma/forma-query forma-map
-                             (constrained-tap ts-pail-path "ndvi" s-res t-res country-seq)
-                             (adjusted-precl-tap ts-pail-path s-res "32" t-res country-seq)
-                             (constrained-tap pail-path "vcf" s-res "00" country-seq)
-                             (country-tap (constrained-tap pail-path "gadm" s-res "00" country-seq)
-                                          convert-line-src)
-                             (tseries/fire-query pail-path
-                                                 t-res
-                                                 "2000-11-01"
-                                                 "2011-06-01"
-                                                 country-seq))))))
+    (assert forma-map (str run-key " is not a valid run key!"))
+    (?- (hfs-seqfile out-path :sinkmode :replace)
+        (forma/forma-query forma-map
+                           (constrained-tap ts-pail-path "ndvi" s-res t-res country-seq)
+                           (adjusted-precl-tap ts-pail-path s-res "32" t-res country-seq)
+                           (constrained-tap pail-path "vcf" s-res "00" country-seq)
+                           (country-tap (constrained-tap pail-path "gadm" s-res "00" country-seq)
+                                        convert-line-src)
+                           (tseries/fire-query pail-path
+                                               t-res
+                                               "2000-11-01"
+                                               "2011-06-01"
+                                               country-seq)))))
 
 ;; TODO: Note that if we go from tap to tap, we have no reducers
 ;; involved.

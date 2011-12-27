@@ -5,6 +5,7 @@
             [forma.reproject :as r]
             [forma.date-time :as date]
             [forma.hadoop.io :as io]
+            [forma.schema :as schema]
             [forma.hadoop.predicate :as p]
             [forma.trends.analysis :as a]))
 
@@ -15,11 +16,8 @@
   (let [ts-start  (io/get-start-idx ts-series)
         new-start (date/datetime->period t-res est-start)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
-    [(->> (io/get-vals ts-series)
-          (a/collect-short-trend start end long-block window)
-          io/to-struct
-          io/mk-array-value
-          (io/timeseries-value new-start))]))
+    [(a/collect-short-trend start end long-block window ts-series)
+     (schema/timeseries-value new-start)]))
 
 (defn long-trend-shell
   "a wrapper that takes a map of options and attributes of the input
@@ -29,12 +27,8 @@
   (let [ts-start    (io/get-start-idx ts-series)
         new-start   (date/datetime->period t-res est-start)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
-    (->> (a/collect-long-trend start end
-                               (io/get-vals ts-series)
-                               (map io/get-vals cofactors))
-         (apply map (comp (partial io/timeseries-value new-start)
-                          io/mk-array-value
-                          io/to-struct
+    (->> (a/collect-long-trend start end ts-series cofactors)
+         (apply map (comp (partial schema/timeseries-value new-start)
                           vector)))))
 
 (defn fire-tap
@@ -97,7 +91,7 @@
                          ?long-series
                          ?t-stat-series :> ?forma-series)
         (io/get-start-idx ?short-series :> ?start)
-        (p/struct-index ?start ?forma-series :> ?period ?forma-val)
+        (p/index ?start ?forma-series :> ?period ?forma-val)
         (:distinct false))))
 
 ;; TODO: Filter identity, instead of complement nil
