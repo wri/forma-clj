@@ -6,9 +6,7 @@
             [forma.hadoop.io :as io]
             [clojure.string :as s]
             [cascalog.ops :as c]
-            [cascalog.vars :as v])
-  (:import [org.apache.hadoop.mapred JobConf]
-           [cascalog Util]))
+            [cascalog.vars :as v]))
 
 ;; ### Cascalog Helpers
 
@@ -176,47 +174,18 @@
 
 ;; ### Generators
 
-;; TODO: write a macro that generalizes this business. We can take
-;; bindings like doseq and get it DONE.
-
-(defn lazy-generator
-  "Returns a cascalog generator on the supplied sequence of
-  tuples. `lazy-generator` serializes each item in the lazy sequence
-  into a sequencefile located at the supplied temporary directory, and
-  returns a tap into its guts.
-
-I recommend wrapping queries that use this tap with
-`cascalog.io/with-fs-tmp`; for example,
-
-    (with-fs-tmp [_ tmp-dir]
-      (let [lazy-tap (pixel-generator tmp-dir lazy-seq)]
-      (?<- (stdout)
-           [?field1 ?field2 ... etc]
-           (lazy-tap ?field1 ?field2)
-           ...)))"
-  [tmp-path lazy-seq]
-  {:pre [(coll? (first lazy-seq))]}
-  (let [tap (:sink (hfs-seqfile tmp-path))
-        n-fields (count (first lazy-seq))]
-    (with-open [collector (.openForWrite tap (JobConf.))]
-      (doseq [item lazy-seq]
-        (.add collector (Util/coerceToTuple item))))
-    (name-vars tap (v/gen-non-nullable-vars n-fields))))
-
 (defn pixel-generator
   "Returns a cascalog generator that produces every pixel combination
   for the supplied sequence of tiles, given the supplied
   resolution. `pixel-generator` stages each tuple into a sequence file
-  located at `tmp-dir`. See `forma.hadoop.predicate/lazy-generator`
+  located at `tmp-dir`. See `cascalog.ops/lazy-generator`
   for usage advice."
   [tmp-path res tileseq]
-  (let [tap (:sink (hfs-seqfile tmp-path))]
-    (with-open [collector (.openForWrite tap (JobConf.))]
-      (doseq [[h v] tileseq
-              s (range (pixels-at-res res))
-              l (range (pixels-at-res res))]
-        (.add collector (Util/coerceToTuple [h v s l]))))
-    (name-vars tap (v/gen-non-nullable-vars 4))))
+  (->> (for [[h v]  tileseq
+             sample (range (pixels-at-res res))
+             line   (range (pixels-at-res res))]
+         [h v s l])
+       (c/lazy-generator tmp-path)))
 
 ;; ### Special Functions
 

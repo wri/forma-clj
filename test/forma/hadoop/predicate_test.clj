@@ -2,20 +2,23 @@
   (:use [forma.hadoop.predicate] :reload)
   (:use forma.testing
         cascalog.api
-        [midje sweet cascalog]))
+        [cascalog.ops :only (lazy-generator)]
+        [midje sweet cascalog])
+  (:require [cascalog.io :as io]))
 
 ;; Generates combinations of `mod-h`, `mod-v`, `sample` and `line` for
 ;; use in buffers.
 
 (defn pixel-tap [xs]
-  (name-vars (vec xs) ["?mh" "?mv" "?s" "?l" "?v"]))
+  (name-vars (vec xs)
+             ["?mh" "?mv" "?s" "?l" "?v"]))
 
 (fact "swap-syms test."
   (swap-syms (pixel-tap [[0 0 0 0 370 0]])
              ["?mh" "?s"]
              ["?a" "?b"]) => ["?a" "?mv" "?b" "?l" "?v"])
 
-(cascalog.io/with-fs-tmp [_ tmp]
+(io/with-fs-tmp [_ tmp]
   (tabular
    (fact?- "Tests of generation off of a series of sequences, be they
             data structure or lazy."
