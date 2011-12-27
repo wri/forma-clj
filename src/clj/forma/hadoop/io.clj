@@ -5,18 +5,11 @@
 ;; abstraction.
 
 (ns forma.hadoop.io
-  (:use cascalog.api
-        forma.schema
+  (:use forma.schema
         [clojure.string :only (join)])
   (:require [cascalog.workflow :as w]
-            [forma.utils :as u]
-            [forma.reproject :as r]
-            [forma.date-time :as date])
+            [forma.reproject :as r])
   (:import [forma WholeFile]
-           [forma.schema FireSeries FormaValue  DataChunk LocationProperty
-            LocationPropertyValue DataValue TimeSeries
-            ModisPixelLocation ModisChunkLocation]
-           [java.util ArrayList]
            [cascading.tuple Fields]))
 
 ;; ## Custom File Input
