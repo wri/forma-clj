@@ -53,7 +53,7 @@
   (let [mk-tseries (form-tseries missing-val)
         series-src (<- [?name ?t-res ?location ?pix-idx ?timeseries]
                        (chunk-source _ ?chunk)
-                       (io/unpack-chunk-val ?chunk
+                       (schema/unpack-chunk-val ?chunk
                                             :> ?name ?t-res ?date ?location ?datachunk)
                        (mk-tseries ?t-res ?date ?datachunk
                                    :> ?pix-idx ?start ?end ?tseries)
