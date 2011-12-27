@@ -1,5 +1,29 @@
 (ns forma.schema)
 
+;; ## Time Series
+
+(defn timeseries-value
+  ([start-idx series]
+     (let [elems (count series)]
+       (timeseries-value start
+                         (dec (+ start elems))
+                         series)))
+  ([start-idx end-idx series]
+     (when series
+       {:start-idx start
+        :end-idx   end
+        :series    series})))
+
+(defn adjust-timeseries
+  "Takes in any number of thrift TimeSeries objects, and returns a new
+  sequence of appropriately truncated TimeSeries objects."
+  [& tseries]
+  (let [[start & ts-seq] (->> tseries
+                              (mapcat (juxt :start-idx :series))
+                              (apply adjust))]
+    (map (partial timeseries-value start)
+         ts-seq)))
+
 ;; ### Fire Values
 
 (def example-fire-value
@@ -27,16 +51,18 @@
   [& f-tuples]
   (apply merge-with + f-tuples))
 
-;; # Compound Objects
+(defn adjust-fires
+  "Returns the section of fires data found appropriate based on the
+  information in the estimation parameter map."
+  [{:keys [est-start est-end t-res]} ^FireSeries f-series]
+  (let [f-start (.getStartIdx f-series)
+        [start end] (for [pd [est-start est-end]]
+                      (date/datetime->period "32" pd))]
+    [(->> (get-vals f-series)
+          (u/trim-seq start (inc end) f-start)
+          (timeseries-value start))]))
 
-;; Replacing FormaValue:
-;;
-;; struct FormaValue {
-;;   1: FireTuple fireValue;
-;;   2: double shortDrop;
-;;   3: double longDrop;
-;;   4: double tStat;
-;; }
+;; # Compound Objects
 
 (def example-forma-value
   {:fire-value "fire value."
@@ -134,32 +160,51 @@
            k330-n c50-n ck-n fire-n
            ct short-mean short-min long-mean long-min t-mean t-min])))
 
+;; ## Location
 
-;; ## Time Series
+(defn chunk-location
+  [s-res mod-h mod-v idx size]
+  {:spatial-res "Spatial resolution (modis)"
+   :mod-h "horizontal modis coordinate."
+   :mod-v "Vertical modis coordinate."
+   :index "Chunk index within the modis tile."
+   :size  "Number of pixels in the chunk."})
 
-(defn timeseries-value
-  ([start-idx series]
-     (let [elems (count series)]
-       (timeseries-value start
-                         (dec (+ start elems))
-                         series)))
-  ([start-idx end-idx series]
-     (when series
-       {:start-idx start
-        :end-idx   end
-        :series    series})))
+(defn pixel-location
+  [s-res mh mv sample line]
+  {:spatial-res "Spatial resolution (modis)"
+   :mod-h "horizontal modis coordinate."
+   :mod-v "Vertical modis coordinate."
+   :sample "Sample (column) within modis tile."
+   :line  "Line (row) within modis tile."})
 
-;; struct FireSeries {
-;;   1: i32 startIdx
-;;   2: i32 endIdx;
-;;   3: list<FireTuple> values
-;; }
+;; TODO: Get rid of this puppy.
+(defn unpack-location
+  [^DataChunk chunk]
+  (-> chunk
+      .getLocationProperty
+      .getProperty
+      .getFieldValue))
 
-;; struct TimeSeries {
-;;   1: i32 startIdx
-;;   2: i32 endIdx;
-;;   3: ArrayValue series;
-;; }
+;; ## Data Chunks
+
+(defn chunk-value
+  [dataset t-res date location data-value]
+  (let [chunk {:temporal-res t-res
+               :location     location
+               :dataset      dataset
+               :value        data-value}]
+    (if-not date
+      chunk
+      (assoc chunk :date date))))
+
+(defn unpack-chunk-val
+  "Used by timeseries. Returns `[dataset-name t-res date collection]`,
+   where collection is a vector."
+  [chunk]
+  (map chunk [:dataset :temporal-res :date :location :value]))
+
+
 
 ;; union DataValue {
 ;;   1: i32 intVal;
@@ -203,3 +248,5 @@
 ;;   4: string temporalRes;
 ;;   5: optional string date;
 ;; }
+
+

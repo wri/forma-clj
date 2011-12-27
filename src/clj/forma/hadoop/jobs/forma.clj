@@ -13,7 +13,7 @@
   "a wrapper to collect the short-term trends into a form that can be
   manipulated from within cascalog."
   [{:keys [est-start est-end t-res long-block window]} ts-series]
-  (let [ts-start  (io/get-start-idx ts-series)
+  (let [ts-start  (:start-idx ts-series)
         new-start (date/datetime->period t-res est-start)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
     [(a/collect-short-trend start end long-block window ts-series)
@@ -24,7 +24,7 @@
   time-series (and cofactors) to extract the long-term trends and
   t-statistics from the time-series."
   [{:keys [est-start est-end t-res long-block window]} ts-series & cofactors]
-  (let [ts-start    (io/get-start-idx ts-series)
+  (let [ts-start    (:start-idx ts-series)
         new-start   (date/datetime->period t-res est-start)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
     (->> (a/collect-long-trend start end ts-series cofactors)
@@ -37,28 +37,25 @@
   [est-map fire-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?fire-series]
       (fire-src ?chunk)
-      ((c/juxt #'io/extract-location
-               #'io/extract-chunk-value) ?chunk :> ?location ?f-series)
+      (map ?chunk [:location :value] :> ?location ?f-series)
       (io/get-pos ?location :> ?s-res ?mod-h ?mod-v ?sample ?line)
-      (io/adjust-fires est-map ?f-series :> ?fire-series)))
+      (schema/adjust-fires est-map ?f-series :> ?fire-series)))
 
 (defn dynamic-filter
   "Returns a new generator of ndvi and rain timeseries obtained by
   filtering out all pixels with VCF less than the supplied
   `vcf-limit`."
   [vcf-limit ndvi-src rain-src vcf-src]
-  (let [extracter (c/juxt #'io/extract-location
-                          #'io/extract-chunk-value)]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?ndvi-series ?precl-series]
-        (ndvi-src _ ?ndvi-chunk)
-        (rain-src _ ?rain-chunk)
-        (vcf-src _ ?vcf-chunk)
-        (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
-        (extracter ?ndvi-chunk :> ?location ?n-series)
-        (extracter ?rain-chunk :> ?location ?r-series)
-        (io/get-pos ?location :> ?s-res ?mod-h ?mod-v ?sample ?line)
-        (io/adjust-timeseries ?r-series ?n-series :> ?precl-series ?ndvi-series)
-        (>= ?vcf vcf-limit))))
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?ndvi-series ?precl-series]
+      (ndvi-src _ ?ndvi-chunk)
+      (rain-src _ ?rain-chunk)
+      (vcf-src _ ?vcf-chunk)
+      (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
+      (map ?ndvi-chunk [:location :value] :> ?location ?n-series)
+      (map ?rain-chunk [:location :value] :> ?location ?r-series)
+      (io/get-pos ?location :> ?s-res ?mod-h ?mod-v ?sample ?line)
+      (schema/adjust-timeseries ?r-series ?n-series :> ?precl-series ?ndvi-series)
+      (>= ?vcf vcf-limit)))
 
 (defn dynamic-tap
   "Accepts an est-map, and sources for ndvi and rain timeseries and
@@ -90,7 +87,7 @@
                          ?short-series
                          ?long-series
                          ?t-stat-series :> ?forma-series)
-        (io/get-start-idx ?short-series :> ?start)
+        (get ?short-series :start-idx :> ?start)
         (p/index ?start ?forma-series :> ?period ?forma-val)
         (:distinct false))))
 

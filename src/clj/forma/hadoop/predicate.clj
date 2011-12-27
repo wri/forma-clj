@@ -3,6 +3,7 @@
         [forma.matrix.utils :only (sparse-expander matrix-of)]
         [forma.reproject :only (pixels-at-res)])
   (:require [forma.utils :as u]
+            [forma.schema :as schema]
             [forma.hadoop.io :as io]
             [clojure.string :as s]
             [cascalog.ops :as c]
@@ -116,15 +117,14 @@
 
 (def blossom-chunk
   (<- [?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val]
-      ((c/juxt #'io/extract-chunk-value
-               #'io/extract-location) ?chunk :> ?static-chunk ?location)
+      (map ?chunk [:location :value] :> ?location ?static-chunk)
       (index 0 ?static-chunk :> ?pix-idx ?val)
       (io/expand-pos ?location ?pix-idx :> ?s-res ?mod-h ?mod-v ?sample ?line)))
 
 (defn chunkify [chunk-size]
   (<- [?dataset !date ?s-res ?t-res ?mh ?mv ?chunkid ?chunk :> ?datachunk]
-      (io/chunk-location ?s-res ?mh ?mv ?chunkid chunk-size :> ?location)
-      (io/mk-chunk ?dataset ?t-res !date ?location ?chunk :> ?datachunk)))
+      (schema/chunk-location ?s-res ?mh ?mv ?chunkid chunk-size :> ?location)
+      (schema/chunk-value ?dataset ?t-res !date ?location ?chunk :> ?datachunk)))
 
 (def break
   "Takes a source of textlines representing rows of a gridded

@@ -90,17 +90,16 @@
   "Document... returns a tap that adjusts for the incoming
   resolution."
   [ts-pail-path s-res base-t-res t-res country-seq]
-  (let [extracter (c/juxt #'io/extract-location
-                          #'io/extract-chunk-value)
-        precl-tap (constrained-tap ts-pail-path "precl" s-res base-t-res country-seq)]
+  (let [precl-tap (constrained-tap ts-pail-path "precl" s-res base-t-res country-seq)]
     (if (= t-res base-t-res)
       precl-tap
       (<- [?path ?final-chunk]
           (precl-tap ?path ?chunk)
-          (extracter ?chunk :> ?location ?series)
+          (map ?chunk [:location :value] :> ?location ?series)
           (stretch/ts-expander base-t-res t-res ?series :> ?new-series)
-          (io/swap-data ?chunk ?new-series :> ?swapped-chunk)
-          (io/set-temporal-res ?swapped-chunk t-res :> ?final-chunk)))))
+          (assoc ?chunk
+            :value ?new-series
+            :temporal-res t-res :> ?final-chunk)))))
 
 (defn process-forma
   [pail-path ts-pail-path out-path run-key country-seq]
@@ -186,7 +185,7 @@
   (<- [?gadm ?date ?avg-rain]
       (rain-src _ ?rain-chunk)
       (gadm-src _ ?gadm-chunk)
-      (io/extract-date ?rain-chunk :> ?date)
+      (get ?rain-chunk :date :> ?date)
       (p/blossom-chunk ?rain-chunk :> _ ?mod-h ?mod-v ?sample ?line ?rain)
       (p/blossom-chunk ?gadm-chunk :> _ ?mod-h ?mod-v ?sample ?line ?gadm)
       (c/avg ?rain :> ?avg-rain)))
@@ -201,7 +200,7 @@
   [ts-pail-path output-path dataset position-seq]
   (let [positions (vec (read-string position-seq))
         src (split-chunk-tap ts-pail-path [dataset])
-        extracter (c/comp #'io/get-pos #'io/extract-location)]
+        extracter (c/comp #'io/get-pos #'schema/unpack-location)]
     (?<- (hfs-seqfile output-path)
          [?ts-chunk]
          (src _ ?ts-chunk)

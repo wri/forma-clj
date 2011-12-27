@@ -108,7 +108,7 @@
 ;; [here](http://goo.gl/uIEzu).
 ;;
 ;; GlobHfs is activated through the `:source-pattern` argument to one
-;; of the hfs- taps.
+;; of the hfs-* taps.
 
 (defn tiles->globstring
   [& tiles]
@@ -189,56 +189,6 @@
 
 ;; ## DataValue Generation
 
-(defn chunk-location
-  [s-res mod-h mod-v idx size]
-  (->> (ModisChunkLocation. s-res mod-h mod-v idx size)
-       LocationPropertyValue/chunkLocation
-       LocationProperty.))
-
-(defn pixel-location
-  [s-res mh mv sample line]
-  (->> (ModisPixelLocation. s-res mh mv sample line)
-       LocationPropertyValue/pixelLocation
-       LocationProperty.))
-
-(defn get-start-idx [^TimeSeries ts]
-  (.getStartIdx ts))
-
-(defn get-location-property
-  [^DataChunk chunk]
-  (.getLocationProperty chunk))
-
-(defn extract-location
-  [^DataChunk chunk]
-  (-> chunk
-      .getLocationProperty
-      .getProperty
-      .getFieldValue))
-
-(defn extract-chunk-value
-  [^DataChunk chunk]
-  (-> chunk
-      .getChunkValue
-      .getFieldValue))
-
-(defn extract-dataset
-  [^DataChunk chunk]
-  (.getDataset chunk))
-
-(defn extract-date
-  [^DataChunk chunk]
-  (.getDate chunk))
-
-(defn extract-ts-data
-  "Used by timeseries. Returns `[dataset-name t-res date collection]`,
-   where collection is a vector."
-  [^DataChunk chunk]
-  [(extract-dataset chunk)
-   (.getTemporalRes chunk)
-   (extract-date chunk)
-   (extract-location chunk)
-   (extract-chunk-value chunk)])
-
 (defn get-pos
   [^ModisPixelLocation loc]
   [(.getResolution loc)
@@ -262,51 +212,3 @@
   "Used by timeseries for conversion."
   [loc pix-idx]
   (apply pixel-location (expand-pos loc pix-idx)))
-
-;; The following are used in timeseries.
-(defn swap-location
-  [^DataChunk chunk location]
-  (doto chunk (.setLocationProperty location)))
-
-(defn swap-data
-  [^DataChunk chunk data-value]
-  (doto chunk (.setChunkValue data-value)))
-
-(defn set-date
-  [^DataChunk chunk date]
-  (doto chunk (.setDate date)))
-
-(defn set-temporal-res
-  [^DataChunk chunk t-res]
-  (doto chunk (.setTemporalRes t-res)))
-
-(defn adjust-timeseries
-  "Takes in any number of thrift TimeSeries objects, and returns a new
-  sequence of appropriately truncated TimeSeries objects."
-  [& tseries]
-  (let [[start & ts-seq] (->> tseries
-                              (mapcat (juxt :start-idx :series))
-                              (apply adjust))]
-    (map (partial timeseries-value start)
-         ts-seq)))
-
-(defn adjust-fires
-  "Returns the section of fires data found appropriate based on the
-  information in the estimation parameter map."
-  [{:keys [est-start est-end t-res]} ^FireSeries f-series]
-  (let [f-start (.getStartIdx f-series)
-        [start end] (for [pd [est-start est-end]]
-                      (date/datetime->period "32" pd))]
-    [(->> (: f-series)
-          (u/trim-seq start (inc end) f-start)
-          (timeseries-value start))]))
-
-(defn mk-chunk
-  [dataset t-res date location data-value]
-  (let [chunk {:temporal-res t-res
-               :location     location
-               :dataset      dataset
-               :value        data-value}]
-    (if-not date
-      chunk
-      (assoc chunk :date date))))

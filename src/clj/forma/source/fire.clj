@@ -97,6 +97,6 @@
       (p/add-fields m-res :> ?m-res)
       (src ?dataset ?date ?t-res ?lat ?lon ?tuple)
       (r/latlon->modis ?m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
-      (io/pixel-location ?m-res ?mod-h ?mod-v ?sample ?line :> ?location)
-      (io/mk-chunk ?dataset ?t-res ?date ?location ?tuple :> ?datachunk)
+      (schema/pixel-location ?m-res ?mod-h ?mod-v ?sample ?line :> ?location)
+      (schema/chunk-value ?dataset ?t-res ?date ?location ?tuple :> ?datachunk)
       (:distinct false)))

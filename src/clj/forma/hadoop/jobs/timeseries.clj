@@ -50,15 +50,15 @@
   (let [mk-tseries (form-tseries missing-val)
         series-src (<- [?name ?t-res ?location ?pix-idx ?timeseries]
                        (chunk-source _ ?chunk)
-                       (io/extract-ts-data ?chunk
-                                           :> ?name ?t-res ?date ?location ?datachunk)
+                       (io/unpack-chunk-val ?chunk
+                                            :> ?name ?t-res ?date ?location ?datachunk)
                        (mk-tseries ?t-res ?date ?datachunk
                                    :> ?pix-idx ?start ?end ?tseries)
                        (schema/timeseries-value ?start ?end ?tseries :> ?timeseries))]
     (<- [?chunk]
         (series-src ?name ?t-res ?location ?pix-idx ?timeseries)
         (io/chunkloc->pixloc ?location ?pix-idx :> ?pix-location)
-        (io/mk-chunk ?name ?t-res nil ?pix-location ?timeseries :> ?chunk)
+        (schema/chunk-value ?name ?t-res nil ?pix-location ?timeseries :> ?chunk)
         (:distinct false))))
 
 (def ^:dynamic *missing-val* -9999)
@@ -99,15 +99,12 @@
   "Converts the datestring into a time period based on the supplied
   temporal resolution."
   [src t-res]
-  (let [mash (c/juxt #'io/extract-dataset
-                     #'io/get-location-property
-                     #'io/extract-date
-                     (c/comp merge-firetuples #'io/extract-chunk-value))]
-    (<- [?name ?datestring ?location ?tuple]
-        (src _ ?chunk)
-        (mash ?chunk :> ?name ?location ?date ?tuple)
-        (date/beginning t-res ?date :> ?datestring)
-        (:distinct false))))
+  (<- [?name ?datestring ?location ?tuple]
+      (src _ ?chunk)
+      (map ?chunk [:dataset :location :date :value] :> ?name ?location ?date ?val)
+      (merge-firetuples ?val :> ?tuple)
+      (date/beginning t-res ?date :> ?datestring)
+      (:distinct false)))
 
 (defn create-fire-series
   "Aggregates fires into timeseries."
@@ -123,7 +120,7 @@
                   (running-fire-sum start ?tseries :> ?fire-series))]
     (<- [?chunk]
         (query ?name ?location ?fire-series)
-        (io/mk-chunk ?name t-res nil ?location ?fire-series :> ?chunk))))
+        (schema/chunk-value ?name t-res nil ?location ?fire-series :> ?chunk))))
 
 (defn fire-query
   "Returns a source of fire timeseries data chunk objects."

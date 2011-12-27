@@ -92,13 +92,14 @@ textual representation."
 ;; TODO: Consolidate these two.
 (defn gen-tuples [dataset m-res t-res]
   (->> (for [data (range 1000)]
-         (mk-chunk dataset t-res "2005-12-01" m-res 8 6 x 1 data))
+         (chunk-value dataset t-res "2005-12-01" m-res 8 6 x 1 data))
        (into [])))
 
 (defn tuple-writer [dataset m-res t-res]
   (with-open [stream (.openWrite some-pail)]
     (doseq [data (range 1000)]
-      (.writeObject stream (mk-chunk dataset t-res "2005-12-01" m-res 8 6 x 1 data)))
+      (.writeObject stream
+                    (chunk-value dataset t-res "2005-12-01" m-res 8 6 x 1 data)))
     (.consolidate some-pail)))
 
 (future-fact "tuple-writing tests!")
