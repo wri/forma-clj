@@ -1,4 +1,37 @@
-(ns forma.schema)
+(ns forma.schema
+  (:require [forma.utils :as u]))
+
+;; ### Collections
+
+(defprotocol Thriftable
+  (get-vals [x]))
+
+(defn boundaries
+  "Accepts a sequence of pairs of <initial time period, collection>
+  and returns the maximum start period and the minimum end period. For
+  example:
+
+    (boundaries [0 [1 2 3 4] 1 [2 3 4 5]]) => [1 4]"
+  [pair-seq]
+  {:pre [(even? (count pair-seq))]}
+  (reduce (fn [[lo hi] [x0 ct]]
+            [(max lo x0) (min hi ct)])
+          (for [[x0 seq] (partition 2 pair-seq)]
+            [x0 (+ x0 (count seq))])))
+
+(defn adjust
+  "Appropriately truncates the incoming Thrift timeseries
+  structs (paired with the initial integer period), and outputs a new
+  start and both truncated series. For example:
+
+    (adjust 0 [1 2 3 4] 1 [2 3 4 5])
+    ;=> (1 [2 3 4] [2 3 4])"
+  [& pairs]
+  {:pre [(even? (count pairs))]}
+  (let [[bottom top] (boundaries pairs)]
+    (cons bottom
+          (for [[x0 seq] (partition 2 pairs)]
+            (u/trim-seq bottom top x0 seq)))))
 
 ;; ## Time Series
 
@@ -54,8 +87,8 @@
 (defn adjust-fires
   "Returns the section of fires data found appropriate based on the
   information in the estimation parameter map."
-  [{:keys [est-start est-end t-res]} ^FireSeries f-series]
-  (let [f-start (.getStartIdx f-series)
+  [{:keys [est-start est-end t-res]} f-series]
+  (let [f-start (:start-idx f-series)
         [start end] (for [pd [est-start est-end]]
                       (date/datetime->period "32" pd))]
     [(->> (get-vals f-series)
@@ -147,8 +180,8 @@
     (neighbor-value (fire-value 0 0 0 0) 0 0 0 0 0 0 0)))
 
 (defn textify
-  "Converts the supplied coordinates, `FormaValue` and
-  `FormaNeighborValue` into a line of text suitable for use in STATA."
+  "Converts the supplied coordinates, forma value and forma neighbor
+  value into a line of text suitable for use in STATA."
   [forma-val neighbor-val]
   (let [[fire-val s-drop l-drop t-drop] (unpack-forma-val forma-val)
         [fire-sum ct short-mean short-min
@@ -178,13 +211,15 @@
    :sample "Sample (column) within modis tile."
    :line  "Line (row) within modis tile."})
 
-;; TODO: Get rid of this puppy.
-(defn unpack-location
-  [^DataChunk chunk]
-  (-> chunk
-      .getLocationProperty
-      .getProperty
-      .getFieldValue))
+(defn unpack-pixel-location [loc]
+  (map loc [:spatial-res :mod-h :mod-v :sample :line]))
+
+(defn chunkloc->pixloc
+  "Accepts a chunk location and a pixel index within that location and
+  returns a pixel location."
+  [{:keys [spatial-res size index mod-h mod-v]} pix-idx]
+  (apply pixel-location spatial-res mod-h mod-v
+         (r/tile-position m-res chunk-size chunk-idx pix-idx)))
 
 ;; ## Data Chunks
 
@@ -204,49 +239,15 @@
   [chunk]
   (map chunk [:dataset :temporal-res :date :location :value]))
 
+(defn forma-schema
+  "Accepts a number of timeseries of equal length and starting
+  position, and converts the first entry in each timeseries to a forma
+  value, for all first values and on up the sequence. Series must be
+  supplied as specified by the arguments for `forma-value`. For
+  example:
 
-
-;; union DataValue {
-;;   1: i32 intVal;
-;;   2: IntArray ints;
-;;   3: double doubleVal;
-;;   4: DoubleArray doubles;
-;;   5: FireTuple fireVal;
-;;   6: TimeSeries timeSeries;
-;;   7: FireSeries fireSeries;
-;; }
-
-;; struct ModisPixelLocation {
-;;   1: string resolution;
-;;   2: i32 tileH;
-;;   3: i32 tileV;
-;;   4: i32 sample;
-;;   5: i32 line;
-;; }
-
-;; struct ModisChunkLocation {
-;;   1: string resolution;
-;;   2: i32 tileH;
-;;   3: i32 tileV;
-;;   4: i32 chunkID;
-;;   5: i32 chunkSize;
-;; }
-
-;; union LocationPropertyValue {
-;;   1: ModisPixelLocation pixelLocation;
-;;   2: ModisChunkLocation chunkLocation;
-;; }
-
-;; struct LocationProperty {
-;;   1: LocationPropertyValue property;
-;; }
-
-;; struct DataChunk {
-;;   1: string dataset;
-;;   2: LocationProperty locationProperty;
-;;   3: DataValue chunkValue;
-;;   4: string temporalRes;
-;;   5: optional string date;
-;; }
-
-
+    (forma-schema fire-series short-series long-series t-stat-series)"
+  [& in-series]
+  [(->> in-series
+        (map #(if % (get-vals %) (repeat %)))
+        (apply map forma-value))])

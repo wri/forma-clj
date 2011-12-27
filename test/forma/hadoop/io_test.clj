@@ -38,25 +38,19 @@ textual representation."
                                                     1.5 1.0
                                                     1.5 1.0)))
 
-(fact "struct-edges tests."
-  (struct-edges [ 0 [1 2 3 4] 1 [2 3 4 5]]) => [1 4]
-  (struct-edges [ 0 [1 2 3 4] [2 3 4 5]]) => (throws AssertionError))
-
-(fact "trim-seq tests."
-  (trim-seq 0 2 1 [1 2 3]) => [1]
-  (trim-seq 0 3 0 [1 2 3]) => [1 2 3]
-  (trim-seq 5 10 0 [1 2 3]) => nil)
+(fact "boundaries testing."
+  (boundaries [ 0 [1 2 3 4] 1 [2 3 4 5]]) => [1 4]
+  (boundaries [ 0 [1 2 3 4] [2 3 4 5]]) => (throws AssertionError))
 
 (tabular
  (fact "adjust and adjust-timeseries testing, combined!"
-   (let [[av bv a b] (map to-struct [?a-vec ?b-vec ?a ?b])]
-     (adjust ?a0 av ?b0 bv) => [?start a b]
-     (adjust-timeseries
-      (timeseries-value ?a0 (to-struct ?a-vec))
-      (timeseries-value ?b0 (to-struct ?b-vec)))
-     =>
-     [(timeseries-value ?start (arrayize ?a))
-      (timeseries-value ?start (arrayize ?b))]))
+   (adjust ?a0 ?a-vec ?b0 ?b-vec) => [?start ?a ?b]
+   (adjust-timeseries
+    (timeseries-value ?a0 ?a-vec)
+    (timeseries-value ?b0 ?b-vec))
+   =>
+   [(timeseries-value ?start ?a)
+    (timeseries-value ?start ?b)])
  ?a0 ?a-vec    ?b0 ?b-vec    ?start ?a      ?b
  0   [1 2 3 4] 1   [2 3 4 5] 1      [2 3 4] [2 3 4]
  2   [9 8 7]   0   [1 2 3 4] 2      [9 8]   [3 4]

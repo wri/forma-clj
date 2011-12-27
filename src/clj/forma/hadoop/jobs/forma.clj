@@ -38,7 +38,7 @@
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?fire-series]
       (fire-src ?chunk)
       (map ?chunk [:location :value] :> ?location ?f-series)
-      (io/get-pos ?location :> ?s-res ?mod-h ?mod-v ?sample ?line)
+      (schema/unpack-pixel-location ?location :> ?s-res ?mod-h ?mod-v ?sample ?line)
       (schema/adjust-fires est-map ?f-series :> ?fire-series)))
 
 (defn dynamic-filter
@@ -53,7 +53,7 @@
       (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
       (map ?ndvi-chunk [:location :value] :> ?location ?n-series)
       (map ?rain-chunk [:location :value] :> ?location ?r-series)
-      (io/get-pos ?location :> ?s-res ?mod-h ?mod-v ?sample ?line)
+      (schema/unpack-pixel-location ?location :> ?s-res ?mod-h ?mod-v ?sample ?line)
       (schema/adjust-timeseries ?r-series ?n-series :> ?precl-series ?ndvi-series)
       (>= ?vcf vcf-limit)))
 
@@ -82,11 +82,12 @@
                          (dynamic-tap est-map))]
     (<- [?s-res ?period ?mod-h ?mod-v ?sample ?line ?forma-val]
         (fire-src ?s-res ?mod-h ?mod-v ?sample ?line !!fire-series)
-        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?short-series ?long-series ?t-stat-series)
-        (io/forma-schema !!fire-series
-                         ?short-series
-                         ?long-series
-                         ?t-stat-series :> ?forma-series)
+        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line
+                     ?short-series ?long-series ?t-stat-series)
+        (schema/forma-schema !!fire-series
+                             ?short-series
+                             ?long-series
+                             ?t-stat-series :> ?forma-series)
         (get ?short-series :start-idx :> ?start)
         (p/index ?start ?forma-series :> ?period ?forma-val)
         (:distinct false))))

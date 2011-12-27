@@ -57,7 +57,7 @@
                        (schema/timeseries-value ?start ?end ?tseries :> ?timeseries))]
     (<- [?chunk]
         (series-src ?name ?t-res ?location ?pix-idx ?timeseries)
-        (io/chunkloc->pixloc ?location ?pix-idx :> ?pix-location)
+        (schema/chunkloc->pixloc ?location ?pix-idx :> ?pix-location)
         (schema/chunk-value ?name ?t-res nil ?pix-location ?timeseries :> ?chunk)
         (:distinct false))))
 

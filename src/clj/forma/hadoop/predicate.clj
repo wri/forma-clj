@@ -119,7 +119,8 @@
   (<- [?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val]
       (map ?chunk [:location :value] :> ?location ?static-chunk)
       (index 0 ?static-chunk :> ?pix-idx ?val)
-      (io/expand-pos ?location ?pix-idx :> ?s-res ?mod-h ?mod-v ?sample ?line)))
+      (schema/expand-chunk-location ?location ?pix-idx
+                                    :> ?s-res ?mod-h ?mod-v ?sample ?line)))
 
 (defn chunkify [chunk-size]
   (<- [?dataset !date ?s-res ?t-res ?mh ?mv ?chunkid ?chunk :> ?datachunk]

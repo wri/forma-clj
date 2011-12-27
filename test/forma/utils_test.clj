@@ -8,7 +8,6 @@
 (future-fact "round-places testing.")
 
 (facts "string conversion tests."
-
   "Strings!"
   (strings->ints "192") => [192]
   (strings->ints "192" "12") => [192 12]
@@ -62,6 +61,11 @@ is a function, not a macro, and can evaluate its arguments."
 
   "Values and weights must come in pairs."
   (weighted-mean 8 1 1) => (throws AssertionError))
+
+(fact "trim-seq tests."
+  (trim-seq 0 2 1 [1 2 3]) => [1]
+  (trim-seq 0 3 0 [1 2 3]) => [1 2 3]
+  (trim-seq 5 10 0 [1 2 3]) => nil)
 
 ;; ## IO Tests
 
