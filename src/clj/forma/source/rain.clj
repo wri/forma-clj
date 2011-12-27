@@ -131,7 +131,7 @@
         (source ?filename ?file)
         (unpack ?filename ?file :> ?date ?raindata)
         (to-rows [step] ?raindata :> ?row ?row-data)
-        (p/index 0 ?row-data :> ?col ?val))))
+        (p/index ?row-data :> ?col ?val))))
 
 (defn resample-rain
   "Cascalog query that merges the `?row` `?col` and `?val` generated

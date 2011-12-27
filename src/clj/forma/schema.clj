@@ -1,11 +1,6 @@
 (ns forma.schema
   (:require [forma.utils :as u]))
 
-;; ### Collections
-
-(defprotocol Thriftable
-  (get-vals [x]))
-
 (defn boundaries
   "Accepts a sequence of pairs of <initial time period, collection>
   and returns the maximum start period and the minimum end period. For
@@ -31,20 +26,20 @@
   (let [[bottom top] (boundaries pairs)]
     (cons bottom
           (for [[x0 seq] (partition 2 pairs)]
-            (u/trim-seq bottom top x0 seq)))))
+            (into [] (u/trim-seq bottom top x0 seq))))))
 
 ;; ## Time Series
 
 (defn timeseries-value
   ([start-idx series]
      (let [elems (count series)]
-       (timeseries-value start
+       (timeseries-value start-idx
                          (dec (+ start elems))
                          series)))
   ([start-idx end-idx series]
      (when series
-       {:start-idx start
-        :end-idx   end
+       {:start-idx start-idx
+        :end-idx   end-idx
         :series    series})))
 
 (defn adjust-timeseries
@@ -88,11 +83,10 @@
   "Returns the section of fires data found appropriate based on the
   information in the estimation parameter map."
   [{:keys [est-start est-end t-res]} f-series]
-  (let [f-start (:start-idx f-series)
-        [start end] (for [pd [est-start est-end]]
+  (let [[start end] (for [pd [est-start est-end]]
                       (date/datetime->period "32" pd))]
-    [(->> (get-vals f-series)
-          (u/trim-seq start (inc end) f-start)
+    [(->> (:series f-series)
+          (u/trim-seq start (inc end) (:start-idx f-series))
           (timeseries-value start))]))
 
 ;; # Compound Objects
@@ -249,5 +243,5 @@
     (forma-schema fire-series short-series long-series t-stat-series)"
   [& in-series]
   [(->> in-series
-        (map #(if % (get-vals %) (repeat %)))
+        (map #(or (:series %) (repeat %)))
         (apply map forma-value))])

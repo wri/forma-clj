@@ -11,6 +11,8 @@
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]))
 
+;; TODO: Check that w're still good here.
+
 (defbufferop [timeseries [missing-val]]
   "Takes in a number of `<t-period, modis-chunk>` tuples,
   sorted by time period, and transposes these into (n = chunk-size)
@@ -25,9 +27,10 @@
         missing-vec (into [] (repeat (count val) missing-val))
         chunks (sparse-expander missing-vec tuples :start fp)
         tupleize (comp (partial vector fp lp)
-                       vec
+                       (partial into [])
                        vector)]
     (->> chunks
+         (map :series)
          (apply map tupleize)
          (map-indexed cons))))
 

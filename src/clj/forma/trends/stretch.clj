@@ -1,17 +1,16 @@
 (ns forma.trends.stretch
   (:use [forma.matrix.utils :only (coll-avg)])
-  (:require [forma.hadoop.io :as io]
-            [forma.date-time :as date]))
+  (:require [forma.date-time :as date]))
 
 (defn ts-expander
-  "`xs` must be a sequence of 2-tuples of the form `[period, val]`."
+  "`series` must be a sequence of 2-tuples of the form `[period, val]`."
   [base-res target-res tseries]
   (let [{:keys [start-idx end-idx series]} tseries
         [beg end] (map (partial date/shift-resolution base-res target-res)
                        [beg-idx end-idx])
         offset (date/date-offset target-res beg base-res beg-idx)]
     (loop [[pd & more :as periods] (range beg (inc end))
-           day-seq (->> (map-indexed #(vector (+ % beg) %2) xs)
+           day-seq (->> (map-indexed #(vector (+ % beg) %2) series)
                         (mapcat (fn [[pd val]]
                                   (repeat (date/period-span base-res pd) val)))
                         (drop offset))

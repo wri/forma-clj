@@ -57,10 +57,14 @@
 ;; #### Defmapcatops
 
 (defmapcatop index
-  "splits a sequence of values into nested 2-tuples formatted
-  as `<idx, val>`. Indexing is zero based."
-  [xs]
-  (map-indexed vector xs))
+  "splits a sequence of values into nested 2-tuples formatted as
+  `<idx, val>`. Index supports the `zero-index` keyword argument; this
+  defaults to zero."
+  [xs & {:keys [zero-index]
+         :or {zero-index 0}}]
+  (map-indexed (fn [idx val]
+                 [(+ idx zero-index) val])
+               xs))
 
 ;; #### Aggregators
 
@@ -97,13 +101,6 @@
 (defpredsummer full-count
   [val] identity)
 
-(defmapcatop index
-  [idx-0 xs]
-  (map-indexed (fn [idx val]
-                 [(+ idx idx-0) val])
-               xs))
-
-
 ;; ### Predicate Macros
 
 ;; TODO: Convert to dynamically opening business with predmacro.
@@ -118,7 +115,7 @@
 (def blossom-chunk
   (<- [?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val]
       (map ?chunk [:location :value] :> ?location ?static-chunk)
-      (index 0 ?static-chunk :> ?pix-idx ?val)
+      (index ?static-chunk :> ?pix-idx ?val)
       (schema/expand-chunk-location ?location ?pix-idx
                                     :> ?s-res ?mod-h ?mod-v ?sample ?line)))
 
@@ -133,7 +130,7 @@
   source of `row`, `col` and `val`."
   (<- [?line :> ?row ?col ?val]
       (liberate ?line :> ?row ?row-struct)
-      (index 0 ?row-struct :> ?col ?val)))
+      (index ?row-struct :> ?col ?val)))
 
 (defn vals->sparsevec
   "Returns an aggregating predicate macro that stitches values into a

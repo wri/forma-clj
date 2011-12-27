@@ -9,15 +9,21 @@
             [forma.hadoop.predicate :as p]
             [forma.trends.analysis :as a]))
 
+;; TODO: Convert these two to Cascalog queries.
+
 (defn short-trend-shell
   "a wrapper to collect the short-term trends into a form that can be
   manipulated from within cascalog."
   [{:keys [est-start est-end t-res long-block window]} ts-series]
-  (let [ts-start  (:start-idx ts-series)
-        new-start (date/datetime->period t-res est-start)
+  (let [ts-start    (:start-idx ts-series)
+        new-start   (date/datetime->period t-res est-start)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
-    [(a/collect-short-trend start end long-block window ts-series)
-     (schema/timeseries-value new-start)]))
+    [(->> (:series ts-series)
+          (a/collect-short-trend start end long-block window)
+          (schema/timeseries-value new-start))]))
+
+;; We're mapping across two sequences at the end, there; the
+;; long-series and the t-stat-series.
 
 (defn long-trend-shell
   "a wrapper that takes a map of options and attributes of the input
@@ -27,9 +33,11 @@
   (let [ts-start    (:start-idx ts-series)
         new-start   (date/datetime->period t-res est-start)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
-    (->> (a/collect-long-trend start end ts-series cofactors)
-         (apply map (comp (partial schema/timeseries-value new-start)
-                          vector)))))
+    (apply map (comp (partial schema/timeseries-value new-start)
+                     vector)
+           (a/collect-long-trend start end
+                                 (:series ts-series)
+                                 (map :series cofactors)))))
 
 (defn fire-tap
   "Accepts an est-map and a query source of fire timeseries. Note that
@@ -89,7 +97,8 @@
                              ?long-series
                              ?t-stat-series :> ?forma-series)
         (get ?short-series :start-idx :> ?start)
-        (p/index ?start ?forma-series :> ?period ?forma-val)
+        (get ?forma-series :series :> ?series-vals)
+        (p/index ?series-vals :zero-index ?start  :> ?period ?forma-val)
         (:distinct false))))
 
 ;; TODO: Filter identity, instead of complement nil
