@@ -45,14 +45,12 @@
 ;; subdataset file paths for substrings that remain constant for each
 ;; data layer across spatial and temporal resolutions.
 
-(def
-  ^{:doc "Map between MODIS dataset identifiers (arbitrarily chosen by
-  the REDD team) and corresponding unique substrings, culled from
-  values in the \"NAMES\" entries of the SUBDATASETS hashtable of
-  MOD13A3 HDF file. No simple, descriptive tag exists within the
-  metadata, as of 2/05/2011, so this ends up being the best
-  solution."}
-  modis-subsets
+(def modis-subsets
+  "Map between MODIS dataset identifiers (arbitrarily chosen by the
+  REDD team) and corresponding unique substrings, culled from values
+  in the \"NAMES\" entries of the SUBDATASETS hashtable of MOD13A3 HDF
+  file. No simple, descriptive tag exists within the metadata, as of
+  2/05/2011, so this ends up being the best solution."
   {:evi "EVI"
    :qual "VI Quality"
    :red "red reflectance"

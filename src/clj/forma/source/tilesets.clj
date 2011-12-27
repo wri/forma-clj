@@ -1,11 +1,10 @@
 (ns forma.source.tilesets
   (:use [clojure.set :only (union)]))
 
-(def
-  ^{:doc "MODIS tiles for the selected countries, identified by their
-  ISO3 codes where each two-vector is the horizontal and vertical
-  position of the MODIS tile `[mod-h mod-v]`"}
-  country-tiles
+(def country-tiles
+  "MODIS tiles for the selected countries, identified by their ISO3
+  codes where each two-vector is the horizontal and vertical position
+  of the MODIS tile `[mod-h mod-v]`"
   {:AGO #{[19 9] [20 9]}
    :ARG #{[11 11] [12 11] [13 11] [13 12]}
    :AUS #{[31 10] [31 11] [32 10]}

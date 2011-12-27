@@ -35,10 +35,9 @@
   [datestring]
   (convert datestring :basic-date :year-month-day))
 
-(def
-  ^{:doc "Predicate macro that converts confidence and temperature
-  into a tuple of fire characteristics."}
-  fire-characteristics
+(def fire-characteristics
+  "Predicate macro that converts confidence and temperature into a
+   tuple of fire characteristics."
   (<- [?conf ?kelvin :> ?tuple]
       (p/full-count ?conf :> ?count)
       (p/filtered-count [330] ?kelvin :> ?temp-330)
@@ -50,7 +49,8 @@
 
 (def fire-pred
   (<- [?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple]
-      (utils/strings->floats ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?lat ?lon ?kelvin ?conf)
+      (utils/strings->floats ?s-lat ?s-lon ?s-kelvin ?s-conf
+                             :> ?lat ?lon ?kelvin ?conf)
       (p/add-fields "fire" "01" :> ?dataset ?t-res)
       (fire-characteristics ?conf ?kelvin :> ?tuple)))
 

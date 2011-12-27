@@ -17,7 +17,9 @@
 
 (def chunk-size 24000)
 
-(def ^{:doc "These are the static datasets, described briefly
+;; TODO: Move this business down into a configuration file.
+(def static-datasets
+  "These are the static datasets, described briefly
   below. Each dataset must be formatted as:
 
     {:corner [lon, lat]
@@ -67,8 +69,7 @@
    polygon of country boundaries. Projected World Sinusoidal for distance 
    calculations with ~463m resolution. Then reprojected WGS84 with 
    .0083333 resolution for conversion to ascii grid, with bilinear 
-   interpolation of pixel values."}
-  static-datasets
+   interpolation of pixel values."
   {:precl  {:corner [0 -90]
             :travel [+ +]
             :step 0.5

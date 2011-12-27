@@ -129,9 +129,9 @@
 
 ;; TODO: Convert to dynamically opening business with predmacro.
 
-(def ^{:doc "Converts between a textline with two numbers encoded as
-strings and their integer representations."}
-  converter
+(def converter
+  "Converts between a textline with two numbers encoded as strings and
+   their integer representations."
   (<- [?textline :> ?country ?admin]
       (mangle #"," ?textline :> ?country ?admin-s)
       (u/strings->ints ?admin-s :> ?admin)))
@@ -149,11 +149,10 @@ strings and their integer representations."}
       (io/mk-data-value ?chunk :> ?data-val)
       (io/mk-chunk ?dataset ?t-res !date ?location ?data-val :> ?datachunk)))
 
-(def
-  ^{:doc "Takes a source of textlines representing rows of a gridded
+(def break
+  "Takes a source of textlines representing rows of a gridded
   dataset (with indices prepended onto each row), and generates a
-  source of `row`, `col` and `val`."}
-  break
+  source of `row`, `col` and `val`."
   (<- [?line :> ?row ?col ?val]
       (liberate ?line :> ?row ?row-struct)
       (struct-index 0 ?row-struct :> ?col ?val)))

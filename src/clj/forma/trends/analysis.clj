@@ -143,12 +143,12 @@
       (catch IllegalArgumentException e
         (repeat (count attributes) 0)))))
 
-(def
-  ^{:doc "force the collection of only the OLS coefficients and t-statistics
-  from the `long-trend-general` function, since this is what we have used for
-  the first implementation of FORMA. `long-trend` takes the same arguments
-  as `long-trend-general` except for the first parameter, `attributes`."}
-  long-trend
+(def long-trend
+  "force the collection of only the OLS coefficients and t-statistics
+  from the `long-trend-general` function, since this is what we have
+  used for the first implementation of FORMA. `long-trend` takes the
+  same arguments as `long-trend-general` except for the first
+  parameter, `attributes`."
   (partial long-trend-general [:coefs :t-tests]))
 
 (defn lengthening-ts
@@ -399,11 +399,12 @@
               ((juxt recresid-series recresid-sd) yvec Xmat)))
 
 (def crit-value-map
-  ^{:doc "Table of critical values from Chu et al. (1995), where the first key-level indicates
-  the h value (0.05 - 0.5) which indicates the proportion of residuals in each
-  moving sum.  The inner key level indicates the significance level.  The float indicates
-  the critical value associated with the h-value and significance level, which is used
-  to test the *recursive* MOSUM test statistic."}
+  "Table of critical values from Chu et al. (1995), where the first
+  key-level indicates the h value (0.05 - 0.5) which indicates the
+  proportion of residuals in each moving sum.  The inner key level
+  indicates the significance level.  The float indicates the critical
+  value associated with the h-value and significance level, which is
+  used to test the *recursive* MOSUM test statistic."
   {:0.05 {:0.2 3.2165 :0.15 3.3185 :0.1 3.4554 :0.05 3.6622 :0.025 3.8632 :0.01 4.1009}
    :0.1  {:0.2 2.9795 :0.15 3.0894 :0.1 3.2368 :0.05 3.4681 :0.025 3.6707 :0.01 3.9397}
    :0.15 {:0.2 2.8289 :0.15 2.9479 :0.1 3.1028 :0.05 3.3382 :0.025 3.5598 :0.01 3.8143}
@@ -432,8 +433,7 @@
   (def X (i/bind-columns (repeat 25 1) (range 25)))
   ;; if window = 0.15, then sub-length = 3
   ;; (count (recresid-series y X)) => 22
-  (count (mosum-efp y X 0.15)) => 20
-"
+  (count (mosum-efp y X 0.15)) => 20"
   [yvec Xmat window]
   {:pre [(contains? crit-value-map (num->key window))]}
   (let [tau (apply - ((juxt i/nrow i/ncol) Xmat))
@@ -453,8 +453,7 @@
   level.
 
   Example:
-  (get-crit-value 0.05 0.05) => 3.6622
-"
+  (get-crit-value 0.05 0.05) => 3.6622"
   [window sig-level]
   (-> (num->key window)
       (crit-value-map)

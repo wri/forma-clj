@@ -24,10 +24,9 @@
    "500" 2400
    "1000" 1200})
 
-(def
-  ^{:doc "Returns the temporal resolution of the supplied MODIS
-  short product name."}
-  dataset-info
+(def dataset-info
+  "Returns the temporal resolution of the supplied MODIS short product
+  name."
   {"MCD45A1" {:temporal-res "32"
               :spatial-res "500"}
    "MOD13Q1" {:temporal-res "16"
@@ -68,14 +67,13 @@
   [res]
   (/ 10. (pixels-at-res res)))
 
-(def
-  #^{:doc "Set of coordinate pairs for all MODIS tiles that contain
-actual data. This set is calculated by taking a vector of offsets,
-representing the first horizontal tile containing data for each row of
-tiles. (For example, the data for row 1 begins with tile 14,
-horizontal.)  For a visual representation of the MODIS grid and its
-available data, see http://remotesensing.unh.edu/modis/modis.shtml"}
-  valid-tiles
+(def valid-tiles
+  "Set of coordinate pairs for all MODIS tiles that contain actual
+   data. This set is calculated by taking a vector of offsets,
+   representing the first horizontal tile containing data for each row
+   of tiles. (For example, the data for row 1 begins with tile 14,
+   horizontal.)  For a visual representation of the MODIS grid and its
+   available data, see http://remotesensing.unh.edu/modis/modis.shtml"
   (let [offsets [14 11 9 6 4 2 1 0 0 0 0 1 2 4 6 9 11 14]]
     (set (for [v-tile (range v-tiles)
                h-tile (let [shift (offsets v-tile)]
