@@ -184,7 +184,7 @@
   (->> (for [[h v]  tileseq
              sample (range (pixels-at-res res))
              line   (range (pixels-at-res res))]
-         [h v s l])
+         [h v sample line])
        (c/lazy-generator tmp-path)))
 
 ;; ### Special Functions
