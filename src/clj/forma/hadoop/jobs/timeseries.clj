@@ -37,8 +37,7 @@
 (defn form-tseries
   "Returns a predicate macro aggregator that generates a timeseries,
   given `?chunk`, `?temporal-resolution` and `?date`. Currently only
-  functions when `?chunk` is an instance of
-  `forma.schema.DoubleArray`."
+  functions when `?chunk` is a vector."
   [missing-val]
   (<- [?temporal-res ?date ?chunk :> ?pix-idx ?t-start ?t-end ?tseries]
       (date/datetime->period ?temporal-res ?date :> ?tperiod)
@@ -91,7 +90,7 @@
 
 
 (defmapop running-fire-sum
-  "Special case of `running-sum` for `FireTuple` thrift objects."
+  "Special case of `running-sum` for fire objects."
   [start tseries]
   (let [empty (schema/fire-value 0 0 0 0)]
     (->> tseries

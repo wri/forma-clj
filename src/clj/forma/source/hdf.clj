@@ -21,8 +21,7 @@
             [cascalog.ops :as c]
             [cascalog.io :as io]
             [clojure.java.io :as java.io])
-  (:import [org.gdal.gdal gdal Dataset Band]
-           [org.gdal.gdalconst gdalconstConstants]))
+  (:import [org.gdal.gdal gdal Dataset Band]))
 
 ;; ## MODIS Introduction
 ;;
@@ -77,7 +76,7 @@
   `(let [~sym (do (gdal/AllRegister)
                   (gdal/Open ~path))]
      (try ~@body
-          (finally (. ~sym delete)))))
+          (finally (.delete ~sym)))))
 
 (defn metadata
   "Returns the metadata map for the supplied MODIS Dataset."
@@ -175,7 +174,7 @@ as a 1-tuple."
   a lazy sequence of 2-tuples of the form `[chunk-index, vector]`."
   [^Dataset data]
   (let [^Band band (.GetRasterBand data 1)
-        width (.GetXSize band)
+        width  (.GetXSize band)
         height (.GetYSize band)
         ret (int-array (* width height))]
     (.ReadRaster band 0 0 width height ret)
@@ -212,14 +211,14 @@ as a 1-tuple."
 
 (defn tileid->res
   "Returns a string representation of the resolution (in meters) of
-the tile data referenced by the supplied TileID.The second character
-of a MODIS TileID acts as a key to retrieve this data."
+  the tile data referenced by the supplied TileID.The second character
+  of a MODIS TileID acts as a key to retrieve this data."
   [tileid]
   (let [s (subs tileid 1 2)]
     (case s
-          "1" "1000"
-          "2" "500"
-          "4" "250")))
+      "1" "1000"
+      "2" "500"
+      "4" "250")))
 
 (defn split-id
   "Returns a sequence containing the modis h and v coordinates, where

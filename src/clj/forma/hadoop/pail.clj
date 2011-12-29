@@ -2,35 +2,32 @@
   (:use cascalog.api
         [cascalog.io :only (with-fs-tmp)]
         [forma.reproject :only (hv->tilestring)])
-  (:import [forma.schema DataChunk FireTuple FormaValue
-            LocationProperty LocationPropertyValue
-            ModisPixelLocation DataValue]
-           [backtype.cascading.tap PailTap PailTap$PailTapOptions]
-           [backtype.hadoop.pail Pail]))
+  (:import [backtype.cascading.tap PailTap PailTap$PailTapOptions]
+           [backtype.hadoop.pail PailStructure Pail])
+  (:gen-class))
 
 ;; ## Pail Data Structures
 
-(gen-class :name forma.hadoop.pail.DataChunkPailStructure
-           :extends forma.tap.ThriftPailStructure
-           :prefix "pail-")
+(defn pail-structure []
+  (let [kryo-buf 1]
+    (reify
+      PailStructure
+      (getType [this] clojure.lang.PersistentHashMap)
 
-(defn pail-getType [this] DataChunk)
-(defn pail-createThriftObject [this] (DataChunk.))
+      (serialize [this record]
+        )
 
-(gen-class :name forma.hadoop.pail.SplitDataChunkPailStructure
-           :extends forma.hadoop.pail.DataChunkPailStructure
-           :prefix "split-")
+      (deserialize [this record]
+        )
 
-(defn split-getTarget [this ^DataChunk d]
-  (let [location (-> d .getLocationProperty .getProperty .getFieldValue)
-        tilestring (hv->tilestring (.getTileH location) (.getTileV location))
-        res (format "%s-%s"
-                    (.getResolution location)
-                    (.getTemporalRes d))]
-    [(.getDataset d) res tilestring]))
+      (getTarget [this {:keys [location temporal-res dataset]}]
+        (let [{:keys [spatial-res mod-h mod-v]} location
+              resolution (format "%s-%s" spatial-res temporal-res)
+              tilestring (hv->tilestring mod-h mod-v)]
+          [dataset resolution tilestring]))
 
-(defn split-isValidTarget [this dirs]
-  (boolean (#{3 4} (count dirs))))
+      (isValidTarget [string dir-seq]
+        (boolean (#{3 4} (count dir-seq)))))))
 
 ;; ## Pail Taps
 
@@ -41,11 +38,8 @@
         opts (PailTap$PailTapOptions. spec "datachunk" seqs nil)]
     (PailTap. path opts)))
 
-(defn data-chunk-tap [path & colls]
-  (pail-tap path colls (forma.hadoop.pail.DataChunkPailStructure.)))
-
 (defn split-chunk-tap [path & colls]
-  (pail-tap path colls (forma.hadoop.pail.SplitDataChunkPailStructure.)))
+  (pail-tap path colls (pail-structure)))
 
 (defn ?pail-*
   "Executes the supplied query into the pail located at the supplied
@@ -54,7 +48,12 @@
   (let [pail (Pail. pail-path)]
     (with-fs-tmp [_ tmp]
       (?- (tap tmp) query)
-      (.absorb pail (Pail. tmp)))))
+      (.absorb pail (Pail. tmp))
+      (.consolidate pail))))
+
+;; TODO: This makes the assumption that the pail-tap is being created
+;; in the macro call. Fix this by swapping the temporary path into the
+;; actual tap vs destructuring.
 
 (defmacro ?pail-
   "Executes the supplied query into the pail located at the supplied

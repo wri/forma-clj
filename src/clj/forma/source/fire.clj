@@ -6,10 +6,9 @@
             [forma.schema :as schema]
             [forma.reproject :as r]
             [forma.hadoop.io :as io]
-            [forma.hadoop.predicate :as p])
-  (:import [forma.schema FireTuple]))
+            [forma.hadoop.predicate :as p]))
 
-;; ### Thrift Manipulation
+;; ### Schema Application
 ;;
 ;; The fires dataset is different from previous MODIS datasets in that
 ;; it requires us to keep track of multiple values for each MODIS
@@ -24,9 +23,8 @@
 ;;     :both-preds 1
 ;;     :count 2}
 ;;
-;; compound value, represented as a `FireTuple` thrift object. We wrap
-;; up collections of fire maps into a `FireSeries` thrift
-;; object.
+;; compound value, represented as a fire-value. We wrap
+;; up collections of fire values into a timeseries-value.
 
 ;; ### Fire Predicates
 
@@ -65,12 +63,13 @@
 (defn fire-source-monthly
   "Takes a source of monthly fire textlines from before , and returns
   tuples with dataset, date, position and value all defined. In this
-  case, the value `?tuple` is a `FireTuple` thrift object containing
-  all relevant characteristics of fires for that particular day."
+  case, the value `?tuple` is a fire-value containing all relevant
+  characteristics of fires for that particular day."
   [src]
   (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
       (src ?line)
-      (p/mangle [#"\s+"] ?line :> ?datestring _ _ ?s-lat ?s-lon ?s-kelvin _ _ _ ?s-conf)
+      (p/mangle [#"\s+"] ?line
+                :> ?datestring _ _ ?s-lat ?s-lon ?s-kelvin _ _ _ ?s-conf)
       (not= "YYYYMMDD" ?datestring)
       (monthly-datestring ?datestring :> ?date)
       (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
@@ -79,12 +78,13 @@
 (defn fire-source-daily
   "Takes a source of textlines, and returns tuples with dataset, date,
   position and value all defined. In this case, the value `?tuple` is
-  a `FireTuple` thrift object containing all relevant characteristics
-  of fires for that particular day."
+  a fire-value containing all relevant characteristics of fires for
+  that particular day."
   [src]
   (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
       (src ?line)
-      (p/mangle [#","] ?line :> ?s-lat ?s-lon ?s-kelvin _ _ ?datestring _ _ ?s-conf _ _ _)
+      (p/mangle [#","] ?line
+                :> ?s-lat ?s-lon ?s-kelvin _ _ ?datestring _ _ ?s-conf _ _ _)
       (daily-datestring ?datestring :> ?date)
       (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
       (:distinct false)))

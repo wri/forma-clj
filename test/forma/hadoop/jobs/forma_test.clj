@@ -5,8 +5,7 @@
   (:require [forma.schema :as schema]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
-            [cascalog.ops :as c])
-  (:import [forma.schema FormaNeighborValue]))
+            [cascalog.ops :as c]))
 
 (def some-map
   {:est-start "2005-12-01"

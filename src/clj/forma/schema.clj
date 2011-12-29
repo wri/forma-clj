@@ -18,9 +18,9 @@
             [x0 (+ x0 (count seq))])))
 
 (defn adjust
-  "Appropriately truncates the incoming Thrift timeseries
-  structs (paired with the initial integer period), and outputs a new
-  start and both truncated series. For example:
+  "Appropriately truncates the incoming timeseries values (paired with
+  the initial integer period), and outputs a new start and both
+  truncated series. For example:
 
     (adjust 0 [1 2 3 4] 1 [2 3 4 5])
     ;=> (1 [2 3 4] [2 3 4])"
@@ -46,7 +46,7 @@
         :series    series})))
 
 (defn adjust-timeseries
-  "Takes in any number of thrift TimeSeries objects, and returns a new
+  "Takes in any number of timeseries objects, and returns a new
   sequence of appropriately truncated TimeSeries objects."
   [& tseries]
   (let [[start & ts-seq] (->> tseries

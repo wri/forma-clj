@@ -2,10 +2,7 @@
   (:use [forma.hadoop.io] :reload)
   (:use forma.schema
         [midje sweet cascalog])
-  (:require [forma.date-time :as date])
-  (:import [backtype.hadoop.pail Pail]
-           [forma.schema ModisChunkLocation]
-           [forma.hadoop.pail SplitDataChunkPailStructure]))
+  (:require [forma.date-time :as date]))
 
 ;; TODO: We need to move the tests for the schema into `forma.schema-test`.
 
@@ -73,30 +70,6 @@ textual representation."
  2       nil)
 
 (fact "chunk to pixel location conversions."
-  (-> (ModisChunkLocation. "1000" 10 10 59 24000)
-      (chunkloc->pixloc 23999)) => (pixel-location "1000" 10 10 1199 1199))
-
-;; TODO: Integrate these into some tests.
-(def some-pail
-  (let [path "/tmp/pail"]
-    (try (Pail. path)
-         (catch Exception e
-           (Pail/create path (SplitDataChunkPailStructure.))))))
-
-;; TODO: Consolidate these two.
-(defn gen-tuples [dataset m-res t-res]
-  (->> (for [data (range 1000)]
-         (chunk-value dataset t-res "2005-12-01" m-res 8 6 x 1 data))
-       (into [])))
-
-(defn tuple-writer [dataset m-res t-res]
-  (with-open [stream (.openWrite some-pail)]
-    (doseq [data (range 1000)]
-      (.writeObject stream
-                    (chunk-value dataset t-res "2005-12-01" m-res 8 6 x 1 data)))
-    (.consolidate some-pail)))
-
-(future-fact "tuple-writing tests!")
-
-;; (?pail- (split-chunk-tap "/tmp/output")
-;;         (<- [?a] ((tuple-src "precl" "1000" "32") ?a)))
+  (let [pix-loc (-> (chunk-location "1000" 10 10 59 24000)
+                    (chunkloc->pixloc 23999))]
+    pix-loc => (pixel-location "1000" 10 10 1199 1199)))

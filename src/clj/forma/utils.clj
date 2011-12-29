@@ -89,8 +89,7 @@
   (float (->> (for [[x weight] (partition 2 val-weight-pairs)]
                 (if  (>= weight 0)
                   [(* x weight) weight]
-                  (throw (IllegalArgumentException.
-                          "All weights must be positive."))))
+                  (throw-illegal "All weights must be positive.")))
               (reduce (partial map +))
               (apply /))))
 
