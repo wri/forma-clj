@@ -195,21 +195,35 @@
 
 ;; ## Location
 
-(defn chunk-location
-  [s-res mod-h mod-v idx size]
+(def example-chunk-location
   {:spatial-res "Spatial resolution (modis)"
    :mod-h "horizontal modis coordinate."
    :mod-v "Vertical modis coordinate."
    :index "Chunk index within the modis tile."
    :size  "Number of pixels in the chunk."})
 
-(defn pixel-location
-  [s-res mh mv sample line]
+(defn chunk-location
+  [spatial-res mod-h mod-v idx size]
+  {:spatial-res spatial-res
+   :mod-h       mod-h
+   :mod-v       mod-v
+   :index       idx
+   :size        size})
+
+(def example-pixel-location
   {:spatial-res "Spatial resolution (modis)"
    :mod-h "horizontal modis coordinate."
    :mod-v "Vertical modis coordinate."
    :sample "Sample (column) within modis tile."
    :line  "Line (row) within modis tile."})
+
+(defn pixel-location
+  [spatial-res mod-h mod-v sample line]
+  {:spatial-res spatial-res
+   :mod-h       mod-h
+   :mod-v       mod-v
+   :sample      sample
+   :line        line})
 
 (defn unpack-pixel-location [loc]
   (map loc [:spatial-res :mod-h :mod-v :sample :line]))

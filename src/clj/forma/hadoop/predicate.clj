@@ -110,7 +110,7 @@
    their integer representations."
   (<- [?textline :> ?country ?admin]
       (mangle #"," ?textline :> ?country ?admin-s)
-      (u/strings->ints ?admin-s :> ?admin)))
+      (u/strings->floats ?admin-s :> ?admin)))
 
 (def blossom-chunk
   (let [expand (c/comp #'schema/unpack-pixel-location

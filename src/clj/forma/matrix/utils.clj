@@ -142,7 +142,8 @@ supplied, assumes a square matrix."
   {:pre [(>= cols 0), (number? val)]}
   (i/matrix val cols 1))
 
-(def ones-column (partial column-matrix 1))
+(def ones-column
+  (partial column-matrix 1))
 
 (defn matrix-of
   "Returns a `dims`-dimensional matrix of `val`, with edge length of

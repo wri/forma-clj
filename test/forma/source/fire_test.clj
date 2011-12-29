@@ -2,8 +2,8 @@
   (:use [forma.source.fire] :reload)
   (:use cascalog.api
         [midje sweet cascalog])
-  (:require [forma.hadoop.io :as io]
-            [forma.testing :as t]))
+  (:require [forma.testing :as t]
+            [forma.schema :as schema]))
 
 (def daily-fires-path
   (t/dev-path "/testdata/FireDaily/MCD14DL.2011074.txt"))

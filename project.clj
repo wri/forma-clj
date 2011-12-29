@@ -14,7 +14,7 @@
                  [org.clojure/tools.cli "0.1.0"]
                  [org.clojure/math.numeric-tower "0.0.1"]
                  [incanter/incanter-core "1.3.0-SNAPSHOT"]
-                 [clj-time "0.3.3"]
+                 [clj-time "0.3.1"]
                  [forma/gdal "1.8.0"]
                  [cascalog "1.8.5-SNAPSHOT"]
                  [backtype/dfs-datastores "1.0.5"]

@@ -65,7 +65,7 @@ textual representation."
                                           (fire-value 1 1 1 1)]))]
      (adjust-fires est-map (mk-f-series ?offset)) => [?series]))
  ?offset ?series
- 0       (timseries-value  f-start [(fire-value 0 0 0 1) (fire-value 1 1 1 1)])
+ 0       (timeseries-value  f-start [(fire-value 0 0 0 1) (fire-value 1 1 1 1)])
  1       (timeseries-value f-start [(fire-value 0 0 0 1)])
  2       nil)
 
