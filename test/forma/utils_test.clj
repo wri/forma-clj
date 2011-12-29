@@ -54,10 +54,10 @@ is a function, not a macro, and can evaluate its arguments."
 
 (facts "weighted-mean tests."
   (weighted-mean 8 3 1 1) => 6.25
-  (weighted-mean 8 0 1 1) => 1
+  (weighted-mean 8 0 1 1) => 1.0
 
   "Negative weights aren't acceptable."
-  (weighted-mean 8 -1 1 1) => (throws RuntimeException)
+  (weighted-mean 8 -1 1 1) => (throws IllegalArgumentException)
 
   "Values and weights must come in pairs."
   (weighted-mean 8 1 1) => (throws AssertionError))
@@ -65,7 +65,7 @@ is a function, not a macro, and can evaluate its arguments."
 (fact "trim-seq tests."
   (trim-seq 0 2 1 [1 2 3]) => [1]
   (trim-seq 0 3 0 [1 2 3]) => [1 2 3]
-  (trim-seq 5 10 0 [1 2 3]) => nil)
+  (trim-seq 5 10 0 [1 2 3]) => [])
 
 ;; ## IO Tests
 
