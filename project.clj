@@ -11,7 +11,6 @@
   :repositories {"releases"
                  "http://oss.sonatype.org/content/repositories/releases/"}
   :dependencies [[org.clojure/clojure "1.3.0"]
-                 [org.clojure/tools.cli "0.1.0"]
                  [org.clojure/math.numeric-tower "0.0.1"]
                  [incanter/incanter-core "1.3.0-SNAPSHOT"]
                  [clj-time "0.3.1"]
