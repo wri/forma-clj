@@ -6,8 +6,8 @@
   (:require [cascalog.ops :as c]
             [forma.utils :only (throw-illegal)]
             [forma.reproject :as r]
+            [forma.schema :as schema]
             [forma.trends.stretch :as stretch]
-            [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
             [forma.hadoop.jobs.forma :as forma]
             [forma.hadoop.jobs.timeseries :as tseries]))

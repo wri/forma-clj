@@ -3,31 +3,31 @@
         [cascalog.io :only (with-fs-tmp)]
         [forma.reproject :only (hv->tilestring)])
   (:import [backtype.cascading.tap PailTap PailTap$PailTapOptions]
-           [backtype.hadoop.pail PailStructure Pail])
-  (:gen-class))
+           [backtype.hadoop.pail PailStructure Pail]
+           [forma.tap KryoPailStructure]))
 
 ;; ## Pail Data Structures
 
+(gen-class :name forma.hadoop.pail.DataChunkPailStructure
+           :extends forma.tap.KryoPailStructure
+           :prefix "pail-")
+
+(defn pail-getType [this]
+  clojure.lang.PersistentHashMap)
+
+(defn pail-getTarget
+  [this {:keys [location temporal-res dataset]}]
+  (let [{:keys [spatial-res mod-h mod-v]} location
+        resolution (format "%s-%s" spatial-res temporal-res)
+        tilestring (hv->tilestring mod-h mod-v)]
+    [dataset resolution tilestring]))
+
+(defn pail-isValidTarget
+  [this dir-seq]
+  (boolean (#{3 4} (count dir-seq))))
+
 (defn pail-structure []
-  (let [kryo-buf 1]
-    (reify
-      PailStructure
-      (getType [this] clojure.lang.PersistentHashMap)
-
-      (serialize [this record]
-        )
-
-      (deserialize [this record]
-        )
-
-      (getTarget [this {:keys [location temporal-res dataset]}]
-        (let [{:keys [spatial-res mod-h mod-v]} location
-              resolution (format "%s-%s" spatial-res temporal-res)
-              tilestring (hv->tilestring mod-h mod-v)]
-          [dataset resolution tilestring]))
-
-      (isValidTarget [string dir-seq]
-        (boolean (#{3 4} (count dir-seq)))))))
+  (forma.hadoop.pail.DataChunkPailStructure.))
 
 ;; ## Pail Taps
 

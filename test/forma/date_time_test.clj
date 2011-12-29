@@ -14,7 +14,7 @@
 
   "within-dates? can't accept datestrings that don't match the default
 or supplied formats."
-  (within-dates? "2005" "2011" "2010") => (throws RuntimeException))
+  (within-dates? "2005" "2011" "2010") => (throws IllegalArgumentException))
 
 (tabular
  (fact "Day conversions."
@@ -49,11 +49,11 @@ or supplied formats."
 
 (tabular
  (fact "16 and 8 day periods per year, and 1 month periods per year."
-   (per-year ordinal ?length ?days-per)
-   ?length ?days-per
-   16      23
-   8       46
-   1       12))
+   (per-year ?unit ?length) => ?days-per)
+?unit    ?length ?days-per
+ordinal  16      23
+ordinal  8       46
+month    1       12)
 
 (fact (periodize "32" (date-time 2005 12 04)) => 431)
 

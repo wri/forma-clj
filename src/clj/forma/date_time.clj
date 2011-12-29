@@ -243,7 +243,7 @@ in which `string` lies (according to the supplied resolution, `res`)."
   (relative-period \"32\" 391 [\"2005-02-01\" \"2005-03-01\"])
   => (30 31)"
   [t-res start period-seq]
-  (map (comp #(int (- % start))
+  (map (comp #(long (- % start))
              (partial datetime->period t-res))
        period-seq))
 

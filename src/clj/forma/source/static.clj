@@ -119,7 +119,7 @@
                                nodata)]
     (<- [?datachunk]
         (src ?dataset ?s-res ?t-res !date ?mod-h ?mod-v  _ ?chunkid ?window)
-        (flatten-window ?window :> ?chunk)
+        (p/flatten-window ?window :> ?chunk)
         (count ?chunk :> ?count)
         (= ?count chunk-size)
         (chunkifier ?dataset !date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk

@@ -4,7 +4,6 @@
             [forma.matrix.walk :as w]
             [forma.reproject :as r]
             [forma.date-time :as date]
-            [forma.hadoop.io :as io]
             [forma.schema :as schema]
             [forma.hadoop.predicate :as p]
             [forma.trends.analysis :as a]))
@@ -112,7 +111,7 @@ value, and the aggregate of the neighbors."
     [idx val (->> neighbors
                   (apply concat)
                   (filter (complement nil?))
-                  (io/combine-neighbors))]))
+                  (schema/combine-neighbors))]))
 
 (defn forma-query
   "final query that walks the neighbors and spits out the values."
@@ -127,5 +126,5 @@ value, and the aggregate of the neighbors."
         (country-src ?s-res ?mod-h ?mod-v ?sample ?line ?country)
         (process-neighbors [neighbors] ?window :> ?win-idx ?val ?neighbor-vals)
         (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)
-        (io/textify ?val ?neighbor-vals :> ?text)
+        (schema/textify ?val ?neighbor-vals :> ?text)
         (:distinct false))))

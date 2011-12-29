@@ -113,11 +113,12 @@
       (u/strings->ints ?admin-s :> ?admin)))
 
 (def blossom-chunk
-  (<- [?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val]
-      (map ?chunk [:location :value] :> ?location ?static-chunk)
-      (index ?static-chunk :> ?pix-idx ?val)
-      (schema/expand-chunk-location ?location ?pix-idx
-                                    :> ?s-res ?mod-h ?mod-v ?sample ?line)))
+  (let [expand (c/comp #'schema/unpack-pixel-location
+                       #'schema/chunkloc->pixloc)]
+    (<- [?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val]
+        (map ?chunk [:location :value] :> ?location ?static-chunk)
+        (index ?static-chunk :> ?pix-idx ?val)
+        (expand ?location ?pix-idx :> ?s-res ?mod-h ?mod-v ?sample ?line))))
 
 (defn chunkify [chunk-size]
   (<- [?dataset !date ?s-res ?t-res ?mh ?mv ?chunkid ?chunk :> ?datachunk]
