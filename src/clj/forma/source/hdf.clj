@@ -4,9 +4,7 @@
 ;; fact.
 ;;
 ;; The overall goal here is to process a MODIS HDF4 archive into
-;; tuples of the form
-;;
-;;     [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk-pix]
+;; a forma.schema/chunk-value.
 ;;
 ;; If every dataset can be coerced into this form, it becomes trivial
 ;; to match tuples up and combine them in various ways.
