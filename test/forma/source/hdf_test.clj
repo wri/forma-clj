@@ -33,7 +33,7 @@ supplied keys (in order)."
 
     "If a key is missing, the generated function throws an assertion
 error."
-    (test-keys #{:ndv}) => (throws AssertionError)))
+    (test-keys #{:missingkey}) => (throws AssertionError)))
 
 (tabular
  (let [src (io/hfs-wholefile hdf-path)
