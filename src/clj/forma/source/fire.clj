@@ -3,12 +3,12 @@
         [forma.date-time :only (convert)])
   (:require [clojure.string :as s]
             [forma.utils :as utils]
+            [forma.schema :as schema]
             [forma.reproject :as r]
             [forma.hadoop.io :as io]
-            [forma.hadoop.predicate :as p])
-  (:import [forma.schema FireTuple]))
+            [forma.hadoop.predicate :as p]))
 
-;; ### Thrift Manipulation
+;; ### Schema Application
 ;;
 ;; The fires dataset is different from previous MODIS datasets in that
 ;; it requires us to keep track of multiple values for each MODIS
@@ -16,9 +16,15 @@
 ;; the subsets of the total that satisfy certain conditions, such as
 ;; `Temp > 330 Kelvin`, `Confidence > 50`, or both at once. We
 ;; abstract this complication away by wrapping up each of these into a
-;; compound value, represented as a `FireTuple` thrift object. We wrap
-;; up collections of `FireTuple` objects in a `FireSeries` thrift
-;; object.
+;; clojure map. For example:
+;;
+;;    {:temp-330 1
+;;     :conf-50 1
+;;     :both-preds 1
+;;     :count 2}
+;;
+;; compound value, represented as a fire-value. We wrap
+;; up collections of fire values into a timeseries-value.
 
 ;; ### Fire Predicates
 
@@ -43,7 +49,7 @@
       (p/filtered-count [330] ?kelvin :> ?temp-330)
       (p/filtered-count [50] ?conf :> ?conf-50)
       (p/bi-filtered-count [50 330] ?conf ?kelvin :> ?both-preds)
-      (io/fire-tuple ?temp-330 ?conf-50 ?both-preds ?count :> ?tuple)))
+      (schema/fire-value ?temp-330 ?conf-50 ?both-preds ?count :> ?tuple)))
 
 ;; ## Fire Queries
 
@@ -57,12 +63,13 @@
 (defn fire-source-monthly
   "Takes a source of monthly fire textlines from before , and returns
   tuples with dataset, date, position and value all defined. In this
-  case, the value `?tuple` is a `FireTuple` thrift object containing
-  all relevant characteristics of fires for that particular day."
+  case, the value `?tuple` is a fire-value containing all relevant
+  characteristics of fires for that particular day."
   [src]
   (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
       (src ?line)
-      (p/mangle [#"\s+"] ?line :> ?datestring _ _ ?s-lat ?s-lon ?s-kelvin _ _ _ ?s-conf)
+      (p/mangle [#"\s+"] ?line
+                :> ?datestring _ _ ?s-lat ?s-lon ?s-kelvin _ _ _ ?s-conf)
       (not= "YYYYMMDD" ?datestring)
       (monthly-datestring ?datestring :> ?date)
       (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
@@ -71,12 +78,13 @@
 (defn fire-source-daily
   "Takes a source of textlines, and returns tuples with dataset, date,
   position and value all defined. In this case, the value `?tuple` is
-  a `FireTuple` thrift object containing all relevant characteristics
-  of fires for that particular day."
+  a fire-value containing all relevant characteristics of fires for
+  that particular day."
   [src]
   (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
       (src ?line)
-      (p/mangle [#","] ?line :> ?s-lat ?s-lon ?s-kelvin _ _ ?datestring _ _ ?s-conf _ _ _)
+      (p/mangle [#","] ?line
+                :> ?s-lat ?s-lon ?s-kelvin _ _ ?datestring _ _ ?s-conf _ _ _)
       (daily-datestring ?datestring :> ?date)
       (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
       (:distinct false)))
@@ -89,7 +97,6 @@
       (p/add-fields m-res :> ?m-res)
       (src ?dataset ?date ?t-res ?lat ?lon ?tuple)
       (r/latlon->modis ?m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
-      (io/pixel-location ?m-res ?mod-h ?mod-v ?sample ?line :> ?location)
-      (io/mk-data-value ?tuple :> ?data-val)
-      (io/mk-chunk ?dataset ?t-res ?date ?location ?data-val :> ?datachunk)
+      (schema/pixel-location ?m-res ?mod-h ?mod-v ?sample ?line :> ?location)
+      (schema/chunk-value ?dataset ?t-res ?date ?location ?tuple :> ?datachunk)
       (:distinct false)))

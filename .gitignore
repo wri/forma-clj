@@ -7,6 +7,7 @@ native
 logs/
 classes
 docs
+doc
 autodoc
 .#*
 *#*
@@ -17,3 +18,7 @@ native/
 .lein-deps-sum
 .DS_Store
 .repl
+.idea
+*.iml
+*.ipr
+*.iws

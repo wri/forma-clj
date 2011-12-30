@@ -8,8 +8,7 @@
 ;;     [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk-pix]
 
 (ns forma.source.rain
-  (:use cascalog.api
-        [forma.hadoop.io :only (to-struct)])
+  (:use cascalog.api)
   (:require [forma.reproject :as r]
             [forma.utils :as u]
             [cascalog.io :as io]
@@ -119,8 +118,7 @@
   (let [[row-length] (r/dimensions-for-step step)]
     (->> coll
          (partition row-length)
-         (map-indexed (fn [idx xs]
-                        [idx (to-struct xs)])))))
+         (map-indexed vector))))
 
 (defn rain-values
   "Generates a cascalog subquery from the supplied WGS84 step size and
@@ -133,7 +131,7 @@
         (source ?filename ?file)
         (unpack ?filename ?file :> ?date ?raindata)
         (to-rows [step] ?raindata :> ?row ?row-data)
-        (p/struct-index 0 ?row-data :> ?col ?val))))
+        (p/index ?row-data :> ?col ?val))))
 
 (defn resample-rain
   "Cascalog query that merges the `?row` `?col` and `?val` generated

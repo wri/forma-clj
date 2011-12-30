@@ -5,14 +5,16 @@
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]))
 
-(future-fact "round-places testing.")
+(tabular
+ (fact "round-places testing."
+   (round-places ?places 129.876234) => ?rounded)
+ ?places ?rounded
+ 0       130.0
+ 1       129.9
+ 2       129.88
+ 3       129.876)
 
-(facts "string conversion tests."
-
-  "Strings!"
-  (strings->ints "192") => [192]
-  (strings->ints "192" "12") => [192 12]
-
+(facts "string conversion tests."  
   "Floats!"
   (strings->floats "192") => [192.0]
   (strings->floats "192" "12") => [192.0 12.0]
@@ -55,13 +57,18 @@ is a function, not a macro, and can evaluate its arguments."
 
 (facts "weighted-mean tests."
   (weighted-mean 8 3 1 1) => 6.25
-  (weighted-mean 8 0 1 1) => 1
+  (weighted-mean 8 0 1 1) => 1.0
 
   "Negative weights aren't acceptable."
-  (weighted-mean 8 -1 1 1) => (throws RuntimeException)
+  (weighted-mean 8 -1 1 1) => (throws IllegalArgumentException)
 
   "Values and weights must come in pairs."
   (weighted-mean 8 1 1) => (throws AssertionError))
+
+(fact "trim-seq tests."
+  (trim-seq 0 2 1 [1 2 3]) => [1]
+  (trim-seq 0 3 0 [1 2 3]) => [1 2 3]
+  (trim-seq 5 10 0 [1 2 3]) => [])
 
 ;; ## IO Tests
 
@@ -89,11 +96,18 @@ do show that we have a sequence of byte arrays being generated."
       (type (first result)) => byte-array-type
       (count result) => 6)))
 
-(future-fact "read numbers testing.")
+(tabular
+ (fact "read numbers testing."
+   (read-numbers ?input) => ?output)
+ ?input ?output
+ "100"  100
+ "-2.9" -2.9
+ "face" (throws AssertionError))
+
 ;; ## Byte Manipulation Tests
 
 (fact float-bytes => 4)
 
-(fact "flipped-endian-float test."
+(facts "flipped-endian-float test."
   (flipped-endian-float [0xD0 0x0F 0x49 0x40]) => (float 3.14159)
   (flipped-endian-float [0xD0 0x0F 0x49]) => (throws AssertionError))

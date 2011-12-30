@@ -109,9 +109,8 @@
 (defn agg-chunks
   "val-gen must generate
 
-?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val"
-  [val-gen m-res chunk-size nodata type]
-  {:pre [(#{:int :double} type)]}
+  ?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val"
+  [val-gen m-res chunk-size nodata]
   (let [chunkifier (p/chunkify chunk-size)
         src (p/sparse-windower val-gen
                                ["?sample" "?line"]
@@ -120,10 +119,11 @@
                                nodata)]
     (<- [?datachunk]
         (src ?dataset ?s-res ?t-res !date ?mod-h ?mod-v  _ ?chunkid ?window)
-        (p/window->struct [type] ?window :> ?chunk)
-        (io/count-vals ?chunk :> ?count)
+        (p/flatten-window ?window :> ?chunk)
+        (count ?chunk :> ?count)
         (= ?count chunk-size)
-        (chunkifier ?dataset !date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk)
+        (chunkifier ?dataset !date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk
+                    :> ?datachunk)
         (:distinct false))))
 
 (defn static-chunks
@@ -134,10 +134,10 @@
     (-> (if upsample?
           (upsample-modis m-res dataset pix-tap line-tap)
           (downsample-modis m-res dataset pix-tap line-tap agg))
-        (agg-chunks m-res chunk-size -9999 :int))))
+        (agg-chunks m-res chunk-size -9999))))
 
 (defn static-modis-chunks
   "TODO: DESTROY. Replace with a better system."
   [chunk-size dataset agg line-tap pix-tap]
   (-> (absorb-modis "1000" dataset pix-tap line-tap agg)
-      (agg-chunks "1000" chunk-size -9999 :int)))
+      (agg-chunks "1000" chunk-size -9999)))

@@ -344,7 +344,7 @@ Example usage:
   supplied spatial step-size between pixels."
   [step-size]
   {:pre [(pos? step-size)]}
-  (map #(quot % step-size) [360 180]))
+  (map (comp long #(quot % step-size)) [360 180]))
 
 (defn line-torus
   "Returns the magnitude of the difference between the supplied value

@@ -4,38 +4,39 @@
             [forma.matrix.walk :as w]
             [forma.reproject :as r]
             [forma.date-time :as date]
-            [forma.hadoop.io :as io]
+            [forma.schema :as schema]
             [forma.hadoop.predicate :as p]
             [forma.trends.analysis :as a]))
+
+;; TODO: Convert these two to Cascalog queries.
 
 (defn short-trend-shell
   "a wrapper to collect the short-term trends into a form that can be
   manipulated from within cascalog."
   [{:keys [est-start est-end t-res long-block window]} ts-series]
-  (let [ts-start  (io/get-start-idx ts-series)
-        new-start (date/datetime->period t-res est-start)
+  (let [ts-start    (:start-idx ts-series)
+        new-start   (date/datetime->period t-res est-start)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
-    [(->> (io/get-vals ts-series)
+    [(->> (:series ts-series)
           (a/collect-short-trend start end long-block window)
-          io/to-struct
-          io/mk-array-value
-          (io/timeseries-value new-start))]))
+          (schema/timeseries-value new-start))]))
+
+;; We're mapping across two sequences at the end, there; the
+;; long-series and the t-stat-series.
 
 (defn long-trend-shell
   "a wrapper that takes a map of options and attributes of the input
   time-series (and cofactors) to extract the long-term trends and
   t-statistics from the time-series."
   [{:keys [est-start est-end t-res long-block window]} ts-series & cofactors]
-  (let [ts-start    (io/get-start-idx ts-series)
+  (let [ts-start    (:start-idx ts-series)
         new-start   (date/datetime->period t-res est-start)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
-    (->> (a/collect-long-trend start end
-                               (io/get-vals ts-series)
-                               (map io/get-vals cofactors))
-         (apply map (comp (partial io/timeseries-value new-start)
-                          io/mk-array-value
-                          io/to-struct
-                          vector)))))
+    (apply map (comp (partial schema/timeseries-value new-start)
+                     vector)
+           (a/collect-long-trend start end
+                                 (:series ts-series)
+                                 (map :series cofactors)))))
 
 (defn fire-tap
   "Accepts an est-map and a query source of fire timeseries. Note that
@@ -43,28 +44,25 @@
   [est-map fire-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?fire-series]
       (fire-src ?chunk)
-      ((c/juxt #'io/extract-location
-               #'io/extract-chunk-value) ?chunk :> ?location ?f-series)
-      (io/get-pos ?location :> ?s-res ?mod-h ?mod-v ?sample ?line)
-      (io/adjust-fires est-map ?f-series :> ?fire-series)))
+      (map ?chunk [:location :value] :> ?location ?f-series)
+      (schema/unpack-pixel-location ?location :> ?s-res ?mod-h ?mod-v ?sample ?line)
+      (schema/adjust-fires est-map ?f-series :> ?fire-series)))
 
 (defn dynamic-filter
   "Returns a new generator of ndvi and rain timeseries obtained by
   filtering out all pixels with VCF less than the supplied
   `vcf-limit`."
   [vcf-limit ndvi-src rain-src vcf-src]
-  (let [extracter (c/juxt #'io/extract-location
-                          #'io/extract-chunk-value)]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?ndvi-series ?precl-series]
-        (ndvi-src _ ?ndvi-chunk)
-        (rain-src _ ?rain-chunk)
-        (vcf-src _ ?vcf-chunk)
-        (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
-        (extracter ?ndvi-chunk :> ?location ?n-series)
-        (extracter ?rain-chunk :> ?location ?r-series)
-        (io/get-pos ?location :> ?s-res ?mod-h ?mod-v ?sample ?line)
-        (io/adjust-timeseries ?r-series ?n-series :> ?precl-series ?ndvi-series)
-        (>= ?vcf vcf-limit))))
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?ndvi-series ?precl-series]
+      (ndvi-src _ ?ndvi-chunk)
+      (rain-src _ ?rain-chunk)
+      (vcf-src _ ?vcf-chunk)
+      (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
+      (map ?ndvi-chunk [:location :value] :> ?location ?n-series)
+      (map ?rain-chunk [:location :value] :> ?location ?r-series)
+      (schema/unpack-pixel-location ?location :> ?s-res ?mod-h ?mod-v ?sample ?line)
+      (schema/adjust-timeseries ?r-series ?n-series :> ?precl-series ?ndvi-series)
+      (>= ?vcf vcf-limit)))
 
 (defn dynamic-tap
   "Accepts an est-map, and sources for ndvi and rain timeseries and
@@ -91,13 +89,14 @@
                          (dynamic-tap est-map))]
     (<- [?s-res ?period ?mod-h ?mod-v ?sample ?line ?forma-val]
         (fire-src ?s-res ?mod-h ?mod-v ?sample ?line !!fire-series)
-        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?short-series ?long-series ?t-stat-series)
-        (io/forma-schema !!fire-series
-                         ?short-series
-                         ?long-series
-                         ?t-stat-series :> ?forma-series)
-        (io/get-start-idx ?short-series :> ?start)
-        (p/struct-index ?start ?forma-series :> ?period ?forma-val)
+        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line
+                     ?short-series ?long-series ?t-stat-series)
+        (schema/forma-seq !!fire-series
+                          ?short-series
+                          ?long-series
+                          ?t-stat-series :> ?forma-seq)
+        (get ?short-series :start-idx :> ?start)
+        (p/index ?forma-seq :zero-index ?start :> ?period ?forma-val)
         (:distinct false))))
 
 ;; TODO: Filter identity, instead of complement nil
@@ -111,7 +110,7 @@ value, and the aggregate of the neighbors."
     [idx val (->> neighbors
                   (apply concat)
                   (filter (complement nil?))
-                  (io/combine-neighbors))]))
+                  (schema/combine-neighbors))]))
 
 (defn forma-query
   "final query that walks the neighbors and spits out the values."
@@ -119,12 +118,15 @@ value, and the aggregate of the neighbors."
   (let [{:keys [t-res neighbors window-dims]} est-map
         [rows cols] window-dims
         src (-> (forma-tap est-map ndvi-src rain-src vcf-src fire-src)
-                (p/sparse-windower ["?sample" "?line"] window-dims "?forma-val" nil))]
+                (p/sparse-windower ["?sample" "?line"]
+                                   window-dims
+                                   "?forma-val"
+                                   nil))]
     (<- [?s-res ?country ?datestring ?mod-h ?mod-v ?sample ?line ?text]
         (date/period->datetime t-res ?period :> ?datestring)
         (src ?s-res ?period ?mod-h ?mod-v ?win-col ?win-row ?window)
         (country-src ?s-res ?mod-h ?mod-v ?sample ?line ?country)
         (process-neighbors [neighbors] ?window :> ?win-idx ?val ?neighbor-vals)
         (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)
-        (io/textify ?val ?neighbor-vals :> ?text)
+        (schema/textify ?val ?neighbor-vals :> ?text)
         (:distinct false))))

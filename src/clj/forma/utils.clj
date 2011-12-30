@@ -14,16 +14,10 @@
   points, and returns a float representation."
   [sig-figs number]
   (let [factor (expt 10 sig-figs)]
-    (float (/ (round (* factor number)) factor))))
-
-(defn strings->ints
-  "Accepts any number of string representations of integers, and
-  returns the corresponding sequence of ints."
-  [& strings]
-  (map #(Integer. %) strings))
+    (double (/ (round (* factor number)) factor))))
 
 (defn strings->floats
-  "Accepts any number of string representations of integers, and
+  "Accepts any number of string representations of floats, and
   returns the corresponding sequence of floats."
   [& strings]
   (map #(Float. %) strings))
@@ -89,8 +83,7 @@
   (float (->> (for [[x weight] (partition 2 val-weight-pairs)]
                 (if  (>= weight 0)
                   [(* x weight) weight]
-                  (throw (IllegalArgumentException.
-                          "All weights must be positive."))))
+                  (throw-illegal "All weights must be positive.")))
               (reduce (partial map +))
               (apply /))))
 
@@ -160,10 +153,10 @@ valid arguments."
       (.close stream))))
 
 (defn read-numbers [x]
-  (let [val (read-string x)]
-    (if (number? val)
-      val
-      (throw-illegal "You can only liberate numbers!"))))
+  (binding [*read-eval* false]
+    (let [val (read-string x)]
+      (assert (number? val) "You can only liberate numbers!")
+      val)))
 
 ;; ## Byte Manipulation
 

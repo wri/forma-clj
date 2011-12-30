@@ -105,15 +105,14 @@ function, as per the documentation."
  (fact "Column matrix tests."
    (column-matrix ?val ?cols) => ?result)
  ?val ?cols ?result
- 2    5     [2 2 2 2 2]
- -1   2     [-1 -1]
+ 2    5     [2.0 2.0 2.0 2.0 2.0]
+ -1   2     [-1.0 -1.0]
  -1   0     []
  [-1] 2     (throws AssertionError)
  2    -1    (throws AssertionError))
 
-(fact "Test of the ones column partial function. Probably
-unnecessary."
-  (ones-column 4) => [1 1 1 1])
+(fact "Test of the ones column partial function."
+  (ones-column 4) => [1.0 1.0 1.0 1.0])
 
 (facts "matrix-of test."
   (matrix-of 2 1 4) => [2 2 2 2]

@@ -33,7 +33,7 @@ supplied keys (in order)."
 
     "If a key is missing, the generated function throws an assertion
 error."
-    (test-keys #{:ndv}) => (throws AssertionError)))
+    (test-keys #{:missingkey}) => (throws AssertionError)))
 
 (tabular
  (let [src (io/hfs-wholefile hdf-path)
@@ -54,13 +54,15 @@ error."
  chunk-size. (By pushing raster-chunks down into a subquery, we force
  serialization of tuples before they're utilized inside of the final
  `fact?<-` query.)"
-   (let [src (io/hfs-wholefile hdf-path)
+   (let [src       (io/hfs-wholefile hdf-path)
          chunk-size ?c-size
-         subquery (<- [?dataset ?chunkid ?chunk]
-                      (src ?filename ?hdf)
-                      (unpack-modis [[:ndvi]] ?hdf :> ?dataset ?freetile)
-                      (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk))]
-     (fact?<- [[?num-chunks]] [?count]
+         subquery  (<- [?dataset ?chunkid ?chunk]
+                       (src ?filename ?hdf)
+                       (unpack-modis [[:ndvi]] ?hdf :> ?dataset ?freetile)
+                       (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk)
+                       (:distinct false))]
+     (fact?<- [[?num-chunks]]
+              [?count]
               (subquery ?dataset ?chunkid ?chunk)
               (c/count ?count))))
  ?c-size ?num-chunks

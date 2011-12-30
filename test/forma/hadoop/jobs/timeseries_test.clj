@@ -3,33 +3,32 @@
         cascalog.api
         [midje sweet cascalog])
   (:require [forma.hadoop.io :as io]
+            [forma.schema :as schema]
             [forma.date-time :as d]))
 
 (defn test-chunks
   "Returns a sample input to the timeseries creation buffer, or a
-  sequence of 2-tuples, structured as <period, int-struct>. Each
+  sequence of 2-tuples, structured as <period, vector>. Each
   int-array is sized to `chunk-size`; the returned sequence contains
   tuples equal to the supplied value for `periods`."
   [dataset periods chunk-size]
   (for [period (range periods)
-        :let [date (d/period->datetime "32" period)
-              location (io/chunk-location "1000" 8 6 0 chunk-size)
-              chunk (-> (range chunk-size)
-                        (io/int-struct)
-                        (io/mk-data-value))]]
-    ["path" (io/mk-chunk dataset "32" date location chunk)]))
+        :let [date     (d/period->datetime "32" period)
+              location (schema/chunk-location "1000" 8 6 0 chunk-size)
+              chunk    (into [] (range chunk-size))]]
+    ["path" (schema/chunk-value dataset "32" date location chunk)]))
 
 (defn test-fires
   "Returns a sample input to the timeseries creation buffer, or a
-  sequence of 2-tuples, structured as <period, int-struct>. Each
+  sequence of 2-tuples, structured as <period, vector>. Each
   int-array is sized to `chunk-size`; the returned sequence contains
   tuples equal to the supplied value for `periods`."
   [sample periods]
   (for [period (range periods)
-        :let [date (d/period->datetime "1" period)
-              location (io/pixel-location "1000" sample 6 10 10)
-              tuple    (io/mk-data-value (io/fire-tuple 1 1 1 1))]]
-    ["path" (io/mk-chunk "fire" "32" date location tuple)]))
+        :let [date     (d/period->datetime "1" period)
+              location (schema/pixel-location "1000" sample 6 10 10)
+              tuple    (schema/fire-value 1 1 1 1)]]
+    ["path" (schema/chunk-value "fire" "32" date location tuple)]))
 
 (future-fact?-
  "Add in test for results, here! Add another test for the usual
