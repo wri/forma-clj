@@ -91,13 +91,12 @@
         (fire-src ?s-res ?mod-h ?mod-v ?sample ?line !!fire-series)
         (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line
                      ?short-series ?long-series ?t-stat-series)
-        (schema/forma-schema !!fire-series
-                             ?short-series
-                             ?long-series
-                             ?t-stat-series :> ?forma-series)
+        (schema/forma-seq !!fire-series
+                          ?short-series
+                          ?long-series
+                          ?t-stat-series :> ?forma-seq)
         (get ?short-series :start-idx :> ?start)
-        (get ?forma-series :series :> ?series-vals)
-        (p/index ?series-vals :zero-index ?start  :> ?period ?forma-val)
+        (p/index ?forma-seq :zero-index ?start :> ?period ?forma-val)
         (:distinct false))))
 
 ;; TODO: Filter identity, instead of complement nil
@@ -119,7 +118,10 @@ value, and the aggregate of the neighbors."
   (let [{:keys [t-res neighbors window-dims]} est-map
         [rows cols] window-dims
         src (-> (forma-tap est-map ndvi-src rain-src vcf-src fire-src)
-                (p/sparse-windower ["?sample" "?line"] window-dims "?forma-val" nil))]
+                (p/sparse-windower ["?sample" "?line"]
+                                   window-dims
+                                   "?forma-val"
+                                   nil))]
     (<- [?s-res ?country ?datestring ?mod-h ?mod-v ?sample ?line ?text]
         (date/period->datetime t-res ?period :> ?datestring)
         (src ?s-res ?period ?mod-h ?mod-v ?win-col ?win-row ?window)

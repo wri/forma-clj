@@ -40,7 +40,7 @@
                          (dec (+ start-idx elems))
                          series)))
   ([start-idx end-idx series]
-     (when series
+     (when (seq series)
        {:start-idx start-idx
         :end-idx   end-idx
         :series    series})))
@@ -157,16 +157,17 @@
 (defn merge-neighbors
   "Merges the supplied instance of `FormaValue` into the existing
   aggregate collection of `FormaValue`s represented by
-  `neighbor-val`. (`neighbor-val` must be an instance of
-  `FormaNeighborValue`."
-  [neighbor-val forma-val]
-  (let [[fire short long t-stat] (unpack-forma-val forma-val)]
-    (-> neighbor-val
+  `neighbor-val`. (`neighbors` must be an instance of
+  neighbor-value)"
+  [neighbors forma-val]
+  (let [n-count  (:neighbor-count neighbors)
+        [fire short long t-stat] (unpack-forma-val forma-val)]
+    (-> neighbors
         (update-in [:fire-value]     add-fires fire)
         (update-in [:neighbor-count] inc)
-        (update-in [:avg-short-drop] u/weighted-mean short 1)
-        (update-in [:avg-long-drop]  u/weighted-mean long 1)
-        (update-in [:avg-t-stat]     u/weighted-mean t-stat 1)
+        (update-in [:avg-short-drop] u/weighted-mean n-count short 1)
+        (update-in [:avg-long-drop]  u/weighted-mean n-count long 1)
+        (update-in [:avg-t-stat]     u/weighted-mean n-count t-stat 1)
         (update-in [:min-short-drop] min short)
         (update-in [:min-long-drop]  min long)
         (update-in [:min-t-stat]     min t-stat))))
@@ -188,10 +189,13 @@
          long-mean long-min t-mean t-min] (unpack-neighbor-val neighbor-val)
         [k330 c50 ck fire] (extract-fields fire-val)
         [k330-n c50-n ck-n fire-n] (extract-fields fire-sum)]
-    (s/join \tab
-            [k330 c50 ck fire s-drop l-drop t-drop
-             k330-n c50-n ck-n fire-n
-             ct short-mean short-min long-mean long-min t-mean t-min])))
+    (->> [k330 c50 ck fire s-drop l-drop t-drop
+          k330-n c50-n ck-n fire-n
+          ct short-mean short-min long-mean long-min t-mean t-min]
+         (map (fn [num]
+                (let [l (long num)]
+                  (if (== l num) l num))))
+         (s/join \tab))))
 
 ;; ## Location
 
@@ -253,14 +257,14 @@
   [chunk]
   (map chunk [:dataset :temporal-res :date :location :value]))
 
-(defn forma-schema
+(defn forma-seq
   "Accepts a number of timeseries of equal length and starting
   position, and converts the first entry in each timeseries to a forma
   value, for all first values and on up the sequence. Series must be
   supplied as specified by the arguments for `forma-value`. For
   example:
 
-    (forma-schema fire-series short-series long-series t-stat-series)"
+    (forma-seq fire-series short-series long-series t-stat-series)"
   [& in-series]
   [(->> in-series
         (map #(or (:series %) (repeat %)))
