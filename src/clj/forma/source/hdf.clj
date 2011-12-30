@@ -180,8 +180,7 @@ as a 1-tuple."
     (.ReadRaster band 0 0 width height ret)
     (->> ret
          (partition chunk-size)
-         (map-indexed (fn [idx xs]
-                        [idx (vec xs)])))))
+         (map-indexed (fn [idx xs] [idx (vec xs)])))))
 
 ;; ### Metadata Parsing
 ;;

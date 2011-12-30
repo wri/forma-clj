@@ -59,7 +59,8 @@ error."
          subquery  (<- [?dataset ?chunkid ?chunk]
                        (src ?filename ?hdf)
                        (unpack-modis [[:ndvi]] ?hdf :> ?dataset ?freetile)
-                       (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk))]
+                       (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk)
+                       (:distinct false))]
      (fact?<- [[?num-chunks]]
               [?count]
               (subquery ?dataset ?chunkid ?chunk)
@@ -68,28 +69,6 @@ error."
  24000   60
  48000   30
  96000   15)
-
-(comment
-  "Cascalog is losing data during its tests, for some reason. What is
-it about my particular tuples that are screwing things up here?"
-  (let [src       (io/hfs-wholefile hdf-path)
-        subquery  (<- [?dataset ?chunkid ?chunk]
-                      (src ?filename ?hdf)
-                      (unpack-modis [[:ndvi]] ?hdf :> ?dataset ?freetile)
-                      (raster-chunks [24000] ?freetile :> ?chunkid ?chunk))]
-
-    ;; This particular block shows the issue.
-    #_(cascalog.testing/process?-
-       [[60]]
-       (<- [?dataset ?chunkid]
-           (subquery ?dataset ?chunkid ?chunk)))
-
-    ;; This pairing shows that everything is working fine, outside of
-    ;; the tests.
-    (?<- (hfs-seqfile "/tmp/out" :sinkmode :replace)
-         [?dataset ?chunkid]
-         (subquery ?dataset ?chunkid ?chunk))
-    (??- (hfs-seqfile "/tmp/out"))))
 
 (tabular
  (fact "Check on the proper unpacking of the HDF file metadata map."
