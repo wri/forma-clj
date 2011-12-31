@@ -81,21 +81,19 @@
 
 ;; #### Fire Time Series Processing
 
-(defaggregateop merge-firetuples
-  " Aggregates a number of firetuples by adding up the values
-  of each `FireTuple` property."
-  ([] [0 0 0 0])
-  ([state tuple] (map + state (schema/extract-fields tuple)))
-  ([state] [(apply schema/fire-value state)]))
-
+(defparallelagg merge-firetuples
+  "Aggregates a number of firetuples by adding up the values of each
+  `FireTuple` property."
+  :init-var #'identity
+  :combine-var #'schema/add-fires)
 
 (defmapop running-fire-sum
   "Special case of `running-sum` for fire objects."
   [start tseries]
-  (let [empty (schema/fire-value 0 0 0 0)]
-    (->> tseries
-         (reductions schema/add-fires empty)
-         (schema/timeseries-value start))))
+  (->> tseries
+       (reductions schema/add-fires)
+       (filter identity)
+       (schema/timeseries-value start)))
 
 (defn aggregate-fires
   "Converts the datestring into a time period based on the supplied
@@ -132,3 +130,5 @@
                    (for [tile (apply tile-set tile-seq)]
                      ["fire" "1000-01" (apply r/hv->tilestring tile)]))]
     (create-fire-series tap t-res start end)))
+
+
