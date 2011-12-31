@@ -192,7 +192,7 @@ in which `string` lies (according to the supplied resolution, `res`)."
   (->> [one-date two-date]
        (map #(parse % :year-month-day))
        (apply time/interval)
-       (in-days)))
+       (time/in-days)))
 
 (defn date-offset
   "Returns the difference in ordinal days between the beginnings of

@@ -85,7 +85,7 @@ month    1       12)
   (period-span "32" 12) => 31
 
   "Checking that we get proper month lengths for all of 1970 (first 12
-months since the epoch)."
+   months since the epoch)."
   (for [month (range 12)]
     (period-span "32" month)) =>  [31 28 31 30 31 30 31 31 30 31 30 31])
 
