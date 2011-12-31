@@ -43,7 +43,7 @@
      (when (seq series)
        {:start-idx start-idx
         :end-idx   end-idx
-        :series    series})))
+        :series    (vec series)})))
 
 (defn adjust-timeseries
   "Takes in any number of timeseries objects, and returns a new

@@ -178,17 +178,6 @@
 
 ;; BFAST-Lite
 
-(defn cumsum
-  " compute the running, cumulative sum of a vector. intended to
-  replicate the cumsum function in R.
-  
-  Example:
-  (cumsum [1 2 3 4 5 6])
-  => [1 3 6 10 15 21]
-"
-  [v]
-  (utils/running-sum [] 0 + v))
-
 ;; TODO: rename variance-matrix in matrix/utils.clj  This is exactly
 ;; the same.
 

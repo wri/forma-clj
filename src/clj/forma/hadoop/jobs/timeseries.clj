@@ -94,7 +94,7 @@
   [start tseries]
   (let [empty (schema/fire-value 0 0 0 0)]
     (->> tseries
-         (running-sum [] empty schema/add-fires)
+         (reductions schema/add-fires empty)
          (schema/timeseries-value start))))
 
 (defn aggregate-fires

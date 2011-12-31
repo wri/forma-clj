@@ -51,10 +51,6 @@ is a function, not a macro, and can evaluate its arguments."
   (scale -1 [1 2 3]) => [-1 -2 -3]
   (scale 0 [2 1]) => [0 0])
 
-(facts "Running sum test."
-  (running-sum [] 0 + [1 1 1]) => [1 2 3]
-  (running-sum [] 0 + [3 2 1]) => [3 5 6])
-
 (facts "weighted-mean tests."
   (weighted-mean 8 3 1 1) => 6.25
   (weighted-mean 8 0 1 1) => 1.0

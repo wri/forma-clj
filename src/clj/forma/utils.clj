@@ -62,17 +62,6 @@
   [factor coll]
   (for [x coll] (* x factor)))
 
-(defn running-sum
-  "Given an accumulator, an initial value and an addition function,
-  transforms the input sequence into a new sequence of equal length,
-  increasing for each value."
-  [acc init add-func tseries]
-  (first (reduce (fn [[coll last] new]
-                   (let [last (add-func last new)]
-                     [(conj coll last) last]))
-                 [acc init]
-                 tseries)))
-
 (defn weighted-mean
   "Accepts a number of `<val, weight>` pairs, and returns the mean of
   all values with corresponding weights applied. For example:
