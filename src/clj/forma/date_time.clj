@@ -83,15 +83,10 @@
 ;; interval between a given date and January 1st of the year in which
 ;; the date occurs.
 
-(defn in-days
-  "Returns the number of days spanned by the given time interval."
-  [interval]
-  (-> interval time/in-minutes (/ 60) (/ 24) int))
-
 (defn ordinal
   "Returns the ordinal day index of a given date."
   [dt]
-  (in-days
+  (time/in-days
    (time/interval (time/date-time (year dt))
                   dt)))
 
