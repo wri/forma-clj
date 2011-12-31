@@ -63,7 +63,7 @@
 
 (defn to-pail
   "Executes the supplied `query` into the pail at `pail-path`. This
-  pail must make use of the `SplitDataChunkPailStructure`."
+  pail must make use of the `DataChunkPailStructure`."
   [pail-path query]
   (?pail- (split-chunk-tap pail-path)
           query))
