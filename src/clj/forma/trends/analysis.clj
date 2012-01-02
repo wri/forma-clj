@@ -115,7 +115,7 @@
   This function was first used to create a time-trend variable to extract
   the linear trend from a time-series (ndvi)."
   [v]
-  (map inc (range (count v))))
+  (take (count v) (iterate inc 1)))
 
 (defn long-trend-general
   "A general version of the original whizbang function, which extracted the time
@@ -130,7 +130,7 @@
   element is that associated with the time-trend. The try statement is
   meant to check whether the cofactor matrix is singular."
   [attributes t-series & cofactors]
-  {:pre [(not (empty? cofactors))]}
+  {:pre [(seq cofactors)]}
   (let [y (deseasonalize (vec t-series))
         X (if (empty? cofactors)
             (i/matrix (t-range y))

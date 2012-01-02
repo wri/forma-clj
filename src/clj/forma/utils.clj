@@ -46,7 +46,7 @@
     (unweave [0 1 2 3])
     ;=> [(0 2) (1 3)]"
   [coll]
-  {:pre [(not (empty? coll)), (even? (count coll))]}
+  {:pre [(seq coll), (even? (count coll))]}
   [(take-nth 2 coll) (take-nth 2 (rest coll))])
 
 (defn find-first
