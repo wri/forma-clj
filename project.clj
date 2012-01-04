@@ -12,7 +12,7 @@
                  [incanter/incanter-core "1.3.0-SNAPSHOT"]
                  [clj-time "0.3.4"]
                  [forma/gdal "1.8.0"]
-                 [cascalog "1.8.5-SNAPSHOT"]
+                 [cascalog "1.8.5"]
                  [backtype/dfs-datastores "1.0.5"]
                  [backtype/dfs-datastores-cascading "1.0.5"]]
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
