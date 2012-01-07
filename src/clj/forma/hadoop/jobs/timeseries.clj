@@ -89,10 +89,10 @@
 (defmapop running-fire-sum
   "Special case of `running-sum` for fire objects."
   [start tseries]
-  (->> tseries
-       (reductions schema/add-fires)
-       (filter identity)
-       (schema/timeseries-value start)))
+  (when (seq tseries)
+    (->> tseries
+         (reductions schema/add-fires)
+         (schema/timeseries-value start))))
 
 (defn aggregate-fires
   "Converts the datestring into a time period based on the supplied
