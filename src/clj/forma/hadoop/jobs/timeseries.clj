@@ -1,6 +1,5 @@
 (ns forma.hadoop.jobs.timeseries
   (:use cascalog.api
-        [forma.utils :only (running-sum)]
         [forma.matrix.utils :only (sparse-expander)]
         [forma.source.tilesets :only (tile-set)])
   (:require [cascalog.ops :as c]
