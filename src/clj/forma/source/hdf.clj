@@ -136,11 +136,14 @@
  and returns a 2-tuple consisting of the modis-subsets key (\"ndvi\")
   and a gdal.Dataset object representing the unpacked MODIS data."
   [path]
-  [(name (subdataset-key path)) (gdal/Open path)])
+  [(name (subdataset-key path))
+   (gdal/Open path)])
 
 ;; This is the first real "director" function; cascalog calls feeds
 ;; `BytesWritable` objects into `unpack-modis` and receives individual
 ;; datasets back.
+
+;; TODO: Update documentation with return value.
 
 (defmapcatop [unpack-modis [to-keep]]
   "Stateful approach to unpacking HDF files. Registers all gdal
@@ -176,9 +179,9 @@ as a 1-tuple."
         height (.GetYSize band)
         ret (int-array (* width height))]
     (.ReadRaster band 0 0 width height ret)
-    (->> ret
-         (partition chunk-size)
-         (map-indexed (fn [idx xs] [idx (vec xs)])))))
+    (map-indexed (fn [idx xs]
+                   [idx (vec xs)])
+                 (partition chunk-size ret))))
 
 ;; ### Metadata Parsing
 ;;
@@ -245,8 +248,8 @@ as a 1-tuple."
   (let [keys ["SHORTNAME" "TileID" "RANGEBEGINNINGDATE"]
         chunkifier (p/chunkify chunk-size)]
     (<- [?datachunk]
-        (source ?filename ?hdf)
-        (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
+        (source _ ?hdf)
+        (unpack-modis  [datasets] ?hdf :> ?dataset ?freetile)
         (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk)
         (meta-values [keys] ?freetile :> ?productname ?tileid ?date)
         (split-id ?tileid :> ?mod-h ?mod-v)
