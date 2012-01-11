@@ -92,6 +92,13 @@
   [coll]
   (apply (partial map vector) coll))
 
+(defn outer-product
+  "returns a flattened vector of the outer product of a vector and its
+  transpose"
+  [coll]
+  (let [mat (i/matrix coll)]
+    (flatten (i/mmult mat (i/trans mat)))))
+
 (defn element-sum
   "returns a vector of sums of each respective element in a vector of vectors,
   i.e., a vector with the first element being the sum of the first
@@ -107,8 +114,8 @@
   TODO: remove redundancy, keep readability"
   [y & x]
   (let [foc (apply first-order-conditions y x)]
-    [(element-sum (map i/kronecker (transpose foc)))
-     (element-sum (map i/kronecker (transpose (map i/cumulative-sum foc))))]))
+    [(element-sum (map outer-product (transpose foc)))
+     (element-sum (map outer-product (transpose (map i/cumulative-sum foc))))]))
 
 (defn hansen-stat
   "returns the Hansen (1992) test statistic; number of first-order
@@ -133,12 +140,13 @@
   to do."
   [y long-block short-block & x]
   (let [characteristics (create-struct :short :long :long-tstat :break)
-        [long-val long-tstat] (apply long-stats y x)]
+        deseas (harmonic-seasonal-decomposition 23 3 y)
+        [long-val long-tstat] (apply long-stats deseas x)]
     (struct characteristics
-            (min-short-trend long-block short-block y)
+            (min-short-trend long-block short-block deseas)
             long-val
             long-tstat
-            (apply hansen-stat y x))))
+            (apply hansen-stat deseas x))))
 
 (defn scaled-vector
   [scalar coll]
