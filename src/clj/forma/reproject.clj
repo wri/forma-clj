@@ -284,13 +284,15 @@ Example usage:
 
 (defn latlon->modis
   "Converts the supplied latitude and longitude into MODIS pixel
-  coordinates at the supplied resolution.
+  coordinates at the supplied resolution. The resolution is
+  expected to be either 1000, 500, or 250.
 
 Example usage:
 
     (latlon->modis \"1000\" 29.89583 -115.2290)
     ;=> [8 6 12 12]"
   [modis-res lat lon]
+  {:pre [(contains? pixels-at-res modis-res)]}
   (->> (latlon->sinu-xy lat lon)
        (apply sinu-xy->global-mags)
        (apply global-mags->modis modis-res)))
