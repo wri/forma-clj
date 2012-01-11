@@ -92,13 +92,6 @@
   [coll]
   (apply (partial map vector) coll))
 
-(defn outer-product
-  "returns a flattened vector of the outer product of a vector and its
-  transpose"
-  [coll]
-  (let [mat (i/matrix coll)]
-    (flatten (i/mmult mat (i/trans mat)))))
-
 (defn element-sum
   "returns a vector of sums of each respective element in a vector of vectors,
   i.e., a vector with the first element being the sum of the first
@@ -114,8 +107,8 @@
   TODO: remove redundancy, keep readability"
   [y & x]
   (let [foc (apply first-order-conditions y x)]
-    [(element-sum (map outer-product (transpose foc)))
-     (element-sum (map outer-product (transpose (map i/cumulative-sum foc))))]))
+    [(element-sum (map i/kronecker (transpose foc)))
+     (element-sum (map i/kronecker (transpose (map i/cumulative-sum foc))))]))
 
 (defn hansen-stat
   "returns the Hansen (1992) test statistic; number of first-order
@@ -152,7 +145,8 @@
   (map #(* scalar %) coll))
 
 (defn harmonic-series
-  "return two vectors "
+  "returns a vector of scaled cosine and sine series of the same
+  length as `coll`; the scalar is the harmonic coefficient"
   [freq coll k]
   (let [pds (count coll)
         scalar (/ (* 2 (. Math PI) k) freq)]
@@ -160,6 +154,8 @@
                     (scaled-vector scalar (idx coll))))))
 
 (defn k-harmonic-matrix
+  "returns an N x (2*k) matrix of harmonic series, where N is the
+  length of `coll` and `k` is the number of harmonic terms."
   [freq k coll]
   (let [degree-vector (vec (map inc (range k)))]
     (apply i/bind-columns
@@ -181,6 +177,8 @@
   (let [S (:fitted (s/linear-model coll (k-harmonic-matrix freq k coll)))]
     (map #(+ (average coll) %)
          (apply (partial map -) [coll S]))))
+
+
 
 ;; ## WHOOPBANG :: Collect the short-term drop associated with a
 ;; ## time-series
