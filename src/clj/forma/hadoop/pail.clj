@@ -13,7 +13,7 @@
            :prefix "pail-")
 
 (defn pail-getType [this]
-  clojure.lang.PersistentHashMap)
+  java.util.Map)
 
 (defn pail-getTarget
   [this {:keys [location temporal-res dataset]}]
