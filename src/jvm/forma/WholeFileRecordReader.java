@@ -1,15 +1,16 @@
 package forma;
 
-import java.io.IOException;
-import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.RecordReader;
+
+import java.io.IOException;
 
 class WholeFileRecordReader implements RecordReader<Text, BytesWritable> {
   
@@ -22,7 +23,6 @@ class WholeFileRecordReader implements RecordReader<Text, BytesWritable> {
         this.conf = conf;
     }
 
-    @Override
     public boolean next(Text key, BytesWritable value) throws IOException {
         if (!processed) {
             byte[] contents = new byte[(int) fileSplit.getLength()];
@@ -46,27 +46,22 @@ class WholeFileRecordReader implements RecordReader<Text, BytesWritable> {
         return false;
     }
 
-    @Override
     public Text createKey() {
         return new Text();
     }
 
-    @Override
     public BytesWritable createValue() {
         return new BytesWritable();
     }
 
-    @Override
     public long getPos() throws IOException {
         return processed ? fileSplit.getLength() : 0;
     }
 
-    @Override
     public float getProgress() throws IOException {
         return processed ? 1.0f : 0.0f;
     }
 
-    @Override
     public void close() throws IOException {
         // do nothing
     }
