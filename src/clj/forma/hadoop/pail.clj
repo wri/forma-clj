@@ -45,7 +45,7 @@
   "Executes the supplied query into the pail located at the supplied
   path, consolidating when finished."
   [tap pail-path query]
-  (let [pail (Pail. pail-path)]
+  (let [pail (Pail/create pail-path false)]
     (with-fs-tmp [_ tmp]
       (?- (tap tmp) query)
       (.absorb pail (Pail. tmp))
