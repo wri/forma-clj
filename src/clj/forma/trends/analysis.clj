@@ -1,7 +1,8 @@
 (ns forma.trends.analysis
-  (:use [forma.matrix.utils :only (variance-matrix coll-avg)]
+  (:use [forma.matrix.utils :only (variance-matrix coll-avg ones-column)]
         [clojure.math.numeric-tower :only (sqrt floor abs expt)]
-        [forma.trends.filter :only (deseasonalize make-reliable hp-filter)])
+        [forma.trends.filter :only (deseasonalize make-reliable hp-filter)]
+        [clojure-csv.core])
   (:require [forma.utils :as utils]
             [incanter.core :as i]
             [incanter.stats :as s]))
@@ -140,13 +141,12 @@
   to do."
   [y long-block short-block & x]
   (let [characteristics (create-struct :short :long :long-tstat :break)
-        deseas (harmonic-seasonal-decomposition 23 3 y)
-        [long-val long-tstat] (apply long-stats deseas x)]
+        [long-val long-tstat] (apply long-stats y x)]
     (struct characteristics
-            (min-short-trend long-block short-block deseas)
+            (min-short-trend long-block short-block y)
             long-val
             long-tstat
-            (apply hansen-stat deseas x))))
+            (apply hansen-stat y x))))
 
 (defn scaled-vector
   [scalar coll]
@@ -187,6 +187,73 @@
          (apply (partial map -) [coll S]))))
 
 
+(def mys-data (let [file "/Users/danhammer/Desktop/testmys/allmys.txt"]
+                (map
+                 (partial map #(Float/parseFloat %))
+                 (parse-csv
+                  (slurp file)))))
+
+(def mys-labels (take 100000 (map last mys-data)))
+(def mys-features (take 100000 (map butlast mys-data)))
+
+(def X (i/bind-columns
+        (ones-column (count mys-features))
+        (i/matrix (vec (map vec mys-features)))))
+(def Xt (i/trans X))
+
+
+(def beta (i/trans (i/matrix (repeat 23 0))))
+
+(defn make-binary
+  [coll]
+  (map #(if (> % 0) 1 0) coll))
+
+(def y (make-binary mys-labels))
+
+(defn one-minus
+  [coll]
+  (map #(- 1 %) coll))
+
+(defn prob
+  [beta X]
+  (let [exp-bx (map #(Math/exp %) (i/mmult beta (i/trans X)))]
+    (map / exp-bx (map inc exp-bx))))
+
+(defn log-likelihood
+  [prob labels]
+  (let [inv-log-p (map * (map #(- 1 %) labels)
+                       (map #(Math/log %) (map #(- 1 %) prob)))
+        log-p (map * labels (map #(Math/log %)  prob))]
+    (reduce + (map + inv-log-p log-p))))
+
+(defn info-matrix
+  [X Xt y p]
+  (let [p-vec (map * p (one-minus p))]
+    (i/mmult
+     (map (partial map * p-vec) Xt)
+     X)))
+
+(defn increment-beta
+  [X Xt y p rdg-cons]
+  (let [score (i/mmult Xt (map - y p))
+        [obs chars] (i/dim X)
+        info-mat (info-matrix X Xt y p)
+        info-adj (i/plus info-mat (i/diag (repeat chars rdg-cons)))]
+    (i/mmult
+     (i/solve info-adj) score)))
+
+(defn logistic-ridge-classifier
+  [y X rdg-cons]
+  (let [b (repeat (second (i/dim X)) 0)
+        Xt (i/trans X)]
+    (loop [beta b diff 4]
+      (if (zero? diff)
+        beta
+        (recur (let [p (prob (i/trans beta) X)
+                     inc-beta (increment-beta X Xt y p rdg-cons)]
+                 (println beta)
+                 map + beta inc-beta)
+               (dec diff))))))
 
 ;; ## WHOOPBANG :: Collect the short-term drop associated with a
 ;; ## time-series
@@ -219,17 +286,17 @@
 ;;           (windowed-apply coll-avg window)
 ;;           (make-monotonic min))))
 
-(defn collect-short-trend
-  "preps the short-term drop for the merge into the other data by separating
-  out the reference period and the rest of the observations for estimation,
-  that is, `for-est`!"
-  ([start-pd end-pd long-block window ts]
-     (collect-short-trend start-pd end-pd long-block window ts []))
-  ([start-pd end-pd long-block window ts reli-ts]
-     (let [offset (+ long-block window)
-           [y z] (map #(-> % (- offset) (+ 2)) [start-pd end-pd])
-           full-ts (short-trend long-block window ts reli-ts)]
-       (subvec full-ts (dec y) z))))
+;; (defn collect-short-trend
+;;   "preps the short-term drop for the merge into the other data by separating
+;;   out the reference period and the rest of the observations for estimation,
+;;   that is, `for-est`!"
+;;   ([start-pd end-pd long-block window ts]
+;;      (collect-short-trend start-pd end-pd long-block window ts []))
+;;   ([start-pd end-pd long-block window ts reli-ts]
+;;      (let [offset (+ long-block window)
+;;            [y z] (map #(-> % (- offset) (+ 2)) [start-pd end-pd])
+;;            full-ts (short-trend long-block window ts reli-ts)]
+;;        (subvec full-ts (dec y) z))))
 
 ;; WHIZBANG :: Collect the long-term drop of a time-series
 
