@@ -18,7 +18,7 @@
                  [backtype/dfs-datastores-cascading "1.1.1"]]
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
                      [incanter/incanter-charts "1.3.0-SNAPSHOT"]
-                     [midje-cascalog "0.3.1"]]
+                     [midje-cascalog "0.4.0"]]
   :aot [
         forma.hadoop.pail
         forma.hadoop.jobs.scatter
