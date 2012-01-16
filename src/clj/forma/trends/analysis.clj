@@ -193,16 +193,13 @@
                  (parse-csv
                   (slurp file)))))
 
-(def mys-labels (take 100000 (map last mys-data)))
-(def mys-features (take 100000 (map butlast mys-data)))
-
-(def X (i/bind-columns
-        (ones-column (count mys-features))
-        (i/matrix (vec (map vec mys-features)))))
-(def Xt (i/trans X))
+(def mys-labels (take 1000000 (map last mys-data)))
+(def mys-features (take 1000000 (map butlast mys-data)))
 
 
-(def beta (i/trans (i/matrix (repeat 23 0))))
+(def X (map (partial cons 1) (take 235469 mys-features)))
+
+(def beta (repeat 23 0))
 
 (defn make-binary
   [coll]
@@ -214,46 +211,77 @@
   [coll]
   (map #(- 1 %) coll))
 
-(defn prob
-  [beta X]
-  (let [exp-bx (map #(Math/exp %) (i/mmult beta (i/trans X)))]
-    (map / exp-bx (map inc exp-bx))))
+
+(defn logistic-fn
+  [x]
+  (/ (Math/exp x)
+     (inc (Math/exp x))))
+
+(defn dot-product
+  [x y]
+  (reduce + (map * x y)))
+
+(defn logistic-prob
+  [beta-seq x]
+  (logistic-fn (dot-product beta-seq x)))
 
 (defn log-likelihood
-  [prob labels]
-  (let [inv-log-p (map * (map #(- 1 %) labels)
-                       (map #(Math/log %) (map #(- 1 %) prob)))
-        log-p (map * labels (map #(Math/log %)  prob))]
-    (reduce + (map + inv-log-p log-p))))
+  [beta-seq label x]
+  (let [prob (logistic-prob beta-seq x)]
+    (+ (* label (Math/log prob))
+       (* (- 1 label) (Math/log (- 1 prob))))))
+
+(defn total-log-likelihood
+  "returns the total log likelihood for a group of pixels; input
+  labels and features for the group of pixels, aligned correctly so
+  that the first label and feature correspond to the first pixel.
+  Example:
+  (total-log-likelihood y X) => -69.31471805599459"
+  [beta-seq labels features]
+  (reduce + (map (partial log-likelihood beta-seq) labels features)))
+
+(defn probability-calc
+  "returns a vector of probabilities for each observation"
+  [beta-seq features]
+  (map (partial logistic-prob beta-seq) features))
+
+(defn score-seq
+  "returns the scores for each parameter in the analysis"
+  [beta-seq labels features]
+  (let [prob-seq (probability-calc beta-seq features)]
+    (i/mmult (i/trans features) (map - labels prob-seq))))
 
 (defn info-matrix
-  [X Xt y p]
-  (let [p-vec (map * p (one-minus p))]
-    (i/mmult
-     (map (partial map * p-vec) Xt)
-     X)))
+  "returns the information matrix for the logistic probability
+  function"
+  [beta-seq labels features]
+  (let [mult-func (fn [x] (* x (- 1 x)))
+        prob-seq  (->> (probability-calc beta-seq features)
+                       (map mult-func))]
+    (i/mmult (map scaled-vector prob-seq (i/trans features))
+             features)))
 
-(defn increment-beta
-  [X Xt y p rdg-cons]
-  (let [score (i/mmult Xt (map - y p))
-        [obs chars] (i/dim X)
-        info-mat (info-matrix X Xt y p)
-        info-adj (i/plus info-mat (i/diag (repeat chars rdg-cons)))]
+(defn beta-update
+  [beta-seq labels features rdg-cons]
+  (let [num-features (count beta-seq)
+        info-adj (i/plus
+                  (info-matrix beta-seq labels features)
+                  (i/diag (repeat num-features rdg-cons)))]
     (i/mmult
-     (i/solve info-adj) score)))
+     (i/solve info-adj)
+     (score-seq beta-seq labels features))))
 
-(defn logistic-ridge-classifier
-  [y X rdg-cons]
-  (let [b (repeat (second (i/dim X)) 0)
-        Xt (i/trans X)]
-    (loop [beta b diff 4]
-      (if (zero? diff)
+(defn logistic-beta-vector 
+  [labels features rdg-cons]
+  (let [b (repeat 23 0)]
+    (loop [beta b iter 9]
+      (if (zero? iter)
         beta
-        (recur (let [p (prob (i/trans beta) X)
-                     inc-beta (increment-beta X Xt y p rdg-cons)]
-                 (println beta)
+        (recur (let [inc-beta (beta-update beta labels features rdg-cons)]
+                 (println "")
+                 (println (flatten beta))
                  map + beta inc-beta)
-               (dec diff))))))
+               (dec iter))))))
 
 ;; ## WHOOPBANG :: Collect the short-term drop associated with a
 ;; ## time-series
