@@ -1,8 +1,6 @@
 (ns forma.matrix.jblas
   (:import [org.jblas FloatMatrix]))
 
-(import '[org.jblas FloatMatrix])
-
 (defn feature-vec [n]
   (FloatMatrix.
    (into-array (for [x (range n)]
