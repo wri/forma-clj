@@ -4,11 +4,16 @@
         [forma.trends.filter :only (deseasonalize make-reliable hp-filter)])
   (:require [forma.utils :as utils]
             [incanter.core :as i]
-            [incanter.stats :as s]))
+            [incanter.stats :as s]
+            [clojure.contrib.generic.math-functions :as m]))
 
 ;; The first few functions are more general, and could be pulled into,
 ;; say, the matrix operation namespace.  For now, we will leave them
 ;; here, until we can talk more about what goes into that namespace.
+
+(defn test-math
+  [n]
+  (m/cos n))
 
 (defn time-trend-cofactor
   "construct a matrix of cofactors; first column is comprised of ones,
