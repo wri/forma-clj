@@ -1,6 +1,5 @@
 (ns forma.source.logistic
-  (:use [clojure.math.numeric-tower :only (sqrt floor abs expt)]
-        [clojure-csv.core])
+  (:use [clojure-csv.core])
   (:require [incanter.core :as i]))
 
 (def mys-data (let [file "/Users/danhammer/Desktop/testmys/allmys.txt"]
@@ -20,9 +19,15 @@
 (def X (map (partial cons 1) (take 235469 mys-features)))
 (def beta (repeat 23 0))
 
-(defn one-minus
-  [coll]
-  (map #(- 1 %) coll))
+(defn feature-vec
+  [n]
+  (map (partial cons 1)
+       (for [x (range n)]
+         (take 22 (repeatedly rand)))))
+
+(defn label-vec
+  [n]
+  (for [x (range n)] (if (> (rand) 0.5) 1 0)))
 
 (defn scaled-vector
   [scalar coll]
@@ -50,9 +55,7 @@
 (defn total-log-likelihood
   "returns the total log likelihood for a group of pixels; input
   labels and features for the group of pixels, aligned correctly so
-  that the first label and feature correspond to the first pixel.
-  Example:
-  (total-log-likelihood y X) => -69.31471805599459"
+  that the first label and feature correspond to the first pixel."
   [beta-seq labels features]
   (reduce + (map (partial log-likelihood beta-seq) labels features)))
 
@@ -63,7 +66,7 @@
        feature-seqs))
 
 (defn score-seq
-  "returns the scores for each parameter in the analysis"
+  "returns the scores for each parameter"
   [beta-seq labels features]
   (let [prob-seq (probability-calc beta-seq features)]
     (i/mmult (i/trans features) (map - labels prob-seq))))
@@ -95,7 +98,19 @@
       (if (zero? iter)
         beta
         (recur (let [inc-beta (beta-update beta labels features rdg-cons)]
-                 (println "")
-                 (println (flatten beta))
-                 map + beta inc-beta)
+                 (map + beta inc-beta))
                (dec iter))))))
+
+;; Ultimately, this is what we'd like to run:
+;; (logistic-beta-vector (label-vec 100000) (feature-vec 100000) 0.00000001)
+
+;; In the meantime, this is a problem ...
+;; (def X-rand (feature-vec 100000))
+;; (def y-rand (label-vec 100000))
+;; (time (total-log-likelihood beta y-rand X-rand))
+;; =>"Elapsed time: 3320.955 msecs"
+
+;; (def X-rand (feature-vec 100000))
+;; (def y-rand (label-vec 100000))
+;; (time (total-log-likelihood beta y-rand X-rand))
+;; ... takes way, way longer than 33200 msecs (10 x 3320 msecs)
