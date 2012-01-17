@@ -1,23 +1,23 @@
 (ns forma.source.logistic
-  (:use [clojure-csv.core])
   (:require [incanter.core :as i]))
 
-(def mys-data (let [file "/Users/danhammer/Desktop/testmys/allmys.txt"]
-                (map
-                 (partial map #(Float/parseFloat %))
-                 (parse-csv
-                  (slurp file)))))
+;; (:use [clojure-csv.core])
+;; (def mys-data (let [file "/Users/danhammer/Desktop/testmys/allmys.txt"]
+;;                 (map
+;;                  (partial map #(Float/parseFloat %))
+;;                  (parse-csv
+;;                   (slurp file)))))
 
-(def mys-labels (take 1000000 (map last mys-data)))
-(def mys-features (take 1000000 (map butlast mys-data)))
+;; (def mys-labels (take 1000000 (map last mys-data)))
+;; (def mys-features (take 1000000 (map butlast mys-data)))
 
-(defn make-binary
-  [coll]
-  (map #(if (> % 0) 1 0) coll))
+;; (defn make-binary
+;;   [coll]
+;;   (map #(if (> % 0) 1 0) coll))
 
-(def y (make-binary mys-labels))
-(def X (map (partial cons 1) (take 235469 mys-features)))
-(def beta (repeat 23 0))
+;; (def y (make-binary mys-labels))
+;; (def X (map (partial cons 1) (take 235469 mys-features)))
+;; (def beta (repeat 23 0))
 
 (defn feature-vec
   [n]
@@ -105,10 +105,10 @@
 ;; (logistic-beta-vector (label-vec 100000) (feature-vec 100000) 0.00000001)
 
 ;; In the meantime, this is a problem ...
-;; (def X-rand (feature-vec 100000))
-;; (def y-rand (label-vec 100000))
-;; (time (total-log-likelihood beta y-rand X-rand))
-;; =>"Elapsed time: 3320.955 msecs"
+(def X-rand (feature-vec 100000))
+(def y-rand (label-vec 100000))
+(time (total-log-likelihood beta y-rand X-rand))
+=>"Elapsed time: 3320.955 msecs"
 
 ;; (def X-rand (feature-vec 100000))
 ;; (def y-rand (label-vec 100000))
