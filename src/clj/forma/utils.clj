@@ -62,6 +62,21 @@
   [factor coll]
   (for [x coll] (* x factor)))
 
+(defn dot-product
+  "returns the dot product of two vectors"
+  [x y]
+  (reduce + (map * x y)))
+
+(defn transpose
+  "returns the transposition of a `coll` of vectors"
+  [coll]
+  (apply map vector coll))
+
+(defn multiply-rows
+  "multiply matrix rows (in place) by a collection"
+  [coll mat]
+  (map (partial map * coll) mat))
+
 (defn weighted-mean
   "Accepts a number of `<val, weight>` pairs, and returns the mean of
   all values with corresponding weights applied. For example:

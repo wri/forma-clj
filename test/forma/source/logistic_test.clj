@@ -1,8 +1,44 @@
 (ns forma.source.logistic-test
   (:use [forma.source.logistic] :reload)
-  (:use [midje sweet cascalog])
+  (:use [midje sweet cascalog]
+        [clojure-csv.core])
   (:import [org.jblas FloatMatrix])
-  (:require [incanter.core :as i]))
+  (:require [incanter.core :as i]
+            [clojure.java.io :as io]))
+
+(defn read-csv
+  [file-name]
+  (map
+   (partial map #(Float/parseFloat %))
+   (parse-csv
+    (slurp file-name))))
+
+(defn test-file
+  [file-name]
+  (io/input-stream (io/resource file-name)))
+
+;; (def y (apply concat (read-csv "mys-label-data.csv")))
+
+;; (def X (map (partial cons 1) (read-csv "mys-feature-data.csv")))
+
+(def y (apply
+        concat
+        (take 1000 (read-csv "/Users/danhammer/Desktop/myslab.csv"))))
+
+(def X (take 1000
+             (map (partial cons 1)
+                  (read-csv "/Users/danhammer/Desktop/mys.csv"))))
+
+(def beta (repeat
+           (count (first X))
+           0))
+
+(facts
+ (let [label-seq   y
+       feature-mat X
+       beta-output (logistic-beta-vector label-seq feature-mat 1e-8)]
+   (first beta-output) => -2.416103637233374
+   (last beta-output)  => -26.652096814499775))
 
 (defn feature-vec
   [n]
