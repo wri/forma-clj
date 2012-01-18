@@ -1,6 +1,7 @@
 (ns forma.source.logistic-test
   (:use [forma.source.logistic] :reload)
   (:use [midje sweet cascalog])
+  (:import [org.jblas FloatMatrix])
   (:require [incanter.core :as i]))
 
 (defn feature-vec
@@ -17,7 +18,21 @@
 
 (fact
  "test algebra for matrix multiplication used in logistic.clj namespace"
- (matrix-mult A B) => [[273 455] [243 235] [244 205] [102 160]])
+ (let [m1 (FloatMatrix. (into-array (map float-array A)))
+       m2 (FloatMatrix. (into-array (map float-array B)))]
+   (vec (.data (.rowSums (.mmul m1 m2)))))
+ => [728.0 478.0 449.0 262.0])
+
+(fact
+ "no new information is added if beta is 0-vector; probability is 0.5"
+ (let [xs (feature-vec 4)
+       beta (repeat 23 0)]
+   (logistic-prob beta (first xs))) => 0.5)
+
+(fact (let [beta (repeat 1000 0)
+            labels (label-vec 1000)
+            features (feature-vec 1000)]
+        (total-log-likelihood beta labels features)) => -693.1471805599322)
 
 ;; (:use [clojure-csv.core])
 ;; (def mys-data (let [file "/Users/danhammer/Desktop/testmys/allmys.txt"]
