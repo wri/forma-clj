@@ -17,17 +17,19 @@
   [file-name]
   (io/input-stream (io/resource file-name)))
 
-;; (def y (apply concat (read-csv "mys-label-data.csv")))
+(def y (apply concat
+              (read-csv (test-file "testdata/mys-label-data.csv"))))
 
-;; (def X (map (partial cons 1) (read-csv "mys-feature-data.csv")))
+(def X (map (partial cons 1)
+            (read-csv (test-file "testdata/mys-feature-data.csv"))))
 
-(def y (apply
-        concat
-        (take 1000 (read-csv "/Users/danhammer/Desktop/myslab.csv"))))
+;; (def y (apply
+;;         concat
+;;         (take 1000 (read-csv "/Users/danhammer/Desktop/myslab.csv"))))
 
-(def X (take 1000
-             (map (partial cons 1)
-                  (read-csv "/Users/danhammer/Desktop/mys.csv"))))
+;; (def X (take 1000
+;;              (map (partial cons 1)
+;;                   (read-csv "/Users/danhammer/Desktop/mys.csv"))))
 
 (def beta (repeat
            (count (first X))
