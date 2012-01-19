@@ -1,28 +1,41 @@
 (ns forma.trends.analysis-test
   (:use [forma.trends.analysis] :reload)
   (:use midje.sweet
-        [forma.presentation.ndvi-filter :only (ndvi reli rain)]
-        [forma.trends.filter :only (deseasonalize)])
+        [forma.presentation.ndvi-filter :only (ndvi reli rain)])
   (:require [incanter.core :as i]
             [incanter.stats :as s]))
 
 (fact
-  "check to make sure the long-trend-general coefficient matches up
- with the linear model trend coefficient."
-  (let [y (deseasonalize (vec ndvi))
-        X (i/bind-columns (t-range y) (vec (take 131 rain)))
-        {coef :coefs} (s/linear-model y X)]
-    (long-trend-general [:coefs] ndvi rain) => [(second coef)]))
+  "Check square matrix"
+  (let [mat (i/matrix [[1 2 3 4]
+                       [5 6 7 8]
+                       [9 10 11 12]
+                       [13 14 15 16]])]
+    (is-square? mat) => true))
 
-(facts
-  "TODO: Make these actually run tests, not just count."
+(fact
+  "check singular matrix"
+  (let [mat (i/matrix [[3 6]
+                       [1 2]])]
+    (singular? singular-matrix) => true))
 
-  "check that short-term trend output is the correct shape for the estimation months"
-  (let [start 75
-        end 131
-        final-count (inc (- end start))]
-    (count (collect-short-trend start end 15 5 ndvi (vec reli))) => final-count
-    (count (collect-long-trend start end ndvi [(vec reli)])) => final-count))
+(fact
+  (idx [1 2 3]) => [0 1 2])
 
-;; The above test results in this, for short trends.
+(fact
+  (average [1 2 3]) => 2)
 
+(fact
+  (moving-average 2 [1 2 3]) => [3/2 5/2])
+
+(tabular
+ (fact
+   (ols-trend ?v) => ?expected)
+ ?v ?expected
+ [1 2] 1.
+ [1 2 4] 1.5
+ [1 2 50] 24.5
+ [2 50] 48.)
+
+(fact
+   (windowed-map ols-trend 2 [1 2 50]) => [1. 48.])
