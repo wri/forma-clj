@@ -39,7 +39,7 @@ with a initialized parameter vector of 0's"
 first and last specified, as below."
  (let [label-seq   y
        feature-mat X
-       beta-output (logistic-beta-vector label-seq feature-mat 1e-8)]
+       beta-output (logistic-beta-vector label-seq feature-mat 1e-8 1e-8 10)]
    (first beta-output) => -2.416103637233374
    (last beta-output)  => -26.652096814499775))
 
