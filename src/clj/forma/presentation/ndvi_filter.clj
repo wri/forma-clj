@@ -3,7 +3,7 @@
         [forma.utils :only (round-places)]
         [forma.date-time :only (monthly-msec-range)]
         [forma.trends.filter :only (hp-filter make-reliable)]
-        [forma.trends.analysis :only (mosum-prediction)]
+        ;;[forma.trends.analysis :only (mosum-prediction)]
         [clj-time.core :only (date-time)])
   (:require [incanter.charts :as c]
             [incanter.core :as i]
@@ -180,35 +180,35 @@
 ;; Plot the structural break lines, with a slider that can adjust the
 ;; MOSUM window and the HP filter parameter
 
-(def plot-efp (c/xy-plot (range (count Yt))
-                         (:series (mosum-prediction (i/matrix (hp-filter Yt 10))
-                                                    (i/bind-columns (repeat (count Yt) 1)
-                                                                    ti)
-                                                    0.05
-                                                    0.05))
-                         :title ""
-                         :x-label ""
-                         :y-label ""
-                         :series-label ""))
+;; (def plot-efp (c/xy-plot (range (count Yt))
+;;                          (:series (mosum-prediction (i/matrix (hp-filter Yt 10))
+;;                                                     (i/bind-columns (repeat (count Yt) 1)
+;;                                                                     ti)
+;;                                                     0.05
+;;                                                     0.05))
+;;                          :title ""
+;;                          :x-label ""
+;;                          :y-label ""
+;;                          :series-label ""))
 
 (defn add-bfast-ndvi []
   (c/add-lines plot-efp (range (count Yt)) Yt))
 
-(defn add-bfast-slider []
-  (let [x (range (count Yt))]
-    (c/sliders*
-     #(i/set-data plot-efp
-                  [x (:series
-                      (mosum-prediction (i/matrix (hp-filter Yt %1))
-                                        (i/bind-columns (repeat (count Yt) 1)
-                                                        ti)
-                                        %2
-                                        %3))])
-     [(map (partial round-places 2)
-           (range 0 100 1))
-      [0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5]
-      [0.01 0.025 0.05 0.1 0.15 0.2]]
-     ["h-p filter parameter" "h" "p-value"])))
+;; (defn add-bfast-slider []
+;;   (let [x (range (count Yt))]
+;;     (c/sliders*
+;;      #(i/set-data plot-efp
+;;                   [x (:series
+;;                       (mosum-prediction (i/matrix (hp-filter Yt %1))
+;;                                         (i/bind-columns (repeat (count Yt) 1)
+;;                                                         ti)
+;;                                         %2
+;;                                         %3))])
+;;      [(map (partial round-places 2)
+;;            (range 0 100 1))
+;;       [0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5]
+;;       [0.01 0.025 0.05 0.1 0.15 0.2]]
+;;      ["h-p filter parameter" "h" "p-value"])))
 
 
 ;; Draw graphs for slide presentation
@@ -245,10 +245,10 @@
   (c/add-lines plot-breaks bfast-range
                Vt))
 
-(defn add-break []
-  (c/add-lines plot-breaks bfast-range
-               (:series (mosum-prediction (i/matrix (hp-filter Yt 10))
-                                          (i/bind-columns (repeat (count Yt) 1)
-                                                          ti)
-                                          0.05
-                                          0.05))))
+;; (defn add-break []
+;;   (c/add-lines plot-breaks bfast-range
+;;                (:series (mosum-prediction (i/matrix (hp-filter Yt 10))
+;;                                           (i/bind-columns (repeat (count Yt) 1)
+;;                                                           ti)
+;;                                           0.05
+;;                                           0.05))))
