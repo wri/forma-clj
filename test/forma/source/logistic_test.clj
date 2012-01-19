@@ -1,41 +1,45 @@
 (ns forma.source.logistic-test
   (:use [forma.source.logistic] :reload)
-  (:use [midje sweet cascalog])
-  (:require [incanter.core :as i]))
+  (:use [midje sweet cascalog]
+        [clojure-csv.core])
+  (:import [org.jblas FloatMatrix])
+  (:require [incanter.core :as i]
+            [forma.testing :as t]))
 
-(defn feature-vec
-  [n]
-  (for [x (range n)]
-    (take 23 (repeatedly rand))))
+(defn read-mys-csv
+  "returns a properly adjusted list of the malaysia test data."
+  [file-name]
+  (map
+   (partial map #(Float/parseFloat %))
+   (butlast (parse-csv
+             (slurp file-name)))))
 
-(defn label-vec
-  [n]
-  (for [x (range n)] (if (> (rand) 0.5) 1 0)))
+(def label-path (t/dev-path "/testdata/mys-label.csv"))
+(def feature-path (t/dev-path "/testdata/mys-feature.csv"))
 
-(def A [[14 9 3] [2 11 15] [0 12 17] [5 2 3]])
-(def B [[12 25] [9 10] [8 5]])
+(def y (apply concat (read-mys-csv label-path)))
 
-(fact
- "test algebra for matrix multiplication used in logistic.clj namespace"
- (matrix-mult A B) => [[273 455] [243 235] [244 205] [102 160]])
+(def X (map (partial cons 1)
+            (read-mys-csv feature-path)))
 
-;; (:use [clojure-csv.core])
-;; (def mys-data (let [file "/Users/danhammer/Desktop/testmys/allmys.txt"]
-;;                 (map
-;;                  (partial map #(Float/parseFloat %))
-;;                  (parse-csv
-;;                   (slurp file)))))
+(def beta-init
+  "define the initial parameter vector as a sequence of 0s, i.e., no
+information on how each variable is weighted."
+  (repeat (count (first X)) 0))
 
-;; (def mys-labels (take 1000000 (map last mys-data)))
-;; (def mys-features (take 1000000 (map butlast mys-data)))
+(facts
+ "log-likelihood of a particular, binary label will always be the same
+with a initialized parameter vector of 0's"
+ (logistic-prob beta-init (first X)) => 0.5
+ (log-likelihood beta-init (first y) (first X)) => -0.6931471805599453
+ (total-log-likelihood beta-init y X) => -693.1471805599322)
 
-;; (defn make-binary
-;;   [coll]
-;;   (map #(if (> % 0) 1 0) coll))
-
-;; (def y (make-binary mys-labels))
-;; (def X (map (partial cons 1) (take 235469 mys-features)))
-;; (def beta (repeat 23 0))
-
-
+(facts
+ "logistic routine should return a vector of coefficients, with the
+first and last specified, as below."
+ (let [label-seq   y
+       feature-mat X
+       beta-output (logistic-beta-vector label-seq feature-mat 1e-8 1e-8 10)]
+   (first beta-output) => -2.416103637233374
+   (last beta-output)  => -26.652096814499775))
 
