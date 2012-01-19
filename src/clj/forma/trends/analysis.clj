@@ -24,7 +24,7 @@
   "return a list of indices starting with 1 equal to the length of
   input"
   [coll]
-  (range (count coll)))
+  (map inc (range (count coll))))
 
 (defn windowed-map
   "maps an input function across a sequence of windows onto a vector
