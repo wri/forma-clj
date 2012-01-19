@@ -73,17 +73,17 @@
   "returns a vector of updates for the parameter vector; the
   ridge-constant is a very small scalar, used to ensure that the
   inverted information matrix is non-singular."
-  [beta-seq label-seq features rdg-cons]
+  [beta-seq label-seq feature-mat rdg-cons]
   (let [num-features (count beta-seq)
         info-adj (.addi
-                  (info-matrix beta-seq features)
+                  (info-matrix beta-seq feature-mat)
                   (.muli (DoubleMatrix/eye (int num-features))
                          (float rdg-cons)))]
     (vec (.toArray
           (.mmul (Solve/solve
                   info-adj
-                  (DoubleMatrix/eye (int 20)))
-                 (score-seq beta-seq label-seq features))))))
+                  (DoubleMatrix/eye (int num-features)))
+                 (score-seq beta-seq label-seq feature-mat))))))
 
 (defn logistic-beta-vector
   "return the estimated parameter vector; which is used, in turn, to
