@@ -6,6 +6,15 @@
 
 ;; TODO: correct for error induced by ridge
 
+;; Namespace Conventions: Each observation is assigned a binary
+;; `label` which indicates deforestation during the training period.
+;; These labels are collected for a group of pixels into `label-seq`.
+;; Each pixel also has a sequence of features, or `feature-seq`.  The
+;; pixel is identified by the order its attributes appear in the
+;; feature and label sequence.  That is, it is vital that the labels
+;; and feature sequences are consistently positioned in the label and
+;; feature collections.
+
 (defn logistic-fn
   "returns the value of the logistic function, given input `x`"
   [x]
@@ -13,6 +22,7 @@
     (/ exp-x (inc exp-x))))
 
 (defn to-double-matrix
+  "returns a DoubleMatrix instance for use with jBLAS functions"
   [mat]
   (DoubleMatrix.
    (into-array (map double-array mat))))
@@ -105,5 +115,20 @@
            (dec iter)
            diff))))))
 
+(defn estimated-probabilities
+  "returns the set of probabilities, after applying the parameter
+  values estimated over the training data; both `label-seq` and
+  `traning-features` reflect data over the training period and
+  `updated-features` reflect data through some interval, which could
+  be the end of the training period (for internal validataion) but is
+  most likely some interval thereafter"
+  [label-seq training-features updated-features]
+  (let [new-beta (logistic-beta-vector
+                  label-seq
+                  training-features
+                  1e-8
+                  1e-6
+                  250)]
+    (probability-calc new-beta updated-features)))
 
 

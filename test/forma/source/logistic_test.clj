@@ -43,3 +43,19 @@ first and last specified, as below."
    (first beta-output) => -2.416103637233374
    (last beta-output)  => -26.652096814499775))
 
+(def new-prob (estimated-probabilities y X X))
+
+(defn make-binary
+  [threshold val]
+  (if (< val threshold) 0 1))
+
+(def alerts (map (partial make-binary 0.5) new-prob))
+
+(defn false-pos
+  [actual estimated]
+  (and (== 0 actual) (== 1 estimated)))
+
+(fact
+ "check false positives; test calculated probabilities against labels"
+ (count (filter true?
+                (map false-pos y alerts))) => 15)
