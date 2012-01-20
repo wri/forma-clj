@@ -1,7 +1,7 @@
 (ns forma.trends.analysis
   (:use [forma.matrix.utils]
         [clojure.math.numeric-tower :only (sqrt floor abs expt)]
-        [forma.trends.filter :only (deseasonalize make-reliable hp-filter)])
+        [forma.trends.filter])
   (:require [forma.utils :as utils]
             [incanter.core :as i]
             [incanter.stats :as s]))
