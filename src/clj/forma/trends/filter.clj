@@ -69,7 +69,7 @@
   inv(lambdaF + I)*y
 
  Reference: http://goo.gl/VC7jJ"
-  [ts lambda]
+  [lambda ts]
   (let [T (count ts)
         coeff-matrix (i/mult lambda (hp-mat T))
         trend-cond (i/solve
