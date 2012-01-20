@@ -135,3 +135,7 @@ original time series"
    (- (abs s-drop)
       (abs (short-trend 23 30 10 reli ndvi))) => pos?))
 
+(fact
+ ""
+ (telescoping-short-trend 140 142 23 30 10 ndvi reli)
+ => [-63.86454150922382 -63.80705626756505 -63.757505861590836])
