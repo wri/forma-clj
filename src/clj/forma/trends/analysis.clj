@@ -1,24 +1,10 @@
 (ns forma.trends.analysis
-  (:use [forma.matrix.utils :only (variance-matrix coll-avg ones-column)]
+  (:use [forma.matrix.utils]
         [clojure.math.numeric-tower :only (sqrt floor abs expt)]
         [forma.trends.filter :only (deseasonalize make-reliable hp-filter)])
   (:require [forma.utils :as utils]
             [incanter.core :as i]
             [incanter.stats :as s]))
-
-;; TODO (dan): move thest extra matrix functions somewhere else
-
-(defn is-square?
-  "returns true if input matrix is square, and false otherwise"
-  [mat]
-  (let [[row col] (i/dim mat)]
-    (= row col)))
-
-(defn singular?
-  "returns if square input matrix is singular, and false otherwise"
-  [mat]
-  {:pre [(is-square? mat)]}
-  (<= (i/det mat) 0))
 
 (defn idx
   "return a list of indices starting with 1 equal to the length of
@@ -26,25 +12,6 @@
   [coll]
   (map inc (range (count coll))))
 
-(defn windowed-map
-  "maps an input function across a sequence of windows onto a vector
-  `v` of length `window-len` and offset by 1.
-
-  Note that this does not work with some functions, such as +. Not sure why"
-  [f window-len v]
-  (pmap f (partition window-len 1 v)))
-
-(defn transpose
-  "returns the transposition of a `coll` of vectors"
-  [coll]
-  (apply (partial map vector) coll))
-
-(defn outer-product
-  "returns a flattened vector of the outer product of a vector and its
-  transpose"
-  [coll]
-  (let [mat (i/matrix coll)]
-    (flatten (i/mmult mat (i/trans mat)))))
 
 (defn element-sum
   "returns a vector of sums of each respective element in a vector of vectors,
@@ -52,10 +19,6 @@
   elements in each sub-vector."
   [coll]
   (apply (partial map +) coll))
-
-(defn average [lst] (/ (reduce + lst) (count lst)))
-
-(defn moving-average [window lst] (map average (partition window 1 lst)))
 
 (defn ols-trend
   "returns the OLS trend coefficient from the input vector; an
@@ -69,8 +32,8 @@
   `long-block` on a time series `ts`, after smoothing by moving
   average of window length `short-block`"
   [long-block short-block ts]
-  (->> (windowed-map ols-trend long-block ts)
-       (moving-average short-block)
+  (->> (utils/windowed-map ols-trend long-block ts)
+       (utils/moving-average short-block)
        (apply min)))
 
 (defn long-stats
@@ -106,7 +69,7 @@
         [resid sq-resid] (map (partial expt-residuals y X) [1 2])]
     (vector (map * resid X)
             (map * resid (repeat (count y) 1))
-            (map #(- % (average sq-resid)) sq-resid))))
+            (map #(- % (utils/average sq-resid)) sq-resid))))
 
 (defn hansen-mats
   "returns the matrices of element-wise sums of (1) the first-order
@@ -131,27 +94,6 @@
       (i/solve (i/matrix (map #(* (count y) %) foc) num-foc))
       (i/matrix cumul-foc num-foc)))))
 
-(defn trend-stats
-  "return a structured map of the trend characteristics; input the
-  spectral time series (e.g., ndvi) and the length (in intervals) of
-  the long and short blocks for the short-term drop measurement, along
-  with the cofactors used in the long-trend calculations and the break
-  magnitude
-
-  NOTE: This is probably not necessary, but it shows what we're trying
-  to do."
-  [y long-block short-block & x]
-  (let [characteristics (create-struct :short :long :long-tstat :break)
-        [long-val long-tstat] (apply long-stats y x)]
-    (struct characteristics
-            (min-short-trend long-block short-block y)
-            long-val
-            long-tstat
-            (apply hansen-stat y x))))
-
-(defn scaled-vector
-  [scalar coll]
-  (map #(* scalar %) coll))
 
 (defn harmonic-series
   "returns a vector of scaled cosine and sine series of the same
@@ -160,7 +102,7 @@
   (let [pds (count coll)
         scalar (/ (* 2 (. Math PI) k) freq)]
     (transpose (map (juxt i/cos i/sin)
-                    (scaled-vector scalar (idx coll))))))
+                    (utils/scale scalar (idx coll))))))
 
 (defn k-harmonic-matrix
   "returns an N x (2*k) matrix of harmonic series, where N is the
@@ -184,7 +126,7 @@
   Series, Remote Sensing of Environment, 114(12), 2970–298"
   [freq k coll]
   (let [S (:fitted (s/linear-model coll (k-harmonic-matrix freq k coll)))]
-    (map #(+ (average coll) %)
+    (map #(+ (utils/average coll) %)
          (apply (partial map -) [coll S]))))
 
 

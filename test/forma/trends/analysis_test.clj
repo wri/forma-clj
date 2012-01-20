@@ -1,8 +1,9 @@
 (ns forma.trends.analysis-test
-  (:use [forma.trends.analysis] :reload
+  (:use [forma.trends.analysis] :reload)
+  (:use [midje.sweet]
+        [forma.trends.data]
+        [forma.matrix.utils]
         [clojure.math.numeric-tower :only (sqrt floor abs expt)])
-  (:use midje.sweet
-        [forma.trends.data])
   (:require [incanter.core :as i]
             [incanter.stats :as s]))
 
@@ -91,23 +92,39 @@
  2 [1 2 3] [2 4 6]
  1.5 [1 2 3] [1.5 3.0 4.5])
 
-(future-fact
- "long-stats works")
+(facts
+ "test that `long-stats` yields the trend coefficient and t-test
+statistic on `ndvi`"
+ (let [[coeff t-test] (long-stats ndvi)]
+   coeff  => -1.1430015917806315
+   t-test => -0.918260660209))
 
-(future-fact
- "first-order-conditions has been checked")
+(fact
+ "first-order-conditions has been checked"
+ (map last (first-order-conditions ndvi))
+ => [-440347.2867647055 -1624.8977371391347 89557.2243993124])
 
-(future-fact
- "hansen-mats has been checked")
+(fact
+ "should return flattened (square) matrices of the element sums (read:
+summing in place) of the first-order conditions and the cumulative
+first-order conditions"
+ (count (hansen-mats ndvi)) => 2)
 
-(future-fact
- "trend-stats does the right thing")
+(facts
+ "harmonic series should have the same length as input collection, but
+with two columns; the first is a scaled vector, passed through cosine,
+which implies all values less than or equal to 1; the `23` parameter
+indicates the number of 16-day intervals in a year."
+ (let [harmony (harmonic-series 23 ndvi 3)
+       cos-harmony (first harmony)]
+   (count harmony) => 2
+   (count cos-harmony) => (count ndvi)
+   (count (filter #(> % 1) (map abs cos-harmony))) => 0))
 
-(future-fact "Harmonic series should play sweet tunes.")
-
-(future-fact
- "k-harmonic-matrix should have 1000 sweet sweet tunes on tap")
-
-(future-fact
- "harmonic-seasonal-decomposition will ... wait a second, who named this shit?")
+(fact
+ "check that the decomposition is the same length with roughly the
+same mean as the original time series"
+ (let [decomp (harmonic-seasonal-decomposition 23 3 ndvi)]
+   (count decomp) => (count ndvi)
+   (float (average decomp)) => (roughly (average ndvi))))
 

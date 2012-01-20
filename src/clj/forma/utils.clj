@@ -107,6 +107,22 @@
        (drop (- bottom x0))
        (drop-last (- (+ x0 (count seq)) top))))
 
+(defn windowed-map
+  "maps an input function across a sequence of windows onto a vector
+  `v` of length `window-len` and offset by 1.
+
+  Note that this does not work with some functions, such as +. Not sure why"
+  [f window-len v]
+  (pmap f (partition window-len 1 v)))
+
+(defn average [lst] (/ (reduce + lst) (count lst)))
+
+(defn moving-average
+  "returns a moving average of windows on `lst` with length `window`"
+  [window lst]
+  (map average (partition window 1 lst)))
+
+
 ;; ## IO Utils
 
 (defn input-stream
