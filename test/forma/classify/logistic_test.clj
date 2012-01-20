@@ -1,5 +1,5 @@
-(ns forma.source.logistic-test
-  (:use [forma.source.logistic] :reload)
+(ns forma.classify.logistic-test
+  (:use [forma.classify.logistic] :reload)
   (:use [midje sweet cascalog]
         [clojure-csv.core])
   (:import [org.jblas FloatMatrix])

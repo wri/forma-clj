@@ -1,6 +1,7 @@
-(ns forma.source.logistic
-  (:use [forma.utils :only (dot-product transpose multiply-rows)]
-        [clojure.contrib.math :only (abs)])
+(ns forma.classify.logistic
+  (:use [forma.utils]
+        [clojure.math.numeric-tower :only (abs)]
+        [forma.matrix.utils])
   (:require [incanter.core :as i])
   (:import [org.jblas FloatMatrix MatrixFunctions Solve DoubleMatrix]))
 
