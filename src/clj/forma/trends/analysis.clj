@@ -87,6 +87,24 @@
       (i/solve (i/matrix (map #(* (count y) %) foc) num-foc))
       (i/matrix cumul-foc num-foc)))))
 
+;; TODO: do not duplicate work to "make-reliable" the time series for
+;; the various trend analysis functions.
 
+(defn short-trend
+  "returns the minumum short-term, smoothed drop from a spectral
+  time-series, which as been cleaned (treated for cloud cover) and
+  deseasonalized."
+  [intervals long-block short-block reli-ts spectral-ts]
+  (->> (make-reliable #{3 2} #{1 0} reli-ts spectral-ts)
+       (harmonic-seasonal-decomposition intervals 3)
+       (min-short-trend long-block short-block)))
 
-
+(defn collect-short-trend
+  "preps the short-term drop for the merge into the other data by separating
+  out the reference period and the rest of the observations for estimation,
+  that is, `for-est`!"
+  ([start-pd end-pd intervals long-block window ts reli-ts]
+     (let [offset (+ long-block window)
+           [y z] (map #(-> % (- offset) (+ 2)) [start-pd end-pd])
+           full-ts (short-trend intervals long-block window reli-ts ts)]
+       (subvec full-ts (dec y) z))))

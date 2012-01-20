@@ -125,3 +125,13 @@ first-order conditions"
  series with a constructed, short-term break"
  (- (hansen-stat (shift-down-end ndvi))
     (hansen-stat ndvi)) => pos?)
+
+(facts
+ "test that the magnitude of the short-term drop of the
+transformed (shifted down) time series is higher than that of the
+original time series"
+ (let [s-drop (short-trend 23 30 10 reli (shift-down-end ndvi))]
+   s-drop => (roughly -207.1324832578859)
+   (- (abs s-drop)
+      (abs (short-trend 23 30 10 reli ndvi))) => pos?))
+
