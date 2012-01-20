@@ -43,6 +43,7 @@
 ;; Hodrick-Prescott filter for additional smoothing; a higher lambda
 ;; parameter implies more weight on overall observations, and
 ;; consequently less weight on recent observations.
+;; Reference: http://goo.gl/VC7jJ
 
 (defn hp-mat
   "returns the matrix of coefficients from the minimization problem
@@ -63,7 +64,11 @@
          i/matrix)))
 
 (defn hp-filter
-  "return a smoothed time-series, given the HP filter parameter."
+  "return a smoothed time series, given the original time series and
+  H-P filter parameter (lambda); from the following reference, we calculate
+  inv(lambdaF + I)*y
+
+ Reference: http://goo.gl/VC7jJ"
   [ts lambda]
   (let [T (count ts)
         coeff-matrix (i/mult lambda (hp-mat T))

@@ -110,21 +110,18 @@ summing in place) of the first-order conditions and the cumulative
 first-order conditions"
  (count (hansen-mats ndvi)) => 2)
 
-(facts
- "harmonic series should have the same length as input collection, but
-with two columns; the first is a scaled vector, passed through cosine,
-which implies all values less than or equal to 1; the `23` parameter
-indicates the number of 16-day intervals in a year."
- (let [harmony (harmonic-series 23 ndvi 3)
-       cos-harmony (first harmony)]
-   (count harmony) => 2
-   (count cos-harmony) => (count ndvi)
-   (count (filter #(> % 1) (map abs cos-harmony))) => 0))
+(defn shift-down-end
+  "returns a transformed collection, where the last half is shifted
+  down by some factor"
+  [coll]
+  (let [half-count (floor (/ (count ndvi) 2))
+        first-half (take half-count ndvi)
+        second-half (drop half-count ndvi)]
+    (concat first-half
+            (map #(- % (/ % 2)) second-half))))
 
 (fact
- "check that the decomposition is the same length with roughly the
-same mean as the original time series"
- (let [decomp (harmonic-seasonal-decomposition 23 3 ndvi)]
-   (count decomp) => (count ndvi)
-   (float (average decomp)) => (roughly (average ndvi))))
-
+ "test that the Hansen test statistic is relatively high for a time
+ series with a constructed, short-term break"
+ (- (hansen-stat (shift-down-end ndvi))
+    (hansen-stat ndvi)) => pos?)
