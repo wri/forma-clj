@@ -67,11 +67,6 @@
   [x y]
   (reduce + (map * x y)))
 
-(defn transpose
-  "returns the transposition of a `coll` of vectors"
-  [coll]
-  (apply map vector coll))
-
 (defn multiply-rows
   "multiply matrix rows (in place) by a collection"
   [coll mat]
