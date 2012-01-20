@@ -8,6 +8,30 @@
 ;; operations that deal with arbitrarily large, multi-dimensional
 ;; matrices.
 
+(defn is-square?
+  "returns true if input matrix is square, and false otherwise"
+  [mat]
+  (let [[row col] (i/dim mat)]
+    (= row col)))
+
+(defn singular?
+  "returns if square input matrix is singular, and false otherwise"
+  [mat]
+  {:pre [(is-square? mat)]}
+  (<= (i/det mat) 0))
+
+(defn transpose
+  "returns the transposition of a `coll` of vectors"
+  [coll]
+  (apply (partial map vector) coll))
+
+(defn outer-product
+  "returns a flattened vector of the outer product of a vector and its
+  transpose"
+  [coll]
+  (let [mat (i/matrix coll)]
+    (flatten (i/mmult mat (i/trans mat)))))
+
 (defn insert-at
   "Inserts `ins-coll` into `coll` at the supplied `idx`."
   [idx ins-coll coll]
