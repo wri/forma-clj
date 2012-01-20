@@ -6,13 +6,6 @@
             [incanter.core :as i]
             [incanter.stats :as s]))
 
-(defn idx
-  "return a list of indices starting with 1 equal to the length of
-  input"
-  [coll]
-  (map inc (range (count coll))))
-
-
 (defn element-sum
   "returns a vector of sums of each respective element in a vector of vectors,
   i.e., a vector with the first element being the sum of the first
@@ -24,7 +17,7 @@
   "returns the OLS trend coefficient from the input vector; an
   intercept is implicitly assumed"
   [v]
-  (let [time-step (idx v)]
+  (let [time-step (utils/idx v)]
     (second (:coefs (s/simple-regression v time-step)))))
 
 (defn min-short-trend
@@ -41,7 +34,7 @@
   trend coefficient for a time series, conditioning on a variable
   number of cofactors"
   [ts & cofactors]
-  (let [time-step (idx ts)
+  (let [time-step (utils/idx ts)
         X (if (empty? cofactors)
             (i/matrix time-step)
             (apply i/bind-columns time-step cofactors))]
@@ -62,7 +55,7 @@
   Testing for Parameter Instability in Linear Models, Journal for
   Policy Modeling, 14(4), pp. 517-533"
   [y & x]
-  (let [time-step (idx y)
+  (let [time-step (utils/idx y)
         X (if (empty? x)
             (i/matrix time-step)
             (apply i/bind-columns time-step x))
@@ -95,38 +88,5 @@
       (i/matrix cumul-foc num-foc)))))
 
 
-(defn harmonic-series
-  "returns a vector of scaled cosine and sine series of the same
-  length as `coll`; the scalar is the harmonic coefficient"
-  [freq coll k]
-  (let [pds (count coll)
-        scalar (/ (* 2 (. Math PI) k) freq)]
-    (transpose (map (juxt i/cos i/sin)
-                    (utils/scale scalar (idx coll))))))
-
-(defn k-harmonic-matrix
-  "returns an N x (2*k) matrix of harmonic series, where N is the
-  length of `coll` and `k` is the number of harmonic terms."
-  [freq k coll]
-  (let [degree-vector (vec (map inc (range k)))]
-    (apply i/bind-columns
-           (apply concat
-                  (map (partial harmonic-series freq coll)
-                       degree-vector)))))
-
-(defn harmonic-seasonal-decomposition
-  "returns a deseasonalized time-series; input frequency of
-  data (e.g., 23 for 16-day intervals), number of harmonic terms (use
-  3 to replicate procedure in the Verbesselt (2010)), and the
-  time-series.
-
-  Reference:
-  Verbesselt, J. et al. (2010) Phenological Change Detection while
-  Accounting for Abrupt and Gradual Trends in Satellite Image Time
-  Series, Remote Sensing of Environment, 114(12), 2970–298"
-  [freq k coll]
-  (let [S (:fitted (s/linear-model coll (k-harmonic-matrix freq k coll)))]
-    (map #(+ (utils/average coll) %)
-         (apply (partial map -) [coll S]))))
 
 

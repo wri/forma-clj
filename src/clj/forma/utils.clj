@@ -122,6 +122,11 @@
   [window lst]
   (map average (partition window 1 lst)))
 
+(defn idx
+  "return a list of indices starting with 1 equal to the length of
+  input"
+  [coll]
+  (map inc (range (count coll))))
 
 ;; ## IO Utils
 
