@@ -126,8 +126,6 @@ first-order conditions"
  series with a constructed, short-term break"
  (- (hansen-stat (shift-down-end ndvi))
     (hansen-stat ndvi)) => pos?)
-<<<<<<< HEAD
-=======
 
 (facts
  "test that the magnitude of the short-term drop of the
@@ -142,4 +140,3 @@ original time series"
  ""
  (telescoping-short-trend 140 142 23 30 10 ndvi reli)
  => [-63.86454150922382 -63.80705626756505 -63.757505861590836])
->>>>>>> dan-work
