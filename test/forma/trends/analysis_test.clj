@@ -3,6 +3,7 @@
   (:use [midje.sweet]
         [forma.trends.data]
         [forma.matrix.utils]
+        [forma.utils]
         [clojure.math.numeric-tower :only (sqrt floor abs expt)])
   (:require [incanter.core :as i]
             [incanter.stats :as s]))
@@ -86,7 +87,7 @@
 (tabular
  (fact
    "check scaling all elements of a vector by a scalar"
-   (scaled-vector ?scalar ?coll) => ?expected)
+   (scale ?scalar ?coll) => ?expected)
  ?scalar ?coll ?expected
  1 [1 2 3] [1 2 3]
  2 [1 2 3] [2 4 6]
@@ -134,7 +135,7 @@ transformed (shifted down) time series is higher than that of the
 original time series"
  (let [s-drop (short-trend 23 30 10 reli (shift-down-end ndvi))]
    s-drop => (roughly -207.1324832578859)
-   (- (abs s-drop)
+   (- (abs s-drop)xk
       (abs (short-trend 23 30 10 reli ndvi))) => pos?))
 
 (fact
