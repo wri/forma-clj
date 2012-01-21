@@ -137,6 +137,38 @@ original time series"
       (abs (short-trend 23 30 10 reli ndvi))) => pos?))
 
 (fact
- ""
+ "check the results of the short-term trend calculations for 16-day
+data (23 intervals per year) for intervals 140 through 142, inclusive,
+with a 30-interval long-block and a 10-interval short block."
  (telescoping-short-trend 140 142 23 30 10 ndvi reli)
  => [-63.86454150922382 -63.80705626756505 -63.757505861590836])
+
+;; Benchmark
+
+;; map the short-trend calculation across lengthening time series
+
+;; (time (dotimes [_ 5]
+;;         (dorun (telescoping-short-trend 140 142 23 30 10 ndvi reli))))
+;; "Elapsed time: 436.664 msecs"
+
+;; (time (dotimes [_ 1]
+;;         (dorun (telescoping-short-trend 140 271 23 30 10 ndvi reli))))
+;; "Elapsed time: 5650.48 msecs"
+
+;; (time (dotimes [_ 1]
+;;         (dorun (telescoping-long-trend 140 271 23 ndvi reli))))
+;; "Elapsed time: 3320.463 msecs"
+
+(defn telescoping-short
+  [start-idx end-idx ndvi reli]
+  (loop [init-length start-idx
+         res (transient [])]
+    (let [ndvi-ts (subvec 0 init-length ndvi)
+          reli-ts (subvec 0 init-length reli)]
+      (if (> init-length end-idx)
+        (persistent! res)
+        (recur (inc init-length)
+               (conj! res (short-trend 23 30 10 reli-ts ndvi-ts)))))))
+
+(time (dotimes [_ 5] (dorun (telescoping-short 140 142 ndvi reli))))
+

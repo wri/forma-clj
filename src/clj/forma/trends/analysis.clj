@@ -127,7 +127,7 @@
   [start-pd end-pd intervals long-block short-block spectral-ts reli-ts]
   (let [len-reli (lengthening-ts start-pd end-pd reli-ts)
         len-spectral (lengthening-ts start-pd end-pd spectral-ts)]
-    (map (partial short-trend intervals long-block short-block)
+    (pmap (partial short-trend intervals long-block short-block)
          len-reli len-spectral)))
 
 ;; TODO: check methodology, effect of more observations on statistical
