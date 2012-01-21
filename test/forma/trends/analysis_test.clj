@@ -133,7 +133,7 @@ transformed (shifted down) time series is higher than that of the
 original time series"
  (let [s-drop (short-trend 23 30 10 reli (shift-down-end ndvi))]
    s-drop => (roughly -207.1324832578859)
-   (- (abs s-drop)xk
+   (- (abs s-drop)
       (abs (short-trend 23 30 10 reli ndvi))) => pos?))
 
 (fact
