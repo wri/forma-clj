@@ -101,7 +101,7 @@
 ;; based on the interpolated NDVI values.
 
 (def plot2 (c/time-series-plot forma-range
-                               (hp-filter (make-reliable #{2} #{1} reli ndvi) 2)
+                               (hp-filter 2 (make-reliable #{2} #{1} reli ndvi))
                                :title ""
                                :x-label ""
                                :y-label ""
@@ -122,7 +122,7 @@
 (defn add-ndvi-slider []
   (let [x forma-range]
     (c/slider #(i/set-data plot2
-                           [x (hp-filter (make-reliable #{2} #{1} reli ndvi) %)])
+                           [x (hp-filter % (make-reliable #{2} #{1} reli ndvi))])
               (map (partial round-places 2)
                    (range 0 1000 1))
               "lambda")))
@@ -165,7 +165,7 @@
 (defn add-filter []
   (doto (c/add-lines plot3
                      forma-range
-                     (hp-filter (make-reliable #{2} #{1} reli ndvi) 2)
+                     (hp-filter 2 (make-reliable #{2} #{1} reli ndvi))
                      :series-label "FILTER")))
 
 
@@ -191,8 +191,8 @@
 ;;                          :y-label ""
 ;;                          :series-label ""))
 
-(defn add-bfast-ndvi []
-  (c/add-lines plot-efp (range (count Yt)) Yt))
+;; (defn add-bfast-ndvi []
+;;   (c/add-lines plot-efp (range (count Yt)) Yt))
 
 ;; (defn add-bfast-slider []
 ;;   (let [x (range (count Yt))]
