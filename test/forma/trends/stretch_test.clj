@@ -50,9 +50,9 @@ The problem at present: The output timeseries seems to be too short by 1-2 perio
      expanded-ts => expected-ts))
  ?extra-32 ?extra-16
  0          0
- 1          1 ;; outputs through first half of January
- 2          3 ;; outputs through mid-January
- 3          5 ;; outputs through 
+ 1          1
+ 2          3
+ 3          5
  12         23)
 
 
