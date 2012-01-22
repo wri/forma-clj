@@ -10,6 +10,7 @@
     (shift-periods-target-res "32" "16" (:start-idx ts) (:end-idx ts)) => [736 739]))
 
 (fact
+  "Expect to see values repeated the correct number of days given a monthly dataset (e.g. 31 for January, 28 for non-leap year February."
   (expand-to-days 384 [1 2 3] 384 1 "32" 0) => [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3])
 
 (fact
@@ -19,11 +20,8 @@
     (ts-expander "32" "16" ts) => output))
 
 (fact
-  "Expand a longer timeseries - in this case one year of NDVI"
-  (let [p32 12 ;; number of periods, 32-day res
-        p16 22 ;; expected number of periods, 16-day res
-        ts (schema/timeseries-value 360 (take p32 data/ndvi))
-        out-ts (ts-expander "32" "16" ts)]
-    (println (date/period->datetime "16" (:start-idx out-ts)))
-    (println (date/period->datetime "16" (:end-idx out-ts)))
-    (count (:series out-ts)) => p16))
+  "Expanding a year-long monthly timeseries (12 periods) should yield a year's worth of 16-day periods (23)."
+  (let [periods-32 12 ;; number of periods, 32-day res
+        periods-16 23 ;; expected number of periods, 16-day res
+        ts (schema/timeseries-value 360 (take periods-32 data/ndvi))]
+    (count (:series (ts-expander "32" "16" ts))) => periods-16))
