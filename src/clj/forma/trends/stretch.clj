@@ -28,10 +28,10 @@
         offset (date/date-offset target-res beg base-res start-idx)]
     (loop [[pd & more :as periods] (range beg end)
            day-seq (expand-to-days start-idx series pd val base-res offset)
-           result []]
+           result (transient [])]
       (if (empty? periods)
-        (schema/timeseries-value beg result)
+        (schema/timeseries-value beg (persistent! result))
         (let [num-days (date/period-span target-res pd)]
           (recur more
                  (drop num-days day-seq)
-                 (conj result (coll-avg (take num-days day-seq)))))))))
+                 (conj! result (coll-avg (take num-days day-seq)))))))))
