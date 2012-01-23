@@ -18,7 +18,7 @@
         new-start   (date/datetime->period t-res est-start)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
     [(->> (:series ts-series)
-          (a/collect-short-trend start end long-block window)
+          (a/telescoping-short-trend start end long-block window)
           (schema/timeseries-value new-start))]))
 
 ;; We're mapping across two sequences at the end, there; the
@@ -34,7 +34,7 @@
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
     (apply map (comp (partial schema/timeseries-value new-start)
                      vector)
-           (a/collect-long-trend start end
+           (a/telescoping-long-trend start end
                                  (:series ts-series)
                                  (map :series cofactors)))))
 

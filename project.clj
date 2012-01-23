@@ -3,11 +3,13 @@
   :source-path "src/clj"
   :java-source-path "src/jvm"
   :dev-resources-path "dev"
+  :repositories {"conjars" "http://conjars.org/repo/"}
   :marginalia {:javascript ["mathjax/MathJax.js"]}
   :javac-options {:debug "true" :fork "true"}
   :jvm-opts ["-XX:MaxPermSize=128M" "-Xms1024M" "-Xmx2048M" "-server"]
   :dependencies [[org.clojure/clojure "1.3.0"]
                  [org.clojure/tools.cli "0.1.0"]
+                 [clojure-csv/clojure-csv "1.3.2"]
                  [org.clojure/math.numeric-tower "0.0.1"]
                  [incanter/incanter-core "1.3.0-SNAPSHOT"]
                  [clj-time "0.3.4"]
@@ -20,6 +22,7 @@
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
                      [incanter/incanter-charts "1.3.0-SNAPSHOT"]
                      [midje-cascalog "0.4.0"]]
+  :main forma.hadoop.cli
   :aot [
         forma.hadoop.pail
         forma.hadoop.jobs.scatter
@@ -27,3 +30,5 @@
         forma.hadoop.jobs.modis
         forma.hadoop.jobs.timeseries
         ])
+
+

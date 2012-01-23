@@ -1,64 +1,56 @@
 (ns forma.trends.filter
-  (:use [forma.utils :only (positions)])
+  (:use [forma.utils :only (positions average scale idx)])
   (:require  [forma.matrix.utils :as u]
-             [incanter.core :as i]))
+             [incanter.core :as i]
+             [incanter.stats :as s]))
 
-;; TODODAN: What does it mean to clean and deseasonalize timeseries?
-;; Give some wikipedia references.
-;; 
-;; These functions clean and deseasonalize time-series. The first few
-;; functions are smaller in scope, and meant to be used in the
-;; higher-order functions toward the end of this script.  The first
-;; higher-order function is meant to smooth a time-series based on the
-;; Hodrick-Prescott convention.  Later, the target (vegetation)
-;; time-series is combined with a measure of reliability to
-;; interpolate across "bad" values.
+;; Remove seasonal component by harmonic decomposition
 
-;; TODODAN: What's a monthly dummy vector? Can you describe why we need
-;; these?
-(defn seasonal-rows [n]
-  "lazy sequence of monthly dummy vectors."
-  (->> (cycle (cons 1 (repeat 11 0)))
-       (partition 11 1)
-       (take n)
-       vec))
+(defn harmonic-series
+  "returns a vector of scaled cosine and sine series of the same
+  length as `coll`; the scalar is the harmonic coefficient"
+  [freq coll k]
+  (let [pds (count coll)
+        scalar (/ (* 2 (. Math PI) k) freq)]
+    (u/transpose (map (juxt i/cos i/sin)
+                      (scale scalar (idx coll))))))
 
-;; TODODAN: What are monthly dummies? Clean up this docstring.
-(defn seasonal-matrix
-  "create a matrix of [num-months]x11 of monthly dummies, where
-  [num-months] indicates the number of months in the time-series"
-  [num-months]
-  (i/bind-columns (u/ones-column num-months)
-                  (seasonal-rows num-months)))
+(defn k-harmonic-matrix
+  "returns an N x (2*k) matrix of harmonic series, where N is the
+  length of `coll` and `k` is the number of harmonic terms."
+  [freq k coll]
+  (let [degree-vector (vec (map inc (range k)))]
+    (apply i/bind-columns
+           (apply concat
+                  (map (partial harmonic-series freq coll)
+                       degree-vector)))))
 
-;; TODODAN: What does deseasonalize mean? Describe the inputs and
-;; returns, and leave the implementation details out.
-;;
-;; Also, I see this i/mmult variance-matrix trans business in a couple
-;; of places. Can we generalize this pattern?
-(defn deseasonalize
-  "deseasonalize a time-series [ts] using monthly dummies. returns
-  a vector the same length of the original time-series, with desea-
-  sonalized values."
-  [ts]
-  (let [avg-seq (repeat (count ts) (u/coll-avg ts))
-        X    (seasonal-matrix (count ts))
-        fix  (i/mmult (u/variance-matrix X)
-                      (i/trans X)
-                      ts)
-        adj  (i/mmult (i/sel X :except-cols 0)
-                      (i/sel fix :except-rows 0))]
-    (i/minus (i/matrix ts)
-             adj)))
+(defn harmonic-seasonal-decomposition
+  "returns a deseasonalized time-series; input frequency of
+  data (e.g., 23 for 16-day intervals), number of harmonic terms (use
+  3 to replicate procedure in the Verbesselt (2010)), and the
+  time-series.
 
-;; Hodrick-Prescott filter
+  Reference:
+  Verbesselt, J. et al. (2010) Phenological Change Detection while
+  Accounting for Abrupt and Gradual Trends in Satellite Image Time
+  Series, Remote Sensing of Environment, 114(12), 2970–298"
+  [freq k coll]
+  (let [S (:fitted (s/linear-model coll (k-harmonic-matrix freq k coll)))]
+    (map #(+ (average coll) %)
+         (apply (partial map -) [coll S]))))
+
+;; Hodrick-Prescott filter for additional smoothing; a higher lambda
+;; parameter implies more weight on overall observations, and
+;; consequently less weight on recent observations.
+;; Reference: http://goo.gl/VC7jJ
 
 (defn hp-mat
-  "create the matrix of coefficients from the minimization problem
-  required to parse the trend component from a time-series of le-
-  gth [T], which has to be greater than or equal to 9 periods."
+  "returns the matrix of coefficients from the minimization problem
+  required to parse the trend component from a time-series of length
+  `T`, which has to be greater than or equal to 9 periods."
   [T]
-  {:pre [(>= T 9)]
+  {:pre  [(>= T 9)]
    :post [(= [T T] (i/dim %))]}
   (let [[first second :as but-2]
         (for [x (range (- T 2))
@@ -72,8 +64,12 @@
          i/matrix)))
 
 (defn hp-filter
-  "return a smoothed time-series, given the HP filter parameter."
-  [ts lambda]
+  "return a smoothed time series, given the original time series and
+  H-P filter parameter (lambda); from the following reference, we calculate
+  inv(lambdaF + I)*y
+
+ Reference: http://goo.gl/VC7jJ"
+  [lambda ts]
   (let [T (count ts)
         coeff-matrix (i/mult lambda (hp-mat T))
         trend-cond (i/solve
