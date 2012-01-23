@@ -7,7 +7,7 @@
   "Shift original ts start/end periods to appropriate values for target res"
   [base-res target-res start-idx end-idx]
   (map (partial date/shift-resolution base-res target-res)
-       [start-idx end-idx]))
+       [start-idx (inc end-idx)]))
 
 (defn expand-to-days
   "Expand timeseries to daily timeseries"
@@ -26,7 +26,7 @@
   (let [{:keys [start-idx end-idx series]} tseries
         [beg end] (shift-periods-target-res base-res target-res start-idx end-idx)
         offset (date/date-offset target-res beg base-res start-idx)]
-    (loop [[pd & more :as periods] (range beg (inc end))
+    (loop [[pd & more :as periods] (range beg end)
            day-seq (expand-to-days start-idx series pd val base-res offset)
            result []]
       (if (empty? periods)
