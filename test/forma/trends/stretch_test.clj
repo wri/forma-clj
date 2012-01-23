@@ -6,8 +6,8 @@
             [forma.trends.data :as data]))
 
 (fact
-  (let [ts (schema/timeseries-value 384 [1 2 3])]
-    (shift-periods-target-res "32" "16" (:start-idx ts) (:end-idx ts)) => [736 741]))
+  (let [{:keys [start-idx end-idx]} (schema/timeseries-value 384 [1 2 3])]
+    (shift-periods-target-res "32" "16" start-idx end-idx) => [736 741]))
 
 
 (fact
