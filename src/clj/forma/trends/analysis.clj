@@ -20,15 +20,6 @@
   (let [time-step (utils/idx v)]
     (second (:coefs (s/simple-regression v time-step)))))
 
-(defn min-short-trend
-  "returns the minimum value of piecewise linear trends of length
-  `long-block` on a time series `ts`, after smoothing by moving
-  average of window length `short-block`"
-  [long-block short-block ts]
-  (->> (utils/windowed-map ols-trend long-block ts)
-       (utils/moving-average short-block)
-       (apply min)))
-
 (defn long-stats
   "returns a list with both the value and t-statistic for the OLS
   trend coefficient for a time series, conditioning on a variable
@@ -87,18 +78,6 @@
       (i/solve (i/matrix (map #(* (count y) %) foc) num-foc))
       (i/matrix cumul-foc num-foc)))))
 
-;; TODO: do not duplicate work to "make-reliable" the time series for
-;; the various trend analysis functions.
-
-(defn short-trend
-  "returns the minumum short-term, smoothed drop from a spectral
-  time-series, which as been cleaned (treated for cloud cover) and
-  deseasonalized."
-  [intervals long-block short-block reli-ts spectral-ts]
-  (->> (make-reliable #{3 2} #{1 0} reli-ts spectral-ts)
-       (harmonic-seasonal-decomposition intervals 3)
-       (min-short-trend long-block short-block)))
-
 (defn long-trend
   [intervals reli-ts spectral-ts]
   (->> (make-reliable #{3 2} #{1 0} reli-ts spectral-ts)
@@ -113,22 +92,6 @@
   (let [base-vec (vec base-seq)]
     (for [x (range start-index (inc end-index))]
       (subvec base-vec 0 x))))
-
-;; TODO: Find a more efficient way to calculate the running short-term
-;; drops, without having to recalculate stat for each, copied time
-;; series
-
-;; TODO: Depending on how these functions are called by cascalog,
-;; combine to eliminate redundancy
-
-(defn telescoping-short-trend
-  "returns a shortened vector of short-term drops for each period
-  between `start-pd` and `end-pd`, inclusive."
-  [start-pd end-pd intervals long-block short-block spectral-ts reli-ts]
-  (let [len-reli (lengthening-ts start-pd end-pd reli-ts)
-        len-spectral (lengthening-ts start-pd end-pd spectral-ts)]
-    (pmap (partial short-trend intervals long-block short-block)
-         len-reli len-spectral)))
 
 ;; TODO: check methodology, effect of more observations on statistical
 ;; significance of down-trend.  That is, check validity of `t-stat`
@@ -181,12 +144,12 @@
   "returns a vector of incanter sub-matrices, offset by 1 and of
   length `window`; works like partition for non-incanter data
   structures."
-  71[window coll]
+  [window coll]
   (loop [idx 0
          res []]
     (if (> idx (- (count coll) window))
       res
-      (recure
+      (recur
        (inc idx)
        (conj res (i/sel coll
                         :rows (range idx (+ window idx))))))))
@@ -203,15 +166,15 @@
   series blocks of length `long-block`, smoothed by moving average
   window of length `short-block`.  The coefficients are calculated
   along the entire time-series, but only apply to periods at and after
-  the end of the training period.  TODO: make sure that the result
-  contains the appropriate number of observations, i.e., that the
-  first observation in the vector is the interval that marks the end
-  of the training period."
-  [long-block short-block freq training-end
-  spectral-ts reli-ts]
+  the end of the training period.
+
+  TODO: make sure that the result contains the appropriate number of
+  observations, i.e., that the first observation in the vector is the
+  interval that marks the end of the training period."
+  [long-block short-block freq training-end spectral-ts reli-ts]
   (let [leading-buffer (+ 2 (- training-end (+ long-block short-block)))]
     (->> (windowed-trend long-block freq spectral-ts reli-ts)
          (utils/moving-average short-block)
          (reductions min)
-         (drop leading-buffer))))
+         (drop (dec leading-buffer)))))
 

@@ -128,47 +128,46 @@ first-order conditions"
     (hansen-stat ndvi)) => pos?)
 
 (facts
- "test that the magnitude of the short-term drop of the
-transformed (shifted down) time series is higher than that of the
-original time series"
- (let [s-drop (short-trend 23 30 10 reli (shift-down-end ndvi))]
-   s-drop => (roughly -207.1324832578859)
-   (- (abs s-drop)
-      (abs (short-trend 23 30 10 reli ndvi))) => pos?))
+ "check that the appropriate number of periods are included in the
+ results vector, after the appropriate number of intervals (strictly
+ within the training period) are dropped.  Suppose, for example, that
+ there are exactly 100 intervals in the training period, with 271
+ intervals total (length of test data, ndvi).  There should be 172
+ values in the result vector: 1 to mark the end of the training
+ period, and then 171 thereafter.
+
+ Parameter list:
+
+ 30: length of long-block for OLS trend
+ 10: length of moving average window
+ 23: frequency of 16-day intervals (annually)
+ 100: example length of the training period"
+ (count (collect-short-trend 30 10 23 100 ndvi reli)) => 172
+ (last (collect-short-trend 30 10 23 100 ndvi reli)) => (roughly -89.4561))
 
 (fact
- "check the results of the short-term trend calculations for 16-day
-data (23 intervals per year) for intervals 140 through 142, inclusive,
-with a 30-interval long-block and a 10-interval short block."
- (telescoping-short-trend 140 142 23 30 10 ndvi reli)
- => [-63.86454150922382 -63.80705626756505 -63.757505861590836])
+ "test that the magnitude of the short-term drop of the
+ transformed (shifted down) time series is higher than that of the
+ original time series"
+ (let [s-drop (collect-short-trend 30 10 23 138 ndvi reli)
+       big-drop (collect-short-trend 30 10 23 138 (shift-down-end ndvi) reli)]
+   (- (abs (reduce min big-drop)) (abs (reduce min s-drop))) => pos?))
 
 ;; Benchmark
-
-;; map the short-trend calculation across lengthening time series
-
-;; (time (dotimes [_ 5]
-;;         (dorun (telescoping-short-trend 140 142 23 30 10 ndvi reli))))
-;; "Elapsed time: 436.664 msecs"
-
-;; (time (dotimes [_ 1]
-;;         (dorun (telescoping-short-trend 140 271 23 30 10 ndvi reli))))
-;; "Elapsed time: 5650.48 msecs"
 
 ;; (time (dotimes [_ 1]
 ;;         (dorun (telescoping-long-trend 140 271 23 ndvi reli))))
 ;; "Elapsed time: 3320.463 msecs"
 
-(defn telescoping-short
-  [start-idx end-idx ndvi reli]
-  (loop [init-length start-idx
-         res (transient [])]
-    (let [ndvi-ts (subvec 0 init-length ndvi)
-          reli-ts (subvec 0 init-length reli)]
-      (if (> init-length end-idx)
-        (persistent! res)
-        (recur (inc init-length)
-               (conj! res (short-trend 23 30 10 reli-ts ndvi-ts)))))))
+;; Newest implementation
 
-(time (dotimes [_ 5] (dorun (telescoping-short 140 142 ndvi reli))))
+;; (time (dotimes [_ 1]
+;;         (dorun (collect-short-trend 30 10 23 100 ndvi reli))))
+;; "Elapsed time: 52.322 msecs"
 
+;; [for reference and encouragement] Original function, which mapped
+;; the short-trend across small blocks
+
+;; (time (dotimes [_ 1]
+;;         (dorun (telescoping-short-trend 140 271 23 30 10 ndvi reli))))
+;; "Elapsed time: 5650.48 msecs"
