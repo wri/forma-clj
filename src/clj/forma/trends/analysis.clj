@@ -107,7 +107,7 @@
            len-reli len-spectral)))
 
 
-(defn deseasonalize
+(defn prep-time-series
   [freq spectral-ts reli-ts]
   (->> (make-reliable #{3 2} #{1 0} reli-ts spectral-ts)
        (harmonic-seasonal-decomposition 23 3)
@@ -159,18 +159,14 @@
   `block-len`"
   [block-len freq spectral-ts reli-ts]
   (map (partial grab-trend (proj-mat block-len))
-       (moving-subvec block-len (deseasonalize freq spectral-ts reli-ts))))
+       (moving-subvec block-len (prep-time-series freq spectral-ts reli-ts))))
 
 (defn collect-short-trend
   "returns a vector of the short-term trend coefficients over time
   series blocks of length `long-block`, smoothed by moving average
   window of length `short-block`.  The coefficients are calculated
   along the entire time-series, but only apply to periods at and after
-  the end of the training period.
-
-  TODO: make sure that the result contains the appropriate number of
-  observations, i.e., that the first observation in the vector is the
-  interval that marks the end of the training period."
+  the end of the training period."
   [long-block short-block freq training-end spectral-ts reli-ts]
   (let [leading-buffer (+ 2 (- training-end (+ long-block short-block)))]
     (->> (windowed-trend long-block freq spectral-ts reli-ts)
