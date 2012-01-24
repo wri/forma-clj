@@ -142,3 +142,77 @@
           len-spectral (lengthening-ts start-pd end-pd spectral-ts)]
       (map (partial long-trend intervals)
            len-reli len-spectral)))
+
+
+(defn deseasonalize
+  [freq spectral-ts reli-ts]
+  (->> (make-reliable #{3 2} #{1 0} reli-ts spectral-ts)
+       (harmonic-seasonal-decomposition 23 3)
+       (i/matrix)))
+
+(defn trend-mat
+  [len]
+  (i/bind-columns
+   (repeat len 1)
+   (map inc (range len))))
+
+(defn proj-mat
+  [block-len]
+  (let [X (trend-mat block-len)]
+    (i/mmult (i/solve (i/mmult (i/trans X) X))
+             (i/trans X))))
+
+(defn grab-trend
+  [proj-mat sub-coll]
+  (second (i/mmult proj-mat sub-coll)))
+
+(defn moving-subvec
+  [coll window]
+  (loop [idx 0
+         res []]
+    (if (> idx (- (count coll) window))
+      res
+      (recur
+       (inc idx)
+       (conj res (i/sel coll :rows (range idx (+ window idx))))))))
+
+(defn block-ols-trend
+  [block-len spectral-ts reli-ts]
+  (map (partial grab-trend (proj-mat block-len))
+       (moving-subvec (deseasonalize 23 spectral-ts reli-ts) block-len)))
+
+(defn collect-short
+  [block-len training-end spectral-ts reli-ts]
+  (let [leading-buffer (+ 2 (- training-end (+ block-len 10)))]
+    (->> (block-ols-trend block-len spectral-ts reli-ts)
+         (utils/moving-average 10)
+         (reductions min)
+         (drop leading-buffer))))
+
+         ;; (drop leading-buffer)
+
+;; (defn test-trends
+;;   [spectral-ts reli-ts long-block]
+;;   (let [proj     (proj-mat long-block)
+;;         clean-ts (deseasonalize 23 spectral-ts reli-ts)]
+;;     (loop [iter 0
+;;            mat (i/sel clean-ts :rows (range iter (+ iter long-block)))     
+;;            res  []]
+;;       (println res)
+;;       (println proj)
+;;       (println "")
+;;       (println (i/sel clean-ts :rows
+;;                       (range iter (+ iter long-block))))
+;;       (if (> iter 5)
+;;         res
+;;         (recur (inc iter)
+;;                (i/sel clean-ts :rows (range iter (+ iter long-block)))
+;;                (conj res (grab-trend proj-mat mat)))))))
+
+;; (reduce min (utils/moving-average 5 ndvi))
+;; (if (< (count sub-coll) 30)
+;;         res
+;;         (recur
+;;          (inc i)
+;;          (i/sel coll :rows  i (+ 30 i))
+;;          (conj res (grab-trend proj sub-coll))))
