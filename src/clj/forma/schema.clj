@@ -152,7 +152,7 @@
    :t-stat     "t-statistic for the relevant month."})
 
 (defn forma-value
-  "FORMA object containing various characteristics of pixel timeseries
+  "Creates forma object containing various characteristics of pixel timeseries
 
    Example:
   (forma-value {:temp-330 1, :conf-50 0, :both-preds 3, :count 4}
@@ -284,8 +284,9 @@
    :size  "Number of pixels in the chunk."})
 
 (defn chunk-location
+  "Creates a chunk-location object.
 
-  "Example: (chunk-location \"1000\" 28 9 59 24000)
+   Example: (chunk-location \"1000\" 28 9 59 24000)
     {:spatial-res \"1000\", :mod-h 28, :mod-v 9, :index 59, :size 24000}"
   [spatial-res mod-h mod-v idx size]
   {:spatial-res spatial-res
@@ -302,7 +303,9 @@
    :line  "Line (row) within modis tile."})
 
 (defn pixel-location
-  "Example:
+  "Creates a pixel-location object.
+
+   Example:
     (pixel-location \"1000\" 28 9 1199 10)
 
     {:spatial-res \"1000\", :mod-h 28, :mod-v 9, :sample 1199, :line 10}"
@@ -344,7 +347,9 @@
 ;; ## Data Chunks
 
 (defn chunk-value
-  "Example:
+  "Creates a chunk-value object.
+
+   Example:
     (let [size 24000
           location (chunk-location \"1000\" 8 6 0 24000)
           data (range size)]
@@ -364,8 +369,7 @@
       (assoc chunk :date date))))
 
 (defn unpack-chunk-val
-  "Used by timeseries. Returns `[dataset-name t-res date location collection]`,
-   where collection is a vector and location is a `chunk-location`.
+  "Used by timeseries. Unpacks a chunk object. Returns `[dataset-name t-res date location collection]`, where collection is a vector and location is a `chunk-location`.
 
    Example:
 
