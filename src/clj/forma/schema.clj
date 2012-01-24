@@ -131,7 +131,7 @@
   ;; TODO: add a sample f-series, result
   [{:keys [est-start est-end t-res]} f-series]
   (let [[start end] (for [pd [est-start est-end]]
-                      (date/datetime->period "32" pd))]
+                      (date/datetime->period t-res pd))]
     [(->> (:series f-series)
           (u/trim-seq start (inc end) (:start-idx f-series))
           (timeseries-value start))]))
