@@ -151,68 +151,67 @@
        (i/matrix)))
 
 (defn trend-mat
+  "returns a (`len` x 2) matrix, with first column of ones; and second
+  column of 1 through `len`"
   [len]
   (i/bind-columns
    (repeat len 1)
    (map inc (range len))))
 
 (defn proj-mat
+  "returns the projection matrix for a given X, premultiplied by
+  inv(X), which is used to calculate the coefficient vector for
+  ordinary least squares:
+
+  P = X*inv(X'*X)*X' => inv(X)*P = inv(X'*X)*X',
+  which implies that estimated OLS coefficient vector:
+  beta = inv(X'*X)*X'*y = inv(X)*P*y"
   [block-len]
   (let [X (trend-mat block-len)]
     (i/mmult (i/solve (i/mmult (i/trans X) X))
              (i/trans X))))
 
 (defn grab-trend
+  "returns the trend from an ordinary least squares regression of a
+  spectral time series on an intercept and a trend variable"
   [proj-mat sub-coll]
   (second (i/mmult proj-mat sub-coll)))
 
 (defn moving-subvec
-  [coll window]
+  "returns a vector of incanter sub-matrices, offset by 1 and of
+  length `window`; works like partition for non-incanter data
+  structures."
+  71[window coll]
   (loop [idx 0
          res []]
     (if (> idx (- (count coll) window))
       res
-      (recur
+      (recure
        (inc idx)
-       (conj res (i/sel coll :rows (range idx (+ window idx))))))))
+       (conj res (i/sel coll
+                        :rows (range idx (+ window idx))))))))
 
-(defn block-ols-trend
-  [block-len spectral-ts reli-ts]
+(defn windowed-trend
+  "returns a vector of short-trem trend coefficients of block length
+  `block-len`"
+  [block-len freq spectral-ts reli-ts]
   (map (partial grab-trend (proj-mat block-len))
-       (moving-subvec (deseasonalize 23 spectral-ts reli-ts) block-len)))
+       (moving-subvec block-len (deseasonalize freq spectral-ts reli-ts))))
 
-(defn collect-short
-  [block-len training-end spectral-ts reli-ts]
-  (let [leading-buffer (+ 2 (- training-end (+ block-len 10)))]
-    (->> (block-ols-trend block-len spectral-ts reli-ts)
-         (utils/moving-average 10)
+(defn collect-short-trend
+  "returns a vector of the short-term trend coefficients over time
+  series blocks of length `long-block`, smoothed by moving average
+  window of length `short-block`.  The coefficients are calculated
+  along the entire time-series, but only apply to periods at and after
+  the end of the training period.  TODO: make sure that the result
+  contains the appropriate number of observations, i.e., that the
+  first observation in the vector is the interval that marks the end
+  of the training period."
+  [long-block short-block freq training-end
+  spectral-ts reli-ts]
+  (let [leading-buffer (+ 2 (- training-end (+ long-block short-block)))]
+    (->> (windowed-trend long-block freq spectral-ts reli-ts)
+         (utils/moving-average short-block)
          (reductions min)
          (drop leading-buffer))))
 
-         ;; (drop leading-buffer)
-
-;; (defn test-trends
-;;   [spectral-ts reli-ts long-block]
-;;   (let [proj     (proj-mat long-block)
-;;         clean-ts (deseasonalize 23 spectral-ts reli-ts)]
-;;     (loop [iter 0
-;;            mat (i/sel clean-ts :rows (range iter (+ iter long-block)))     
-;;            res  []]
-;;       (println res)
-;;       (println proj)
-;;       (println "")
-;;       (println (i/sel clean-ts :rows
-;;                       (range iter (+ iter long-block))))
-;;       (if (> iter 5)
-;;         res
-;;         (recur (inc iter)
-;;                (i/sel clean-ts :rows (range iter (+ iter long-block)))
-;;                (conj res (grab-trend proj-mat mat)))))))
-
-;; (reduce min (utils/moving-average 5 ndvi))
-;; (if (< (count sub-coll) 30)
-;;         res
-;;         (recur
-;;          (inc i)
-;;          (i/sel coll :rows  i (+ 30 i))
-;;          (conj res (grab-trend proj sub-coll))))
