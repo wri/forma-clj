@@ -62,9 +62,10 @@
   test for parameter instability in linear models.
   TODO: remove redundancy, keep readability"
   [y & x]
-  (let [foc (apply first-order-conditions y x)]
+  (let [foc (apply first-order-conditions y x)
+        foccum (map i/cumulative-sum foc)]
     [(element-sum (map outer-product (transpose foc)))
-     (element-sum (map outer-product (transpose (map i/cumulative-sum foc))))]))
+     (element-sum (map outer-product (transpose foccum)))]))
 
 (defn hansen-stat
   "returns the Hansen (1992) test statistic; number of first-order
@@ -78,11 +79,11 @@
       (i/solve (i/matrix (map #(* (count y) %) foc) num-foc))
       (i/matrix cumul-foc num-foc)))))
 
-(defn long-trend
-  [intervals reli-ts spectral-ts]
-  (->> (make-reliable #{3 2} #{1 0} reli-ts spectral-ts)
-       (harmonic-seasonal-decomposition intervals 3)
-       (long-stats)))
+;; (defn long-trend
+;;   [intervals reli-ts spectral-ts]
+;;   (->> (make-reliable #{3 2} #{1 0} reli-ts spectral-ts)
+;;        (harmonic-seasonal-decomposition intervals 3)
+;;        (long-stats)))
 
 (defn lengthening-ts
   "create a sequence of sequences, where each incremental sequence is
@@ -99,19 +100,33 @@
 ;; have higher `t-stats` and higher (in magnitude) short term drops as
 ;; time goes on.  A sort of one-way ratchet.
 
-(defn telescoping-long-trend
-  [start-pd end-pd intervals spectral-ts reli-ts]
-    (let [len-reli (lengthening-ts start-pd end-pd reli-ts)
-          len-spectral (lengthening-ts start-pd end-pd spectral-ts)]
-      (map (partial long-trend intervals)
-           len-reli len-spectral)))
-
-
-(defn prep-time-series
+(defn clean-trend
+  "filter out bad values and remove seasonal component for a spectral
+  time series (with frequency `freq`) using information in an
+  associated reliability time series"
   [freq spectral-ts reli-ts]
   (->> (make-reliable #{3 2} #{1 0} reli-ts spectral-ts)
-       (harmonic-seasonal-decomposition 23 3)
-       (i/matrix)))
+       (harmonic-seasonal-decomposition freq 3)))
+
+(defn clean-tele-trends
+  "clean trends (i.e., filter out bad values and remove seasonal
+  component) for each intervening time period between `start-idx` and
+  `end-idx`.
+  TODO: THIS is the most time-intensive function of all the trends."
+  [freq start-idx end-idx spectral-ts reli-ts]
+  (map (partial clean-trend freq)
+       (lengthening-ts start-idx end-idx spectral-ts)
+       (lengthening-ts start-idx end-idx reli-ts)))
+
+(defn telescoping-trend-analysis
+  "returns a three-tuple with the trend coefficient, trend t-stat, and
+  the hansen statistic for each period between `start-idx` (inclusive)
+  and `end-idx` (inclusive)."
+  [freq start-idx end-idx spectral-ts reli-ts]
+  (let [params [freq start-idx end-idx spectral-ts reli-ts]
+        clean-ts (apply clean-tele-trends params)]
+    (map flatten
+         (map (juxt hansen-stat long-stats) clean-ts))))
 
 (defn trend-mat
   "returns a (`len` x 2) matrix, with first column of ones; and second
@@ -151,15 +166,16 @@
       res
       (recur
        (inc idx)
-       (conj res (i/sel coll
-                        :rows (range idx (+ window idx))))))))
+       (conj res
+             (i/sel coll :rows (range idx (+ window idx))))))))
 
 (defn windowed-trend
   "returns a vector of short-trem trend coefficients of block length
   `block-len`"
   [block-len freq spectral-ts reli-ts]
   (map (partial grab-trend (proj-mat block-len))
-       (moving-subvec block-len (prep-time-series freq spectral-ts reli-ts))))
+       (moving-subvec block-len
+                      (i/matrix (clean-trend freq spectral-ts reli-ts)))))
 
 (defn collect-short-trend
   "returns a vector of the short-term trend coefficients over time
