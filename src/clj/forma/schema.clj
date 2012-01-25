@@ -320,10 +320,10 @@
    returns a pixel location.
  
      (chunkloc->pixloc
-      {:spatial-res "1000", :mod-h 28, :mod-v 9, :index 59, :size 24000}
+      {:spatial-res \"1000\", :mod-h 28, :mod-v 9, :index 59, :size 24000}
       23999)
 
-    ;=> {:spatial-res "1000", :mod-h 28, :mod-v 9, :sample 1199, :line 1199}"
+    ;=> {:spatial-res \"1000\", :mod-h 28, :mod-v 9, :sample 1199, :line 1199}"
   [{:keys [spatial-res size index mod-h mod-v]} pix-idx]
   (apply pixel-location spatial-res mod-h mod-v
          (r/tile-position spatial-res size index pix-idx)))
