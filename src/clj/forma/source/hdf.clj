@@ -77,7 +77,7 @@
   of being opened with `gdal/Open`, and binds the opened dataset to
   the supplied symbol."
   [[sym path] & body]
-  `(with-gdal-open* (fn [~sym] ~@body) path))
+  `(with-gdal-open* (fn [~sym] ~@body) ~path))
 
 (defn metadata
   "Returns the metadata map for the supplied MODIS Dataset."
