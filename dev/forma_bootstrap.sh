@@ -7,6 +7,7 @@ set -e
 bucket=reddconfig
 fwtools=FWTools-linux-x86_64-4.0.0.tar.gz
 native=linuxnative.tar.gz
+jblas=libjblas.tar.gz
 sources=/etc/apt/sources.list
 hadoop_lib=/home/hadoop/lib/native/Linux-amd64-64
 
@@ -45,8 +46,10 @@ sudo chown --recursive hadoop /usr/local/fwtools
 
 # Install Native Java Bindings
 wget -S -T 10 -t 5 http://$bucket.s3.amazonaws.com/$native
+wget -S -T 10 -t 5 http://$bucket.s3.amazonaws.com/$jblas
 sudo mkdir -p /home/hadoop/native
 sudo tar -C $hadoop_lib --strip-components=2 -xvzf $native
+sudo tar -C $hadoop_lib --strip-components=2 -xvzf $jblas
 sudo chown --recursive hadoop $hadoop_lib
 
 # Add proper configs to hadoop-env.
