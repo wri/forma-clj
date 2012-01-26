@@ -92,11 +92,11 @@
      ([count#] [count#])))
 
 (defpredsummer [filtered-count [limit]]
-  [val] #(> % limit))
+  [val] #(>= % limit))
 
 (defpredsummer [bi-filtered-count [lim1 lim2]]
-  [val1 val2] #(and (> %1 lim1)
-                    (> %2 lim2)))
+  [val1 val2] #(and (>= %1 lim1)
+                    (>= %2 lim2)))
 
 (defpredsummer full-count
   [val] identity)

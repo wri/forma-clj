@@ -9,10 +9,11 @@ fwtools=FWTools-linux-x86_64-4.0.0.tar.gz
 native=linuxnative.tar.gz
 jblas=libjblas.tar.gz
 sources=/etc/apt/sources.list
-hadoop_lib=/home/hadoop/lib/native/Linux-amd64-64
+hadoop_lib=/home/hadoop/native/Linux-amd64-64
 
 # Start with screen.
 sudo apt-get -y --force-yes install screen
+sudo apt-get -y --force-yes install exim4
 
 # Upgrading GCC requires a restart of certain services; this is a
 # little hacky, but rather than do this manually we'll move the
