@@ -1,3 +1,4 @@
+
 (ns forma.trends.analysis-test
   (:use [forma.trends.analysis] :reload)
   (:use [midje.sweet]
@@ -30,11 +31,8 @@
   (idx [4 5 6]) => [1 2 3])
 
 (fact
-  "Check windowed-map
-  Split test in two because of roughly limitations"
-  (first (windowed-map ols-trend 2 [1 2 50])) => (roughly (first [1. 48.])))
-(fact
-  (last (windowed-map ols-trend 2 [1 2 50])) => (roughly (last [1. 48.])))
+  "Check windowed-map"
+  (windowed-map ols-trend 2 [1 2 50]) => (contains (map roughly [1.0 48.0])))
 
 (fact
   "Does transpose work as planned? Sure looks like it!"
