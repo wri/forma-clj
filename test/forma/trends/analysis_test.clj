@@ -77,7 +77,7 @@ first-order conditions"
  intervals total (length of test data, ndvi).  There should be 172
  values in the result vector: 1 to mark the end of the training
  period, and then 171 thereafter.
-
+0
  Parameter list:
 
  30: length of long-block for OLS trend

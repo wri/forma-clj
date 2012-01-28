@@ -1,5 +1,7 @@
 (ns forma.trends.analysis
   (:use [forma.matrix.utils]
+        [midje.cascalog]
+        [cascalog.api]
         [clojure.math.numeric-tower :only (sqrt floor abs expt)]
         [forma.trends.filter])
   (:require [forma.utils :as utils]
@@ -59,8 +61,7 @@
   "returns the matrices of element-wise sums of (1) the first-order
   conditions, and (2) the cumulative first-order conditions.  This is
   only an intermediate step in the calculation of the Hansen (1992)
-  test for parameter instability in linear models.
-  TODO: remove redundancy, keep readability"
+  test for parameter instability in linear models."
   [y & x]
   (let [foc (apply first-order-conditions y x)
         foccum (map i/cumulative-sum foc)]
@@ -79,12 +80,6 @@
       (i/solve (i/matrix (map #(* (count y) %) foc) num-foc))
       (i/matrix cumul-foc num-foc)))))
 
-;; (defn long-trend
-;;   [intervals reli-ts spectral-ts]
-;;   (->> (make-reliable #{3 2} #{1 0} reli-ts spectral-ts)
-;;        (harmonic-seasonal-decomposition intervals 3)
-;;        (long-stats)))
-
 (defn lengthening-ts
   "create a sequence of sequences, where each incremental sequence is
   one element longer than the last, pinned to the same starting
@@ -93,12 +88,6 @@
   (let [base-vec (vec base-seq)]
     (for [x (range start-index (inc end-index))]
       (subvec base-vec 0 x))))
-
-;; TODO: check methodology, effect of more observations on statistical
-;; significance of down-trend.  That is, check validity of `t-stat`
-;; feature in the analysis for projecting forward.  ALL pixels will
-;; have higher `t-stats` and higher (in magnitude) short term drops as
-;; time goes on.  A sort of one-way ratchet.
 
 (defn clean-trend
   "filter out bad values and remove seasonal component for a spectral
@@ -112,21 +101,25 @@
   "clean trends (i.e., filter out bad values and remove seasonal
   component) for each intervening time period between `start-idx` and
   `end-idx`.
-  TODO: THIS is the most time-intensive function of all the trends."
+
+  TODO: THIS is the most time-intensive function of all the trend
+  analysis."
   [freq start-idx end-idx spectral-ts reli-ts]
   (map (partial clean-trend freq)
        (lengthening-ts start-idx end-idx spectral-ts)
        (lengthening-ts start-idx end-idx reli-ts)))
 
-(defn telescoping-trend-analysis
+(defn telescoping-long-trend
   "returns a three-tuple with the trend coefficient, trend t-stat, and
   the hansen statistic for each period between `start-idx` (inclusive)
   and `end-idx` (inclusive)."
-  [freq start-idx end-idx spectral-ts reli-ts]
+  [freq start-idx end-idx spectral-ts reli-ts cofactor-ts]
   (let [params [freq start-idx end-idx spectral-ts reli-ts]
-        clean-ts (apply clean-tele-trends params)]
+        clean-ts (apply clean-tele-trends params)
+        cofactor-tele (lengthening-ts start-idx end-idx cofactor-ts)]
     (map flatten
-         (map (juxt hansen-stat long-stats) clean-ts))))
+         (transpose [(map hansen-stat clean-ts)
+                     (map long-stats clean-ts cofactor-tele)]))))
 
 (defn trend-mat
   "returns a (`len` x 2) matrix, with first column of ones; and second
@@ -136,14 +129,10 @@
    (repeat len 1)
    (map inc (range len))))
 
-(defn proj-mat
-  "returns the projection matrix for a given X, premultiplied by
-  inv(X), which is used to calculate the coefficient vector for
-  ordinary least squares:
-
-  P = X*inv(X'*X)*X' => inv(X)*P = inv(X'*X)*X',
-  which implies that estimated OLS coefficient vector:
-  beta = inv(X'*X)*X'*y = inv(X)*P*y"
+(defn hat-mat
+  "returns hat matrix for a trend cofactor matrix of length
+  `block-len`, used to calculate the coefficient vector for ordinary
+  least squares"
   [block-len]
   (let [X (trend-mat block-len)]
     (i/mmult (i/solve (i/mmult (i/trans X) X))
@@ -177,7 +166,7 @@
        (moving-subvec block-len
                       (i/matrix (clean-trend freq spectral-ts reli-ts)))))
 
-(defn collect-short-trend
+(defn telescoping-short-trend
   "returns a vector of the short-term trend coefficients over time
   series blocks of length `long-block`, smoothed by moving average
   window of length `short-block`.  The coefficients are calculated
@@ -190,3 +179,7 @@
          (reductions min)
          (drop (dec leading-buffer)))))
 
+(defn subtract-lag
+  [n]
+  (let [v (take n (repeatedly rand))]
+    (time (dorun (map - v (cons 0 v))))))

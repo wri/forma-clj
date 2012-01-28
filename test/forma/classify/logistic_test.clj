@@ -59,3 +59,12 @@ first and last specified, as below."
  "check false positives; test calculated probabilities against labels"
  (count (filter true?
                 (map false-pos y alerts))) => 15)
+
+(def sample-logist (vec (map (comp vec (partial take 5) flatten vector) y X)))
+
+(defn check-labels []
+  (<-  [?label] [sample-logist ?label ?v1 ?v2 ?v3 ?v4]))
+
+(fact?- [[0.0]
+         [1.0]] (check-labels))
+
