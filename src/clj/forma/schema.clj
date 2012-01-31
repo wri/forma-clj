@@ -269,3 +269,19 @@
   [(->> in-series
         (map #(or (:series %) (repeat %)))
         (apply map forma-value))])
+
+
+(defn randomize-this
+  [coll]
+  (let [yes (take (count coll) (repeatedly #(rand-int 100)))]
+    (vec (map + yes coll))))
+
+(defn get-hansen-stat
+  [n]
+  (let [myfunc (fn [{:keys [series]}]
+                 (hansen-stat (map (partial + (rand-int 100)) series)))
+        tm-src (vec (repeat n (timeseries-value 0 ndvi)))]
+    (?<- (stdout)
+         [?han]
+         (time-src ?series)
+         (myfunc ?series :> ?han))))

@@ -162,7 +162,7 @@
   "returns a vector of short-trem trend coefficients of block length
   `block-len`"
   [block-len freq spectral-ts reli-ts]
-  (map (partial grab-trend (proj-mat block-len))
+  (map (partial grab-trend (hat-mat block-len))
        (moving-subvec block-len
                       (i/matrix (clean-trend freq spectral-ts reli-ts)))))
 
@@ -179,7 +179,3 @@
          (reductions min)
          (drop (dec leading-buffer)))))
 
-(defn subtract-lag
-  [n]
-  (let [v (take n (repeatedly rand))]
-    (time (dorun (map - v (cons 0 v))))))
