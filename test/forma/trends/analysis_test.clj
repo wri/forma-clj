@@ -4,9 +4,11 @@
         [forma.trends.data]
         [forma.matrix.utils]
         [forma.utils]
+        [cascalog.api]
         [clojure.math.numeric-tower :only (sqrt floor abs expt)])
   (:require [incanter.core :as i]
-            [incanter.stats :as s]))
+            [incanter.stats :as s]
+            [forma.schema :as schema]))
 
 (defn num-equals [expected]
   (fn [actual] (== expected actual)))
@@ -86,6 +88,7 @@ first-order conditions"
  100: example length of the training period
  271: last period in test time series"
  (count (telescoping-long-trend 23 100 271 ndvi reli rain)) => 172
+ (count (first (telescoping-long-trend 23 100 271 ndvi reli rain))) => 3
  (count (telescoping-short-trend 30 10 23 100 ndvi reli))  => 172
  (last  (telescoping-short-trend 30 10 23 100 ndvi reli))  => (roughly -89.4561))
 
@@ -115,3 +118,15 @@ first-order conditions"
 ;; (time (dotimes [_ 1]
 ;;         (dorun (telescoping-short-trend 140 271 23 30 10 ndvi reli))))
 ;; "Elapsed time: 5650.48 msecs"
+
+(defn extract-series
+  [{:keys [series]}]
+  series)
+
+(defn test-long
+  [ndvi-tap (schema/timeseries-value ndvi)
+   reli-tap (schema/timeseries-value reli)
+   rain-tap (schema/timeseries-value rain)]
+  (?<- (stdout)
+       [?series]
+       (ndvi-tap )))

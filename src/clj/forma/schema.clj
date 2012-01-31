@@ -271,11 +271,6 @@
         (apply map forma-value))])
 
 
-(defn randomize-this
-  [coll]
-  (let [yes (take (count coll) (repeatedly #(rand-int 100)))]
-    (vec (map + yes coll))))
-
 (defn get-hansen-stat
   [n]
   (let [myfunc (fn [{:keys [series]}]
@@ -285,3 +280,4 @@
          [?han]
          (time-src ?series)
          (myfunc ?series :> ?han))))
+
