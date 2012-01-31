@@ -269,15 +269,3 @@
   [(->> in-series
         (map #(or (:series %) (repeat %)))
         (apply map forma-value))])
-
-
-(defn get-hansen-stat
-  [n]
-  (let [myfunc (fn [{:keys [series]}]
-                 (hansen-stat series))
-        tm-src (vec (repeat n (timeseries-value 0 ndvi)))]
-    (?<- (stdout)
-         [?han]
-         (time-src ?series)
-         (myfunc ?series :> ?han))))
-
