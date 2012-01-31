@@ -71,7 +71,7 @@ first-order conditions"
  (- (hansen-stat (shift-down-end ndvi))
     (hansen-stat ndvi)) => pos?)
 
-(facts
+#_(facts
  "check that the appropriate number of periods are included in the
  results vector, after the appropriate number of intervals (strictly
  within the training period) are dropped.  Suppose, for example, that
@@ -119,14 +119,33 @@ first-order conditions"
 ;;         (dorun (telescoping-short-trend 140 271 23 30 10 ndvi reli))))
 ;; "Elapsed time: 5650.48 msecs"
 
-(defn extract-series
-  [{:keys [series]}]
-  series)
+(defn extract-ndvi
+  [{:keys [ndvi]}]
+  [ndvi])
 
-(defn test-long
-  [ndvi-tap (schema/timeseries-value ndvi)
-   reli-tap (schema/timeseries-value reli)
-   rain-tap (schema/timeseries-value rain)]
-  (?<- (stdout)
-       [?series]
-       (ndvi-tap )))
+(defn extract-reli
+  [{:keys [reli]}]
+  [reli])
+
+(defn extract-rain
+  [{:keys [rain]}]
+  [rain])
+
+(defn create-tap
+  [n ts]
+  (vec (repeat n (schema/timeseries-value 0 ts))))
+
+(defn myfunc [m] 
+  (let [coll (vector (:series m))]
+    (hansen-stat (first coll))))
+
+(defn test-myfunc []
+  (?<- (stdout) [?han] (time-src ?series) (myfunc ?series :> ?han)))
+
+(defn total-tap
+  [n]
+  (repeat n {:start 0 :end 271 :ndvi ndvi :reli reli :rain rain}))
+
+(defmapcatop tele-wrap
+  [ndvi reli rain]
+  (telescoping-long-trend 23 100 110 ndvi reli rain))
