@@ -7,11 +7,13 @@ set -e
 bucket=reddconfig
 fwtools=FWTools-linux-x86_64-4.0.0.tar.gz
 native=linuxnative.tar.gz
+jblas=libjblas.tar.gz
 sources=/etc/apt/sources.list
-hadoop_lib=/home/hadoop/lib/native/Linux-amd64-64
+hadoop_lib=/home/hadoop/native/Linux-amd64-64
 
 # Start with screen.
 sudo apt-get -y --force-yes install screen
+sudo apt-get -y --force-yes install exim4
 
 # Upgrading GCC requires a restart of certain services; this is a
 # little hacky, but rather than do this manually we'll move the
@@ -45,8 +47,10 @@ sudo chown --recursive hadoop /usr/local/fwtools
 
 # Install Native Java Bindings
 wget -S -T 10 -t 5 http://$bucket.s3.amazonaws.com/$native
+wget -S -T 10 -t 5 http://$bucket.s3.amazonaws.com/$jblas
 sudo mkdir -p /home/hadoop/native
 sudo tar -C $hadoop_lib --strip-components=2 -xvzf $native
+sudo tar -C $hadoop_lib --strip-components=2 -xvzf $jblas
 sudo chown --recursive hadoop $hadoop_lib
 
 # Add proper configs to hadoop-env.
@@ -56,5 +60,7 @@ echo "export JAVA_LIBRARY_PATH=$hadoop_lib:\$JAVA_LIBRARY_PATH" >> /home/hadoop/
 # Add to bashrc, for good measure.
 echo "export LD_LIBRARY_PATH=/usr/local/fwtools/usr/lib:$hadoop_lib:\$LD_LIBRARY_PATH" >> /home/hadoop/.bashrc
 echo "export JAVA_LIBRARY_PATH=$hadoop_lib:\$JAVA_LIBRARY_PATH" >> /home/hadoop/.bashrc
+
+source /home/hadoop/.bashrc
 
 exit 0

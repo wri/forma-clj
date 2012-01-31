@@ -1,3 +1,4 @@
+
 (ns forma.trends.analysis-test
   (:use [forma.trends.analysis] :reload)
   (:use [midje.sweet]
@@ -27,6 +28,45 @@
        X (idx Yt)
        power 2]
    (last (expt-residuals y X power))) => (roughly 0.044304))
+
+(fact
+  "Check that indexing is correct"
+  (idx [4 5 6]) => [1 2 3])
+
+(fact
+  "Check windowed-map"
+  (windowed-map ols-trend 2 [1 2 50]) => (contains (map roughly [1.0 48.0])))
+
+(fact
+  "Does transpose work as planned? Sure looks like it!"
+  (transpose [[1 2 3] [4 5 6]] ) => [[1 4] [2 5] [3 6]])
+
+(fact
+  "Checking outer product calculation against Numpy function np.outer() for mat and mat.T, where mat is [1 2 3]"
+  (outer-product [1 2 3]) => [1.0 2.0 3.0 2.0 4.0 6.0 3.0 6.0 9.0])
+
+(fact
+  "Check element-wise sum of components of vector of vectors"
+  (element-sum [[1 2 3] [1 2 3]]) => [2 4 6])
+
+(fact
+  "Check average of vector.
+   Casting as float to generalize for another vector as necessary"
+  (float (average [1 2 3.])) => (num-equals 2.0))
+
+(fact
+  "Check moving average"
+  (moving-average 2 [1 2 3]) => [3/2 5/2])
+
+(tabular
+ (fact
+   "Calculates simple OLS trend, assuming 0 intercept."
+   (ols-trend ?v) => ?expected)
+ ?v ?expected
+ [1 2] (roughly 1. 0.00000001)
+ [1 2 4] (roughly 1.5 0.00000001)
+ [1 2 50] (roughly 24.5 0.00000001)
+ [2 50] (roughly 48. 0.00000001))
 
 (tabular
  (fact
@@ -139,15 +179,12 @@ first-order conditions"
   (let [coll (vector (:series m))]
     (hansen-stat (first coll))))
 
-(defn test-myfunc []
-  (?<- (stdout) [?han] (time-src ?series) (myfunc ?series :> ?han)))
+;; (defn test-myfunc []
+;;   (?<- (stdout) [?han] (time-src ?series) (myfunc ?series :> ?han)))
 
 (defn total-tap
   [n]
   (repeat n {:start 0 :end 271 :ndvi ndvi :reli reli :rain rain}))
-
-(defn test-myfunc []
-  (?<- (stdout) [?han] (time-src ?series) (myfunc ?series :> ?han)))
 
 (defmapcatop tele-wrap
   [ndvi reli rain]

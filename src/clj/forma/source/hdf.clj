@@ -66,15 +66,18 @@
 ;; provides us with everything we need for proper classification of
 ;; the data we need.
 
+(defn with-gdal-open* [f path]
+  (let [gdal (do (gdal/AllRegister)
+                 (gdal/Open path))]
+    (try (f gdal)
+         (finally (.delete gdal)))))
+
 (defmacro with-gdal-open
   "Accepts a vector containing a symbol and a path to a file capable
   of being opened with `gdal/Open`, and binds the opened dataset to
   the supplied symbol."
   [[sym path] & body]
-  `(let [~sym (do (gdal/AllRegister)
-                  (gdal/Open ~path))]
-     (try ~@body
-          (finally (.delete ~sym)))))
+  `(with-gdal-open* (fn [~sym] ~@body) ~path))
 
 (defn metadata
   "Returns the metadata map for the supplied MODIS Dataset."
