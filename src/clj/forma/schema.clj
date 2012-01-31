@@ -279,7 +279,7 @@
 (defn get-hansen-stat
   [n]
   (let [myfunc (fn [{:keys [series]}]
-                 (hansen-stat (map (partial + (rand-int 100)) series)))
+                 (hansen-stat series))
         tm-src (vec (repeat n (timeseries-value 0 ndvi)))]
     (?<- (stdout)
          [?han]

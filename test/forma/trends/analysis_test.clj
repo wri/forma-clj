@@ -77,7 +77,7 @@ first-order conditions"
  intervals total (length of test data, ndvi).  There should be 172
  values in the result vector: 1 to mark the end of the training
  period, and then 171 thereafter.
-0
+
  Parameter list:
 
  30: length of long-block for OLS trend
@@ -85,16 +85,16 @@ first-order conditions"
  23: frequency of 16-day intervals (annually)
  100: example length of the training period
  271: last period in test time series"
- (count (telescoping-trend-analysis 23 100 271 ndvi reli)) => 172
- (count (collect-short-trend 30 10 23 100 ndvi reli))  => 172
- (last  (collect-short-trend 30 10 23 100 ndvi reli))  => (roughly -89.4561))
+ (count (telescoping-long-trend 23 100 271 ndvi reli rain)) => 172
+ (count (telescoping-short-trend 30 10 23 100 ndvi reli))  => 172
+ (last  (telescoping-short-trend 30 10 23 100 ndvi reli))  => (roughly -89.4561))
 
 (fact
  "test that the magnitude of the short-term drop of the
  transformed (shifted down) time series is higher than that of the
  original time series"
- (let [s-drop (collect-short-trend 30 10 23 138 ndvi reli)
-       big-drop (collect-short-trend 30 10 23 138 (shift-down-end ndvi) reli)]
+ (let [s-drop (telescoping-short-trend 30 10 23 138 ndvi reli)
+       big-drop (telescoping-short-trend 30 10 23 138 (shift-down-end ndvi) reli)]
    (- (abs (reduce min big-drop)) (abs (reduce min s-drop))) => pos?))
 
 ;; Benchmark
