@@ -146,6 +146,9 @@ first-order conditions"
   [n]
   (repeat n {:start 0 :end 271 :ndvi ndvi :reli reli :rain rain}))
 
+(defn test-myfunc []
+  (?<- (stdout) [?han] (time-src ?series) (myfunc ?series :> ?han)))
+
 (defmapcatop tele-wrap
   [ndvi reli rain]
   (telescoping-long-trend 23 100 110 ndvi reli rain))
