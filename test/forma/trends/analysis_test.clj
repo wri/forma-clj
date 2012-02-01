@@ -171,9 +171,6 @@ first-order conditions"
   start and end index don't matter for this application, but are left
   in there anyway to ensure forward compatibility"
   [m]
-  (let [ndvi (vector (:ndvi m))
-        reli (vector (:reli m))
-        rain (vector (:rain m))])
   (transpose (telescoping-long-trend 23 135 136 ndvi reli rain)))
 
 
