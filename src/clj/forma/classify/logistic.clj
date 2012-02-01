@@ -132,4 +132,3 @@
                   1e-6
                   250)]
     (probability-calc new-beta updated-features)))
-
