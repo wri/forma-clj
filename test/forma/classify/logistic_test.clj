@@ -71,11 +71,14 @@ first and last specified, as below."
 
 ;; Start to test the classifier as a cascalog query
 
+(defn eco-generator [n]
+  (map vector (map #(if (odd? %) "eco1" "eco2") (range n))))
+
 (defn create-sample-tap
   "creates a sample tap with `n` observations, with the ecoregion
   string, the label, and the feature vector"
   [n]
-  (let [ecoid (map vector (repeat n "eco1"))
+  (let [ecoid (eco-generator n)
         obs (map conj ecoid (map vector y) (map vec X)) ]
     (vec (take n obs))))
 
@@ -96,5 +99,4 @@ first and last specified, as below."
          (get-probabilities ?y ?X :> ?prob))))
 
 
-(defn eco-generator [n]
-  (map #(if (odd? %) "eco1" "eco2") (range n)))
+
