@@ -1,9 +1,9 @@
-
 (ns forma.trends.analysis-test
   (:use [forma.trends.analysis] :reload)
   (:use [midje.sweet]
-        [forma.trends.data]
         [forma.matrix.utils]
+        [forma.trends.stretch]
+        [forma.trends.data]
         [forma.utils]
         [cascalog.api]
         [clojure.math.numeric-tower :only (sqrt floor abs expt)])
@@ -111,7 +111,7 @@ first-order conditions"
  (- (hansen-stat (shift-down-end ndvi))
     (hansen-stat ndvi)) => pos?)
 
-#_(facts
+(facts
  "check that the appropriate number of periods are included in the
  results vector, after the appropriate number of intervals (strictly
  within the training period) are dropped.  Suppose, for example, that
@@ -189,3 +189,4 @@ first-order conditions"
 (defmapcatop tele-wrap
   [ndvi reli rain]
   (telescoping-long-trend 23 100 110 ndvi reli rain))
+
