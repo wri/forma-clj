@@ -1,7 +1,8 @@
 (ns forma.classify.logistic-test
   (:use [forma.classify.logistic] :reload)
   (:use [midje sweet cascalog]
-        [clojure-csv.core])
+        [clojure-csv.core]
+        [cascalog.api])
   (:import [org.jblas FloatMatrix])
   (:require [incanter.core :as i]
             [forma.testing :as t]))
@@ -63,8 +64,29 @@ first and last specified, as below."
 (def sample-logist (vec (map (comp vec (partial take 5) flatten vector) y X)))
 
 (defn check-labels []
-  (<-  [?label] [sample-logist ?label ?v1 ?v2 ?v3 ?v4]))
+  (<- [?label] [sample-logist ?label ?v1 ?v2 ?v3 ?v4]))
 
 (fact?- [[0.0]
          [1.0]] (check-labels))
 
+;; Start to test the classifier as a cascalog query
+
+(defn create-sample-tap
+  [n]
+  (let [ecoid (map vector (repeat n "eco1"))
+        obs (map conj ecoid (map vector y) (map vec X)) ]
+    (vec (take n obs))))
+
+(defbufferop get-probabilities
+  [tuples]
+  (let [y (vec (flatten (map first tuples)))
+        X (vec (map second tuples))]
+    (estimated-probabilities y X X)))
+
+(defn show-logistic-results
+  [n]
+  (let [src (create-sample-tap n)]
+    (?<- (stdout)
+         [?eco ?prob]
+         (src ?eco ?y ?X)
+         (get-probabilities ?y ?X :> ?prob))))

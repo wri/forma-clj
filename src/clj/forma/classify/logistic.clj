@@ -1,7 +1,8 @@
 (ns forma.classify.logistic
   (:use [forma.utils]
         [clojure.math.numeric-tower :only (abs)]
-        [forma.matrix.utils])
+        [forma.matrix.utils]
+        [cascalog.api])
   (:require [incanter.core :as i])
   (:import [org.jblas FloatMatrix MatrixFunctions Solve DoubleMatrix]))
 
@@ -131,5 +132,4 @@
                   1e-6
                   250)]
     (probability-calc new-beta updated-features)))
-
 
