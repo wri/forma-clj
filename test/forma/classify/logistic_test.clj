@@ -79,9 +79,9 @@ first and last specified, as below."
   "returns a vector of coefficients that is accepted within the
   framework of cascalog."
   [tuples]
-  (let [label-seq (vec (flatten (map first tuples)))
-        feature-mat (vec (map second tuples))]
-    [[(vec (logistic-beta-vector label-seq feature-mat 1e-8 1e-6 250))]]))
+  (let [label-seq (flatten (map first tuples))
+        feature-mat (map second tuples)]
+    [[(logistic-beta-vector label-seq feature-mat 1e-8 1e-6 250)]]))
 
 (defn show-beta-vector
   "generate a separate coefficient vector for each ecoregion, and
