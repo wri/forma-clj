@@ -174,12 +174,16 @@ first-order conditions"
   (let [ndvi (vector (:ndvi m))
         reli (vector (:reli m))
         rain (vector (:rain m))])
-  (transpose (telescoping-long-trend 23 135 136 ndvi reli rain)))
+  (vec (transpose (telescoping-long-trend 23 135 136 ndvi reli rain))))
+
+(defn short-trend-results
+  [m]
+  )
 
 (def long-trend-query
   (<- [?han-stat ?long-drop ?long-tstat]
       (total-tap ?ts-map)
-      (tele-wrap ?ts-map :> ?han-stat ?long-drop ?long-tstat)
+      (long-trend-results ?ts-map :> ?han-stat ?long-drop ?long-tstat)
       (:distinct false)))
 
 (fact
