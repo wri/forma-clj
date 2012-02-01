@@ -72,6 +72,8 @@ first and last specified, as below."
 ;; Start to test the classifier as a cascalog query
 
 (defn create-sample-tap
+  "creates a sample tap with `n` observations, with the ecoregion
+  string, the label, and the feature vector"
   [n]
   (let [ecoid (map vector (repeat n "eco1"))
         obs (map conj ecoid (map vector y) (map vec X)) ]
@@ -84,9 +86,15 @@ first and last specified, as below."
     (estimated-probabilities y X X)))
 
 (defn show-logistic-results
+  "display the probability and ecoregion for each pixel in std out,
+  based on grouping by ecoregion and `n` observations total"
   [n]
   (let [src (create-sample-tap n)]
     (?<- (stdout)
          [?eco ?prob]
          (src ?eco ?y ?X)
          (get-probabilities ?y ?X :> ?prob))))
+
+
+(defn eco-generator [n]
+  (map #(if (odd? %) "eco1" "eco2") (range n)))
