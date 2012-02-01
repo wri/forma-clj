@@ -182,16 +182,20 @@ first-order conditions"
            (telescoping-long-trend 23 start end ndvi-ts reli-ts rain-ts))))))
 
 (def long-trend-query
-  (?<- (stdout) [?han-stat ?long-drop ?long-tstat]
+  (<- [?han-stat ?long-drop ?long-tstat]
       (ts-tap ?ts-map)
       (long-trend-results ?ts-map :> ?han-stat ?long-drop ?long-tstat)
       (:distinct false)))
 
 (fact
  "duplicate time series will produce two sets of identical results, given that :distinct is set to false; otherwise, results would "
- long-trend-query => (produces [[[1.2393550741169639 1.2133709085855648]
-                                 [2.4915869043482424 1.3049908881259853]
-                                 [1.1504228201940752 0.5951173333726173]]
-                                [[1.2393550741169639 1.2133709085855648]
-                                 [2.4915869043482424 1.3049908881259853]
-                                 [1.1504228201940752 0.5951173333726173]]]))
+ long-trend-query =>
+ (produces-some [[{:start-idx 135
+                   :end-idx 136
+                   :series [1.2393550741169639 1.2133709085855648]}
+                  {:start-idx 135
+                   :end-idx 136
+                   :series [2.4915869043482424 1.3049908881259853]}
+                  {:start-idx 135
+                   :end-idx 136
+                   :series [1.1504228201940752 0.5951173333726173]}]]))
