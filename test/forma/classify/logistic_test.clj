@@ -83,7 +83,7 @@ first and last specified, as below."
         feature-mat (map second tuples)]
     [[(logistic-beta-vector label-seq feature-mat 1e-8 1e-6 250)]]))
 
-(defn show-beta-vector
+(defn calc-group-probabilities
   "generate a separate coefficient vector for each ecoregion, and
   apply the appropriate coefficient vector to each pixel.  Note that
   `?feat-training` is the feature set over the training period,
@@ -99,10 +99,9 @@ first and last specified, as below."
         beta-gen (<- [?eco ?beta]
                      (src ?eco ?labels ?feat-training)
                      (logistic-beta-wrap ?labels ?feat-training :> ?beta))]
-    (?<- (stdout)
-         [?eco ?prob]
-         (src ?eco ?labels ?feat-update)
-         (= ?eco "eco1")
-         (beta-gen ?eco ?beta)
-         (logistic-prob ?beta ?feat-update :> ?prob))))
+    (<- [?eco ?prob]
+        (src ?eco ?labels ?feat-update)
+        (= ?eco "eco1")
+        (beta-gen ?eco ?beta)
+        (logistic-prob ?beta ?feat-update :> ?prob))))
 
