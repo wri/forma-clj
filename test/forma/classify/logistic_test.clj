@@ -88,9 +88,9 @@ first and last specified, as below."
   "returns a vector of coefficients that is accepted within the
   framework of cascalog."
   [tuples]
-  (let [y (vec (flatten (map first tuples)))
-        X (vec (map second tuples))]
-    [[(vec (logistic-beta-vector y X 1e-8 1e-6 250))]]))
+  (let [label-seq (vec (flatten (map first tuples)))
+        feature-mat (vec (map second tuples))]
+    [[(vec (logistic-beta-vector label-seq feature-mat 1e-8 1e-6 250))]]))
 
 (defn show-beta-vector
   "generate a separate coefficient vector for each ecoregion, and
@@ -106,11 +106,11 @@ first and last specified, as below."
   [n]
   (let [src (create-sample-tap n)
         beta-gen (<- [?eco ?beta]
-                     (src ?eco ?y ?feat-training)
-                     (logistic-beta-wrap ?y ?feat-training :> ?beta))]
+                     (src ?eco ?labels ?feat-training)
+                     (logistic-beta-wrap ?labels ?feat-training :> ?beta))]
     (?<- (stdout)
          [?eco ?prob]
-         (src ?eco ?y ?feat-update)
+         (src ?eco ?labels ?feat-update)
          (= ?eco "eco1")
          (beta-gen ?eco ?beta)
          (logistic-prob ?beta ?feat-update :> ?prob))))
