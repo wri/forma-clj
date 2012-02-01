@@ -172,11 +172,16 @@ first-order conditions"
   start and end index don't matter for this application, but are left
   in there anyway to ensure forward compatibility"
   [m]
-  (let [[ndvi-ts reli-ts rain-ts] ((juxt :ndvi :reli :rain) m)]
-    (transpose (telescoping-long-trend 23 135 136 ndvi-ts reli-ts rain-ts))))
+  (let [start 135
+        end 136
+        [ndvi-ts reli-ts rain-ts] ((juxt :ndvi :reli :rain) m)]
+    (vec (map
+          (partial schema/timeseries-value start end)
+          (transpose
+           (telescoping-long-trend 23 start end ndvi-ts reli-ts rain-ts))))))
 
 (def long-trend-query
-  (<- [?han-stat ?long-drop ?long-tstat]
+  (?<- (stdout) [?han-stat ?long-drop ?long-tstat]
       (ts-tap ?ts-map)
       (long-trend-results ?ts-map :> ?han-stat ?long-drop ?long-tstat)
       (:distinct false)))
