@@ -83,9 +83,10 @@ first and last specified, as below."
         feature-mat (map second tuples)]
     [[(logistic-beta-vector label-seq feature-mat 1e-8 1e-6 250)]]))
 
-(defn calc-group-probabilities
-  "generate a separate coefficient vector for each ecoregion, and
-  apply the appropriate coefficient vector to each pixel.  Note that
+(defn show-group-probabilities
+  "show calculated probabilities for each ecoregion grouping. generate
+  a separate coefficient vector for each ecoregion, and apply the
+  appropriate coefficient vector to each pixel.  Note that
   `?feat-training` is the feature set over the training period,
   whereas `?feat-update` is the feature set through the updated
   interval.  Here, for this example, the two feature sets are
@@ -93,15 +94,20 @@ first and last specified, as below."
   probability of deforestation *during* the training period. This
   seems a little round-about, but this workflow will reduce redundant
   calculation as we estimate probabilities for more than one time
-  period (or any other time period than the training period)"
+  period (or any other time period than the training period)
+
+  FOR THIS EXAMPLE: return the probabilities for the alerts identified
+  for the sample ecoregion, eco1"
   [n]
   (let [src (create-sample-tap n)
         beta-gen (<- [?eco ?beta]
                      (src ?eco ?labels ?feat-training)
                      (logistic-beta-wrap ?labels ?feat-training :> ?beta))]
-    (<- [?eco ?prob]
-        (src ?eco ?labels ?feat-update)
-        (= ?eco "eco1")
-        (beta-gen ?eco ?beta)
-        (logistic-prob ?beta ?feat-update :> ?prob))))
+    (?<- (stdout)
+         [?eco ?prob]
+         (src ?eco ?labels ?feat-update)
+         (= ?eco "eco1")
+         (beta-gen ?eco ?beta)
+         (logistic-prob ?beta ?feat-update :> ?prob)
+         (> ?prob 0.5))))
 
