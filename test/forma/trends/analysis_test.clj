@@ -161,6 +161,7 @@ first-order conditions"
 
 
 (def ts-tap
+  "sample tap that mimics 2 identical pixels (each with the same time series)"
   (vec (repeat 2 {:start 0 :end 271 :ndvi ndvi :reli reli :rain rain})))
 
 (defn long-trend-results
@@ -171,8 +172,8 @@ first-order conditions"
   start and end index don't matter for this application, but are left
   in there anyway to ensure forward compatibility"
   [m]
-  (transpose (telescoping-long-trend 23 135 136 ndvi reli rain)))
-
+  (let [[ndvi-ts reli-ts rain-ts] ((juxt :ndvi :reli :rain) m)]
+    (transpose (telescoping-long-trend 23 135 136 ndvi-ts reli-ts rain-ts))))
 
 (def long-trend-query
   (<- [?han-stat ?long-drop ?long-tstat]
@@ -182,23 +183,9 @@ first-order conditions"
 
 (fact
  "duplicate time series will produce two sets of identical results, given that :distinct is set to false; otherwise, results would "
- long-trend-query => (produces '([[1.2393550741169639 1.2133709085855648]
-                                  [2.4915869043482424 1.3049908881259853]
-                                  [1.1504228201940752 0.5951173333726173]]
-                                 [[1.2393550741169639 1.2133709085855648]
-                                  [2.4915869043482424 1.3049908881259853]
-                                  [1.1504228201940752 0.5951173333726173]])))
-
-;; informative tests (leave in for now)
-
-;; (defn create-tap
-;;   [n ts]
-;;   (vec (repeat n (schema/timeseries-value 0 ts))))
-
-;; (defn myfunc [m] 
-;;   (let [coll (vector (:series m))]
-;;     (hansen-stat (first coll))))
-
-;; (defn test-myfunc []
-;;   (?<- (stdout) [?han] (time-src ?series) (myfunc ?series :> ?han)))
-
+ long-trend-query => (produces [[[1.2393550741169639 1.2133709085855648]
+                                 [2.4915869043482424 1.3049908881259853]
+                                 [1.1504228201940752 0.5951173333726173]]
+                                [[1.2393550741169639 1.2133709085855648]
+                                 [2.4915869043482424 1.3049908881259853]
+                                 [1.1504228201940752 0.5951173333726173]]]))
