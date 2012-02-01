@@ -6,7 +6,8 @@
         [forma.trends.filter])
   (:require [forma.utils :as utils]
             [incanter.core :as i]
-            [incanter.stats :as s]))
+            [incanter.stats :as s]
+            [forma.schema :as schema]))
 
 (defn element-sum
   "returns a vector of sums of each respective element in a vector of vectors,
@@ -159,7 +160,7 @@
              (i/sel coll :rows (range idx (+ window idx))))))))
 
 (defn windowed-trend
-  "returns a vector of short-trem trend coefficients of block length
+  "returns a vector of short-term trend coefficients of block length
   `block-len`"
   [block-len freq spectral-ts reli-ts]
   (map (partial grab-trend (hat-mat block-len))
@@ -169,13 +170,15 @@
 (defn telescoping-short-trend
   "returns a vector of the short-term trend coefficients over time
   series blocks of length `long-block`, smoothed by moving average
-  window of length `short-block`.  The coefficients are calculated
+  window of length `short-block`. The coefficients are calculated
   along the entire time-series, but only apply to periods at and after
   the end of the training period."
-  [long-block short-block freq training-end spectral-ts reli-ts]
-  (let [leading-buffer (+ 2 (- training-end (+ long-block short-block)))]
-    (->> (windowed-trend long-block freq spectral-ts reli-ts)
-         (utils/moving-average short-block)
-         (reductions min)
-         (drop (dec leading-buffer)))))
+  [long-block short-block freq training-end end-idx spectral-ts reli-ts]
+  (let [leading-buffer (+ 2 (- training-end (+ long-block short-block)))
+        results-len (- (inc end-idx) training-end)]
+    (take results-len (->> (windowed-trend long-block freq spectral-ts reli-ts)
+                          (utils/moving-average short-block)
+                          (reductions min)
+                          (drop (dec leading-buffer))))))
+
 
