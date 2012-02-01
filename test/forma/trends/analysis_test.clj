@@ -6,6 +6,7 @@
         [forma.trends.data]
         [forma.utils]
         [cascalog.api]
+        [midje.cascalog]
         [clojure.math.numeric-tower :only (sqrt floor abs expt)])
   (:require [incanter.core :as i]
             [incanter.stats :as s]
