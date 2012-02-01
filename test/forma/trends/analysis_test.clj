@@ -160,7 +160,7 @@ first-order conditions"
 ;; "Elapsed time: 5650.48 msecs"
 
 
-(def total-tap
+(def ts-tap
   (vec (repeat 2 {:start 0 :end 271 :ndvi ndvi :reli reli :rain rain})))
 
 (defn long-trend-results
@@ -174,15 +174,12 @@ first-order conditions"
   (let [ndvi (vector (:ndvi m))
         reli (vector (:reli m))
         rain (vector (:rain m))])
-  (vec (transpose (telescoping-long-trend 23 135 136 ndvi reli rain))))
+  (transpose (telescoping-long-trend 23 135 136 ndvi reli rain)))
 
-(defn short-trend-results
-  [m]
-  )
 
 (def long-trend-query
   (<- [?han-stat ?long-drop ?long-tstat]
-      (total-tap ?ts-map)
+      (ts-tap ?ts-map)
       (long-trend-results ?ts-map :> ?han-stat ?long-drop ?long-tstat)
       (:distinct false)))
 
