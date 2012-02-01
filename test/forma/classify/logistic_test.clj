@@ -111,3 +111,13 @@ first and last specified, as below."
          (logistic-prob ?beta ?feat-update :> ?prob)
          (> ?prob 0.5))))
 
+;; Will write tests soon when I understand how to NOT set off an
+;; infinite import loop...
+
+;; forma.classify.logistic-test> (show-group-probabilities 100)
+
+;; RESULTS
+;; -----------------------
+;; eco1	0.9999999999765928
+;; eco1	0.9999999999963644
+;; -----------------------
