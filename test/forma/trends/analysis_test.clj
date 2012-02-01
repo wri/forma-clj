@@ -131,15 +131,15 @@ first-order conditions"
  271: last period in test time series"
  (count (telescoping-long-trend 23 100 271 ndvi reli rain)) => 172
  (count (first (telescoping-long-trend 23 100 271 ndvi reli rain))) => 3
- (count (telescoping-short-trend 30 10 23 100 110 ndvi reli))  => 11
- (last  (telescoping-short-trend 30 10 23 100 110 ndvi reli))  => (roughly -63.2393))
+ (count (telescoping-short-trend 30 10 23 100 271 ndvi reli))  => 172
+ (last  (telescoping-short-trend 30 10 23 100 271 ndvi reli))  => (roughly -89.45618))
 
 (fact
  "test that the magnitude of the short-term drop of the
  transformed (shifted down) time series is higher than that of the
  original time series"
- (let [s-drop (telescoping-short-trend 30 10 23 138 (count ndvi) ndvi reli)
-       big-drop (telescoping-short-trend 30 10 23 138 (count ndvi) (shift-down-end ndvi) reli)]
+ (let [s-drop (telescoping-short-trend 30 10 23 138 271 ndvi reli)
+       big-drop (telescoping-short-trend 30 10 23 138 271 (shift-down-end ndvi) reli)]
    (- (abs (reduce min big-drop)) (abs (reduce min s-drop))) => pos?))
 
 ;; Benchmark
@@ -182,7 +182,6 @@ first-order conditions"
           (transpose
            (telescoping-long-trend 23 start end ndvi-ts reli-ts rain-ts))))))
 
-<<<<<<< HEAD
 (defn short-trend-results
   "returns three vectors, the first with the hansen statistic for time
   series ranging from 0 through 135 (end of training period) and 136;
@@ -192,63 +191,37 @@ first-order conditions"
   in there anyway to ensure forward compatibility"
   [m]
   (let [start 135
+        end 136
         [ndvi-ts reli-ts] ((juxt :ndvi :reli) m)]
-    (schema/timeseries-value start (count ndvi-ts)
-     (telescoping-short-trend 30 10 23 start ndvi-ts reli-ts))))
+    (schema/timeseries-value start end
+     (telescoping-short-trend 30 10 23 start end ndvi-ts reli-ts))))
 
-(def long-trend-query
-  (<- [?han-stat ?long-drop ?long-tstat]
-      (ts-tap ?ts-map)
-      (long-trend-results ?ts-map :> ?han-stat ?long-drop ?long-tstat)
-      (:distinct false)))
-
-(def short-trend-query
-  (?<- (stdout) [?min-drop]
-      (ts-tap ?ts-map)
-      (short-trend-results ?ts-map :> ?min-drop)
-      (:distinct false)))
-
-(fact
- "duplicate time series will produce two sets of identical results, given that :distinct is set to false; otherwise, results would "
- long-trend-query =>
- (produces-some [[{:start-idx 135
-                   :end-idx 136
-                   :series [1.2393550741169639 1.2133709085855648]}
-                  {:start-idx 135
-                   :end-idx 136
-                   :series [2.4915869043482424 1.3049908881259853]}
-                  {:start-idx 135
-                   :end-idx 136
-                   :series [1.1504228201940752 0.5951173333726173]}]]))
-=======
 (deftest long-trends-test
-  (fact
-    "duplicate time series will produce two sets of identical results, given that :distinct is set to false; otherwise, results would "
-    (let [long-trend-query (<- [?han-stat ?long-drop ?long-tstat]
-                               (ts-tap ?ts-map)
-                               (long-trend-results ?ts-map :> ?han-stat ?long-drop ?long-tstat)
-                               (:distinct false))]
-      long-trend-query =>
-      (produces-some [[{:start-idx 135
-                        :end-idx 136
-                        :series [1.2393550741169639 1.2133709085855648]}
-                       {:start-idx 135
-                        :end-idx 136
-                        :series [2.4915869043482424 1.3049908881259853]}
-                       {:start-idx 135
-                        :end-idx 136
-                        :series [1.1504228201940752 0.5951173333726173]}]]))))
+  (facts
+   "check that the long- and short-term statistics match the expected
+values of the test data vectors."
+   (let [long-trend-query
+         (<- [?han-stat ?long-drop ?long-tstat]
+             (ts-tap ?ts-map)
+             (long-trend-results ?ts-map :> ?han-stat ?long-drop ?long-tstat)
+             (:distinct false))
+         short-trend-query
+         (<- [?min-drop]
+             (ts-tap ?ts-map)
+             (short-trend-results ?ts-map :> ?min-drop)
+             (:distinct false))]
+     long-trend-query =>
+     (produces-some [[{:start-idx 135
+                       :end-idx 136
+                       :series [1.2393550741169639 1.2133709085855648]}
+                      {:start-idx 135
+                       :end-idx 136
+                       :series [2.4915869043482424 1.3049908881259853]}
+                      {:start-idx 135
+                       :end-idx 136
+                       :series [1.1504228201940752 0.5951173333726173]}]])
+     short-trend-query =>
+     (produces-some [[{:start-idx 135
+                       :end-idx 136
+                       :series [-63.23936661263988 -63.23936661263988]}]]))))
 
-;; (defn telescoping-short-trend
-;;   "returns a vector of the short-term trend coefficients over time
-;;   series blocks of length `long-block`, smoothed by moving average
-;;   window of length `short-block`.  The coefficients are calculated
-;;   along the entire time-series, but only apply to periods at and after
-;;   the end of the training period."
-;;   [long-block short-block freq training-end spectral-ts reli-ts]
-;;   (let [leading-buffer (+ 2 (- training-end (+ long-block short-block)))]
-;;     (->> (windowed-trend long-block freq spectral-ts reli-ts)
-;;          (utils/moving-average short-block)
-;;          (reductions min)
-;;          (drop (dec leading-buffer)))))
->>>>>>> cf4b45156cf92b9a7b32a8590e367eadfd707a5c
