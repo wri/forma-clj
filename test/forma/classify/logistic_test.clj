@@ -98,7 +98,8 @@ first and last specified, as below."
   period (or any other time period than the training period)
 
   FOR THIS EXAMPLE: return the probabilities for the alerts identified
-  for the sample ecoregion, eco1"
+  for the sample ecoregion, eco1, as well as the arbitrary, unique
+  pixel identifiers"
   (fact
    (let [src (create-sample-tap 100)
          beta-gen (<- [?eco ?beta]
