@@ -99,7 +99,9 @@ first and last specified, as below."
 
   FOR THIS EXAMPLE: return the probabilities for the alerts identified
   for the sample ecoregion, eco1, as well as the arbitrary, unique
-  pixel identifiers"
+  pixel identifiers
+
+  NOTE!!!  This example perfectly identifies the two alerts in eco1"
   (fact
    (let [src (create-sample-tap 100)
          beta-gen (<- [?eco ?beta]
