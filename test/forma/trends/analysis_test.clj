@@ -1,17 +1,12 @@
 (ns forma.trends.analysis-test
   (:use [forma.trends.analysis] :reload)
-  (:use [midje.sweet]
-        [forma.matrix.utils]
-        [forma.trends.stretch]
+  (:use [cascalog.api]
+        [midje sweet cascalog]
         [forma.trends.data]
-        [forma.utils]
-        [cascalog.api]
-        [midje.cascalog]
-        [clojure.math.numeric-tower :only (sqrt floor abs expt)]
-        [clojure.test :only (deftest)])
-  (:require [incanter.core :as i]
-            [incanter.stats :as s]
-            [forma.schema :as schema]))
+        [forma.schema :only (timeseries-value)]
+        [forma.trends.stretch :only (ts-expander)]
+        [clojure.math.numeric-tower :only (floor abs expt)]
+        [clojure.test :only (deftest)]))
 
 (defn num-equals [expected]
   (fn [actual] (== expected actual)))
@@ -178,7 +173,7 @@ first-order conditions"
         end 136
         [ndvi-ts reli-ts rain-ts] ((juxt :ndvi :reli :rain) m)]
     (vec (map
-          (partial schema/timeseries-value start end)
+          (partial timeseries-value start end)
           (transpose
            (telescoping-long-trend 23 start end ndvi-ts reli-ts rain-ts))))))
 
@@ -193,7 +188,7 @@ first-order conditions"
   (let [start 135
         end 136
         [ndvi-ts reli-ts] ((juxt :ndvi :reli) m)]
-    (schema/timeseries-value start end
+    (timeseries-value start end
      (telescoping-short-trend 30 10 23 start end ndvi-ts reli-ts))))
 
 (deftest long-trends-test
