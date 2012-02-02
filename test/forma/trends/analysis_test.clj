@@ -2,7 +2,7 @@
   (:use [forma.trends.analysis] :reload)
   (:use [cascalog.api]
         [midje sweet cascalog]
-        [forma.trends.data]
+        [forma.trends.data :only (ndvi rain reli)]
         [forma.schema :only (timeseries-value)]
         [forma.trends.stretch :only (ts-expander)]
         [clojure.math.numeric-tower :only (floor abs expt)]
