@@ -72,7 +72,7 @@ first and last specified, as below."
   string, the label, and the feature vector"
   [n]
   (let [ecoid (eco-generator n)
-        obs (map conj ecoid (map vector y) (map vec X))]
+        obs (map conj ecoid (map vector (range n)) (map vector y) (map vec X))]
     (vec (take n obs))))
 
 (defbufferop logistic-beta-wrap
@@ -102,13 +102,13 @@ first and last specified, as below."
   (fact
    (let [src (create-sample-tap 100)
          beta-gen (<- [?eco ?beta]
-                      (src ?eco ?labels ?feat-training)
+                      (src ?eco ?pixel-id ?labels ?feat-training)
                       (logistic-beta-wrap ?labels ?feat-training :> ?beta))
-         alerts-query (<- [?eco ?prob]
-                          (src ?eco ?labels ?feat-update)
+         alerts-query (<- [?eco ?pixel-id ?prob]
+                          (src ?eco ?pixel-id ?labels ?feat-update)
                           (= ?eco "eco1")
                           (beta-gen ?eco ?beta)
                           (logistic-prob ?beta ?feat-update :> ?prob)
                           (> ?prob 0.5))]
-     alerts-query => (produces [["eco1" 0.9999999999765928]
-                                ["eco1" 0.9999999999963644]]))))
+     alerts-query => (produces [["eco1" [31] 0.9999999999963644]
+                                ["eco1" [49] 0.9999999999765928]]))))
