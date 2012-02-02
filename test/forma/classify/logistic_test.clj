@@ -83,10 +83,11 @@ first and last specified, as below."
         feature-mat (map second tuples)]
     [[(logistic-beta-vector label-seq feature-mat 1e-8 1e-6 250)]]))
 
-(defn show-group-probabilities
-  "show calculated probabilities for each ecoregion grouping. generate
-  a separate coefficient vector for each ecoregion, and apply the
-  appropriate coefficient vector to each pixel.  Note that
+(deftest group-probabilities-test
+  "test that the classifier returns two alerts in this example for a
+  given ecoregion, constructed \"eco1\".  This method first calculates
+  a separate coefficient vector for each ecoregion, and then applies
+  the appropriate coefficient vector to each pixel.  Note that
   `?feat-training` is the feature set over the training period,
   whereas `?feat-update` is the feature set through the updated
   interval.  Here, for this example, the two feature sets are
@@ -98,26 +99,16 @@ first and last specified, as below."
 
   FOR THIS EXAMPLE: return the probabilities for the alerts identified
   for the sample ecoregion, eco1"
-  [n]
-  (let [src (create-sample-tap n)
-        beta-gen (<- [?eco ?beta]
-                     (src ?eco ?labels ?feat-training)
-                     (logistic-beta-wrap ?labels ?feat-training :> ?beta))]
-    (?<- (stdout)
-         [?eco ?prob]
-         (src ?eco ?labels ?feat-update)
-         (= ?eco "eco1")
-         (beta-gen ?eco ?beta)
-         (logistic-prob ?beta ?feat-update :> ?prob)
-         (> ?prob 0.5))))
-
-;; Will write tests soon when I understand how to NOT set off an
-;; infinite import loop...
-
-;; forma.classify.logistic-test> (show-group-probabilities 100)
-
-;; RESULTS
-;; -----------------------
-;; eco1	0.9999999999765928
-;; eco1	0.9999999999963644
-;; -----------------------
+  (fact
+   (let [src (create-sample-tap 100)
+         beta-gen (<- [?eco ?beta]
+                      (src ?eco ?labels ?feat-training)
+                      (logistic-beta-wrap ?labels ?feat-training :> ?beta))
+         alerts-query (<- [?eco ?prob]
+                          (src ?eco ?labels ?feat-update)
+                          (= ?eco "eco1")
+                          (beta-gen ?eco ?beta)
+                          (logistic-prob ?beta ?feat-update :> ?prob)
+                          (> ?prob 0.5))]
+     alerts-query => (produces [["eco1" 0.9999999999765928]
+                                ["eco1" 0.9999999999963644]]))))
