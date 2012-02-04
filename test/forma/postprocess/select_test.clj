@@ -78,27 +78,23 @@
              (map (partial + offset) idx)
              (map (partial nth series) idx)])))))
 
+(def agg-tap (<- [?cntry ?pd ?tot-prob]
+                 (sample-output-map ?m)
+                 (grab-sig-pixels "16" ?m :> ?cntry ?pd ?prob)
+                 (c/sum ?prob :> ?tot-prob)))
+
 (deftest agg-probs
   "test the aggregation by country and time period to simulate the
 final, final step of forma, which is the country time series of
 clearing activity."
   (fact
-   (let [agg-pix (<- [?cntry ?pd ?tot-prob]
-                     (sample-output-map ?m)
-                     (grab-sig-pixels "16" ?m :> ?cntry ?pd ?prob)
-                     (c/sum ?prob :> ?tot-prob))]
-     agg-pix => (produces [["IDN" 828 0.6]
-                           ["IDN" 829 0.6]
-                           ["IDN" 830 2.05]
-                           ["IDN" 831 2.7]
-                           ["MYS" 830 0.7]
-                           ["MYS" 831 0.9]
-                           ["nil" 0 0]]))))
-
-(def pxtap (<- [?cntry ?pd ?tot-prob]
-               (sample-output-map ?m)
-               (grab-sig-pixels "16" ?m :> ?cntry ?pd ?prob)
-               (c/sum ?prob :> ?tot-prob)))
+   agg-tap => (produces [["IDN" 828 0.6]
+                         ["IDN" 829 0.6]
+                         ["IDN" 830 2.05]
+                         ["IDN" 831 2.7]
+                         ["MYS" 830 0.7]
+                         ["MYS" 831 0.9]
+                         ["nil" 0 0]])))
 
 (defbufferop docat
   [tuples]
@@ -115,12 +111,12 @@ clearing activity."
                :y-label "aggregate clearing"
                :title (str "Clearing activity in " cntry))
               path)
-      (println ts))))
+      (println (str "no data for " cntry)))))
 
 (defn vectorize-output
   []
   (?<- (stdout)
        [?cntry]
-       (pxtap ?cntry ?pd ?tot-prob)
+       (agg-tap ?cntry ?pd ?tot-prob)
        (docat ?tot-prob :> ?ts)
        (graph-ts ?cntry ?ts)))
