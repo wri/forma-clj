@@ -119,10 +119,8 @@ clearing activity."
 
 (defn vectorize-output
   []
-  (let [ts-tap (<- [?cntry ?ts]
-                   (pxtap ?cntry ?pd ?tot-prob)
-                   (docat ?tot-prob :> ?ts))]
-    (?<- (stdout)
-         [?cntry]
-         (ts-tap ?cntry ?ts)
-         (graph-ts ?cntry ?ts))))
+  (?<- (stdout)
+       [?cntry]
+       (pxtap ?cntry ?pd ?tot-prob)
+       (docat ?tot-prob :> ?ts)
+       (graph-ts ?cntry ?ts)))
