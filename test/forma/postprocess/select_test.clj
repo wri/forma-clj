@@ -59,17 +59,16 @@
 
 (defn end-training
   [res]
-  (cond (= res "32") (datetime->period "32" "2005-12-01")
-        (= res "16") (datetime->period "16" "2005-12-19")))
+  (datetime->period res "2005-12-31"))
 
 (defmapcatop grab-sig-pixels
   "return a vector of three-tuples, with the country iso code, the
   index of the period with the alert (> 0.5), and the probability of
   the alert.  If the probability of clearing never exceeds the
   threshold, then a stand-in three-tuple is returned."
-  [res out-m]
+  [res out-m thresh]
   (let [series (:prob-series out-m)
-        idx (positions #(> % 0.5) series)
+        idx (positions #(> % thresh) series)
         offset (end-training res)]
     (if (empty? idx)
       [["nil" 0 0]]
@@ -80,7 +79,7 @@
 
 (def agg-tap (<- [?cntry ?pd ?tot-prob]
                  (sample-output-map ?m)
-                 (grab-sig-pixels "16" ?m :> ?cntry ?pd ?prob)
+                 (grab-sig-pixels "16" ?m 0.5 :> ?cntry ?pd ?prob)
                  (c/sum ?prob :> ?tot-prob)))
 
 (deftest agg-probs
