@@ -9,6 +9,7 @@
         [forma.date-time :only (period->datetime datetime->period)]
         [forma.trends.data :only (ndvi rain reli)])
   (:require [incanter.core :as i]
+            [incanter.charts :as chart]
             [forma.testing :as t]
             [cascalog.ops :as c]))
 
@@ -31,6 +32,12 @@
     :lon         90.1
     :pixel       7
     :prob-series [0.1 0.2 0.4 0.7 0.9]}
+   {:cntry       "IDN"
+    :admin       23456
+    :lat         45.3
+    :lon         90.2
+    :pixel       8
+    :prob-series [0.1 0.6 0.6 0.65 0.9]}
    {:cntry       "MYS"
     :admin       12345
     :lat         32
@@ -80,8 +87,42 @@ clearing activity."
                      (sample-output-map ?m)
                      (grab-sig-pixels "16" ?m :> ?cntry ?pd ?prob)
                      (c/sum ?prob :> ?tot-prob))]
-     agg-pix => (produces [["IDN" 830 1.4]
-                           ["IDN" 831 1.8]
+     agg-pix => (produces [["IDN" 828 0.6]
+                           ["IDN" 829 0.6]
+                           ["IDN" 830 2.05]
+                           ["IDN" 831 2.7]
                            ["MYS" 830 0.7]
                            ["MYS" 831 0.9]
                            ["nil" 0 0]]))))
+
+(def pxtap (<- [?cntry ?pd ?tot-prob]
+               (sample-output-map ?m)
+               (grab-sig-pixels "16" ?m :> ?cntry ?pd ?prob)
+               (c/sum ?prob :> ?tot-prob)))
+
+(defbufferop docat
+  [tuples]
+  [[(vec (flatten tuples))]])
+
+(defn graph-ts
+  [cntry ts]
+  (let [path (str "/Users/danhammer/Desktop/" cntry ".png")]
+    (if (> (count ts) 1)
+      (i/save (chart/line-chart
+               (range (count ts))
+               ts
+               :x-label "index"
+               :y-label "aggregate clearing"
+               :title (str "Clearing activity in " cntry))
+              path)
+      (println ts))))
+
+(defn vectorize-output
+  []
+  (let [ts-tap (<- [?cntry ?ts]
+                   (pxtap ?cntry ?pd ?tot-prob)
+                   (docat ?tot-prob :> ?ts))]
+    (?<- (stdout)
+         [?cntry]
+         (ts-tap ?cntry ?ts)
+         (graph-ts ?cntry ?ts))))
