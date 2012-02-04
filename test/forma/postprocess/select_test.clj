@@ -76,12 +76,9 @@
 final, final step of forma, which is the country time series of
 clearing activity."
   (fact
-   (let [sig-tap (<- [?cntry ?pd ?prob]
+   (let [agg-pix (<- [?cntry ?pd ?tot-prob]
                      (sample-output-map ?m)
                      (grab-sig-pixels "16" ?m :> ?cntry ?pd ?prob)
-                     (:distinct false))
-         agg-pix (<- [?cntry ?pd ?tot-prob]
-                     (sig-tap ?cntry ?pd ?prob)
                      (c/sum ?prob :> ?tot-prob))]
      agg-pix => (produces [["IDN" 830 1.4]
                            ["IDN" 831 1.8]
