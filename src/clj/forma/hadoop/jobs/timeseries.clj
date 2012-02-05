@@ -129,5 +129,3 @@
                    (for [tile (apply tile-set tile-seq)]
                      ["fire" "1000-01" (apply r/hv->tilestring tile)]))]
     (create-fire-series tap t-res start end)))
-
-
