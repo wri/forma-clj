@@ -114,27 +114,6 @@ clearing activity."
                          ["MYS" 831 0.9]
                          ["nil" 0 0]])))
 
-(defbufferop docat
-  [tuples]
-  [[(vec (flatten tuples))]])
 
-(defn graph-ts
-  [cntry ts]
-  (let [path (str "/Users/danhammer/Desktop/" cntry ".png")]
-    (if (> (count ts) 1)
-      (i/save (chart/line-chart
-               (range (count ts))
-               ts
-               :x-label "index"
-               :y-label "aggregate clearing"
-               :title (str "Clearing activity in " cntry))
-              path)
-      (println (str "no data for " cntry)))))
 
-(defn vectorize-output
-  []
-  (?<- (stdout)
-       [?cntry]
-       (agg-tap ?cntry ?pd ?tot-prob)
-       (docat ?tot-prob :> ?ts)
-       (graph-ts ?cntry ?ts)))
+
