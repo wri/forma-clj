@@ -41,11 +41,14 @@
 (defn split-chunk-tap [path & colls]
   (pail-tap path colls (pail-structure)))
 
+;; TODO: If the pail doesn't exist, rather than providing
+;; pail-structure, pull the structure information out of the tap.
+
 (defn ?pail-*
-  "Executes the supplied query into the pail located at the supplied
-  path, consolidating when finished."
+  "Executes the supplied query into the DataChunkPailStructure pail
+  located at the supplied path, consolidating when finished."
   [tap pail-path query]
-  (let [pail (Pail/create pail-path false)]
+  (let [pail (Pail/create pail-path (pail-structure) false)]
     (with-fs-tmp [_ tmp]
       (?- (tap tmp) query)
       (.absorb pail (Pail. tmp))
