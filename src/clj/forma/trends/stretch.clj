@@ -18,17 +18,18 @@
        (drop offset)))
 
 (defn ts-expander
-  "Expand a timeseries from lower resolution to higher resolution, by expanding the original timeseries to a daily timeseries, then consuming it at the new resolution.
+  "Expand a timeseries from lower resolution to higher resolution, by
+ expanding the original timeseries to a daily timeseries, then
+ consuming it at the new resolution.
 
-  tseries must be a timeseries-value as defined in forma.schema.
-  :series must be a sequence of 2-tuples of the form `[period, val]`."
-  [base-res target-res tseries]
-  (let [{:keys [start-idx end-idx series]} tseries
-        [beg end] (shift-periods-target-res base-res target-res start-idx end-idx)
-        offset (date/date-offset target-res beg base-res start-idx)]
+  The final argument must be a timeseries-value as defined in
+  forma.schema."
+  [base-res target-res {:keys [start-idx end-idx series]}]
+  (let [[beg end] (shift-periods-target-res base-res target-res start-idx end-idx)
+        offset    (date/date-offset target-res beg base-res start-idx)]
     (loop [[pd & more :as periods] (range beg end)
            day-seq (expand-to-days start-idx series pd val base-res offset)
-           result (transient [])]
+           result  (transient [])]
       (if (empty? periods)
         (schema/timeseries-value beg (persistent! result))
         (let [num-days (date/period-span target-res pd)]
