@@ -40,7 +40,8 @@
                   (end-training "16")
                   [0.1 0.2 0.4 0.7 0.9])
     :tres        "16"
-    :sres        500}
+    :sres        500
+    :hansen      0}
    {:cntry       "IDN"
     :admin       23456
     :lat         46
@@ -50,7 +51,8 @@
                   (end-training "16")
                   [0.1 0.1 0.1 0.1 0.1])
     :tres        "16"
-    :sres        500}
+    :sres        500
+    :hansen      1}
    {:cntry       "IDN"
     :admin       23456
     :lat         45.2
@@ -60,7 +62,8 @@
                   (end-training "16")
                   [0.1 0.2 0.4 0.7 0.9])
     :tres        "16"
-    :sres        500}
+    :sres        500
+    :hansen      0}
    {:cntry       "IDN"
     :admin       23456
     :lat         45.3
@@ -68,7 +71,10 @@
     :pixel       8
     :prob-series (schema/timeseries-value
                   (end-training "16")
-                  [0.1 0.6 0.6 0.65 0.9])}
+                  [0.1 0.6 0.6 0.65 0.9])
+    :tres         "16"
+    :sres         500
+    :hansen       1}
    {:cntry       "MYS"
     :admin       12345
     :lat         32
@@ -78,7 +84,8 @@
                   (end-training "16")
                   [0.1 0.2 0.4 0.7 0.9])
     :tres        "16"
-    :sres        500}])
+    :sres        500
+    :hansen      1}])
 
 (defmapcatop grab-sig-pixels
   "return a vector of three-tuples, with the country iso code, the
