@@ -229,15 +229,15 @@
                           ["1000" 13 9 sample line 1]))]
   (fact?- "forma-tap tests."
           outer-src
-          (forma-tap est-map :n-src :r-src :v-src :f-src)
+          (forma-tap est-map :n-src :reli-src :r-src :v-src :f-src)
           (provided
             (dynamic-tap
              est-map
-             (dynamic-filter 25 :n-src :r-src :v-src)) => dynamic-tuples
+             (dynamic-filter 25 :n-src :reli-src :r-src :v-src)) => dynamic-tuples
             (fire-tap est-map :f-src) => fire-values))
   
   (fact?- "Can forma follow through?"
           forma-results
-          (forma-query est-map :n-src :r-src :v-src country-src :f-src)  
+          (forma-query est-map :n-src :reli-src :r-src :v-src country-src :f-src)  
           (provided
-            (forma-tap est-map :n-src :r-src :v-src :f-src) => outer-tap)))
+            (forma-tap est-map :n-src :reli-src :r-src :v-src :f-src) => outer-tap)))
