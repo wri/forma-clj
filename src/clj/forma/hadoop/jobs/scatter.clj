@@ -55,8 +55,8 @@
 
 ;; ## Forma
 (def forma-run-parameters
-  {"1000-32" {:est-start "2005-12-01"
-              :est-end "2011-08-01"
+  {"1000-32" {:est-start "2005-12-31"
+              :est-end "2011-08-01" ;; I KEEP FUCKING THIS UP
               :s-res "1000"
               :t-res "32"
               :neighbors 1
@@ -64,7 +64,7 @@
               :vcf-limit 25
               :long-block 15
               :window 5}
-   "1000-16" {:est-start "2005-12-01"
+   "1000-16" {:est-start "2005-12-31"
               :est-end "2011-08-01"
               :s-res "1000"
               :t-res "16"
@@ -108,6 +108,7 @@
     (?- (hfs-seqfile out-path :sinkmode :replace)
         (forma/forma-query forma-map
                            (constrained-tap ts-pail-path "ndvi" s-res t-res country-seq)
+                           (constrained-tap ts-pail-path "reli" s-res t-res country-seq)
                            (adjusted-precl-tap ts-pail-path s-res "32" t-res country-seq)
                            (constrained-tap pail-path "vcf" s-res "00" country-seq)
                            (country-tap (constrained-tap pail-path "gadm" s-res "00" country-seq)

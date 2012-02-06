@@ -33,6 +33,9 @@
          (apply map tupleize)
          (map-indexed cons))))
 
+(defn plus-and-str [x y]
+  (str "result: " (+ x y)))
+
 (defn form-tseries
   "Returns a predicate macro aggregator that generates a timeseries,
   given `?chunk`, `?temporal-resolution` and `?date`. Currently only
@@ -51,10 +54,8 @@
   (let [mk-tseries (form-tseries missing-val)
         series-src (<- [?name ?t-res ?location ?pix-idx ?timeseries]
                        (chunk-source _ ?chunk)
-                       (schema/unpack-chunk-val ?chunk
-                                            :> ?name ?t-res ?date ?location ?datachunk)
-                       (mk-tseries ?t-res ?date ?datachunk
-                                   :> ?pix-idx ?start ?end ?tseries)
+                       (schema/unpack-chunk-val ?chunk :> ?name ?t-res ?date ?location ?datachunk)
+                       (mk-tseries ?t-res ?date ?datachunk :> ?pix-idx ?start ?end ?tseries)
                        (schema/timeseries-value ?start ?end ?tseries :> ?timeseries))]
     (<- [?chunk]
         (series-src ?name ?t-res ?location ?pix-idx ?timeseries)
@@ -83,7 +84,7 @@
 (defparallelagg merge-firetuples
   "Aggregates a number of firetuples by adding up the values of each
   `FireTuple` property."
-  :init-var #'identity
+  :init-var    #'identity
   :combine-var #'schema/add-fires)
 
 (defmapop running-fire-sum

@@ -258,3 +258,12 @@ in which `string` lies (according to the supplied resolution, `res`)."
     (for [month-offset (range total-months)]
       (msecs-from-epoch (time/plus start-date
                                    (time/months month-offset))))))
+
+(defn res->period-count
+  [res]
+  (apply per-year
+         (case res
+           "32" [month 1]
+           "16" [ordinal 16]
+           "8" [ordinal 8]
+           "1" [ordinal 1])))
