@@ -72,7 +72,10 @@
               :window-dims [600 600]
               :vcf-limit 25
               :long-block 30
-              :window 10}})
+              :window 10
+              :ridge-const 1e-8
+              :convergence-thresh 1e-6
+              :max-iterations 500}})
 
 (defn paths-for-dataset
   [dataset s-res t-res tile-seq]
@@ -101,20 +104,18 @@
             :value ?new-series
             :temporal-res t-res :> ?final-chunk)))))
 
-(defn process-forma
+(defn first-half-query
+  "Poorly named! Returns a query that generates a number of position and dataset identifier"
   [pail-path ts-pail-path out-path run-key country-seq]
   (let [{:keys [s-res t-res] :as forma-map} (forma-run-parameters run-key)]
     (assert forma-map (str run-key " is not a valid run key!"))
-    (?- (hfs-seqfile out-path :sinkmode :replace)
-        (forma/forma-query forma-map
-                           (constrained-tap ts-pail-path "ndvi" s-res t-res country-seq)
-                           (constrained-tap ts-pail-path "reli" s-res t-res country-seq)
-                           (adjusted-precl-tap ts-pail-path s-res "32" t-res country-seq)
-                           (constrained-tap pail-path "vcf" s-res "00" country-seq)
-                           (country-tap (constrained-tap pail-path "gadm" s-res "00" country-seq)
-                                        convert-line-src)
-                           (tseries/fire-query pail-path
-                                               t-res
-                                               "2000-11-01"
-                                               "2011-06-01"
-                                               country-seq)))))
+    (forma/forma-query forma-map
+                       (constrained-tap ts-pail-path "ndvi" s-res t-res country-seq)
+                       (constrained-tap ts-pail-path "reli" s-res t-res country-seq)
+                       (adjusted-precl-tap ts-pail-path s-res "32" t-res country-seq)
+                       (constrained-tap pail-path "vcf" s-res "00" country-seq)
+                       (tseries/fire-query pail-path
+                                           t-res
+                                           "2000-11-01"
+                                           "2011-06-01"
+                                           country-seq))))

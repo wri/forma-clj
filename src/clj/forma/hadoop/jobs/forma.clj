@@ -117,20 +117,43 @@ value, and the aggregate of the neighbors."
                   (filter (complement nil?))
                   (schema/combine-neighbors))]))
 
+(defn mk-feature-vec [forma-val neighbor-val]
+  (concat (unpack-forma-val forma-val)
+          (unpack-neighbor-val neighbor-val)))
+
 (defn forma-query
   "final query that walks the neighbors and spits out the values."
-  [est-map ndvi-src reli-src rain-src vcf-src country-src fire-src]
-  (let [{:keys [t-res neighbors window-dims]} est-map
+  [est-map ndvi-src reli-src rain-src vcf-src fire-src]
+  (let [{:keys [neighbors window-dims]} est-map
         [rows cols] window-dims
         src (-> (forma-tap est-map ndvi-src rain-src reli-src vcf-src fire-src)
                 (p/sparse-windower ["?sample" "?line"]
                                    window-dims
                                    "?forma-val"
                                    nil))]
-    (<- [?s-res ?country ?datestring ?mod-h ?mod-v ?sample ?line ?val ?neighbor-val]
-        (date/period->datetime t-res ?period :> ?datestring)
+    (<- [?s-res ?period ?mod-h ?mod-v ?sample ?line ?feature-vec]
         (src ?s-res ?period ?mod-h ?mod-v ?win-col ?win-row ?window)
-        (country-src ?s-res ?mod-h ?mod-v ?sample ?line ?country)
         (process-neighbors [neighbors] ?window :> ?win-idx ?val ?neighbor-val)
         (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)
+        (mk-feature-vec ?forma-val ?neighbor-val :> ?feature-vec)
         (:distinct false))))
+
+(comment
+  (defn beta-extraction
+   [{:keys [t-res est-start ridge-const convergence-thresh max-iterations]}
+    forma-src static-src]
+   (let [first-idx (date/datetime->period t-res est-start)]
+     (<- [?s-res ?eco ?beta-vec]
+         (forma-src ?s-res ?period ?mod-h ?mod-v ?sample ?line ?feature-vec)
+         (static-src ?s-res ?period ?mod-h ?mod-v ?sample ?line ?eco ?hansen)
+         (= ?period first-idx)
+         (logistic-beta-wrap [ridge-const convergence-thresh max-iterations]
+                             ?hansen ?feature-vec :> ?beta-vec))))
+
+  (defn final-q [,,,]
+    (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?timeseries]
+        (beta-src ?s-res ?eco ?beta-vec)
+        (forma-src ?s-res ?period ?mod-h ?mod-v ?sample ?line ?feature-vec)
+        (static-src ?s-res ?period ?mod-h ?mod-v ?sample ?line ?eco)
+        (logistic-prob ?beta-vec ?feature-vec :> ?prob)
+        (mk-timeseries ?t-res ?period ?prob :> ?timeseries))))

@@ -219,6 +219,16 @@
       :avg-t-stat     avg-stat
       :min-t-stat     min-stat}))
 
+(defn unpack-neighbor-val
+  "Returns a vector containing the fields of a forma-neighbor-value."
+ [neighbor-val]
+  (map neighbor-val
+       [:fire-value :neighbor-count
+        :avg-short-drop :min-short-drop
+        :avg-param-break :min-param-break
+        :avg-long-drop :min-long-drop
+        :avg-t-stat :min-t-stat]))
+
 (defn merge-neighbors
   "Merges the supplied instance of `FormaValue` into the existing
   aggregate collection of `FormaValue`s represented by
