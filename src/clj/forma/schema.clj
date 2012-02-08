@@ -53,10 +53,10 @@
 
 (defn adjust-timeseries
   "Takes in any number of timeseries objects, and returns a new
-  sequence of appropriately truncated TimeSeries objects generated from the temporal overlap of the input timeseries objects.
+  sequence of appropriately truncated TimeSeries objects generated
+  from the temporal overlap of the input timeseries objects.
 
-   (schema/adjust-timeseries
-                             (schema/timeseries-value 0 [1 2 3])
+   (schema/adjust-timeseries (schema/timeseries-value 0 [1 2 3])
                              (schema/timeseries-value 1 [1 2 3 4]))
    ;=> [{:start-idx 1,
          :end-idx 2,
@@ -140,10 +140,11 @@
 ;; # Compound Objects
 
 (def example-forma-value
-  {:fire-value "fire value."
-   :short-drop "Short term drop in NDVI."
-   :long-drop  "Long term drop in NDVI."
-   :t-stat     "t-statistic for the relevant month."})
+  {:fire-value  "fire value."
+   :param-break "Arbitrary name for the amount of downward wiggle in the timeseries."
+   :short-drop  "Short term drop in NDVI."
+   :long-drop   "Long term drop in NDVI."
+   :t-stat      "t-statistic for the relevant month."})
 
 (defn forma-value
   "Creates forma object containing various characteristics of pixel timeseries
@@ -157,8 +158,9 @@
          :short-drop -2.7,
          :long-drop -1.2,
          :t-stat 1.725}"
-  [fire short long t-stat]
+  [fire short param-break long t-stat]
   {:fire-value (or fire (fire-value 0 0 0 0))
+   :param-break param-break
    :short-drop short
    :long-drop  long
    :t-stat     t-stat})
@@ -175,50 +177,57 @@
 
     ;=> [{:count 4, :conf-50 0, :temp-330 1, :both-preds 3} -2.7 -1.2 1.725]"
   [forma-val]
-  (map forma-val [:fire-value :short-drop :long-drop :t-stat]))
+  (map forma-val [:fire-value :short-drop :param-break
+                  :long-drop :t-stat]))
 
 ;; ## Neighbor Values
 
 (def example-forma-neighbor-value
-  {:fire-value     "fire value."
-   :num-neighbors  "Number of non-nil neighbors."
-   :avg-short-drop "Average..."
-   :min-short-drop "min..."
-   :avg-long-drop  "Average..."
-   :min-long-drop  "min..."
-   :avg-t-stat     "Average..."
-   :min-t-stat     "min..."})
+  {:fire-value      "fire value."
+   :num-neighbors   "Number of non-nil neighbors."
+   :avg-short-drop  "Average..."
+   :min-short-drop  "min..."
+   :avg-param-break "Average..."
+   :min-param-break "min..."
+   :avg-long-drop   "Average..."
+   :min-long-drop   "min..."
+   :avg-t-stat      "Average..."
+   :min-t-stat      "min..."})
 
 (defn neighbor-value
   "Accepts either a forma value or a sequence of sub-values."
   ;; TODO: come up with an example
-  ([{:keys [fire-value short-drop long-drop t-stat]}]
+  ([{:keys [fire-value short-drop param-break long-drop t-stat]}]
      (neighbor-value fire-value 1
                      short-drop short-drop
+                     param-break param-break
                      long-drop long-drop
                      t-stat t-stat))
-  ([fire neighbors avg-short min-short avg-long min-long avg-stat min-stat]
+  ([fire neighbors
+    avg-short min-short
+    avg-param min-param
+    avg-long min-long
+    avg-stat min-stat]
      {:fire-value     fire
       :neighbor-count neighbors
       :avg-short-drop avg-short
       :min-short-drop min-short
+      :avg-param-break avg-param
+      :min-param-break min-param
       :avg-long-drop  avg-long
       :min-long-drop  min-long
       :avg-t-stat     avg-stat
       :min-t-stat     min-stat}))
 
 (defn unpack-neighbor-val
-  ;; TODO: come up with an example
-  [neighbor-val]
+  "Returns a vector containing the fields of a forma-neighbor-value."
+ [neighbor-val]
   (map neighbor-val
-       [:fire-value
-        :neighbor-count
-        :avg-short-drop
-        :min-short-drop
-        :avg-long-drop 
-        :min-long-drop 
-        :avg-t-stat    
-        :min-t-stat]))
+       [:fire-value :neighbor-count
+        :avg-short-drop :min-short-drop
+        :avg-param-break :min-param-break
+        :avg-long-drop :min-long-drop
+        :avg-t-stat :min-t-stat]))
 
 (defn merge-neighbors
   "Merges the supplied instance of `FormaValue` into the existing
@@ -228,14 +237,16 @@
   ;; TODO: come up with an example
   [neighbors forma-val]
   (let [n-count  (:neighbor-count neighbors)
-        [fire short long t-stat] (unpack-forma-val forma-val)]
+        [fire short param long t-stat] (unpack-forma-val forma-val)]
     (-> neighbors
         (update-in [:fire-value]     add-fires fire)
         (update-in [:neighbor-count] inc)
         (update-in [:avg-short-drop] u/weighted-mean n-count short 1)
+        (update-in [:avg-param-break] u/weighted-mean n-count param 1)
         (update-in [:avg-long-drop]  u/weighted-mean n-count long 1)
         (update-in [:avg-t-stat]     u/weighted-mean n-count t-stat 1)
         (update-in [:min-short-drop] min short)
+        (update-in [:min-param-break] min param)
         (update-in [:min-long-drop]  min long)
         (update-in [:min-t-stat]     min t-stat))))
 
@@ -246,25 +257,7 @@
   [[x & more]]
   (if x
     (reduce merge-neighbors (neighbor-value x) more)
-    (neighbor-value (fire-value 0 0 0 0) 0 0 0 0 0 0 0)))
-
-(defn textify
-  "Converts the supplied coordinates, forma value and forma neighbor
-  value into a line of text suitable for use in STATA."
-  ;; come up with an example
-  [forma-val neighbor-val]
-  (let [[fire-val s-drop l-drop t-drop] (unpack-forma-val forma-val)
-        [fire-sum ct short-mean short-min
-         long-mean long-min t-mean t-min] (unpack-neighbor-val neighbor-val)
-        [k330 c50 ck fire] (extract-fields fire-val)
-        [k330-n c50-n ck-n fire-n] (extract-fields fire-sum)]
-    (->> [k330 c50 ck fire s-drop l-drop t-drop
-          k330-n c50-n ck-n fire-n
-          ct short-mean short-min long-mean long-min t-mean t-min]
-         (map (fn [num]
-                (let [l (long num)]
-                  (if (== l num) l num))))
-         (s/join \tab))))
+    (neighbor-value (fire-value 0 0 0 0) 0 0 0 0 0 0 0 0 0)))
 
 ;; ## Location
 
@@ -353,15 +346,21 @@
       (assoc chunk :date date))))
 
 (defn unpack-chunk-val
-  "Used by timeseries. Unpacks a chunk object. Returns `[dataset-name t-res date location collection]`, where collection is a vector and location is a `chunk-location`.
+  "Used by timeseries. Unpacks a chunk object. Returns `[dataset-name
+ t-res date location collection]`, where collection is a vector and
+ location is a `chunk-location`.
 
    Example:
 
   (schema/unpack-chunk-val {:date \"2006-01-01\"
                             :temporal-res \"32\"
-                            :location {:spatial-res \"1000\", :mod-h 8, :mod-v 6, :index 0, :size 24000}     :dataset \"ndvi\"
+                            :location {:spatial-res \"1000\"
+                                       :mod-h 8
+                                       :mod-v 6
+                                       :index 0
+                                       :size 24000}
+                            :dataset \"ndvi\"
                             :value [0 1 2 3 4 5 6 7 8 9]})   
-
   ;=> [\"ndvi\" \"32\" \"2006-01-01\" {:mod-h 8, :size 24000, :mod-v 6, :spatial-res \"1000\", :index 0} [0 1 2 3 4 5 6 7 8 9]"
   [chunk]
   (map chunk [:dataset :temporal-res :date :location :value]))

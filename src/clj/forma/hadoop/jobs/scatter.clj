@@ -55,8 +55,8 @@
 
 ;; ## Forma
 (def forma-run-parameters
-  {"1000-32" {:est-start "2005-12-01"
-              :est-end "2011-08-01"
+  {"1000-32" {:est-start "2005-12-31"
+              :est-end "2011-08-01" ;; I KEEP FUCKING THIS UP
               :s-res "1000"
               :t-res "32"
               :neighbors 1
@@ -64,7 +64,7 @@
               :vcf-limit 25
               :long-block 15
               :window 5}
-   "1000-16" {:est-start "2005-12-01"
+   "1000-16" {:est-start "2005-12-31"
               :est-end "2011-08-01"
               :s-res "1000"
               :t-res "16"
@@ -72,7 +72,10 @@
               :window-dims [600 600]
               :vcf-limit 25
               :long-block 30
-              :window 10}})
+              :window 10
+              :ridge-const 1e-8
+              :convergence-thresh 1e-6
+              :max-iterations 500}})
 
 (defn paths-for-dataset
   [dataset s-res t-res tile-seq]
@@ -101,108 +104,18 @@
             :value ?new-series
             :temporal-res t-res :> ?final-chunk)))))
 
-(defn process-forma
+(defn first-half-query
+  "Poorly named! Returns a query that generates a number of position and dataset identifier"
   [pail-path ts-pail-path out-path run-key country-seq]
   (let [{:keys [s-res t-res] :as forma-map} (forma-run-parameters run-key)]
     (assert forma-map (str run-key " is not a valid run key!"))
-    (?- (hfs-seqfile out-path :sinkmode :replace)
-        (forma/forma-query forma-map
-                           (constrained-tap ts-pail-path "ndvi" s-res t-res country-seq)
-                           (adjusted-precl-tap ts-pail-path s-res "32" t-res country-seq)
-                           (constrained-tap pail-path "vcf" s-res "00" country-seq)
-                           (country-tap (constrained-tap pail-path "gadm" s-res "00" country-seq)
-                                        convert-line-src)
-                           (tseries/fire-query pail-path
-                                               t-res
-                                               "2000-11-01"
-                                               "2011-06-01"
-                                               country-seq)))))
-
-;; TODO: Note that if we go from tap to tap, we have no reducers
-;; involved.
-(defn bucket-forma
-  "TODO: Get these country numbers turned into codes! Then uncomment
-  code below, and remove that final `src`. Accept countries to
-  bucket "
-  [unbucketed-path bucketed-path country-code-seq]
-  (let [keep-countries (into [] (map vector country-code-seq))
-        template-fields ["?s-res" "?country"]
-        data-fields     ["?datestring" "?mod-h" "?mod-v" "?sample" "?line" "?text"]
-        forma-fields    (concat template-fields data-fields)
-        src (hfs-seqfile unbucketed-path)]
-    (?- (hfs-textline bucketed-path
-                      :sinkmode :replace
-                      :sink-template "%s/%s/"
-                      :outfields data-fields
-                      :templatefields template-fields
-                      :sinkparts 3)
-        (if country-code-seq
-          (<- forma-fields
-              (src :>> forma-fields)
-              (keep-countries ?country :> true)
-              (:distinct false))
-          (name-vars src forma-fields)))))
-
-(defmain RunForma
-  [pail-path ts-pail-path results-path run-key & countries]
-  (let [countries (->> (or countries [":IDN" ":MYS"])
-                       (map read-string))
-        temp-path "s3n://formares/unbucketed"]
-    (process-forma pail-path ts-pail-path temp-path run-key countries)
-    (bucket-forma temp-path results-path (map name countries))))
-
-(defmain BucketForma
-  [source-path results-path & codes]
-  (bucket-forma source-path results-path codes))
-
-(defmapop [find-first [re]]
-  [s]
-  (re-find re s))
-
-(defmain BucketCountry
-  [source-path dest-path]
-  (let [src (hfs-textline source-path)]
-    (?<- (hfs-textline dest-path
-                       :sinkmode :replace
-                       :sink-template "%s/"
-                       :templatefields ["?datestring"]
-                       :outfields ["?text"]
-                       :sinkparts 3)
-         [?datestring ?text]
-         (src ?text)
-         (find-first [#"[^\s]+"] ?text :> ?datestring))))
-
-;; ## Rain Processing, for Dan
-;;
-;; Dan wanted some means of generating the average rainfall per
-;; administrative region. As we've already projected the data into
-;; modis coordinates, we can simply take an average of all values per
-;; administrative boundary; MODIS is far finer than gadm, so this will
-;; mimic a weighted average.
-
-(defn rain-query
-  [gadm-src rain-src]
-  (<- [?gadm ?date ?avg-rain]
-      (rain-src _ ?rain-chunk)
-      (gadm-src _ ?gadm-chunk)
-      (get ?rain-chunk :date :> ?date)
-      (p/blossom-chunk ?rain-chunk :> _ ?mod-h ?mod-v ?sample ?line ?rain)
-      (p/blossom-chunk ?gadm-chunk :> _ ?mod-h ?mod-v ?sample ?line ?gadm)
-      (c/avg ?rain :> ?avg-rain)))
-
-(defmain ProcessRain
-  [pail-path output-path]
-  (?- (hfs-textline output-path)
-      (rain-query (split-chunk-tap pail-path ["gadm"])
-                  (split-chunk-tap pail-path ["rain"]))))
-
-(defmain GrabTimeseries
-  [ts-pail-path output-path dataset position-seq]
-  (let [positions (vec (read-string position-seq))
-        src (split-chunk-tap ts-pail-path [dataset])]
-    (?<- (hfs-seqfile output-path)
-         [?ts-chunk]
-         (src _ ?ts-chunk)
-         (get ?ts-chunk :location :> ?location)
-         (schema/unpack-pixel-location ?location :> ?s-res ?mod-h ?mod-v ?sample ?line)
-         (positions ?mod-h ?mod-v ?sample ?line :> true))))
+    (forma/forma-query forma-map
+                       (constrained-tap ts-pail-path "ndvi" s-res t-res country-seq)
+                       (constrained-tap ts-pail-path "reli" s-res t-res country-seq)
+                       (adjusted-precl-tap ts-pail-path s-res "32" t-res country-seq)
+                       (constrained-tap pail-path "vcf" s-res "00" country-seq)
+                       (tseries/fire-query pail-path
+                                           t-res
+                                           "2000-11-01"
+                                           "2011-06-01"
+                                           country-seq))))
