@@ -117,3 +117,11 @@ function, as per the documentation."
 (facts "matrix-of test."
   (matrix-of 2 1 4) => [2 2 2 2]
   (matrix-of 0 2 2) => [[0 0] [0 0]])
+
+(fact
+ "Checking outer product calculation against Numpy function np.outer() for mat and mat.T, where mat is [1 2 3]"
+ (outer-product [1 2 3]) => [1.0 2.0 3.0 2.0 4.0 6.0 3.0 6.0 9.0])
+
+(fact
+  "Does transpose work as planned? Sure looks like it!"
+  (transpose [[1 2 3] [4 5 6]] ) => [[1 4] [2 5] [3 6]])

@@ -2,18 +2,13 @@
   (:use [forma.trends.analysis] :reload)
   (:use [cascalog.api]
         [midje sweet cascalog]
-        [forma.trends.data :only (ndvi rain reli)]
+        [forma.trends.data :only (ndvi rain reli Yt)]
+        [forma.matrix.utils :only (transpose)]
+        [forma.utils :only (idx)]
         [forma.schema :only (timeseries-value)]
         [forma.trends.stretch :only (ts-expander)]
         [clojure.math.numeric-tower :only (floor abs expt)]
         [clojure.test :only (deftest)]))
-
-(defn num-equals [expected]
-  (fn [actual] (== expected actual)))
-
-(fact
- "Checking outer product calculation against Numpy function np.outer() for mat and mat.T, where mat is [1 2 3]"
- (outer-product [1 2 3]) => [1.0 2.0 3.0 2.0 4.0 6.0 3.0 6.0 9.0])
 
 (fact
  "Check element-wise sum of components of vector of vectors"
@@ -26,35 +21,6 @@
        power 2]
    (last (expt-residuals y X power))) => (roughly 0.044304))
 
-(fact
-  "Check that indexing is correct"
-  (idx [4 5 6]) => [1 2 3])
-
-(fact
-  "Check windowed-map"
-  (windowed-map ols-trend 2 [1 2 50]) => (contains (map roughly [1.0 48.0])))
-
-(fact
-  "Does transpose work as planned? Sure looks like it!"
-  (transpose [[1 2 3] [4 5 6]] ) => [[1 4] [2 5] [3 6]])
-
-(fact
-  "Checking outer product calculation against Numpy function np.outer() for mat and mat.T, where mat is [1 2 3]"
-  (outer-product [1 2 3]) => [1.0 2.0 3.0 2.0 4.0 6.0 3.0 6.0 9.0])
-
-(fact
-  "Check element-wise sum of components of vector of vectors"
-  (element-sum [[1 2 3] [1 2 3]]) => [2 4 6])
-
-(fact
-  "Check average of vector.
-   Casting as float to generalize for another vector as necessary"
-  (float (average [1 2 3.])) => (num-equals 2.0))
-
-(fact
-  "Check moving average"
-  (moving-average 2 [1 2 3]) => [3/2 5/2])
-
 (tabular
  (fact
    "Calculates simple OLS trend, assuming 0 intercept."
@@ -64,15 +30,6 @@
  [1 2 4] (roughly 1.5 0.00000001)
  [1 2 50] (roughly 24.5 0.00000001)
  [2 50] (roughly 48. 0.00000001))
-
-(tabular
- (fact
-  "check scaling all elements of a vector by a scalar"
-  (scale ?scalar ?coll) => ?expected)
- ?scalar ?coll ?expected
- 1 [1 2 3] [1 2 3]
- 2 [1 2 3] [2 4 6]
- 1.5 [1 2 3] [1.5 3.0 4.5])
 
 (facts
  "test that `long-stats` yields the trend coefficient and t-test
@@ -219,4 +176,3 @@ values of the test data vectors."
      (produces-some [[{:start-idx 135
                        :end-idx 136
                        :series [-63.23936661263988 -63.23936661263988]}]]))))
-

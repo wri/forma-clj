@@ -1,5 +1,6 @@
 (ns forma.utils-test
   (:use forma.utils
+        [forma.trends.analysis]
         midje.sweet)
   (:require [forma.testing :as t])
   (:import  [java.io InputStream]
@@ -107,3 +108,26 @@ do show that we have a sequence of byte arrays being generated."
 (facts "flipped-endian-float test."
   (flipped-endian-float [0xD0 0x0F 0x49 0x40]) => (float 3.14159)
   (flipped-endian-float [0xD0 0x0F 0x49]) => (throws AssertionError))
+
+(fact
+  "Check average of vector.
+   Casting as float to generalize for another vector as necessary. Otherwise average will return fractions."
+  (float (average [1 2 3.])) => 2.0)
+
+(fact
+  "Check that indexing is correct"
+  (idx [4 5 6]) => [1 2 3])
+
+(tabular
+ (fact
+  "check scaling all elements of a vector by a scalar"
+  (scale ?scalar ?coll) => ?expected)
+ ?scalar ?coll ?expected
+ 1 [1 2 3] [1 2 3]
+ 2 [1 2 3] [2 4 6]
+ 1.5 [1 2 3] [1.5 3.0 4.5])
+
+(fact
+  "Check windowed-map"
+  (windowed-map ols-trend 2 [1 2 50]) => (contains (map roughly [1.0 48.0])))
+
