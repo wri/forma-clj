@@ -118,8 +118,8 @@ value, and the aggregate of the neighbors."
                   (schema/combine-neighbors))]))
 
 (defn mk-feature-vec [forma-val neighbor-val]
-  (concat (unpack-forma-val forma-val)
-          (unpack-neighbor-val neighbor-val)))
+  (concat (schema/unpack-forma-val forma-val)
+          (schema/unpack-neighbor-val neighbor-val)))
 
 (defn forma-query
   "final query that walks the neighbors and spits out the values."

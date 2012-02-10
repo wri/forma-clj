@@ -157,4 +157,4 @@
   resolution `m-res`, partitioned by the supplied chunk size."
   [m-res {:keys [nodata] :as ascii-map} chunk-size file-tap pix-tap]
   (-> (resample-rain m-res ascii-map file-tap pix-tap)
-      (static/agg-chunks m-res chunk-size nodata :int)))
+      (static/agg-chunks m-res chunk-size nodata)))
