@@ -105,10 +105,6 @@ do show that we have a sequence of byte arrays being generated."
 
 (fact float-bytes => 4)
 
-(facts "flipped-endian-float test."
-  (flipped-endian-float [0xD0 0x0F 0x49 0x40]) => (float 3.14159)
-  (flipped-endian-float [0xD0 0x0F 0x49]) => (throws AssertionError))
-
 (fact
   "Check average of vector.
    Casting as float to generalize for another vector as necessary. Otherwise average will return fractions."

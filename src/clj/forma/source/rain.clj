@@ -15,7 +15,7 @@
             [forma.source.static :as static]
             [forma.hadoop.predicate :as p]
             [clojure.string :as s])
-  (:import  [java.io InputStream]))
+  (:import  [java.nio ByteBuffer ByteOrder]))
 
 ;; ## Dataset Information
 ;;
@@ -59,18 +59,23 @@
   (vec (map u/flipped-endian-float
             (partition u/float-bytes little-bytes))))
 
+(defn tupleize [idx arr]
+  (let [buf (-> (ByteBuffer/wrap arr)
+                (.order ByteOrder/LITTLE_ENDIAN)
+                (.asFloatBuffer))
+        ret (float-array (.limit buf))]
+    (.get buf ret)
+    [(inc idx) ret]))
+
 (defn rain-tuples
   "Returns a lazy seq of 2-tuples representing NOAA PREC/L rain
-  data. Each 2-tuple is of the form `[idx, month-vec]`, where `idx` is
-  the 1-based month and `month-vec` is a vector of `(* 720 360)`
-  big-endian floats.
+  data. Each 2-tuple is of the form `[idx, month-arr]`, where `idx`
+  is the 1-based month and `month-vec` is a `(* 720 360)` float-array.
 
   Note that we take every other element in the `partition-stream` seq,
   skipping data concerning # of gauges."
   [step stream]
-  (let [n (floats-for-step step)
-        tupleize (fn [idx arr]
-                   [(inc idx) (big-floats arr)])]
+  (let [n (floats-for-step step)]
     (->> stream
          (u/partition-stream n)
          (take-nth 2)
