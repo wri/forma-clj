@@ -74,7 +74,6 @@ Expanded timeseries includes pre-pended nils. So moving average is actually forw
 
 Ex. (backward-looking-mavg 3 [1 2 3 4]) expands to [nil nil 1 2 3 4]. Nils are filtered out, so the output is effectively [(average [1]) (average [1 2]) (average [1 2 3]) (average 2 3 4)]"
   [window series]
-  (let [expanded-ts (concat (take (dec window) (repeat nil)) series)]
-    (map average
-         (map #(filter not-nil? %)
-              (partition window 1 expanded-ts)))))
+  (let [expanded-ts (concat (repeat (dec window) nil) series)]
+    (map (comp float average #(filter not-nil? %))         
+         (partition window 1 expanded-ts))))
