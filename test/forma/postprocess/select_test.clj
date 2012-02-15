@@ -93,46 +93,9 @@
     :sres        "500"
     :hansen      1}])
 
-
-;; (defn latlon-series
-;;   [res out-m]
-;;   (modis->latlon  ))
-
-(defn grab-modis-coords
-  [m]
-  (vec (map #(get m %) [:sres :modh :modv :sample :line])))
-
-(defn grab-series
+(defn grab-series  
   [m]
   (:series (:prob-series m)))
-
-(defn convert-to-latlon
-  [out-m]
-  (let [series (grab-series out-m)
-        [res modh modv sample line] (grab-modis-coords out-m)]
-    (modis->latlon res modh modv sample line)))
-
-(def latlon-series-tap
-  (<- [?lat ?lon ?series]
-      (sample-output-map ?m)
-      (convert-to-latlon ?m :> ?lat ?lon ?series)))
-
-(fact
-  (grab-modis-coords (first sample-output-map)) => [500 28 7 10 5])
-
-(fact
-  (grab-series (first sample-output-map)) => [0.1 0.2 0.4 0.7 0.9])
-
-(fact
-  (convert-to-latlon (first sample-output-map)) => [5])
-
-;; (deftest adding-latlon
-;;   (fact
-;;     (get-latlon-series sample-output-map) => (produces [{:lat 1 :lon 1 }])))
-
-;; (def sample-pixel-map
-;;   (schema/pixel-location "500" 28 7 5 10)
-;;   (modis->latlon ))
 
 (defmapcatop grab-sig-pixels
   "return a vector of three-tuples, with the country iso code, the
@@ -167,3 +130,15 @@ clearing activity."
                          ["MYS" 830 0.7]
                          ["MYS" 831 0.9]
                          ["nil" 0 0]])))
+
+(fact
+  (<- [?cntry ?pd ?tot-prob]
+      (sample-output-map ?m)
+      (grab-sig-pixels "16" ?m 0.5 :> ?cntry ?pd ?prob)
+      (c/sum ?prob :> ?tot-prob)) => (produces [["IDN" 828 0.6]
+                                                ["IDN" 829 0.6]
+                                                ["IDN" 830 2.05]
+                                                ["IDN" 831 2.7]
+                                                ["MYS" 830 0.7]
+                                                ["MYS" 831 0.9]
+                                                ["nil" 0 0]]))
