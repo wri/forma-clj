@@ -114,3 +114,6 @@
 (fact
   (let [ts (schema/timeseries-value 0 [1 2 3])]
     (mk-date-header "16" "p" ts)) => ["p19700101" "p19700117" "p19700202"])
+
+(fact
+  (backward-looking-mavg 3 [1 2 3 4]) => [1.0 1.5 2.0 3.0])
