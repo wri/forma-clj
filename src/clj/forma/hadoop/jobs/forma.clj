@@ -19,10 +19,28 @@
         freq        (date/res->period-count t-res)
         new-start   (date/datetime->period t-res est-start)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
+    (def bad-args
+      [long-block window freq start end
+       (:series spectral-series)
+       (:series reli-series)])
     [(->> (a/telescoping-short-trend long-block window freq start end
                                      (:series spectral-series)
                                      (:series reli-series))
           (schema/timeseries-value new-start))]))
+
+(def spectral
+  [6217 8599 7074 8437 8471 8285 8342 9035 8356 7612 8538 6439 8232 7277 8588 7651 8824 4981 7251 7332 6179 4618 6506 8188 8320 6262 8094 8129 6773 7230 6417 6791 6285 6013 5786 8020 7588 6423 5734 6522 6481 7924 8067 7328 4249 8490 8591 4472 6335 8706 8076 8376 8861 8183 8712 6426 8314 8441 6643 7673 5193 8813 7902 7275 4480 7004 5691 5630 7540 8610 8981 5181 8947 8681 9072 8931 8879 8770 8702 6578 9027 8846 8530 6927 9128 5984 6133 4775 6707 6707 3392 7081 5806 6580 9108 5748 6784 8520 8597 9130 7585 6531 6768 7249 4992 4048 7988 8088 7418 4082 8056 2715 1899 8579 8852 8896 3010 8063 7985 8377 5503 8139 8672 8319 5995 8252 8835 8593 8909 6817 8488 7206 8561 8549 4261 5659 5924 8601 7302 2610 7610 7416 8978 8704 8528 8236 5400 6372 8387 9279 9175 8652 4637 4167 5624 5707])
+
+(def reli
+  [3 3 3 0 1 0 1 1 0 1 3 3 1 1 1 3 1 3 3 3 3 3 1 1 1 3 1 0 1 3 1 1 0 0 0 1 1 0 3 3 3 1 1 1 3 1 1 3 3 1 1 1 1 1 1 1 0 0 3 1 3 1 1 3 3 1 1 3 1 0 1 3 1 3 1 1 1 1 1 1 1 0 0 3 1 3 3 3 3 3 3 1 3 3 1 1 3 1 1 1 1 1 1 1 1 1 0 1 3 3 1 3 3 1 1 1 1 0 1 3 3 1 0 1 3 0 1 1 1 3 3 3 1 0 3 1 1 1 1 3 3 3 1 1 0 1 1 3 0 1 1 1 3 3 3 1])
+
+(let [long-block 30
+      window     10
+      freq       23
+      start      134
+      end        251]
+  (a/telescoping-short-trend long-block window freq start end
+                             spectral reli))
 
 ;; We're mapping across two sequences at the end, there; the
 ;; long-series and the t-stat-series.
