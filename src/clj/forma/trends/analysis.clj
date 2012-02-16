@@ -118,8 +118,9 @@
   (let [params [freq start-idx end-idx spectral-ts reli-ts]
         clean-ts (apply clean-tele-trends params)
         cofactor-tele (lengthening-ts start-idx end-idx cofactor-ts)]
-    (transpose [(map hansen-stat clean-ts)
-                (map long-stats clean-ts cofactor-tele)])))
+    (map flatten
+         (transpose [(map hansen-stat clean-ts)
+                     (map long-stats clean-ts cofactor-tele)]))))
 
 (defn trend-mat
   "returns a (`len` x 2) matrix, with first column of ones; and second
