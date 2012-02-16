@@ -21,9 +21,8 @@
   [freq k coll]
   (let [degree-vector (vec (map inc (range k)))]
     (apply i/bind-columns
-           (apply concat
-                  (map (partial harmonic-series freq coll)
-                       degree-vector)))))
+           (mapcat (partial harmonic-series freq coll)
+                   degree-vector))))
 
 (defn harmonic-seasonal-decomposition
   "returns a deseasonalized time-series; input frequency of
@@ -34,11 +33,11 @@
   Reference:
   Verbesselt, J. et al. (2010) Phenological Change Detection while
   Accounting for Abrupt and Gradual Trends in Satellite Image Time
-  Series, Remote Sensing of Environment, 114(12), 2970–298"
+  Series, Remote Sensing of Environment, 114(12), 2970-298"
   [freq k coll]
   (let [S (:fitted (s/linear-model coll (k-harmonic-matrix freq k coll)))]
-    (map #(+ (average coll) %)
-         (apply (partial map -) [coll S]))))
+    (map #(-> (- % %2) (+ (average coll)))
+         coll S)))
 
 ;; Hodrick-Prescott filter for additional smoothing; a higher lambda
 ;; parameter implies more weight on overall observations, and
@@ -133,9 +132,8 @@
 
 (defn act-on-good
   "apply function `func` to all non-nil values within a collection `coll`"
-  [func coll]
-  (func
-   (filter (complement nil?) coll)))
+  [f coll]
+  (f (filter (complement nil?) coll)))
 
 (defn neutralize-ends
   "replace the ends of a value-collection (like NDVI) if the ends are unreliable,

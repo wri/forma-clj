@@ -88,14 +88,11 @@
         span (r/pixels-at-res m-res)]
     (<- [?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val]
         (line-tap ?textline)
-        (p/break ?textline :> ?r ?c ?temp-val)
-        (quot ?r 2 :> ?row)
-        (quot ?c 2 :> ?col)
+        (p/break ?textline :> ?row ?col ?val)
         ((c/juxt #'mod #'quot) ?col span :> ?sample ?mod-h)
         ((c/juxt #'mod #'quot) ?row span :> ?line ?mv)
-        (+ 5 ?mv :> ?mod-v)
-        (agg ?temp-val :> ?val)
         (pixel-tap ?mod-h ?mod-v ?sample ?line :> true)
+        (+ 5 ?mv :> ?mod-v)
         (p/add-fields dataset m-res "00" nil :> ?dataset ?m-res ?t-res !date)
         (:distinct false))))
 
@@ -139,5 +136,5 @@
 (defn static-modis-chunks
   "TODO: DESTROY. Replace with a better system."
   [chunk-size dataset agg line-tap pix-tap]
-  (-> (absorb-modis "1000" dataset pix-tap line-tap agg)
-      (agg-chunks "1000" chunk-size -9999)))
+  (-> (absorb-modis "500" dataset pix-tap line-tap agg)
+       (agg-chunks "500" chunk-size -9999)))

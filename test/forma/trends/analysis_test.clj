@@ -3,7 +3,9 @@
   (:use [cascalog.api]
         [forma.matrix.utils :only (transpose)]
         [midje sweet cascalog]
-        [forma.trends.data :only (ndvi rain reli)]
+        [forma.trends.data :only (ndvi rain reli Yt)]
+        [forma.matrix.utils :only (transpose)]
+        [forma.utils :only (idx)]
         [forma.schema :only (timeseries-value)]
         [forma.trends.stretch :only (ts-expander)]
         [clojure.math.numeric-tower :only (floor abs expt)]
@@ -11,6 +13,17 @@
 
 (defn num-equals [expected]
   (fn [actual] (== expected actual)))
+
+(fact
+ "Check element-wise sum of components of vector of vectors"
+ (element-sum [[1 2 3] [1 2 3]]) => [2 4 6])
+
+(fact
+ "check raising residuals of linear model to given power"
+ (let [y Yt
+       X (idx Yt)
+       power 2]
+   (last (expt-residuals y X power))) => (roughly 0.044304))
 
 (tabular
  (fact
@@ -167,4 +180,3 @@ values of the test data vectors."
      (produces-some [[{:start-idx 135
                        :end-idx 136
                        :series [-63.23936661263988 -63.23936661263988]}]]))))
-

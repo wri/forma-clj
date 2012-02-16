@@ -21,7 +21,7 @@ public class WholeFileInputFormat extends FileInputFormat<Text, BytesWritable> {
     }
 
     @Override
-    public RecordReader<Text, BytesWritable> getRecordReader(
+        public RecordReader<Text, BytesWritable> getRecordReader(
       InputSplit split, JobConf job, Reporter reporter) throws IOException {
         return new WholeFileRecordReader((FileSplit) split, job);
     }

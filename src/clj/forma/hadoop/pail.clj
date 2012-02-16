@@ -51,8 +51,7 @@
   (let [pail (Pail/create pail-path (pail-structure) false)]
     (with-fs-tmp [_ tmp]
       (?- (tap tmp) query)
-      (.absorb pail (Pail. tmp))
-      (.consolidate pail))))
+      (.absorb pail (Pail. tmp)))))
 
 ;; TODO: This makes the assumption that the pail-tap is being created
 ;; in the macro call. Fix this by swapping the temporary path into the
@@ -75,4 +74,5 @@
   (.consolidate (Pail. pail-path)))
 
 (defmain absorb [from-pail to-pail]
-  (.absorb (Pail. to-pail) (Pail. from-pail)))
+  (.absorb (Pail. to-pail)
+           (Pail. from-pail)))

@@ -15,7 +15,7 @@
             [forma.source.static :as static]
             [forma.hadoop.predicate :as p]
             [clojure.string :as s])
-  (:import  [java.io InputStream]))
+  (:import  [java.nio ByteBuffer ByteOrder]))
 
 ;; ## Dataset Information
 ;;
@@ -49,28 +49,26 @@
 ;; Java reads primitive arrays using [big endian](http://goo.gl/os4SJ)
 ;; format, by default. The PRECL dataset was stored using [little
 ;; endian](http://goo.gl/KUpiy) floats, 4 bytes each. We define a
-;; function that converts an array of little-endian bytes into a
-;; vector of big-endian floats.
+;; function that converts an array of little-endian bytes into an
+;;  array of big-endian floats.
 
-(defn big-floats
-  "Converts the supplied little-endian byte array into a seq of
-  big-endian-ordered floats."
-  [little-bytes]
-  (vec (map u/flipped-endian-float
-            (partition u/float-bytes little-bytes))))
+(defn tupleize [idx arr]
+  (let [buf (-> (ByteBuffer/wrap arr)
+                (.order ByteOrder/LITTLE_ENDIAN)
+                (.asFloatBuffer))
+        ret (float-array (.limit buf))]
+    (.get buf ret)
+    [(inc idx) ret]))
 
 (defn rain-tuples
   "Returns a lazy seq of 2-tuples representing NOAA PREC/L rain
-  data. Each 2-tuple is of the form `[idx, month-vec]`, where `idx` is
-  the 1-based month and `month-vec` is a vector of `(* 720 360)`
-  big-endian floats.
+  data. Each 2-tuple is of the form `[idx, month-arr]`, where `idx`
+  is the 1-based month and `month-vec` is a `(* 720 360)` float-array.
 
   Note that we take every other element in the `partition-stream` seq,
   skipping data concerning # of gauges."
   [step stream]
-  (let [n (floats-for-step step)
-        tupleize (fn [idx arr]
-                   [(inc idx) (big-floats arr)])]
+  (let [n (floats-for-step step)]
     (->> stream
          (u/partition-stream n)
          (take-nth 2)
@@ -157,4 +155,4 @@
   resolution `m-res`, partitioned by the supplied chunk size."
   [m-res {:keys [nodata] :as ascii-map} chunk-size file-tap pix-tap]
   (-> (resample-rain m-res ascii-map file-tap pix-tap)
-      (static/agg-chunks m-res chunk-size nodata :int)))
+      (static/agg-chunks m-res chunk-size nodata)))

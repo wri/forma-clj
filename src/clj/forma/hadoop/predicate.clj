@@ -7,7 +7,13 @@
             [forma.hadoop.io :as io]
             [clojure.string :as s]
             [cascalog.ops :as c]
-            [cascalog.vars :as v]))
+            [cascalog.vars :as v]
+            [cascalog.conf :as conf]
+            [hadoop-util.core :as hadoop])
+  (:import [org.apache.hadoop.mapred JobConf]
+           [cascading.flow.hadoop HadoopFlowProcess]
+           [cascading.tuple TupleEntryCollector]
+           [cascalog Util]))
 
 ;; ### Cascalog Helpers
 
@@ -113,12 +119,11 @@
       (u/strings->floats ?admin-s :> ?admin)))
 
 (def blossom-chunk
-  (let [expand (c/comp #'schema/unpack-pixel-location
-                       #'schema/chunkloc->pixloc)]
-    (<- [?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val]
-        (map ?chunk [:location :value] :> ?location ?static-chunk)
-        (index ?static-chunk :> ?pix-idx ?val)
-        (expand ?location ?pix-idx :> ?s-res ?mod-h ?mod-v ?sample ?line))))
+  (<- [?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val]
+      (map ?chunk [:location :value] :> ?loc ?static-chunk)
+      (index ?static-chunk :> ?pix-idx ?val)
+      (schema/chunkloc->pixloc ?loc ?pix-idx :> ?pixloc)
+      (schema/unpack-pixel-location ?pixloc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
 
 (defn chunkify [chunk-size]
   (<- [?dataset !date ?s-res ?t-res ?mh ?mv ?chunkid ?chunk :> ?datachunk]
@@ -159,11 +164,16 @@
   located at `tmp-dir`. See `cascalog.ops/lazy-generator`
   for usage advice."
   [tmp-path res tileseq]
-  (->> (for [[h v]  tileseq
-             sample (range (pixels-at-res res))
-             line   (range (pixels-at-res res))]
-         [h v sample line])
-       (c/lazy-generator tmp-path)))
+  (let [tap (:sink (hfs-seqfile tmp-path))]
+    (with-open [^TupleEntryCollector collector
+                (-> (hadoop/job-conf (conf/project-conf))
+                    (HadoopFlowProcess.)
+                    (.openTapForWrite tap))]
+      (doseq [item (for [[h v]  tileseq
+                         sample (range (pixels-at-res res))
+                         line   (range (pixels-at-res res))]
+                     [h v sample line])]
+        (.add collector (Util/coerceToTuple item))))))
 
 ;; ### Special Functions
 
@@ -190,16 +200,16 @@
     (s ?mod-h ?mod-v ?window-col ?window-row ?window)"
   [gen in-syms dim-vec val sparse-val]
   (let [[outpos outval] (v/gen-nullable-vars 2)
-        dim-vec (if (coll? dim-vec) dim-vec [dim-vec])
-        get-length #(try (dim-vec %) (catch Exception e (last dim-vec)))]
-    (apply u/thrush
-           gen
-           (for [[dim inpos] (map-indexed vector in-syms)
-                 :let [empty-val (->> (get-length (max 0 (dec dim)))
-                                      (matrix-of sparse-val dim))
-                       aggr (vals->sparsevec (get-length dim) empty-val)]]
-             (fn [src]
-               (construct (swap-syms gen [inpos val] [outpos outval])
-                          [[src :>> (get-out-fields gen)]
-                           [aggr inpos val :> outpos outval]
-                           [:distinct false]]))))))
+        dim-vec         (if (coll? dim-vec) dim-vec [dim-vec])
+        get-length     #(try (dim-vec %) (catch Exception e (last dim-vec)))]
+    (reduce #(%2 %1)
+            gen
+            (for [[dim inpos] (map-indexed vector in-syms)
+                  :let [empty-val (->> (get-length (max 0 (dec dim)))
+                                       (matrix-of sparse-val dim))
+                        aggr (vals->sparsevec (get-length dim) empty-val)]]
+              (fn [src]
+                (construct (swap-syms gen [inpos val] [outpos outval])
+                           [[src :>> (get-out-fields gen)]
+                            [aggr inpos val :> outpos outval]
+                            [:distinct false]]))))))
