@@ -1,7 +1,7 @@
 (ns forma.hadoop.jobs.scatter
   "Namespace for arbitrary queries."
   (:use cascalog.api
-        [forma.source.tilesets :only (tile-set)]
+        [forma.source.tilesets :only (tile-set country-tiles)]
         [forma.hadoop.pail :only (?pail- split-chunk-tap)])
   (:require [cascalog.ops :as c]
             [forma.utils :only (throw-illegal)]
@@ -54,6 +54,7 @@
          (>= ?vcf 25))))
 
 ;; ## Forma
+
 (def forma-run-parameters
   {"1000-32" {:est-start "2005-12-31"
               :est-end "2011-08-01" ;; I KEEP FUCKING THIS UP
@@ -64,18 +65,18 @@
               :vcf-limit 25
               :long-block 15
               :window 5}
-   "1000-16" {:est-start "2005-12-31"
-              :est-end "2011-08-01"
-              :s-res "1000"
-              :t-res "16"
-              :neighbors 1
-              :window-dims [600 600]
-              :vcf-limit 25
-              :long-block 30
-              :window 10
-              :ridge-const 1e-8
-              :convergence-thresh 1e-6
-              :max-iterations 500}})
+   "500-16" {:est-start "2005-12-31"
+             :est-end "2012-01-17"
+             :s-res "500"
+             :t-res "16"
+             :neighbors 1
+             :window-dims [600 600]
+             :vcf-limit 25
+             :long-block 30
+             :window 10
+             :ridge-const 1e-8
+             :convergence-thresh 1e-6
+             :max-iterations 500}})
 
 (defn paths-for-dataset
   [dataset s-res t-res tile-seq]
@@ -102,20 +103,36 @@
           (stretch/ts-expander base-t-res t-res ?series :> ?new-series)
           (assoc ?chunk
             :value ?new-series
-            :temporal-res t-res :> ?final-chunk)))))
+            :temporal-res t-res :> ?final-chunk)
+          (:distinct false)))))
+
+(comment
+  (first-half-query "s3n://pailbucket/master"
+                    "s3n://pailbucket/series"
+                    "s3n://formaresults/forma2012"
+                    "500-16"
+                    [:IDN]))
 
 (defn first-half-query
   "Poorly named! Returns a query that generates a number of position and dataset identifier"
   [pail-path ts-pail-path out-path run-key country-seq]
-  (let [{:keys [s-res t-res] :as forma-map} (forma-run-parameters run-key)]
+  (let [{:keys [s-res t-res est-end] :as forma-map} (forma-run-parameters run-key)
+        precl-path "/user/hadoop/precldata"
+        fire-path  "/user/hadoop/firedata"]
     (assert forma-map (str run-key " is not a valid run key!"))
-    (forma/forma-query forma-map
-                       (constrained-tap ts-pail-path "ndvi" s-res t-res country-seq)
-                       (constrained-tap ts-pail-path "reli" s-res t-res country-seq)
-                       (adjusted-precl-tap ts-pail-path s-res "32" t-res country-seq)
-                       (constrained-tap pail-path "vcf" s-res "00" country-seq)
-                       (tseries/fire-query pail-path
-                                           t-res
-                                           "2000-11-01"
-                                           "2011-06-01"
-                                           country-seq))))
+    (comment
+      (?- (hfs-seqfile precl-path)
+          (adjusted-precl-tap ts-pail-path "1000" "32" t-res country-seq)))    
+    (with-job-conf {"mapreduce.jobtracker.split.metainfo.maxsize" 100000000000}
+      (?- (hfs-seqfile out-path :sinkmode :replace)
+          (forma/forma-query
+           forma-map
+           (constrained-tap ts-pail-path "ndvi" s-res t-res country-seq)
+           (constrained-tap ts-pail-path "reli" s-res t-res country-seq)
+           (adjusted-precl-tap ts-pail-path "1000" "32" t-res country-seq)
+           (constrained-tap pail-path "vcf" s-res "00" country-seq)
+           (tseries/fire-query pail-path
+                               t-res
+                               "2000-11-01"
+                               est-end
+                               country-seq))))))

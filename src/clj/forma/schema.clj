@@ -308,6 +308,15 @@
   [loc]
   (map loc [:spatial-res :mod-h :mod-v :sample :line]))
 
+(defn unpack-chunk-location
+  "Unpacks chunk-location object into a tuple.
+
+    (unpack-chunk-location
+     {:spatial-res \"1000\", :mod-h 28, :mod-v 9, :index 4, :size 24000})
+    ;=> [\"1000\" 28 9 4 24000]"
+  [loc]
+  (map loc [:spatial-res :mod-h :mod-v :index :size]))
+
 (defn chunkloc->pixloc
   "Accepts a chunk location and a pixel index within that location and
    returns a pixel location.
