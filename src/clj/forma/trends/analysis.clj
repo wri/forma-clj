@@ -181,5 +181,3 @@
          (reductions min)
          (drop (dec leading-buffer))
          (take results-len))))
-
-

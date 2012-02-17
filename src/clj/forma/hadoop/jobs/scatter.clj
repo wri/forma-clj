@@ -1,6 +1,8 @@
 (ns forma.hadoop.jobs.scatter
   "Namespace for arbitrary queries."
   (:use cascalog.api
+        forma.trends.data
+        [forma.hadoop.pail :only (to-pail)]
         [forma.source.tilesets :only (tile-set country-tiles)]
         [forma.hadoop.pail :only (?pail- split-chunk-tap)])
   (:require [cascalog.ops :as c]
@@ -66,7 +68,8 @@
               :long-block 15
               :window 5}
    "500-16" {:est-start "2005-12-31"
-             :est-end "2012-01-17"
+             :est-end "2010-01-17"
+             ;; :est-end "2012-01-17"
              :s-res "500"
              :t-res "16"
              :neighbors 1
@@ -98,15 +101,41 @@
     (if (= t-res base-t-res)
       precl-tap
       (<- [?path ?final-chunk]
-          (precl-tap ?path ?chunk)
-          (map ?chunk [:location :value] :> ?location ?series)
-          (stretch/ts-expander base-t-res t-res ?series :> ?new-series)
-          (assoc ?chunk
-            :value ?new-series
-            :temporal-res t-res :> ?final-chunk)
-          (:distinct false)))))
+        (precl-tap ?path ?chunk)
+        (map ?chunk [:location :value] :> ?location ?series)
+        (schema/unpack-pixel-location ?locat)
+        (stretch/ts-expander base-t-res t-res ?series :> ?new-series)
+        (assoc ?chunk
+          :value ?new-series
+          :temporal-res t-res :> ?final-chunk)
+        (:distinct false)))))
+
+(defmapcatop expand-rain-pixel
+  [sample line]
+  (let [sample-0 (* 2 sample)
+        line-0   (* 2 line)]
+    (for [x (range 2)
+          y (range 2)]
+      [(+ sample-0 x) (+ line-0 y)])))
+
+(defn new-adjusted-precl-tap
+  "More brittle version that assumes conversion from 1000 to 500m."
+  [ts-pail-path s-res base-t-res t-res country-seq]
+  (let [precl-tap (constrained-tap ts-pail-path "precl" s-res base-t-res country-seq)]
+    (<- [?path ?final-chunk]
+        (precl-tap ?path ?chunk)
+        (forma/get-loc ?chunk :> ?s-res ?mod-h ?mod-v ?s ?l ?series)
+        (expand-rain-pixel ?s ?l :> ?sample ?line)
+        (schema/pixel-location "500" ?mod-h ?mod-v ?sample ?line :> ?location)
+        (stretch/ts-expander base-t-res t-res ?series :> ?new-series)
+        (assoc ?chunk
+          :value ?new-series
+          :location ?location
+          :temporal-res t-res :> ?final-chunk)
+        (:distinct false))))
 
 (comment
+  "This command runs FORMA."
   (first-half-query "s3n://pailbucket/master"
                     "s3n://pailbucket/series"
                     "s3n://formaresults/forma2012"
@@ -114,7 +143,8 @@
                     [:IDN]))
 
 (defn first-half-query
-  "Poorly named! Returns a query that generates a number of position and dataset identifier"
+  "Poorly named! Returns a query that generates a number of position
+  and dataset identifier"
   [pail-path ts-pail-path out-path run-key country-seq]
   (let [{:keys [s-res t-res est-end] :as forma-map} (forma-run-parameters run-key)
         precl-path "/user/hadoop/precldata"
@@ -122,17 +152,53 @@
     (assert forma-map (str run-key " is not a valid run key!"))
     (comment
       (?- (hfs-seqfile precl-path)
-          (adjusted-precl-tap ts-pail-path "1000" "32" t-res country-seq)))    
+          (adjusted-precl-tap ts-pail-path "1000" "32" t-res country-seq)))
     (with-job-conf {"mapreduce.jobtracker.split.metainfo.maxsize" 100000000000}
       (?- (hfs-seqfile out-path :sinkmode :replace)
           (forma/forma-query
            forma-map
            (constrained-tap ts-pail-path "ndvi" s-res t-res country-seq)
            (constrained-tap ts-pail-path "reli" s-res t-res country-seq)
-           (adjusted-precl-tap ts-pail-path "1000" "32" t-res country-seq)
+           (new-adjusted-precl-tap ts-pail-path "1000" "32" t-res country-seq)
            (constrained-tap pail-path "vcf" s-res "00" country-seq)
            (tseries/fire-query pail-path
                                t-res
                                "2000-11-01"
                                est-end
                                country-seq))))))
+
+(defn populate-local [main-path timeseries-path]
+  (doto timeseries-path
+    (to-pail [[(schema/chunk-value
+                "ndvi" "16" nil
+                (schema/pixel-location "500" 8 6 0 0)
+                (schema/timeseries-value 693 (concat ndvi ndvi)))]])
+    (to-pail [[(schema/chunk-value
+                "reli" "16" nil
+                (schema/pixel-location "500" 8 6 0 0)
+                (schema/timeseries-value 693 (concat reli reli)))]])
+    (to-pail [[(schema/chunk-value
+                "precl" "32" nil
+                (schema/pixel-location "1000" 8 6 0 0)
+                (schema/timeseries-value 361 rain-raw))]]))
+  (doto main-path
+    (to-pail [[(schema/chunk-value "vcf" "00" nil
+                                   (schema/chunk-location "500" 8 6 0 24000)
+                                   (into [] (repeat 156 30)))]])
+    (to-pail [(->> (schema/chunk-value "fire" "01" "2004-12-01"
+                                       (schema/pixel-location "500" 8 6 0 0)
+                                       (schema/fire-value 1 1 1 1))
+                   (repeat 10))])))
+
+(comment
+  "We need to move this over to the testing namespace. This is an
+example of how you'd populate a local directory with some timeseries
+and run forma:"
+  (let [main-path "/Users/sritchie/Desktop/mypail"
+        ts-path   "/Users/sritchie/Desktop/tspail"
+        out-path  "/Users/sritchie/Desktop/updawg"]
+    (populate-local main-path ts-path)
+    (first-half-query main-path
+                      out-path
+                      "500-16"
+                      [[8 6]])))
