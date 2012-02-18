@@ -16,7 +16,7 @@
                  [forma/gdal "1.8.0"]
                  [forma/jblas "1.2.1"]
                  [cascalog "1.9.0-wip"]
-                 [cascalog-elephantdb "0.3.0"]
+                 [cascalog-checkpoint "0.1.1"]
                  [backtype/dfs-datastores "1.1.0"]
                  [backtype/dfs-datastores-cascading "1.1.1"]]
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]

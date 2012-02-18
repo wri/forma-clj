@@ -64,7 +64,7 @@
   `vcf-limit`."
   [vcf-limit ndvi-src reli-src rain-src vcf-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?ndvi-series ?precl-series ?reli-series]
-     (ndvi-src _ ?ndvi-chunk)
+      (ndvi-src _ ?ndvi-chunk)
       (reli-src _ ?reli-chunk)
       (rain-src _ ?rain-chunk)
       (vcf-src _ ?vcf-chunk)
@@ -81,34 +81,28 @@
   vcf values split up by pixel.
 
   We break this apart from dynamic-filter to force the filtering to
-  occur before the analysis."
+  occur before the analysis. Note that all variable names within this
+  query are TIMESERIES, not individual values."
   [est-map dynamic-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line
-       ?short-series ?break-series ?long-series ?t-stat-series]
-      (dynamic-src
-       ?s-res ?mod-h ?mod-v ?sample ?line ?ndvi-series ?precl-series ?reli-series)
-      (short-trend-shell est-map ?ndvi-series ?reli-series :> ?short-series)
-      (long-trend-shell est-map ?ndvi-series ?reli-series ?precl-series
-                        :> ?break-series ?long-series ?t-stat-series)
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?short ?break ?long ?t-stat]
+      (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?ndvi ?precl ?rel)
+      (short-trend-shell est-map ?ndvi ?reli :> ?short)
+      (long-trend-shell est-map ?ndvi ?reli ?precl :> ?break ?long ?t-stat)
       (:distinct false)))
 
 (defn forma-tap
   "Accepts an est-map and sources for ndvi, rain, and fire timeseries,
-  plus a source of static vcf pixels."
-  [est-map ndvi-src reli-src rain-src vcf-src fire-src]
-  (let [fire-src (fire-tap est-map fire-src)
-        {lim :vcf-limit} est-map
-        dynamic-src (->> (dynamic-filter lim ndvi-src reli-src rain-src vcf-src)
-                         (dynamic-tap est-map))]
-    (<- [?s-res ?period ?mod-h ?mod-v ?sample ?line ?forma-val]
-        (fire-src ?s-res ?mod-h ?mod-v ?sample ?line !!fire-series)
-        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line
-                     ?short-series ?break-series ?long-series ?t-stat-series)
-        (schema/forma-seq !!fire-series ?short-series
-                          ?break-series ?long-series ?t-stat-series :> ?forma-seq)
-        (get ?short-series :start-idx :> ?start)
-        (p/index ?forma-seq :zero-index ?start :> ?period ?forma-val)
-        (:distinct false))))
+  plus a source of static vcf pixels.
+
+  Note that all values internally discuss timeseries."
+  [dynamic-src fire-src]
+  (<- [?s-res ?period ?mod-h ?mod-v ?sample ?line ?forma-val]
+      (fire-src ?s-res ?mod-h ?mod-v ?sample ?line !!fire)
+      (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?short ?break ?long ?t-stat)
+      (schema/forma-seq !!fire ?short ?break ?long ?t-stat :> ?forma-seq)
+      (get ?short :start-idx :> ?start)
+      (p/index ?forma-seq :zero-index ?start :> ?period ?forma-val)
+      (:distinct false)))
 
 ;; TODO: Filter identity, instead of complement nil
 (defmapcatop [process-neighbors [num-neighbors]]
@@ -125,14 +119,14 @@ value, and the aggregate of the neighbors."
 
 (defn forma-query
   "final query that walks the neighbors and spits out the values."
-  [est-map ndvi-src reli-src rain-src vcf-src fire-src]
+  [est-map forma-val-src]
   (let [{:keys [neighbors window-dims]} est-map
         [rows cols] window-dims
-        src (-> (forma-tap est-map ndvi-src reli-src rain-src vcf-src fire-src)
-                (p/sparse-windower ["?sample" "?line"]
-                                   window-dims
-                                   "?forma-val"
-                                   nil))]
+        src (p/sparse-windower forma-val-src
+                               ["?sample" "?line"]
+                               window-dims
+                               "?forma-val"
+                               nil)]
     (<- [?s-res ?period ?mod-h ?mod-v ?sample ?line ?val ?neighbor-val]
         (src ?s-res ?period ?mod-h ?mod-v ?win-col ?win-row ?window)
         (process-neighbors [neighbors] ?window :> ?win-idx ?val ?neighbor-val)

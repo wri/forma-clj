@@ -4,7 +4,8 @@
         forma.trends.data
         [forma.hadoop.pail :only (to-pail)]
         [forma.source.tilesets :only (tile-set country-tiles)]
-        [forma.hadoop.pail :only (?pail- split-chunk-tap)])
+        [forma.hadoop.pail :only (?pail- split-chunk-tap)]
+        [cascalog.checkpoint :only (workflow)])
   (:require [cascalog.ops :as c]
             [forma.utils :only (throw-illegal)]
             [forma.reproject :as r]
@@ -166,6 +167,70 @@
                                "2000-11-01"
                                est-end
                                country-seq))))))
+
+(defmain formarunner
+  [pail-path ts-pail-path out-path run-key country-seq]
+  (let [{:keys [s-res t-res est-end] :as est-map} (forma-run-parameters run-key)
+        tmp-root "/tmp/formarun"]
+    (assert est-map (str run-key " is not a valid run key!"))
+    (workflow [tmp-root]
+              ndvi-step ([:tmp-dirs ndvi-path]
+                           (?- (hfs-seqfile ndvi-path)
+                               (constrained-tap
+                                ts-pail-path "ndvi" s-res t-res country-seq)))
+
+              reli-step ([:tmp-dirs reli-path]
+                           (?- (hfs-seqfile reli-path)
+                               (constrained-tap
+                                ts-pail-path "reli" s-res t-res country-seq)))
+
+              rain-step ([:tmp-dirs rain-path]
+                           (?- (hfs-seqfile rain-path)
+                               (new-adjusted-precl-tap
+                                ts-pail-path "1000" "32" t-res country-seq)))
+
+              vcf-step ([:tmp-dirs vcf-path]
+                          (?- (hfs-seqfile vcf-path)
+                              (constrained-tap
+                               pail-path "vcf" s-res "00" country-seq)))
+
+              fire-step ([:tmp-dirs fire-path]
+                           (?- (hfs-seqfile fire-path)
+                               (tseries/fire-query pail-path
+                                                   t-res
+                                                   "2000-11-01"
+                                                   est-end
+                                                   country-seq)))
+
+              adjustfires ([:tmp-dirs adjusted-fire-path]
+                             (?- (hfs-seqfile adjusted-fire-path)
+                                 (forma/fire-tap est-map (hfs-seqfile fire-path))))
+
+              adjustseries ([:tmp-dirs adjusted-series-path]
+                              "Adjusts the lengths of all timeseries
+                               and filters out timeseries below the proper VCF value."
+                              (?- (hfs-seqfile adjusted-series-path)
+                                  (forma/dynamic-filter (:vcf-limit est-map)
+                                                        (hfs-seqfile ndvi-path)
+                                                        (hfs-seqfile reli-path)
+                                                        (hfs-seqfile rain-path)
+                                                        (hfs-seqfile vcf-path))))
+
+              trends ([:tmp-dirs dynamic-path]
+                        "Runs the trends processing."
+                        (?- (hfs-seqfile dynamic-path)
+                            (forma/dynamic-tap
+                             est-map (hfs-seqfile adjusted-series-path))))
+
+              mid-forma ([:tmp-dirs forma-mid-path
+                          :deps [trends adjustfires]]
+                           (?- (hfs-seqfile forma-mid-path)
+                               (forma/forma-tap (hfs-seqfile dynamic-path)
+                                                (hfs-seqfile adjusted-fire-path))))
+
+              final-forma ([] (?- (hfs-seqfile out-path)
+                                  (forma/forma-query est-map
+                                                     (hfs-seqfile forma-mid-path)))))))
 
 (defn populate-local [main-path timeseries-path]
   (doto timeseries-path
