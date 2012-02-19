@@ -69,8 +69,7 @@
               :long-block 15
               :window 5}
    "500-16" {:est-start "2005-12-31"
-             :est-end "2010-01-17"
-             ;; :est-end "2012-01-17"
+             :est-end "2012-01-17"
              :s-res "500"
              :t-res "16"
              :neighbors 1
@@ -137,23 +136,19 @@
 
 (comment
   "This command runs FORMA."
-  (first-half-query "s3n://pailbucket/master"
-                    "s3n://pailbucket/series"
-                    "s3n://formaresults/forma2012"
-                    "500-16"
-                    [:IDN]))
+  (formarunner "/user/hadoop/checkpoints"
+               "s3n://pailbucket/master"
+               "s3n://pailbucket/series"
+               "s3n://formaresults/forma2012"
+               "500-16"
+               [:IDN]))
 
 (defn first-half-query
   "Poorly named! Returns a query that generates a number of position
   and dataset identifier"
   [pail-path ts-pail-path out-path run-key country-seq]
-  (let [{:keys [s-res t-res est-end] :as forma-map} (forma-run-parameters run-key)
-        precl-path "/user/hadoop/precldata"
-        fire-path  "/user/hadoop/firedata"]
+  (let [{:keys [s-res t-res est-end] :as forma-map} (forma-run-parameters run-key)]
     (assert forma-map (str run-key " is not a valid run key!"))
-    (comment
-      (?- (hfs-seqfile precl-path)
-          (adjusted-precl-tap ts-pail-path "1000" "32" t-res country-seq)))
     (with-job-conf {"mapreduce.jobtracker.split.metainfo.maxsize" 100000000000}
       (?- (hfs-seqfile out-path :sinkmode :replace)
           (forma/forma-query
@@ -169,26 +164,14 @@
                                country-seq))))))
 
 (defmain formarunner
-  [pail-path ts-pail-path out-path run-key country-seq]
+  [tmp-root pail-path ts-pail-path out-path run-key country-seq]
   (let [{:keys [s-res t-res est-end] :as est-map} (forma-run-parameters run-key)
-        tmp-root "/tmp/formarun"]
+        mk-filter (fn [vcf-path ts-src]
+                    (forma/filter-query (hfs-seqfile vcf-path)
+                                        (:vcf-limit est-map)
+                                        ts-src))]
     (assert est-map (str run-key " is not a valid run key!"))
     (workflow [tmp-root]
-              ndvi-step ([:tmp-dirs ndvi-path]
-                           (?- (hfs-seqfile ndvi-path)
-                               (constrained-tap
-                                ts-pail-path "ndvi" s-res t-res country-seq)))
-
-              reli-step ([:tmp-dirs reli-path]
-                           (?- (hfs-seqfile reli-path)
-                               (constrained-tap
-                                ts-pail-path "reli" s-res t-res country-seq)))
-
-              rain-step ([:tmp-dirs rain-path]
-                           (?- (hfs-seqfile rain-path)
-                               (new-adjusted-precl-tap
-                                ts-pail-path "1000" "32" t-res country-seq)))
-
               vcf-step ([:tmp-dirs vcf-path]
                           (?- (hfs-seqfile vcf-path)
                               (constrained-tap
@@ -202,19 +185,42 @@
                                                    est-end
                                                    country-seq)))
 
-              adjustfires ([:tmp-dirs adjusted-fire-path]
-                             (?- (hfs-seqfile adjusted-fire-path)
-                                 (forma/fire-tap est-map (hfs-seqfile fire-path))))
+              adjustfires
+              ([:tmp-dirs adjusted-fire-path]
+                 (?- (hfs-seqfile adjusted-fire-path)
+                     (forma/fire-tap est-map (hfs-seqfile fire-path))))
 
-              adjustseries ([:tmp-dirs adjusted-series-path]
-                              "Adjusts the lengths of all timeseries
+              ndvi-step
+              ([:tmp-dirs ndvi-path]
+                 (?- (hfs-seqfile ndvi-path)
+                     (mk-filter vcf-path
+                                (constrained-tap
+                                 ts-pail-path "ndvi" s-res t-res country-seq))))
+
+              reli-step
+              ([:tmp-dirs reli-path]
+                 (?- (hfs-seqfile reli-path)
+                     (mk-filter vcf-path
+                                (constrained-tap
+                                 ts-pail-path "reli" s-res t-res country-seq))))
+
+              rain-step
+              ([:tmp-dirs rain-path]
+                 (?- (hfs-seqfile rain-path)
+                     (mk-filter vcf-path
+                                (new-adjusted-precl-tap
+                                 ts-pail-path "1000" "32" t-res country-seq))))
+
+              adjustseries
+              ([:tmp-dirs adjusted-series-path]
+                 "Adjusts the lengths of all timeseries
                                and filters out timeseries below the proper VCF value."
-                              (?- (hfs-seqfile adjusted-series-path)
-                                  (forma/dynamic-filter (:vcf-limit est-map)
-                                                        (hfs-seqfile ndvi-path)
-                                                        (hfs-seqfile reli-path)
-                                                        (hfs-seqfile rain-path)
-                                                        (hfs-seqfile vcf-path))))
+                 (with-job-conf {"mapred.min.split.size" 805306368}
+                   (?- (hfs-seqfile adjusted-series-path)
+                       (forma/dynamic-filter (hfs-seqfile ndvi-path)
+                                             (hfs-seqfile reli-path)
+                                             (hfs-seqfile rain-path)
+                                             (hfs-seqfile vcf-path)))))
 
               trends ([:tmp-dirs dynamic-path]
                         "Runs the trends processing."
@@ -266,4 +272,6 @@ and run forma:"
     (first-half-query main-path
                       out-path
                       "500-16"
-                      [[8 6]])))
+                      [[8 6]]))
+  
+  )

@@ -49,6 +49,7 @@
       (map ?chunk [:location :value] :> ?location ?val)
       (schema/unpack-pixel-location ?location :> ?s-res ?mod-h ?mod-v ?sample ?line)))
 
+;; TODO: implement comparable for our records.
 (defn fire-tap
   "Accepts an est-map and a query source of fire timeseries. Note that
   this won't work, pulling directly from the pail!"
@@ -56,25 +57,28 @@
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?fire-series]
       (fire-src ?chunk)
       (get-loc ?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?f-series)
-      (schema/adjust-fires est-map ?f-series :> ?fire-series)))
+      (schema/adjust-fires est-map ?f-series :> ?fire-series)
+      (:distinct false)))
+
+(defn filter-query [vcf-src vcf-limit chunk-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?series]
+      (chunk-src _ ?ts-chunk)
+      (vcf-src _ ?vcf-chunk)
+      (get-loc ?ts-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?series)
+      (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
+      (>= ?vcf vcf-limit)))
 
 (defn dynamic-filter
   "Returns a new generator of ndvi and rain timeseries obtained by
   filtering out all pixels with VCF less than the supplied
   `vcf-limit`."
-  [vcf-limit ndvi-src reli-src rain-src vcf-src]
+  [ndvi-src reli-src rain-src vcf-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?ndvi-series ?precl-series ?reli-series]
-      (ndvi-src _ ?ndvi-chunk)
-      (reli-src _ ?reli-chunk)
-      (rain-src _ ?rain-chunk)
-      (vcf-src _ ?vcf-chunk)
-      (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
-      (get-loc ?ndvi-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?n-series)
-      (get-loc ?rain-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?r-series)
-      (get-loc ?reli-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?reli)
-      (schema/adjust-timeseries ?r-series ?n-series ?reli
-                                :> ?precl-series ?ndvi-series ?reli-series)
-      (>= ?vcf vcf-limit)))
+      (ndvi-src ?s-res ?mod-h ?mod-v ?sample ?line ?ndvi)
+      (reli-src ?s-res ?mod-h ?mod-v ?sample ?line ?reli)
+      (rain-src ?s-res ?mod-h ?mod-v ?sample ?line ?rain)
+      (schema/adjust-timeseries ?rain ?ndvi ?reli
+                                :> ?precl-series ?ndvi-series ?reli-series)))
 
 (defn dynamic-tap
   "Accepts an est-map, and sources for ndvi and rain timeseries and
