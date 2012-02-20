@@ -219,8 +219,7 @@
                    (?- (hfs-seqfile adjusted-series-path)
                        (forma/dynamic-filter (hfs-seqfile ndvi-path)
                                              (hfs-seqfile reli-path)
-                                             (hfs-seqfile rain-path)
-                                             (hfs-seqfile vcf-path)))))
+                                             (hfs-seqfile rain-path)))))
 
               trends ([:tmp-dirs dynamic-path]
                         "Runs the trends processing."
@@ -233,10 +232,14 @@
                            (?- (hfs-seqfile forma-mid-path)
                                (forma/forma-tap (hfs-seqfile dynamic-path)
                                                 (hfs-seqfile adjusted-fire-path))))
-
-              final-forma ([] (?- (hfs-seqfile out-path)
-                                  (forma/forma-query est-map
-                                                     (hfs-seqfile forma-mid-path)))))))
+              
+              final-forma
+              ([] (let [names ["?s-res" "?period" "?mod-h" "?mod-v"
+                               "?sample" "?line" "?forma-val"]
+                        mid-src (-> (hfs-seqfile forma-mid-path)
+                                    (name-vars names))]
+                    (?- (hfs-seqfile out-path)
+                        (forma/forma-query est-map mid-src)))))))
 
 (defn populate-local [main-path timeseries-path]
   (doto timeseries-path
@@ -255,7 +258,7 @@
   (doto main-path
     (to-pail [[(schema/chunk-value "vcf" "00" nil
                                    (schema/chunk-location "500" 8 6 0 24000)
-                                   (into [] (repeat 156 30)))]])
+                                   (into [] (repeat 24000 30)))]])
     (to-pail [(->> (schema/chunk-value "fire" "01" "2004-12-01"
                                        (schema/pixel-location "500" 8 6 0 0)
                                        (schema/fire-value 1 1 1 1))
@@ -265,13 +268,13 @@
   "We need to move this over to the testing namespace. This is an
 example of how you'd populate a local directory with some timeseries
 and run forma:"
-  (let [main-path "/Users/sritchie/Desktop/mypail"
-        ts-path   "/Users/sritchie/Desktop/tspail"
-        out-path  "/Users/sritchie/Desktop/updawg"]
-    (populate-local main-path ts-path)
-    (first-half-query main-path
-                      out-path
-                      "500-16"
-                      [[8 6]]))
-  
-  )
+  (let [main-path "/Users/sritchie/Desktop/mypail2"
+        ts-path   "/Users/sritchie/Desktop/tspail2"
+        out-path  "/Users/sritchie/Desktop/updawg2"]
+    ;; (populate-local main-path ts-path)
+    (formarunner "/Users/sritchie/Desktop/checkpoint"
+                 main-path
+                 ts-path
+                 out-path
+                 "500-16"
+                 [[8 6]])))

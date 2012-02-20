@@ -125,3 +125,15 @@ function, as per the documentation."
 (fact
   "Does transpose work as planned? Sure looks like it!"
   (transpose [[1 2 3] [4 5 6]] ) => [[1 4] [2 5] [3 6]])
+
+
+(tabular
+ (fact?- "Tabular generates lots of facts, one for each set of
+         substitutions in the table below."
+         (wc-query :path) => (produces ?results)
+         (provided
+           (hfs-textline :path) => [[?sentence]]))
+ ?sentence       ?results
+ "mock it out!"  [["mock" 1] ["it" 1] ["out!" 1]]
+ "two two two"   [["two" 3]]
+ "nathan M.M"    [["M.M" 1] ["nathan" 1]]) ;; 3 true facts

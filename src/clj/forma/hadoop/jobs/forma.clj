@@ -22,7 +22,7 @@
     [(->> (a/telescoping-short-trend long-block window freq start end
                                      (:series spectral-series)
                                      (:series reli-series))
-          (schema/timeseries-value new-start))]))
+          (schema/ts-record new-start))]))
 
 ;; We're mapping across two sequences at the end, there; the
 ;; long-series and the t-stat-series.
@@ -37,7 +37,7 @@
         freq        (date/res->period-count t-res)
         new-start   (date/datetime->period t-res est-start)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
-    (apply map (comp (partial schema/timeseries-value new-start)
+    (apply map (comp (partial schema/ts-record new-start)
                      vector)
            (a/telescoping-long-trend freq start end
                                      (:series ts-series)
@@ -57,14 +57,14 @@
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?fire-series]
       (fire-src ?chunk)
       (get-loc ?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?f-series)
-      (schema/adjust-fires est-map ?f-series :> ?fire-series)
-      (:distinct false)))
+      (schema/adjust-fires est-map ?f-series :> ?fire-series)))
 
 (defn filter-query [vcf-src vcf-limit chunk-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?series]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?ts-record]
       (chunk-src _ ?ts-chunk)
       (vcf-src _ ?vcf-chunk)
       (get-loc ?ts-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?series)
+      (schema/map->TimeSeriesValue ?series :> ?ts-record)
       (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
       (>= ?vcf vcf-limit)))
 
@@ -72,13 +72,13 @@
   "Returns a new generator of ndvi and rain timeseries obtained by
   filtering out all pixels with VCF less than the supplied
   `vcf-limit`."
-  [ndvi-src reli-src rain-src vcf-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?ndvi-series ?precl-series ?reli-series]
+  [ndvi-src reli-src rain-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?ndvi-ts ?precl-ts ?reli-ts]
       (ndvi-src ?s-res ?mod-h ?mod-v ?sample ?line ?ndvi)
       (reli-src ?s-res ?mod-h ?mod-v ?sample ?line ?reli)
       (rain-src ?s-res ?mod-h ?mod-v ?sample ?line ?rain)
-      (schema/adjust-timeseries ?rain ?ndvi ?reli
-                                :> ?precl-series ?ndvi-series ?reli-series)))
+      (schema/adjust-timeseries ?rain ?ndvi ?reli :> ?precl-ts ?ndvi-ts ?reli-ts)
+      (:distinct false)))
 
 (defn dynamic-tap
   "Accepts an est-map, and sources for ndvi and rain timeseries and
@@ -89,7 +89,7 @@
   query are TIMESERIES, not individual values."
   [est-map dynamic-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?short ?break ?long ?t-stat]
-      (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?ndvi ?precl ?rel)
+      (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?ndvi ?precl ?reli)
       (short-trend-shell est-map ?ndvi ?reli :> ?short)
       (long-trend-shell est-map ?ndvi ?reli ?precl :> ?break ?long ?t-stat)
       (:distinct false)))
