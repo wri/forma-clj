@@ -54,16 +54,6 @@ first and last specified, as below."
 
 (def alerts (map (partial make-binary 0.5) new-prob))
 
-(defn false-pos
-  [actual estimated]
-  (and (== 0 actual) (== 1 estimated)))
-
-(fact
- "check false positives; test calculated probabilities against labels"
- (count (filter true?
-                (map false-pos y alerts))) => 15)
-
-
 (defn eco-generator [n]
   (map vector (map #(if (odd? %) "eco1" "eco2") (range n))))
 
@@ -75,13 +65,13 @@ first and last specified, as below."
         obs (map conj ecoid (map vector (range n)) (map vector y) (map vec X))]
     (vec (take n obs))))
 
-(defbufferop logistic-beta-wrap
+(defbufferop [logistic-beta-wrap [r c m]]
   "returns a vector of coefficients that is accepted within the
   framework of cascalog."
   [tuples]
   (let [label-seq (flatten (map first tuples))
         feature-mat (map second tuples)]
-    [[(logistic-beta-vector label-seq feature-mat 1e-8 1e-6 250)]]))
+    [[(logistic-beta-vector label-seq feature-mat r c m)]]))
 
 (deftest group-probabilities-test
   "test that the classifier returns two alerts in this example for a
@@ -106,7 +96,8 @@ first and last specified, as below."
    (let [src (create-sample-tap 100)
          beta-gen (<- [?eco ?beta]
                       (src ?eco ?pixel-id ?labels ?feat-training)
-                      (logistic-beta-wrap ?labels ?feat-training :> ?beta))
+                      (logistic-beta-wrap [1e-8 1e-6 250] ?labels ?feat-training
+                                          :> ?beta))
          alerts-query (<- [?eco ?pixel-id ?prob]
                           (src ?eco ?pixel-id ?labels ?feat-update)
                           (= ?eco "eco1")

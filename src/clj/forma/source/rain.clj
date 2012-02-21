@@ -49,15 +49,8 @@
 ;; Java reads primitive arrays using [big endian](http://goo.gl/os4SJ)
 ;; format, by default. The PRECL dataset was stored using [little
 ;; endian](http://goo.gl/KUpiy) floats, 4 bytes each. We define a
-;; function that converts an array of little-endian bytes into a
-;; vector of big-endian floats.
-
-(defn big-floats
-  "Converts the supplied little-endian byte array into a seq of
-  big-endian-ordered floats."
-  [little-bytes]
-  (vec (map u/flipped-endian-float
-            (partition u/float-bytes little-bytes))))
+;; function that converts an array of little-endian bytes into an
+;;  array of big-endian floats.
 
 (defn tupleize [idx arr]
   (let [buf (-> (ByteBuffer/wrap arr)

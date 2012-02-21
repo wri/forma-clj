@@ -16,8 +16,9 @@
   java.util.Map)
 
 (defn pail-getTarget
-  [this {:keys [location temporal-res dataset]}]
-  (let [{:keys [spatial-res mod-h mod-v]} location
+  [this m]
+  (let [{:keys [location temporal-res dataset]} m
+         {:keys [spatial-res mod-h mod-v]} location
         resolution (format "%s-%s" spatial-res temporal-res)
         tilestring (hv->tilestring mod-h mod-v)]
     [dataset resolution tilestring]))

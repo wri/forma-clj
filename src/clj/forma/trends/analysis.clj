@@ -176,9 +176,8 @@
   [long-block short-block freq training-end end-idx spectral-ts reli-ts]
   (let [leading-buffer (+ 2 (- training-end (+ long-block short-block)))
         results-len (- (inc end-idx) training-end)]
-    (take results-len (->> (windowed-trend long-block freq spectral-ts reli-ts)
-                          (utils/moving-average short-block)
-                          (reductions min)
-                          (drop (dec leading-buffer))))))
-
-
+    (->> (windowed-trend long-block freq spectral-ts reli-ts)
+         (utils/moving-average short-block)
+         (reductions min)
+         (drop (dec leading-buffer))
+         (take results-len))))

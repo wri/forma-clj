@@ -1,6 +1,7 @@
 (ns forma.trends.analysis-test
   (:use [forma.trends.analysis] :reload)
   (:use [cascalog.api]
+        [forma.matrix.utils :only (transpose)]
         [midje sweet cascalog]
         [forma.trends.data :only (ndvi rain reli Yt)]
         [forma.matrix.utils :only (transpose)]
@@ -9,6 +10,9 @@
         [forma.trends.stretch :only (ts-expander)]
         [clojure.math.numeric-tower :only (floor abs expt)]
         [clojure.test :only (deftest)]))
+
+(defn num-equals [expected]
+  (fn [actual] (== expected actual)))
 
 (fact
  "Check element-wise sum of components of vector of vectors"
