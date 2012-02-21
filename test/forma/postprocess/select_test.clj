@@ -131,17 +131,18 @@ clearing activity."
                          ["MYS" 831 0.9]
                          ["nil" 0 0]])))
 
-(fact
-  (<- [?cntry ?pd ?tot-prob]
-      (sample-output-map ?m)
-      (grab-sig-pixels "16" ?m 0.5 :> ?cntry ?pd ?prob)
-      (c/sum ?prob :> ?tot-prob)) => (produces [["IDN" 828 0.6]
-                                                ["IDN" 829 0.6]
-                                                ["IDN" 830 2.05]
-                                                ["IDN" 831 2.7]
-                                                ["MYS" 830 0.7]
-                                                ["MYS" 831 0.9]
-                                                ["nil" 0 0]]))
+(deftest grab-sig-pixels-test
+  (fact
+    (<- [?cntry ?pd ?tot-prob]
+        (sample-output-map ?m)
+        (grab-sig-pixels "16" ?m 0.5 :> ?cntry ?pd ?prob)
+        (c/sum ?prob :> ?tot-prob)) => (produces [["IDN" 828 0.6]
+                                                  ["IDN" 829 0.6]
+                                                  ["IDN" 830 2.05]
+                                                  ["IDN" 831 2.7]
+                                                  ["MYS" 830 0.7]
+                                                  ["MYS" 831 0.9]
+                                                  ["nil" 0 0]])))
 =======
 ;; TODO: put in ! instead of nil value
 ;; predicate macro in agg-tap
