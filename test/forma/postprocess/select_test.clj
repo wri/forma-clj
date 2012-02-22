@@ -10,7 +10,6 @@
         [forma.trends.data :only (ndvi rain reli)]
         [forma.reproject :only (modis->latlon)])
   (:require [incanter.core :as i]
-            [incanter.charts :as chart]
             [forma.testing :as t]
             [cascalog.ops :as c]
             [forma.schema :as schema]))

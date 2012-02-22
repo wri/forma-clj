@@ -53,7 +53,14 @@
         :end-idx   end-idx
         :series    (vec series)})))
 
-(defn fields-compare [m1 m2 fn-seq]
+(gen-class :name forma.kryo.RecordComparator
+           :prefix "fields-"
+           :methods
+           [^{:static true}
+            [recordCompare [java.util.Map java.util.Map java.util.List] int]])
+
+(defn fields-recordCompare
+  [m1 m2 fn-seq]
   (loop [[f & more] fn-seq]
     (let [val (compare (f m1) (f m2))]
       (if (and more (zero? val))
@@ -63,7 +70,8 @@
 (defrecord TimeSeriesValue [start-idx end-idx series]
   Comparable
   (compareTo [m1 m2]
-    (fields-compare m1 m2 [:start-idx :end-idx (comp vec :series)])))
+    (forma.kryo.RecordComparator/recordCompare
+     m1 m2 [:start-idx :end-idx (comp vec :series)])))
 
 (defn ts-record
   ([start-idx series]
@@ -107,7 +115,8 @@
 (defrecord FireValue [temp-330 conf-50 both-preds count]
   Comparable
   (compareTo [m1 m2]
-    (fields-compare m1 m2 [:temp-330 :conf-50 :both-preds :count])))
+    (forma.kryo.RecordComparator/recordCompare
+     m1 m2 [:temp-330 :conf-50 :both-preds :count])))
 
 (defn fire-value
   "Creates a `fire-value` object with counts of fires meeting certain criteria:
@@ -154,6 +163,7 @@
   (let [[start end] (for [pd [est-start est-end]]
                       (date/datetime->period t-res pd))]
     [(->> (:series f-series)
+          (map map->FireValue)
           (u/trim-seq start (inc end) (:start-idx f-series))
           (ts-record start))]))
 
@@ -170,7 +180,8 @@
     [fire-value short-drop param-break long-drop t-stat]
   Comparable
   (compareTo [m1 m2]
-    (fields-compare m1 m2 [:t-stat :fire :short :param-break :long])))
+    (forma.kryo.RecordComparator/recordCompare
+     m1 m2 [:t-stat :fire :short :param-break :long])))
 
 (defn forma-value
   "Creates forma object containing various characteristics of pixel timeseries
@@ -186,7 +197,7 @@
          :t-stat 1.725}"
   [fire short param-break long t-stat]
   (let [fire (or fire (FireValue. 0 0 0 0))]
-    (FormaValue. fire short param-break long t-stat)))
+    [fire short param-break long t-stat]))
 
 (defn unpack-forma-val
   "Returns a vector containing the fire value, short drop,
@@ -212,9 +223,10 @@
      avg-t-stat min-t-stat]
   Comparable
   (compareTo [m1 m2]
-    (fields-compare [:neighbor-count :fire-value :avg-short-drop :min-short-drop
-                     :avg-param-break :min-param-break :avg-long-drop :min-long-drop
-                     :avg-t-stat :min-t-stat])))
+    (forma.kryo.RecordComparator/recordCompare
+     m1 m2 [:neighbor-count :fire-value :avg-short-drop :min-short-drop
+            :avg-param-break :min-param-break :avg-long-drop :min-long-drop
+            :avg-t-stat :min-t-stat])))
 
 (defn neighbor-value
   "Accepts either a forma value or a sequence of sub-values."
@@ -394,5 +406,5 @@
     (forma-seq fire-series short-series long-series t-stat-series)"
   [& in-series]
   [(->> in-series
-        (map #(or (:series %) (repeat %)))
+        (map #(or % (repeat %)))
         (apply map forma-value))])

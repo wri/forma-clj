@@ -13,16 +13,12 @@
 (defn short-trend-shell
   "a wrapper to collect the short-term trends into a form that can be
   manipulated from within cascalog."
-  [{:keys [est-start est-end t-res long-block window]}
-   spectral-series reli-series]
-  (let [ts-start    (:start-idx spectral-series)
-        freq        (date/res->period-count t-res)
+  [{:keys [est-start est-end t-res long-block window]} ts-start spectral reli]
+  (let [freq        (date/res->period-count t-res)
         new-start   (date/datetime->period t-res est-start)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
-    [(->> (a/telescoping-short-trend long-block window freq start end
-                                     (:series spectral-series)
-                                     (:series reli-series))
-          (schema/ts-record new-start))]))
+    [new-start
+     (a/telescoping-short-trend long-block window freq start end spectral reli)]))
 
 ;; We're mapping across two sequences at the end, there; the
 ;; long-series and the t-stat-series.
@@ -32,24 +28,22 @@
   time-series (and cofactors) to extract the long-term trends and
   t-statistics from the time-series."
   [{:keys [est-start est-end t-res long-block window]}
-   ts-series reli-series rain-series]
-  (let [ts-start    (:start-idx ts-series)
-        freq        (date/res->period-count t-res)
+   ts-start ts-series reli-series rain-series]
+  (let [freq        (date/res->period-count t-res)
         new-start   (date/datetime->period t-res est-start)
         [start end] (date/relative-period t-res ts-start [est-start est-end])]
-    (apply map (comp (partial schema/ts-record new-start)
-                     vector)
-           (a/telescoping-long-trend freq start end
-                                     (:series ts-series)
-                                     (:series reli-series)
-                                     (:series rain-series)))))
+    (cons new-start
+          (apply map vector
+                 (a/telescoping-long-trend freq start end
+                                           ts-series
+                                           reli-series
+                                           rain-series)))))
 
 (def get-loc
   (<- [?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val]
-      (map ?chunk [:location :value] :> ?location ?val)
-      (schema/unpack-pixel-location ?location :> ?s-res ?mod-h ?mod-v ?sample ?line)))
+      (map ?chunk [:location :value] :> ?loc ?val)
+      (schema/unpack-pixel-location ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
 
-;; TODO: implement comparable for our records.
 (defn fire-tap
   "Accepts an est-map and a query source of fire timeseries. Note that
   this won't work, pulling directly from the pail!"
@@ -60,11 +54,12 @@
       (schema/adjust-fires est-map ?f-series :> ?fire-series)))
 
 (defn filter-query [vcf-src vcf-limit chunk-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?ts-record]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?ts]
       (chunk-src _ ?ts-chunk)
       (vcf-src _ ?vcf-chunk)
       (get-loc ?ts-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?series)
-      (schema/map->TimeSeriesValue ?series :> ?ts-record)
+      (:distinct false)
+      (map ?series [:start-idx :series] :> ?start ?ts)
       (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
       (>= ?vcf vcf-limit)))
 
@@ -73,11 +68,12 @@
   filtering out all pixels with VCF less than the supplied
   `vcf-limit`."
   [ndvi-src reli-src rain-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?ndvi-ts ?precl-ts ?reli-ts]
-      (ndvi-src ?s-res ?mod-h ?mod-v ?sample ?line ?ndvi)
-      (reli-src ?s-res ?mod-h ?mod-v ?sample ?line ?reli)
-      (rain-src ?s-res ?mod-h ?mod-v ?sample ?line ?rain)
-      (schema/adjust-timeseries ?rain ?ndvi ?reli :> ?precl-ts ?ndvi-ts ?reli-ts)
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ndvi-ts ?precl-ts ?reli-ts]
+      (ndvi-src ?s-res ?mod-h ?mod-v ?sample ?line ?n-start ?ndvi)
+      (reli-src ?s-res ?mod-h ?mod-v ?sample ?line ?r-start ?reli)
+      (rain-src ?s-res ?mod-h ?mod-v ?sample ?line ?p-start ?precl)
+      (schema/adjust ?p-start ?precl ?n-start ?ndvi ?r-start ?reli
+                     :> ?start-idx ?precl-ts ?ndvi-ts ?reli-ts)
       (:distinct false)))
 
 (defn dynamic-tap
@@ -88,10 +84,10 @@
   occur before the analysis. Note that all variable names within this
   query are TIMESERIES, not individual values."
   [est-map dynamic-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?short ?break ?long ?t-stat]
-      (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?ndvi ?precl ?reli)
-      (short-trend-shell est-map ?ndvi ?reli :> ?short)
-      (long-trend-shell est-map ?ndvi ?reli ?precl :> ?break ?long ?t-stat)
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?new-start ?short ?break ?long ?t-stat]
+      (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl ?reli)
+      (short-trend-shell est-map ?start ?ndvi ?reli :> ?new-start ?short)
+      (long-trend-shell est-map ?start ?ndvi ?reli ?precl :> _ ?break ?long ?t-stat)
       (:distinct false)))
 
 (defn forma-tap
@@ -100,11 +96,10 @@
 
   Note that all values internally discuss timeseries."
   [dynamic-src fire-src]
-  (<- [?s-res ?period ?mod-h ?mod-v ?sample ?line ?forma-val]
-      (fire-src ?s-res ?mod-h ?mod-v ?sample ?line !!fire)
-      (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?short ?break ?long ?t-stat)
+  (<- [?s-res ?period ?mh ?mv ?s ?l ?forma-val]
+      (fire-src ?s-res ?mh ?mv ?s ?l !!fire)
+      (dynamic-src ?s-res ?mh ?mv ?s ?l ?start ?short ?break ?long ?t-stat)
       (schema/forma-seq !!fire ?short ?break ?long ?t-stat :> ?forma-seq)
-      (get ?short :start-idx :> ?start)
       (p/index ?forma-seq :zero-index ?start :> ?period ?forma-val)
       (:distinct false)))
 

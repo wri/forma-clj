@@ -135,7 +135,14 @@
         (:distinct false))))
 
 (comment
+  (??<- [?a ?b]
+        ((constrained-tap
+          "/Users/sritchie/Desktop/mypail" "vcf" "500" "00" [[8 6]]) ?a ?b)
+        (:distinct false))
+
   "This command runs FORMA."
+  (use 'forma.hadoop.jobs.scatter)
+  (in-ns 'forma.hadoop.jobs.scatter)
   (formarunner "/user/hadoop/checkpoints"
                "s3n://pailbucket/master"
                "s3n://pailbucket/series"
@@ -172,10 +179,21 @@
                                         ts-src))]
     (assert est-map (str run-key " is not a valid run key!"))
     (workflow [tmp-root]
-              vcf-step ([:tmp-dirs vcf-path]
-                          (?- (hfs-seqfile vcf-path)
-                              (constrained-tap
-                               pail-path "vcf" s-res "00" country-seq)))
+              vcf-step
+              ([:tmp-dirs vcf-path]
+                 (?- (hfs-seqfile vcf-path)
+                     (<- [?a ?b]
+                         ((constrained-tap
+                           pail-path "vcf" s-res "00" country-seq) ?a ?b)
+                         (:distinct false))))
+
+              ndvi-step
+              ([:tmp-dirs ndvi-path]
+                 (with-job-conf {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
+                   (?- (hfs-seqfile ndvi-path)
+                       (mk-filter vcf-path
+                                  (constrained-tap
+                                   ts-pail-path "ndvi" s-res t-res country-seq)))))
 
               fire-step ([:tmp-dirs fire-path]
                            (?- (hfs-seqfile fire-path)
@@ -187,35 +205,33 @@
 
               adjustfires
               ([:tmp-dirs adjusted-fire-path]
-                 (?- (hfs-seqfile adjusted-fire-path)
-                     (forma/fire-tap est-map (hfs-seqfile fire-path))))
-
-              ndvi-step
-              ([:tmp-dirs ndvi-path]
-                 (?- (hfs-seqfile ndvi-path)
-                     (mk-filter vcf-path
-                                (constrained-tap
-                                 ts-pail-path "ndvi" s-res t-res country-seq))))
-
-              reli-step
-              ([:tmp-dirs reli-path]
-                 (?- (hfs-seqfile reli-path)
-                     (mk-filter vcf-path
-                                (constrained-tap
-                                 ts-pail-path "reli" s-res t-res country-seq))))
+                 (with-job-conf
+                   {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
+                   (?- (hfs-seqfile adjusted-fire-path)
+                       (forma/fire-tap est-map (hfs-seqfile fire-path)))))
 
               rain-step
               ([:tmp-dirs rain-path]
-                 (?- (hfs-seqfile rain-path)
-                     (mk-filter vcf-path
-                                (new-adjusted-precl-tap
-                                 ts-pail-path "1000" "32" t-res country-seq))))
+                 (with-job-conf {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
+                   (?- (hfs-seqfile rain-path)
+                       (mk-filter vcf-path
+                                  (new-adjusted-precl-tap
+                                   ts-pail-path "1000" "32" t-res country-seq)))))
 
+              reli-step
+              ([:tmp-dirs reli-path]
+                 (with-job-conf {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
+                   (?- (hfs-seqfile reli-path)
+                       (mk-filter vcf-path
+                                  (constrained-tap
+                                   ts-pail-path "reli" s-res t-res country-seq)))))
+              
               adjustseries
               ([:tmp-dirs adjusted-series-path]
                  "Adjusts the lengths of all timeseries
                                and filters out timeseries below the proper VCF value."
-                 (with-job-conf {"mapred.min.split.size" 805306368}
+                 (with-job-conf {"mapred.min.split.size" 805306368
+                                 "cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
                    (?- (hfs-seqfile adjusted-series-path)
                        (forma/dynamic-filter (hfs-seqfile ndvi-path)
                                              (hfs-seqfile reli-path)
@@ -223,23 +239,26 @@
 
               trends ([:tmp-dirs dynamic-path]
                         "Runs the trends processing."
-                        (?- (hfs-seqfile dynamic-path)
-                            (forma/dynamic-tap
-                             est-map (hfs-seqfile adjusted-series-path))))
+                        (with-job-conf {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
+                          (?- (hfs-seqfile dynamic-path)
+                              (forma/dynamic-tap
+                               est-map (hfs-seqfile adjusted-series-path)))))
 
               mid-forma ([:tmp-dirs forma-mid-path
                           :deps [trends adjustfires]]
-                           (?- (hfs-seqfile forma-mid-path)
-                               (forma/forma-tap (hfs-seqfile dynamic-path)
-                                                (hfs-seqfile adjusted-fire-path))))
+                           (with-job-conf {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
+                             (?- (hfs-seqfile forma-mid-path)
+                                 (forma/forma-tap (hfs-seqfile dynamic-path)
+                                                  (hfs-seqfile adjusted-fire-path)))))
               
               final-forma
               ([] (let [names ["?s-res" "?period" "?mod-h" "?mod-v"
                                "?sample" "?line" "?forma-val"]
                         mid-src (-> (hfs-seqfile forma-mid-path)
                                     (name-vars names))]
-                    (?- (hfs-seqfile out-path)
-                        (forma/forma-query est-map mid-src)))))))
+                    (with-job-conf {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
+                      (?- (hfs-seqfile out-path)
+                          (forma/forma-query est-map mid-src))))))))
 
 (defn populate-local [main-path timeseries-path]
   (doto timeseries-path
