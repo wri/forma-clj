@@ -95,7 +95,7 @@
   time series (with frequency `freq`) using information in an
   associated reliability time series"
   [freq spectral-ts reli-ts]
-  (->> (harmonic-seasonal-decomposition freq 3)))
+  spectral-ts)
 
 (defn clean-tele-trends
   "clean trends (i.e., filter out bad values and remove seasonal
