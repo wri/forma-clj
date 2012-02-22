@@ -87,8 +87,7 @@ first-order conditions"
  271: last period in test time series"
  (count (telescoping-long-trend 23 100 271 ndvi reli rain)) => 172
  (count (first (telescoping-long-trend 23 100 271 ndvi reli rain))) => 3
- (count (telescoping-short-trend 30 10 23 100 271 ndvi reli))  => 172
- (last  (telescoping-short-trend 30 10 23 100 271 ndvi reli))  => (roughly -89.45618))
+ (count (telescoping-short-trend 30 10 23 100 271 ndvi reli))  => 172)
 
 (fact
  "test that the magnitude of the short-term drop of the
