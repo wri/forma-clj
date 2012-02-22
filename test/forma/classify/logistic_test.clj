@@ -119,6 +119,9 @@ first and last specified, as below."
 (defn random-eco []
   (if (zero? (rand-int 2)) 22220 22221))
 
+(def modis-sample (for [x (range 10) y (range 10)]
+                    [27 8 x y]))
+
 (def sample-dynamic-tap
   (vec (for [[h v s l] modis-sample
              pd (range 827 837)]
@@ -175,7 +178,7 @@ first and last specified, as below."
 (defn grab-forma-output
   [path]
   (let [src (hfs-seqfile path)]
-    (?<- (stdout)
+    (??<-
          [?s ?l ?prob-series]
          (src _ _ _ ?s ?l ?prob-series)
          (:distinct false))))
