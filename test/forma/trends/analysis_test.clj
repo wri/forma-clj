@@ -99,6 +99,10 @@ first-order conditions"
 
 ;; Benchmark
 
+;; (time (dotimes [_ 100] (hansen-stat ndvi)))
+;; "Elapsed time: 4465.948 msecs"
+;; (hansen-stat ndvi) => 0.9113170920764364
+
 ;; (time (dotimes [_ 1]
 ;;         (dorun (telescoping-long-trend 23 140 271 ndvi reli rain))))
 ;; "Elapsed time: 3320.463 msecs"
