@@ -66,7 +66,7 @@ first and last specified, as below."
         obs (map conj ecoid (map vector (range n)) (map vector y) (map vec X))]
     (vec (take n obs))))
 
-(defbufferop [logistic-beta-wrap [r c m]]
+(defbufferop [logistic-beta-wrap-test [r c m]]
   "returns a vector of coefficients that is accepted within the
   framework of cascalog."
   [tuples]
@@ -97,7 +97,7 @@ first and last specified, as below."
    (let [src (create-sample-tap 100)
          beta-gen (<- [?eco ?beta]
                       (src ?eco ?pixel-id ?labels ?feat-training)
-                      (logistic-beta-wrap [1e-8 1e-6 250] ?labels ?feat-training
+                      (logistic-beta-wrap-test [1e-8 1e-6 250] ?labels ?feat-training
                                           :> ?beta))
          alerts-query (<- [?eco ?pixel-id ?prob]
                           (src ?eco ?pixel-id ?labels ?feat-update)
@@ -107,12 +107,6 @@ first and last specified, as below."
                           (> ?prob 0.5))]
      alerts-query => (produces [["eco1" [31] 0.9999999999963644]
                                 ["eco1" [49] 0.9999999999765928]]))))
-
-(def est-map {:t-res "16"
-              :est-start "2005-12-31"
-              :ridge-const 1e-8
-              :convergence-thresh 1e-6
-              :max-iterations 500})
 
 (defn random-ints [] (take 5 (repeatedly #(rand-int 100))))
 
@@ -131,50 +125,6 @@ first and last specified, as below."
   (vec (for [[h v s l] modis-sample]
          ["500" h v s l 14141 35 (random-eco) (rand-int 2)])))
 
-(defbufferop [logistic-beta-wrap [r c m]]
-  "returns a vector of parameter coefficients.  note that this is
-  where the intercept is added (to the front of each stacked vector in
-  the feature matrix"
-  [tuples]
-  (let [label-seq    (map first tuples)
-        val-mat      (map (comp vec (partial cons 1) second)
-                          tuples)
-        neighbor-mat (map last tuples)
-        feature-mat  (map concat val-mat neighbor-mat)]
-    [[(logistic-beta-vector label-seq feature-mat r c m)]]))
-
-(defn logistic-prob-wrap
-  [beta-vec val neighbor-val]
-  (let [feature-vec (concat val neighbor-val)]
-    (logistic-prob beta-vec feature-vec)))
-
-(defbufferop mk-timeseries
-  [tuples]
-  [[(map second (sort-by first tuples))]])
-
-(defn beta-generator
-  [{:keys [t-res est-start ridge-const convergence-thresh max-iterations]}]
-  (let [first-idx (date/datetime->period t-res est-start)]
-    (?<- (stdout)
-         [?s-res ?eco ?beta]
-        (sample-dynamic-tap ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-        (sample-static-tap ?s-res ?mod-h ?mod-v ?s ?l ?gadm ?vcf ?eco ?hansen)
-        (= ?pd first-idx)
-        (logistic-beta-wrap [ridge-const convergence-thresh max-iterations]
-                            ?hansen ?val ?neighbor-val :> ?beta))))
-
-(defn forma-query
-  [path est-map]
-  (let [{:keys [t-res est-start ridge-const convergence-thresh max-iterations]}
-        est-map
-        beta-src (beta-generator est-map)]
-    (?<- (hfs-seqfile path)
-         [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
-         (beta-src ?s-res ?eco ?beta)
-         (sample-dynamic-tap ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-         (sample-static-tap ?s-res ?mod-h ?mod-v ?s ?l ?gadm ?vcf ?eco ?hansen)
-         (logistic-prob-wrap ?beta ?val ?neighbor-val :> ?prob)
-         (mk-timeseries ?pd ?prob :> ?prob-series))))
 
 (defn grab-forma-output
   [path]

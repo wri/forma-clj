@@ -6,7 +6,8 @@
             [forma.date-time :as date]
             [forma.schema :as schema]
             [forma.hadoop.predicate :as p]
-            [forma.trends.analysis :as a]))
+            [forma.trends.analysis :as a]
+            [forma.classify.logistic :as log]))
 
 ;; TODO: Convert these two to Cascalog queries.
 
@@ -136,26 +137,39 @@ value, and the aggregate of the neighbors."
   (concat (schema/unpack-forma-val forma-val)
           (schema/unpack-neighbor-val neighbor-val)))
 
+(defn beta-generator
+  "query to return the beta vector associated with each ecoregion"
+  [dynamic-src static-src
+   {:keys [t-res est-start ridge-const convergence-thresh max-iterations]}]
+  (let [first-idx (date/datetime->period t-res est-start)]
+    (<- [?s-res ?eco ?beta]
+        (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
+        (static-src ?s-res ?mod-h ?mod-v ?s ?l ?gadm ?vcf ?eco ?hansen)
+        (= ?pd first-idx)
+        (log/logistic-beta-wrap [ridge-const convergence-thresh max-iterations]
+                            ?hansen ?val ?neighbor-val :> ?beta))))
+
+(defn forma-estimate
+  "query to end all queries: estimate the probabilities for each
+  period after the training period.
+
+  Example usage:
+  (forma-estimate sample-dyn-src sample-static-src
+                  out-path (forma-run-parameters \"500-16\"))
+  "
+  [dynamic-src static-src out-path est-map]
+  (let [{:keys [t-res ridge-const convergence-thresh max-iterations est-start]
+         :as sub-map} est-map
+         beta-src (beta-generator dynamic-src static-src sub-map)]
+    (?<- (hfs-seqfile out-path)
+         [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
+         (beta-src ?s-res ?eco ?beta)
+         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
+         (static-src ?s-res ?mod-h ?mod-v ?s ?l ?gadm ?vcf ?eco ?hansen)
+         (log/logistic-prob-wrap ?beta ?val ?neighbor-val :> ?prob)
+         (log/mk-timeseries ?pd ?prob :> ?prob-series))))
+
 (comment
-  (defn beta-extraction
-    [{:keys [t-res est-start ridge-const convergence-thresh max-iterations]}
-     forma-src static-src]
-    (let [first-idx (date/datetime->period t-res est-start)]
-      (<- [?s-res ?eco ?beta-vec]
-          (forma-src ?s-res ?period ?mod-h ?mod-v ?sample ?line ?feature-vec)
-          (static-src ?s-res ?period ?mod-h ?mod-v ?sample ?line ?eco ?hansen)
-          (= ?period first-idx)
-          (logistic-beta-wrap [ridge-const convergence-thresh max-iterations]
-                              ?hansen ?feature-vec :> ?beta-vec))))
-
-  (defn final-q [,,,]
-    (<- [?s-res ?t-res ?mod-h ?mod-v ?sample ?line ?timeseries]
-        (beta-src ?s-res ?eco ?beta-vec)
-        (forma-src ?s-res ?period ?mod-h ?mod-v ?sample ?line ?feature-vec)
-        (static-src ?s-res ?period ?mod-h ?mod-v ?sample ?line ?eco)
-        (logistic-prob ?beta-vec ?feature-vec :> ?prob)
-        (mk-timeseries ?t-res ?period ?prob :> ?timeseries)))
-
   (let [m {:est-start "2005-12-31"
            :est-end "2010-01-17"
            :s-res "500"

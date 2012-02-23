@@ -36,11 +36,21 @@
       (map second (map (s/linear-model ts X) [:coefs :t-tests]))
       (catch IllegalArgumentException e))))
 
+(defn linear-residuals [y X] (:residuals (s/linear-model y X)))
+
 (defn expt-residuals
   "returns a list of residuals from the linear regression of `y` on
   `X`, raised to `power`"
-  [y X power]
-  (map #(expt % power) (:residuals (s/linear-model y X))))
+  [power residuals]
+  (i/pow residuals power))
+
+;; (def X (i/matrix (utils/idx ndvi)))
+;; (def y (i/matrix ndvi))
+;; (last (expt-residuals y X 2)) => 2640292.6561598806
+;; (time (dotimes [_ 100] (dorun (expt-residuals y X 2))))
+;; => "Elapsed time: 383.317 msecs"
+;; after: (time (dotimes [_ 100] (dorun (expt-residuals y X 2))))
+;; "Elapsed time: 320.351 msecs"
 
 (defn first-order-conditions
   "returns a matrix with residual weighted cofactors (incl. constant
@@ -48,16 +58,30 @@
   conditions $f_t$ in the following reference: Hansen, B. (1992)
   Testing for Parameter Instability in Linear Models, Journal for
   Policy Modeling, 14(4), pp. 517-533"
-  [y & x]
-  (let [time-step (utils/idx y)
-        X (if (empty? x)
-            (i/matrix time-step)
-            (apply i/bind-columns time-step x))
-        [resid sq-resid] (map (partial expt-residuals y X) [1 2])]
-    (vector (map * resid X)
-            (map * resid (repeat (count y) 1))
-            (map #(- % (utils/average sq-resid)) sq-resid))))
+  [y]
+  (let [ones (i/matrix (repeat (count y) 1))
+        X (i/matrix (utils/idx y))
+        resid (linear-residuals y X)
+        sq-resid (i/matrix (expt-residuals 2 resid))
+        mu (s/mean sq-resid)]
+    (i/bind-columns (i/mult resid X)
+                    (i/mult resid ones)
+                    (i/minus sq-resid mu))))
 
+    ;; (vector (map * resid X)
+            ;; (map * resid (repeat (count y) 1))
+            ;; (map #(- % (utils/average sq-resid)) sq-resid))
+
+;; (count (last (first-order-conditions ndvi))) => 271
+;; (count (first (first-order-conditions ndvi))) => 271
+;; (first (last (first-order-conditions ndvi))) => -1352787.304306197
+;; (time (dotimes [_ 100] (dorun (first-order-conditions y))))
+;; => "Elapsed time: 639.449 msecs"
+;; after: (time (dotimes [_ 100] (dorun (first-order-conditions y))))
+;; => "Elapsed time: 253.278 msecs"
+
+
+;; (defn outer-product2 [coll] (i/matrix (flatten (map #(scale % coll) coll))))
 (defn hansen-mats
   "returns the matrices of element-wise sums of (1) the first-order
   conditions, and (2) the cumulative first-order conditions.  This is

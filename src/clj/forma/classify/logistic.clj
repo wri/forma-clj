@@ -132,3 +132,29 @@
                   1e-6
                   250)]
     (probability-calc new-beta updated-features)))
+
+(defbufferop [logistic-beta-wrap [r c m]]
+  "returns a vector of parameter coefficients.  note that this is
+  where the intercept is added (to the front of each stacked vector in
+  the feature matrix
+
+  TODO: The intercept is included in the feature vector for now, as a
+  kludge when we removed the hansen statistic.  When we include the
+  hansen stat, we will have to replace the feature-mat binding below
+  with a line that tacks on a 1 to each feature vector.
+  "
+  [tuples]
+  (let [label-seq    (map first tuples) 
+        val-mat      (map second tuples) 
+        neighbor-mat (map last tuples)
+        feature-mat  (map concat val-mat neighbor-mat)]
+    [[(logistic-beta-vector label-seq feature-mat r c m)]]))
+
+(defn logistic-prob-wrap
+  [beta-vec val neighbor-val]
+  (let [feature-vec (concat val neighbor-val)]
+    (logistic-prob beta-vec feature-vec)))
+
+(defbufferop mk-timeseries
+  [tuples]
+  [[(map second (sort-by first tuples))]])
