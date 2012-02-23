@@ -100,13 +100,13 @@ first-order conditions"
 ;; Benchmark
 
 ;; (time (dotimes [_ 1]
-;;         (dorun (telescoping-long-trend 140 271 23 ndvi reli))))
+;;         (dorun (telescoping-long-trend 23 140 271 ndvi reli rain))))
 ;; "Elapsed time: 3320.463 msecs"
 
 ;; Newest implementation
 
 ;; (time (dotimes [_ 1]
-;;         (dorun (collect-short-trend 30 10 23 100 ndvi reli))))
+        ;; (dorun (telescoping-short-trend 30 10 23 138 271 ndvi reli))))
 ;; "Elapsed time: 52.322 msecs"
 
 ;; [for reference and encouragement] Original function, which mapped
@@ -179,3 +179,5 @@ values of the test data vectors."
      (produces-some [[{:start-idx 135
                        :end-idx 136
                        :series [-63.23936661263988 -63.23936661263988]}]]))))
+
+

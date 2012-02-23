@@ -155,7 +155,8 @@ first and last specified, as below."
 (defn beta-generator
   [{:keys [t-res est-start ridge-const convergence-thresh max-iterations]}]
   (let [first-idx (date/datetime->period t-res est-start)]
-    (<- [?s-res ?eco ?beta]
+    (?<- (stdout)
+         [?s-res ?eco ?beta]
         (sample-dynamic-tap ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
         (sample-static-tap ?s-res ?mod-h ?mod-v ?s ?l ?gadm ?vcf ?eco ?hansen)
         (= ?pd first-idx)
@@ -178,7 +179,7 @@ first and last specified, as below."
 (defn grab-forma-output
   [path]
   (let [src (hfs-seqfile path)]
-    (??<-
+    (?<- (stdout)
          [?s ?l ?prob-series]
          (src _ _ _ ?s ?l ?prob-series)
          (:distinct false))))

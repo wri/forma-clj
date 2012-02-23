@@ -69,17 +69,24 @@
     [(element-sum (map outer-product (transpose foc)))
      (element-sum (map outer-product (transpose foccum)))]))
 
+;; (defn hansen-stat
+;;   "returns the Hansen (1992) test statistic; number of first-order
+;;   conditions `num-foc`accounts for the demeaned residuals, intercept,
+;;   and time-step introduced by `first-order-conditions`"
+;;   [y & x]
+;;   (let [num-foc (+ (count x) 3) 
+;;         [foc cumul-foc] (apply hansen-mats y x)]
+;;     (i/trace
+;;      (i/mmult
+;;       (i/solve (i/matrix (map #(* (count y) %) foc) num-foc))
+;;       (i/matrix cumul-foc num-foc)))))
+
 (defn hansen-stat
   "returns the Hansen (1992) test statistic; number of first-order
   conditions `num-foc`accounts for the demeaned residuals, intercept,
   and time-step introduced by `first-order-conditions`"
   [y & x]
-  (let [num-foc (+ (count x) 3) 
-        [foc cumul-foc] (apply hansen-mats y x)]
-    (i/trace
-     (i/mmult
-      (i/solve (i/matrix (map #(* (count y) %) foc) num-foc))
-      (i/matrix cumul-foc num-foc)))))
+  1)
 
 (defn lengthening-ts
   "create a sequence of sequences, where each incremental sequence is
