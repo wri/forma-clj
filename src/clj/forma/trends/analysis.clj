@@ -4,6 +4,7 @@
         [cascalog.api]
         [clojure.math.numeric-tower :only (sqrt floor abs expt)]
         [forma.trends.filter])
+  (:import [org.jblas FloatMatrix MatrixFunctions Solve DoubleMatrix])
   (:require [forma.utils :as utils]
             [incanter.core :as i]
             [incanter.stats :as s]
@@ -36,13 +37,13 @@
       (map second (map (s/linear-model ts X) [:coefs :t-tests]))
       (catch IllegalArgumentException e))))
 
-(defn linear-residuals [y X] (:residuals (s/linear-model y X)))
+;; (defn linear-residuals [y X] (:residuals (s/linear-model y X)))
 
-(defn expt-residuals
-  "returns a list of residuals from the linear regression of `y` on
-  `X`, raised to `power`"
-  [power residuals]
-  (i/pow residuals power))
+;; (defn expt-residuals
+;;   "returns a list of residuals from the linear regression of `y` on
+;;   `X`, raised to `power`"
+;;   [power residuals]
+;;   (map #(expt % power) residuals))
 
 ;; (def X (i/matrix (utils/idx ndvi)))
 ;; (def y (i/matrix ndvi))
@@ -52,46 +53,76 @@
 ;; after: (time (dotimes [_ 100] (dorun (expt-residuals y X 2))))
 ;; "Elapsed time: 320.351 msecs"
 
-(defn first-order-conditions
-  "returns a matrix with residual weighted cofactors (incl. constant
-  vector) and deviations from mean; corresponds to first-order
-  conditions $f_t$ in the following reference: Hansen, B. (1992)
-  Testing for Parameter Instability in Linear Models, Journal for
-  Policy Modeling, 14(4), pp. 517-533"
-  [y]
-  (let [ones (i/matrix (repeat (count y) 1))
-        X (i/matrix (utils/idx y))
-        resid (linear-residuals y X)
-        sq-resid (i/matrix (expt-residuals 2 resid))
-        mu (s/mean sq-resid)]
-    (i/bind-columns (i/mult resid X)
-                    (i/mult resid ones)
-                    (i/minus sq-resid mu))))
+;; (defn first-order-conditions
+;;   "returns a matrix with residual weighted cofactors (incl. constant
+;;   vector) and deviations from mean; corresponds to first-order
+;;   conditions $f_t$ in the following reference: Hansen, B. (1992)
+;;   Testing for Parameter Instability in Linear Models, Journal for
+;;   Policy Modeling, 14(4), pp. 517-533"
+;;   [coll]
+;;   {:pre [(i/matrix? coll)]}
+;;   (let [n (count coll)
+;;         X (i/matrix (range n))
+;;         resid (linear-residuals coll X)
+;;         sq-resid (expt-residuals 2 resid)
+;;         mu (utils/average sq-resid)]
+;;     (i/bind-rows (map * resid X)
+;;                     (map * resid (repeat n 1))
+;;                     (map #(- % mu) sq-resid))))
 
-    ;; (vector (map * resid X)
-            ;; (map * resid (repeat (count y) 1))
-            ;; (map #(- % (utils/average sq-resid)) sq-resid))
+
+
+;; (defn foc-mat [coll]
+;;   (let [foc (first-order-conditions coll)]
+;;     ))
 
 ;; (count (last (first-order-conditions ndvi))) => 271
 ;; (count (first (first-order-conditions ndvi))) => 271
 ;; (first (last (first-order-conditions ndvi))) => -1352787.304306197
 ;; (time (dotimes [_ 100] (dorun (first-order-conditions y))))
 ;; => "Elapsed time: 639.449 msecs"
-;; after: (time (dotimes [_ 100] (dorun (first-order-conditions y))))
-;; => "Elapsed time: 253.278 msecs"
+;; after: (time (dotimes [_ 100] (dorun (first-order-conditions
+;; (i/matrix y)))))
+;; => "Elapsed time: 248.278 msecs"
 
 
-;; (defn outer-product2 [coll] (i/matrix (flatten (map #(scale % coll) coll))))
-(defn hansen-mats
-  "returns the matrices of element-wise sums of (1) the first-order
-  conditions, and (2) the cumulative first-order conditions.  This is
-  only an intermediate step in the calculation of the Hansen (1992)
-  test for parameter instability in linear models."
-  [y & x]
-  (let [foc (apply first-order-conditions y x)
-        foccum (map i/cumulative-sum foc)]
-    [(element-sum (map outer-product (transpose foc)))
-     (element-sum (map outer-product (transpose foccum)))]))
+;; (defn outer-product2 [coll] (flatten (map #(utils/scale % coll) coll)))
+
+;; (defn hansen-mats
+;;   "returns the matrices of element-wise sums of (1) the first-order
+;;   conditions, and (2) the cumulative first-order conditions.  This is
+;;   only an intermediate step in the calculation of the Hansen (1992)
+;;   test for parameter instability in linear models."
+;;   [coll]
+;;   (let [foc (first-order-conditions coll)
+;;         foccum (map i/cumulative-sum foc)]
+;;     (vec [
+;;           (element-sum (map outer-product (transpose foc)))
+;;           (element-sum (map outer-product (transpose foccum)))])))
+
+
+;; (defn hansen-stat
+;;   "returns the Hansen (1992) test statistic; number of first-order
+;;   conditions `num-foc` accounts for the demeaned residuals, intercept,
+;;   and time-step introduced by `first-order-conditions`"
+;;   [coll]
+;;   (let [hmat      (hansen-mats coll)
+;;         foc       (first hmat) 
+;;         cumul-foc (second hmat)]
+;;     (print (count cumul-foc))))
+
+    ;; (i/trace
+    ;;  (i/mmult
+    ;;   (i/solve (i/mult foc (count coll)))
+    ;;   cumul-foc))
+
+;; (last (last (hansen-mats (i/matrix y))))
+;; 4.0864006033466618E17
+
+
+;; (hansen-stat (i/matrix ndvi))
+;; 0.9113170920764445
+
 
 ;; (defn hansen-stat
 ;;   "returns the Hansen (1992) test statistic; number of first-order
@@ -109,7 +140,7 @@
   "returns the Hansen (1992) test statistic; number of first-order
   conditions `num-foc`accounts for the demeaned residuals, intercept,
   and time-step introduced by `first-order-conditions`"
-  [y & x]
+  [y]
   1)
 
 (defn lengthening-ts
