@@ -3,7 +3,8 @@
         [midje.cascalog]
         [cascalog.api]
         [clojure.math.numeric-tower :only (sqrt floor abs expt)]
-        [forma.trends.filter])
+        [forma.trends.filter]
+        [clojure.tools.logging :only (error)])
   (:require [forma.utils :as utils]
             [incanter.core :as i]
             [incanter.stats :as s]
@@ -32,11 +33,12 @@
         X (if (empty? cofactors)
             (i/matrix time-step)
             (apply i/bind-columns time-step cofactors))]
-    (try
-      (map second (map (s/linear-model ts X) [:coefs :t-tests]))
-      (catch IllegalArgumentException e))))
+    (try (map second (map (s/linear-model ts X) [:coefs :t-tests]))
+         (catch Throwable e
+           (error (str "TIMESERIES ISSUES: " ts ", " cofactors) e)))))
 
-(defn linear-residuals [y X] (:residuals (s/linear-model y X)))
+(defn linear-residuals [y X]
+  (:residuals (s/linear-model y X)))
 
 (defn expt-residuals
   "returns a list of residuals from the linear regression of `y` on

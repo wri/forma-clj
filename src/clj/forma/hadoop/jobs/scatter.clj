@@ -37,15 +37,14 @@
 
 (defmain GetStatic
   [pail-path out-path]
-  (let [[vcf hansen ecoid gadm border] (map (comp static-tap
-                                                  (partial split-chunk-tap pail-path))
-                                            [["vcf"] ["hansen"]
-                                             ["ecoid"] ["gadm"]
-                                             ["border"]])]
+  (let [[vcf hansen ecoid gadm border]
+        (map (comp static-tap (partial split-chunk-tap pail-path))
+             [["vcf"] ["hansen"] ["ecoid"] ["gadm"] ["border"]])]
     (?<- (hfs-textline out-path
                        :sinkparts 3
                        :sink-template "%s/")
-         [?country ?lat ?lon ?mod-h ?mod-v ?sample ?line ?hansen ?ecoid ?vcf ?gadm ?border]
+         [?country ?lat ?lon ?mod-h ?mod-v
+          ?sample ?line ?hansen ?ecoid ?vcf ?gadm ?border]
          (vcf    ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
          (hansen ?s-res ?mod-h ?mod-v ?sample ?line ?hansen)
          (ecoid  ?s-res ?mod-h ?mod-v ?sample ?line ?ecoid)
@@ -55,6 +54,17 @@
          (convert-line-src ?textline)
          (p/converter ?textline :> ?country ?gadm)
          (>= ?vcf 25))))
+
+(defn static-src [{:keys [vcf-limit]} pail-path]
+  (let [[vcf hansen ecoid gadm border]
+        (map (comp static-tap (partial split-chunk-tap pail-path))
+             [["vcf"] ["hansen"] ["ecoid"] ["gadm"] ["border"]])]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?gadm ?vcf ?ecoid ?hansen]
+        (vcf    ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
+        (hansen ?s-res ?mod-h ?mod-v ?sample ?line ?hansen)
+        (ecoid  ?s-res ?mod-h ?mod-v ?sample ?line ?ecoid)
+        (gadm   ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
+        (>= ?vcf vcf-limit))))
 
 ;; ## Forma
 
@@ -284,16 +294,52 @@
                    (repeat 10))])))
 
 (comment
-  "We need to move this over to the testing namespace. This is an
-example of how you'd populate a local directory with some timeseries
-and run forma:"
-  (let [main-path "/Users/sritchie/Desktop/mypail2"
-        ts-path   "/Users/sritchie/Desktop/tspail2"
-        out-path  "/Users/sritchie/Desktop/updawg2"]
-    ;; (populate-local main-path ts-path)
-    (formarunner "/Users/sritchie/Desktop/checkpoint"
-                 main-path
-                 ts-path
-                 out-path
-                 "500-16"
-                 [[8 6]])))
+  (ultrarunner "/user/hadoop/checkpoint"
+               "s3n://pailbucket/master"
+               "s3n://formaresults/firetemp"
+               "s3n://formaresults/trendstemp"
+               "s3n://formaresults/output"
+               "s3n://formaresults/finaloutput"))
+
+(def kryo-conf
+  {"cascading.kryo.serializations"   "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"})
+
+(defmain ultrarunner
+  [tmp-root pail-path fire-path trends-path final-path out-path]
+  (let [{:keys [s-res t-res est-end] :as est-map} (forma-run-parameters "500-16")]
+    (workflow [tmp-root]
+              mid-forma
+              ([:tmp-dirs forma-mid-path]
+                 (with-job-conf kryo-conf
+                   (?- (hfs-seqfile forma-mid-path)
+                       (forma/forma-tap (hfs-seqfile trends-path)
+                                        (hfs-seqfile fire-path)))))
+            
+              final-forma
+              ([]
+                 (let [names ["?s-res" "?period" "?mod-h" "?mod-v"
+                              "?sample" "?line" "?forma-val"]
+                       mid-src (-> (hfs-seqfile forma-mid-path)
+                                   (name-vars names))]
+                   (with-job-conf kryo-conf
+                     (?- (hfs-seqfile final-path)
+                         (forma/forma-query est-map mid-src)))))
+
+              bucketstatic
+              ([:tmp-dirs static-path]
+                 (?- (hfs-seqfile static-path)
+                     (static-src est-map pail-path)))
+              
+              genbetas
+              ([:tmp-dirs beta-path]
+                 (?- (hfs-seqfile beta-path)
+                     (forma/beta-generator est-map
+                                           (hfs-seqfile final-path)
+                                           (hfs-seqfile static-path))))
+
+              applybetas
+              ([] (?- (hfs-seqfile out-path :sinkmode :replace)
+                      (forma/forma-estimate est-map
+                                            (hfs-seqfile beta-path)
+                                            (hfs-seqfile final-path)
+                                            (hfs-seqfile static-path)))))))

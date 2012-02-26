@@ -10,6 +10,7 @@
   :jvm-opts ["-XX:MaxPermSize=128M" "-Xms1024M" "-Xmx2048M" "-server"]
   :dependencies [[org.clojure/clojure "1.3.0"]
                  [org.clojure/tools.cli "0.1.0"]
+                 [org.clojure/tools.logging "0.2.3"]
                  [clojure-csv/clojure-csv "1.3.2"]
                  [org.clojure/math.numeric-tower "0.0.1"]
                  [incanter/incanter-core "1.3.0-SNAPSHOT"]

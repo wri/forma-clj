@@ -104,7 +104,6 @@
       (p/index ?forma-seq :zero-index ?start :> ?period ?forma-val)
       (:distinct false)))
 
-;; TODO: Filter identity, instead of complement nil
 (defmapcatop [process-neighbors [num-neighbors]]
   "Processes all neighbors... Returns the index within the chunk, the
 value, and the aggregate of the neighbors."
@@ -114,7 +113,7 @@ value, and the aggregate of the neighbors."
         :when val]
     [idx val (->> neighbors
                   (apply concat)
-                  (filter (complement nil?))
+                  (filter identity)
                   (schema/combine-neighbors))]))
 
 (defn forma-query
@@ -133,41 +132,28 @@ value, and the aggregate of the neighbors."
         (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)
         (:distinct false))))
 
-(defn mk-feature-vec [forma-val neighbor-val]
-  (concat (schema/unpack-forma-val forma-val)
-          (schema/unpack-neighbor-val neighbor-val)))
-
 (defn beta-generator
   "query to return the beta vector associated with each ecoregion"
-  [dynamic-src static-src
-   {:keys [t-res est-start ridge-const convergence-thresh max-iterations]}]
+  [{:keys [t-res est-start ridge-const convergence-thresh max-iterations]}
+   dynamic-src static-src]
   (let [first-idx (date/datetime->period t-res est-start)]
     (<- [?s-res ?eco ?beta]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l ?gadm ?vcf ?eco ?hansen)
         (= ?pd first-idx)
         (log/logistic-beta-wrap [ridge-const convergence-thresh max-iterations]
-                            ?hansen ?val ?neighbor-val :> ?beta))))
+                                ?hansen ?val ?neighbor-val :> ?beta))))
 
 (defn forma-estimate
   "query to end all queries: estimate the probabilities for each
-  period after the training period.
-
-  Example usage:
-  (forma-estimate sample-dyn-src sample-static-src
-                  out-path (forma-run-parameters \"500-16\"))
-  "
-  [dynamic-src static-src out-path est-map]
-  (let [{:keys [t-res ridge-const convergence-thresh max-iterations est-start]
-         :as sub-map} est-map
-         beta-src (beta-generator dynamic-src static-src sub-map)]
-    (?<- (hfs-seqfile out-path)
-         [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
-         (beta-src ?s-res ?eco ?beta)
-         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-         (static-src ?s-res ?mod-h ?mod-v ?s ?l ?gadm ?vcf ?eco ?hansen)
-         (log/logistic-prob-wrap ?beta ?val ?neighbor-val :> ?prob)
-         (log/mk-timeseries ?pd ?prob :> ?prob-series))))
+  period after the training period."
+  [beta-src dynamic-src static-src]
+  (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
+      (beta-src ?s-res ?eco ?beta)
+      (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
+      (static-src ?s-res ?mod-h ?mod-v ?s ?l ?gadm ?vcf ?eco ?hansen)
+      (log/logistic-prob-wrap ?beta ?val ?neighbor-val :> ?prob)
+      (log/mk-timeseries ?pd ?prob :> ?prob-series)))
 
 (comment
   (let [m {:est-start "2005-12-31"

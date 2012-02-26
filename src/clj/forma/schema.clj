@@ -184,36 +184,12 @@
      m1 m2 [:t-stat :fire :short :param-break :long])))
 
 (defn forma-value
-  "Creates forma object containing various characteristics of pixel timeseries
-
-    (forma-value {:temp-330 1, :conf-50 0, :both-preds 3, :count 4}
-                  -2.7
-                  -1.2
-                  1.725)
-    ;=> {:fire-value
-         {:count 4, :conf-50 0, :temp-330 1, :both-preds 3},
-         :short-drop -2.7,
-         :long-drop -1.2,
-         :t-stat 1.725}"
+  "Returns a vector containing a FireValue, short-term drop,
+  parametrized break, long-term drop and t-stat of the short-term
+  drop."
   [fire short param-break long t-stat]
   (let [fire (or fire (FireValue. 0 0 0 0))]
     [fire short param-break long t-stat]))
-
-(defn unpack-forma-val
-  "Returns a vector containing the fire value, short drop,
-  long drop and t-stat fields of the supplied `FormaValue`.
-
-    (unpack-forma-val {:fire-value
-                       {:count 4, :conf-50 0, :temp-330 1, :both-preds 3},
-                       :short-drop -2.7,
-                       :long-drop -1.2,
-                       :t-stat 1.725})
-
-    ;=> [{:count 4, :conf-50 0, :temp-330 1, :both-preds 3} -2.7 -1.2 1.725]"
-  [forma-val]
-  (map (partial get forma-val)
-       [:fire-value :short-drop :param-break
-        :long-drop :t-stat]))
 
 ;; ## Neighbor Values
 
@@ -231,12 +207,8 @@
 (defn neighbor-value
   "Accepts either a forma value or a sequence of sub-values."
   ;; TODO: come up with an example
-  ([{:keys [fire-value short-drop param-break long-drop t-stat]}]
-     (NeighborValue. fire-value 1
-                     short-drop short-drop
-                     param-break param-break
-                     long-drop long-drop
-                     t-stat t-stat))
+  ([[fire short param long t-stat]]
+     (NeighborValue. fire 1 short short param param long long t-stat t-stat))
   ([fire neighbors avg-short
     min-short avg-param min-param avg-long min-long avg-stat min-stat]
      (NeighborValue.
@@ -261,14 +233,15 @@
   ;; TODO: come up with an example
   [neighbors forma-val]
   (let [n-count  (:neighbor-count neighbors)
-        [fire short param long t-stat] (unpack-forma-val forma-val)]
+        [fire short param long t-stat] forma-val]
+    (prn neighbors ", " [fire short param long t-stat])
     (-> neighbors
         (update-in [:fire-value]     add-fires fire)
         (update-in [:neighbor-count] inc)
-        (update-in [:avg-short-drop] u/weighted-mean n-count short 1)
-        (update-in [:avg-param-break] u/weighted-mean n-count param 1)
-        (update-in [:avg-long-drop]  u/weighted-mean n-count long 1)
-        (update-in [:avg-t-stat]     u/weighted-mean n-count t-stat 1)
+        ;; (update-in [:avg-short-drop] u/weighted-mean n-count short 1)
+        ;; (update-in [:avg-param-break] u/weighted-mean n-count param 1)
+        ;; (update-in [:avg-long-drop]  u/weighted-mean n-count long 1)
+        ;; (update-in [:avg-t-stat]     u/weighted-mean n-count t-stat 1)
         (update-in [:min-short-drop] min short)
         (update-in [:min-param-break] min param)
         (update-in [:min-long-drop]  min long)
