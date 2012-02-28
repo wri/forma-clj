@@ -270,61 +270,14 @@
                       (?- (hfs-seqfile out-path)
                           (forma/forma-query est-map mid-src))))))))
 
-(defn populate-local [main-path timeseries-path]
-  (doto timeseries-path
-    (to-pail [[(schema/chunk-value
-                "ndvi" "16" nil
-                (schema/pixel-location "500" 8 6 0 0)
-                (schema/timeseries-value 693 (concat ndvi ndvi)))]])
-    (to-pail [[(schema/chunk-value
-                "reli" "16" nil
-                (schema/pixel-location "500" 8 6 0 0)
-                (schema/timeseries-value 693 (concat reli reli)))]])
-    (to-pail [[(schema/chunk-value
-                "precl" "32" nil
-                (schema/pixel-location "1000" 8 6 0 0)
-                (schema/timeseries-value 361 rain-raw))]]))
-  (doto main-path
-    (to-pail [[(schema/chunk-value "vcf" "00" nil
-                                   (schema/chunk-location "500" 8 6 0 24000)
-                                   (into [] (repeat 24000 30)))]])
-    (to-pail [(->> (schema/chunk-value "fire" "01" "2004-12-01"
-                                       (schema/pixel-location "500" 8 6 0 0)
-                                       (schema/fire-value 1 1 1 1))
-                   (repeat 10))])))
-
-(comment
-  (ultrarunner "/user/hadoop/checkpoint"
-               "s3n://pailbucket/master"
-               "s3n://formaresults/firetemp"
-               "s3n://formaresults/trendstemp"
-               "s3n://formaresults/finaloutput"))
-
 (def kryo-conf
   {"cascading.kryo.serializations"   "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"
    "fs.s3n.multipart.uploads.enabled" true})
 
 (defmain ultrarunner
-  [tmp-root pail-path fire-path trends-path out-path]
-  (let [{:keys [s-res t-res est-end] :as est-map} (forma-run-parameters "500-16")]
+  [tmp-root static-path final-path out-path]
+  (let [est-map (forma-run-parameters "500-16")]
     (workflow [tmp-root]
-              mid-forma
-              ([:tmp-dirs forma-mid-path]
-                 (with-job-conf kryo-conf
-                   (?- (hfs-seqfile forma-mid-path)
-                       (forma/forma-tap (hfs-seqfile trends-path)
-                                        (hfs-seqfile fire-path)))))
-            
-              final-forma
-              ([:tmp-dirs final-path]
-                 (let [names
-                       ["?s-res" "?period" "?mod-h" "?mod-v" "?sample" "?line" "?forma-val"]
-                       mid-src (-> (hfs-seqfile forma-mid-path)
-                                   (name-vars names))]
-                   (with-job-conf kryo-conf
-                     (?- (hfs-seqfile final-path)
-                         (forma/forma-query est-map mid-src)))))
-
               bucketstatic
               ([:tmp-dirs static-path]
                  (?- (hfs-seqfile static-path)
@@ -343,3 +296,10 @@
                                             (hfs-seqfile beta-path)
                                             (hfs-seqfile final-path)
                                             (hfs-seqfile static-path)))))))
+
+(comment
+  "Run this:"
+  (ultrarunner "/user/hadoop/checkpoint"
+               "s3n://formaresults/staticbuckettemp"
+               "s3n://formaresults/finalbuckettemp"
+               "s3n://formaresults/finaloutput"))
