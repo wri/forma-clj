@@ -145,3 +145,18 @@ first and last specified, as below."
          (logistic-beta-wrap [1e-6 1e-8 250] ?hansen ?val ?neighbor-val :> ?beta)
          (:distinct false))))
 
+(defbufferop num-distinct [tuples]
+  [(reduce +
+           (map (partial thresh-make-binary -1)
+                (apply concat tuples)))])
+
+(defn examine-data
+  "path to partfile that comes from s3://formaresults/prebetatemp;
+  test to make sure that the betas are produced"
+  [path]
+  (let [src (hfs-seqfile path)]
+    (?<- (stdout)
+         [?eco ?num]
+         (src ?mod-h ?mod-v ?s ?l ?eco ?hansen ?val ?neighbor-val)
+         (num-distinct ?hansen :> ?num))))
+
