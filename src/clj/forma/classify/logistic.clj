@@ -1,5 +1,6 @@
 (ns forma.classify.logistic
   (:use [forma.utils]
+        [forma.schema :only (unpack-neighbor-val)]
         [clojure.math.numeric-tower :only (abs)]
         [forma.matrix.utils]
         [cascalog.api])
@@ -105,9 +106,8 @@
     (loop [beta beta-init
            iter max-iter
            beta-diff 100]
-      (if (or
-           (zero? iter)
-           (< beta-diff converge-threshold))
+      (if (or (zero? iter)
+              (< beta-diff converge-threshold))
         beta
         (let [update (beta-update beta label-seq feature-mat rdg-cons)
               beta-new (map + beta update)
@@ -133,6 +133,26 @@
                   250)]
     (probability-calc new-beta updated-features)))
 
+(defn unpack-neighbors
+  "Returns a vector containing the fields of a forma-neighbor-value."
+  [neighbor-val]
+  (map (partial get neighbor-val)
+       [:fire-value :neighbor-count
+        :avg-short-drop :min-short-drop
+        :avg-long-drop :min-long-drop
+        :avg-t-stat :min-t-stat]))
+
+(defn unpack-fire [fire]
+  (map (partial get fire)
+       [:temp-330 :conf-50 :both-preds :count]))
+
+(defn unpack-feature-vec [val neighbor-val]
+  (let [[fire short _ long t-stat] val
+        fire-seq (unpack-fire fire)
+        [fire-neighbors & more] (unpack-neighbors neighbor-val)
+        fire-neighbor (unpack-fire fire-neighbors)]
+    (into [] (concat fire-seq [short long t-stat] fire-neighbor more))))
+
 (defbufferop [logistic-beta-wrap [r c m]]
   "returns a vector of parameter coefficients.  note that this is
   where the intercept is added (to the front of each stacked vector in
@@ -147,13 +167,12 @@
   (let [label-seq    (map first tuples) 
         val-mat      (map second tuples) 
         neighbor-mat (map last tuples)
-        feature-mat  (map concat val-mat neighbor-mat)]
+        feature-mat  (map unpack-feature-vec val-mat neighbor-mat)]
     [[(logistic-beta-vector label-seq feature-mat r c m)]]))
 
 (defn logistic-prob-wrap
   [beta-vec val neighbor-val]
-  (let [feature-vec (concat val neighbor-val)]
-    (logistic-prob beta-vec feature-vec)))
+  (logistic-prob beta-vec (unpack-feature-vec val neighbor-val)))
 
 (defbufferop mk-timeseries
   [tuples]

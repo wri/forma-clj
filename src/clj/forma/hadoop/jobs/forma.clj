@@ -107,6 +107,7 @@
 (defmapcatop [process-neighbors [num-neighbors]]
   "Processes all neighbors... Returns the index within the chunk, the
 value, and the aggregate of the neighbors."
+
   [window]
   (for [[idx [val neighbors]] (->> (w/neighbor-scan num-neighbors window)
                                    (map-indexed vector))
@@ -139,10 +140,11 @@ value, and the aggregate of the neighbors."
   (let [first-idx (date/datetime->period t-res est-start)]
     (<- [?s-res ?eco ?beta]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-        (static-src ?s-res ?mod-h ?mod-v ?s ?l ?gadm ?vcf ?eco ?hansen)
+        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen)
         (= ?pd first-idx)
         (log/logistic-beta-wrap [ridge-const convergence-thresh max-iterations]
-                                ?hansen ?val ?neighbor-val :> ?beta))))
+                                ?hansen ?val ?neighbor-val :> ?beta)
+        (:distinct false))))
 
 (defn forma-estimate
   "query to end all queries: estimate the probabilities for each
@@ -151,9 +153,10 @@ value, and the aggregate of the neighbors."
   (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
       (beta-src ?s-res ?eco ?beta)
       (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-      (static-src ?s-res ?mod-h ?mod-v ?s ?l ?gadm ?vcf ?eco ?hansen)
+      (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)
       (log/logistic-prob-wrap ?beta ?val ?neighbor-val :> ?prob)
-      (log/mk-timeseries ?pd ?prob :> ?prob-series)))
+      (log/mk-timeseries ?pd ?prob :> ?prob-series)
+      (:distinct false)))
 
 (comment
   (let [m {:est-start "2005-12-31"

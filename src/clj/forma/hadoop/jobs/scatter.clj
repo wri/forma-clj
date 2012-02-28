@@ -298,14 +298,14 @@
                "s3n://pailbucket/master"
                "s3n://formaresults/firetemp"
                "s3n://formaresults/trendstemp"
-               "s3n://formaresults/output"
                "s3n://formaresults/finaloutput"))
 
 (def kryo-conf
-  {"cascading.kryo.serializations"   "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"})
+  {"cascading.kryo.serializations"   "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"
+   "fs.s3n.multipart.uploads.enabled" true})
 
 (defmain ultrarunner
-  [tmp-root pail-path fire-path trends-path final-path out-path]
+  [tmp-root pail-path fire-path trends-path out-path]
   (let [{:keys [s-res t-res est-end] :as est-map} (forma-run-parameters "500-16")]
     (workflow [tmp-root]
               mid-forma
@@ -316,9 +316,9 @@
                                         (hfs-seqfile fire-path)))))
             
               final-forma
-              ([]
-                 (let [names ["?s-res" "?period" "?mod-h" "?mod-v"
-                              "?sample" "?line" "?forma-val"]
+              ([:tmp-dirs final-path]
+                 (let [names
+                       ["?s-res" "?period" "?mod-h" "?mod-v" "?sample" "?line" "?forma-val"]
                        mid-src (-> (hfs-seqfile forma-mid-path)
                                    (name-vars names))]
                    (with-job-conf kryo-conf
