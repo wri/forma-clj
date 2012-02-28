@@ -49,11 +49,11 @@ first and last specified, as below."
 
 (def new-prob (estimated-probabilities y X X))
 
-(defn make-binary
+(defn thresh-make-binary
   [threshold val]
   (if (< val threshold) 0 1))
 
-(def alerts (map (partial make-binary 0.5) new-prob))
+(def alerts (map (partial thresh-make-binary 0.5) new-prob))
 
 (defn eco-generator [n]
   (map vector (map #(if (odd? %) "eco1" "eco2") (range n))))
@@ -133,3 +133,15 @@ first and last specified, as below."
          [?s ?l ?prob-series]
          (src _ _ _ ?s ?l ?prob-series)
          (:distinct false))))
+
+(defn look-at-feat
+  "path to partfile that comes from s3://formaresults/prebetatemp;
+  test to make sure that the betas are produced"
+  [path]
+  (let [src (hfs-seqfile path)]
+    (?<- (stdout)
+         [?eco ?beta]
+         (src ?mod-h ?mod-v ?s ?l ?eco ?hansen ?val ?neighbor-val)
+         (logistic-beta-wrap [1e-6 1e-8 250] ?hansen ?val ?neighbor-val :> ?beta)
+         (:distinct false))))
+

@@ -153,6 +153,10 @@
         fire-neighbor (unpack-fire fire-neighbors)]
     (into [] (concat fire-seq [short long t-stat] fire-neighbor more))))
 
+(defn make-binary
+  [x]
+  (if (zero? x) 0 1))
+
 (defbufferop [logistic-beta-wrap [r c m]]
   "returns a vector of parameter coefficients.  note that this is
   where the intercept is added (to the front of each stacked vector in
@@ -164,7 +168,7 @@
   with a line that tacks on a 1 to each feature vector.
   "
   [tuples]
-  (let [label-seq    (map first tuples) 
+  (let [label-seq    (map (comp make-binary first) tuples) 
         val-mat      (map second tuples) 
         neighbor-mat (map last tuples)
         feature-mat  (map unpack-feature-vec val-mat neighbor-mat)]
