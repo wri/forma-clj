@@ -283,14 +283,13 @@
                  (?- (hfs-seqfile beta-path :sinkmode :replace)
                      (forma/beta-generator est-map
                                            (hfs-seqfile final-path)
-                                           (hfs-seqfile static-path))))
-
-              applybetas
-              ([] (?- (hfs-seqfile out-path :sinkmode :replace)
-                      (forma/forma-estimate est-map
-                                            (hfs-seqfile beta-path)
-                                            (hfs-seqfile final-path)
-                                            (hfs-seqfile static-path)))))))
+                                           (hfs-seqfile static-path)))))))
+;; genbetas
+;; ([:tmp-dirs beta-path]
+;;    (?- (hfs-seqfile beta-path)
+;;        (forma/beta-generator est-map
+;;                              (hfs-seqfile final-path)
+;;                              (hfs-seqfile static-path))))
 
 (comment
   "Run this:"
