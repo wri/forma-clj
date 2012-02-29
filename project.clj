@@ -7,7 +7,7 @@
   :repositories {"conjars" "http://conjars.org/repo/"}
   :marginalia {:javascript ["mathjax/MathJax.js"]}
   :javac-options {:debug "true" :fork "true"}
-  :jvm-opts ["-XX:MaxPermSize=128M" "-Xms1024M" "-Xmx2048M" "-server"]
+  :jvm-opts ["-XX:MaxPermSize=128M" "-XX:-UseConcMarkSweepGC" "-Xms1024M" "-Xmx2048M" "-server"]
   :dependencies [[org.clojure/clojure "1.3.0"]
                  [org.clojure/tools.cli "0.1.0"]
                  [org.clojure/tools.logging "0.2.3"]
