@@ -277,12 +277,7 @@
 (defmain ultrarunner
   [tmp-root static-path final-path out-path]
   (let [est-map (forma-run-parameters "500-16")]
-    (workflow [tmp-root]
-              bucketstatic
-              ([:tmp-dirs static-path]
-                 (?- (hfs-seqfile static-path)
-                     (static-src est-map pail-path)))
-              
+    (workflow [tmp-root]              
               genbetas
               ([:tmp-dirs beta-path]
                  (?- (hfs-seqfile beta-path)
