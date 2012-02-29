@@ -278,19 +278,18 @@
   [tmp-root static-path final-path out-path]
   (let [est-map (forma-run-parameters "500-16")]
     (workflow [tmp-root]              
-              genbetas
-              ([:tmp-dirs beta-path]
-                 (?- (hfs-seqfile beta-path)
-                     (forma/beta-generator est-map
-                                           (hfs-seqfile final-path)
-                                           (hfs-seqfile static-path))))
-
               applybetas
               ([] (?- (hfs-seqfile out-path :sinkmode :replace)
                       (forma/forma-estimate est-map
-                                            (hfs-seqfile beta-path)
+                                            "placeholder"
                                             (hfs-seqfile final-path)
                                             (hfs-seqfile static-path)))))))
+;; genbetas
+;; ([:tmp-dirs beta-path]
+;;    (?- (hfs-seqfile beta-path)
+;;        (forma/beta-generator est-map
+;;                              (hfs-seqfile final-path)
+;;                              (hfs-seqfile static-path))))
 
 (comment
   "Run this:"

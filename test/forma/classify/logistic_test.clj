@@ -8,6 +8,7 @@
   (:import [org.jblas FloatMatrix])
   (:require [incanter.core :as i]
             [forma.testing :as t]
+            [cascalog.ops :as c]
             [forma.date-time :as date]))
 
 (defn read-mys-csv
@@ -125,4 +126,15 @@ first and last specified, as below."
   (vec (for [[h v s l] modis-sample]
          ["500" h v s l 14141 35 (random-eco) (rand-int 2)])))
 
+(defn examine-beta [beta-path]
+  (let [beta-src (hfs-seqfile beta-path)]
+    (?<- (stdout)
+         [?eco ?beta]
+         (beta-src ?sres ?eco ?beta))))
 
+
+(defn examine-beta [datastore-path final-path]
+  (let [src (name-vars (hfs-seqfile datastore-path)
+                       ["?s-res" "?eco" "?beta"])]
+    (?- (hfs-textline final-path)
+        (c/first-n src 200))))
