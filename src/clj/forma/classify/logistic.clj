@@ -3,8 +3,10 @@
         [forma.schema :only (unpack-neighbor-val)]
         [clojure.math.numeric-tower :only (abs)]
         [forma.matrix.utils]
-        [cascalog.api])
-  (:require [incanter.core :as i])
+        [cascalog.api]
+        [clojure-csv.core])
+  (:require [incanter.core :as i]
+            [cascalog.ops :as c])
   (:import [org.jblas FloatMatrix MatrixFunctions Solve DoubleMatrix]))
 
 ;; TODO: correct for error induced by ridge
@@ -181,6 +183,35 @@
 (defbufferop mk-timeseries
   [tuples]
   [[(map second (sort-by first tuples))]])
+
+(defn look-at-output
+  [path textpath]
+  (let [src (hfs-seqfile path)]
+    (?<- (hfs-textline textpath)
+         [?mod-h ?mod-v ?s ?l ?thresh]
+         (src ?s-res ?mod-h ?mod-v ?s ?l ?prob-series)
+         (first ?prob-series :> ?thresh)
+         (> ?thresh 0.5))))
+
+(defn beta-dictionary
+  [beta-path]
+  (let [src (hfs-seqfile beta-path)
+        beta-tap (??<- [?eco ?beta]
+                       (src ?s-res ?eco ?beta))]
+    beta-tap))
+
+(defn make-dict
+  [v]
+  {(keyword (str (second v)))
+   (last v)})
+
+(defn examine-beta [datastore-path]
+  (let [src (name-vars (hfs-seqfile datastore-path)
+                       ["?s-res" "?eco" "?beta"])
+        beta-vec (first (??- (c/first-n src 200)))]
+    (apply merge-with identity
+           (map make-dict beta-vec))))
+
 
 (def beta-map
   {:40159 [0.0 0.0 0.0 0.0 0.06325956015102006 -0.16519407866340646 -0.5348362045894003 0.0 0.0 0.0 0.0 -0.686224132946902 -0.018079615166628565 0.026912345439857023 0.08109012937829134 0.007560497631149489 -0.3501106177352919 -0.8871233045997788]

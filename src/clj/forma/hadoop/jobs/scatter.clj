@@ -281,7 +281,6 @@
               applybetas
               ([] (?- (hfs-seqfile out-path :sinkmode :replace)
                       (forma/forma-estimate est-map
-                                            "placeholder"
                                             (hfs-seqfile final-path)
                                             (hfs-seqfile static-path)))))))
 ;; genbetas
