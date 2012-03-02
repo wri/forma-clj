@@ -208,4 +208,3 @@
     (assoc (apply merge-with identity
                   (map make-dict beta-vec))
       :full (last (first beta-full)))))
-
