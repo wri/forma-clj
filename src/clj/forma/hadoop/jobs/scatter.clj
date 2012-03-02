@@ -275,26 +275,27 @@
    "fs.s3n.multipart.uploads.enabled" true})
 
 (defmain ultrarunner
-  [tmp-root static-path beta-path final-path out-path]
+  [tmp-root full-beta-path static-path final-path out-path]
   (let [est-map (forma-run-parameters "500-16")]
     (workflow [tmp-root]              
               genbetas
               ([]
-                 (?- (hfs-seqfile beta-path :sinkmode :replace)
+                 (?- (hfs-seqfile full-beta-path)
                      (forma/beta-generator est-map
                                            (hfs-seqfile final-path)
                                            (hfs-seqfile static-path)))))))
-;; genbetas
-;; ([:tmp-dirs beta-path]
-;;    (?- (hfs-seqfile beta-path)
-;;        (forma/beta-generator est-map
-;;                              (hfs-seqfile final-path)
-;;                              (hfs-seqfile static-path))))
+
+
+;; applybetas
+;;               ([] (?- (hfs-seqfile out-path :sinkmode :replace)
+;;                       (forma/forma-estimate est-map
+;;                                             (hfs-seqfile final-path)
+;;                                             (hfs-seqfile static-path))))
 
 (comment
   "Run this:"
   (ultrarunner "/user/hadoop/checkpoint"
+               "s3n://formaresults/fullbetatemp"               
                "s3n://formaresults/staticbuckettemp"
-               "s3n://formaresults/betabuckettemp"
                "s3n://formaresults/finalbuckettemp"
                "s3n://formaresults/finaloutput"))
