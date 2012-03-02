@@ -148,7 +148,7 @@ value, and the aggregate of the neighbors."
 
 (defn apply-betas
   [eco val neighbor-val]
-  (let [beta (log/beta-map (keyword (str eco)))]
+  (let [beta (log/beta-dict (keyword (str eco)))]
     (if (nil? beta)
       nil
       (log/logistic-prob-wrap beta val neighbor-val))))
