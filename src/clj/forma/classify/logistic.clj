@@ -201,12 +201,11 @@
 (defn beta-dict [eco-beta-src full-beta-src]
   (let [src (name-vars eco-beta-src
                        ["?s-res" "?eco" "?beta"])
-        full-src (name-vars full-beta-path
-                            ["?s-res" "?eco" "?beta"])
+        full-src (name-vars full-beta-src
+                            ["?s-res" "?beta"])
         beta-full (first (??- (c/first-n full-src 1)))
         beta-vec  (first (??- (c/first-n src 200)))]
     (assoc (apply merge-with identity
                   (map make-dict beta-vec))
       :full (last (first beta-full)))))
-
 

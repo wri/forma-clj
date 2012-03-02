@@ -302,3 +302,9 @@
                "s3n://formaresults/staticbuckettemp"
                "s3n://formaresults/finalbuckettemp"
                "s3n://formaresults/finaloutput"))
+
+(ultrarunner "/user/hadoop/checkpoint"
+             "s3n://formaresults/fullbetatemp"               
+             "s3n://formaresults/staticbuckettemp"
+             "s3n://formaresults/finalbuckettemp"
+             "s3n://formaresults/finaloutput")
