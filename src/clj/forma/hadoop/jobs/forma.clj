@@ -147,16 +147,18 @@ value, and the aggregate of the neighbors."
         (:distinct false))))
 
 (defn apply-betas
-  [eco val neighbor-val]
-  (let [beta (log/beta-map (keyword (str eco)))]
+  [eco-beta-src full-beta-src eco val neighbor-val]
+  (let [beta-map (log/beta-dict eco-beta-src full-beta-src)
+        beta (beta-map (keyword (str eco)))
+        beta-full (beta-map :full)]
     (if (nil? beta)
-      nil
+      (log/logistic-prob-wrap beta-full val neighbor-val)
       (log/logistic-prob-wrap beta val neighbor-val))))
 
 (defn forma-estimate
   "query to end all queries: estimate the probabilities for each
   period after the training period."
-  [beta-src dynamic-src static-src]
+  [eco-beta-src full-beta-src dynamic-src static-src]
   (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
       (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
       (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)
