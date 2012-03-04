@@ -125,10 +125,9 @@ information on how each variable is weighted."
   (vec (for [[h v s l] modis-sample]
          ["500" h v s l 14141 35 (random-eco) (rand-int 2)])))
 
-(facts
- (let [beta (repeat (count (first X)) 1)]
-   (logistic-prob [1 2 3] [0.5 0.5 0.5]) => (roughly 0.9525)
-   (reduce + (probability-calc beta X)) => (roughly 1.3288)))
+(fact
+ (logistic-prob (to-double-rowmat [1 2 3])
+                (to-double-rowmat [0.5 0.5 0.5])) => (roughly 0.9525))
 
 
 

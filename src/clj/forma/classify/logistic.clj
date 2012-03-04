@@ -8,11 +8,12 @@
   (:import [org.jblas FloatMatrix MatrixFunctions Solve DoubleMatrix]))
 
 ;; TODO: correct for error induced by ridge
+;; TODO: Add docs!!!
 
 ;; Namespace Conventions: Each observation is assigned a binary
 ;; `label` which indicates deforestation during the training period.
-;; These labels are collected for a group of pixels into `label-seq`.
-;; Each pixel also has a sequence of features, or `feature-seq`.  The
+;; These labels are collected for a group of pixels into `label-row`.
+;; Each pixel also has a matrix of features, or `feature-mat`.  The
 ;; pixel is identified by the order its attributes appear in the
 ;; feature and label sequence.  That is, it is vital that the labels
 ;; and feature sequences are consistently positioned in the label and
@@ -37,16 +38,6 @@
 (defn copy-row
   [^DoubleMatrix row]
   (.copy (to-double-matrix [[]]) row))
-
-(def bm (to-double-rowmat (repeat 5 1)))
-(def ym (to-double-rowmat (interleave (repeat 10 0) (repeat 10 1))))
-(defn reshape [v c]
-  (if (= (count v) 1)
-    c
-    (recur (butlast v)
-           (partition (last v) c))))
-(def feat (reshape '(10 5) (range 100)))
-(def Xm (to-double-matrix  feat))
 
 (defn logistic-prob
   [^DoubleMatrix beta ^DoubleMatrix features]
@@ -98,9 +89,6 @@
     (.mmul (.transpose feature-mat)
            (.transpose (.sub labels prob-seq)))))
 
-;; (score-seq b lab feat)
-;; #<DoubleMatrix [-450.0; -459.9999546021313; -469.9999092042626; -479.9998638063939; -489.9998184085252]>
-
 (defn info-matrix
   [^DoubleMatrix beta-row ^DoubleMatrix feature-mat]
   {:pre [(= (.columns beta-row) (.columns feature-mat))]}
@@ -110,14 +98,11 @@
     (.mmul (.muliRowVector (.transpose feature-mat) transformed-row)
            feature-mat)))
 
-;; (info-matrix b feat)
-;; #<DoubleMatrix [1.665334536937734E-14, 1.9984014443252805E-14, 2.3314683517128275E-14, 2.664535259100374E-14, 2.997602166487921E-14; 1.9984014443252805E-14, 4.539580775988847E-5, 9.079161549979293E-5, 1.3618742323969737E-4, 1.8158323097960185E-4; 2.331468351712827E-14, 9.079161549979293E-5, 1.8158323097627118E-4, 2.723748464527494E-4, 3.6316646192922767E-4; 2.664535259100374E-14, 1.3618742323969737E-4, 2.723748464527494E-4, 4.085622696658014E-4, 5.447496928788534E-4; 2.9976021664879214E-14, 1.8158323097960185E-4, 3.6316646192922767E-4, 5.447496928788534E-4, 7.263329238284793E-4]>
-
 (defn beta-update
   "returns a vector of updates for the parameter vector; the
   ridge-constant is a very small scalar, used to ensure that the
   inverted information matrix is non-singular."
-  [beta-row label-row feature-mat rdg-cons]
+  [^DoubleMatrix beta-row ^DoubleMatrix label-row ^DoubleMatrix feature-mat rdg-cons]
   (let [num-features (.columns beta-row)
         info-adj (.addi
                   (info-matrix beta-row feature-mat)
@@ -126,9 +111,6 @@
     (.mmul (Solve/solve info-adj
                         (DoubleMatrix/eye (int num-features)))
            (score-seq beta-row label-row feature-mat))))
-
-;; (beta-update b lab feat 1e-4)
-;; [-4500000.112138934 -3109448.5835883324 -1718897.0550377304 -328345.52648712834 1062206.0020634746]
 
 (defn initial-beta
   [^DoubleMatrix feature-mat]
@@ -147,36 +129,14 @@
            beta-diff 100]
       (if (or (zero? iter)
               (< beta-diff converge-threshold))
-        beta
+        (vec (.toArray beta))
         (let [update (beta-update beta label-row feature-mat rdg-cons)
               beta-new (.addRowVector beta update)
-              diff (.norm1 (.subRowVector beta beta-new))]
+              diff (.distance2 beta beta-new)]
           (recur
            beta-new
            (dec iter)
            diff))))))
-
-
-;; (defn logistic-beta-vector
-;;   "return the estimated parameter vector; which is used, in turn, to
-;;   calculate the estimated probability of the binary label"
-;;   [label-seq feature-mat rdg-cons converge-threshold max-iter]
-;;   (let [beta-init (repeat (count (first feature-mat)) 0)]
-;;     (loop [beta beta-init
-;;            iter max-iter
-;;            beta-diff 100]
-;;       (if (or (zero? iter)
-;;               (< beta-diff converge-threshold))
-;;         beta
-;;         (let [update (beta-update beta label-seq feature-mat rdg-cons)
-;;               beta-new (map + beta update)
-;;               diff (reduce + (map (comp abs -) beta beta-new))]
-;;           (recur
-;;            beta-new
-;;            (dec iter)
-;;            diff))))))
-
-
 
 (defn estimated-probabilities
   "returns the set of probabilities, after applying the parameter
@@ -233,7 +193,10 @@
         val-mat      (map second tuples) 
         neighbor-mat (map last tuples)
         feature-mat  (map unpack-feature-vec val-mat neighbor-mat)]
-    [[(logistic-beta-vector label-seq feature-mat r c m)]]))
+    [[(logistic-beta-vector
+       (to-double-rowmat label-seq)
+       (to-double-matrix feature-mat)
+       r c m)]]))
 
 (defn logistic-prob-wrap
   [beta-vec val neighbor-val]
