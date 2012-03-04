@@ -26,26 +26,22 @@
 (def X (map (partial cons 1)
             (read-mys-csv feature-path)))
 
-(def beta-init
-  "define the initial parameter vector as a sequence of 0s, i.e., no
-information on how each variable is weighted."
-  (repeat (count (first X)) 0))
+(fact
+ (logistic-prob (to-double-rowmat [1 2 3])
+                (to-double-rowmat [0.5 0.5 0.5])) => (roughly 0.9525))
 
-;; (facts
-;;  "log-likelihood of a particular, binary label will always be the same
-;; with a initialized parameter vector of 0's"
-;;  (logistic-prob beta-init (first X)) => 0.5
-;;  (log-likelihood beta-init (first y) (first X)) => -0.6931471805599453
-;;  (total-log-likelihood beta-init y X) => -693.1471805599322)
+(facts
+ (let [ym (to-double-rowmat y)
+       Xm (to-double-matrix X)
+       x  (to-double-rowmat (first X))
+       beta (logistic-beta-vector ym Xm 1e-8 1e-10 6)]
+   (vector? beta) => true
+   (last beta)    => (roughly -8.4745)
+   (first beta)   => (roughly -1.7796)
+   (logistic-prob (initial-beta Xm) x) => 0.5))
 
-;; (facts
-;;  "logistic routine should return a vector of coefficients, with the
-;; first and last specified, as below."
-;;  (let [label-seq   y
-;;        feature-mat X
-;;        beta-output (logistic-beta-vector label-seq feature-mat 1e-8 1e-8 10)]
-;;    (first beta-output) => -2.416103637233374
-;;    (last beta-output)  => -26.652096814499775))
+
+
 
 ;; (def new-prob (estimated-probabilities y X X))
 
@@ -108,29 +104,4 @@ information on how each variable is weighted."
 ;;      alerts-query => (produces [["eco1" [31] 0.9999999999963644]
 ;;                                 ["eco1" [49] 0.9999999999765928]]))))
 
-(defn random-ints [] (take 5 (repeatedly #(rand-int 100))))
-
-(defn random-eco []
-  (if (zero? (rand-int 2)) 22220 22221))
-
-(def modis-sample (for [x (range 10) y (range 10)]
-                    [27 8 x y]))
-
-(def sample-dynamic-tap
-  (vec (for [[h v s l] modis-sample
-             pd (range 827 837)]
-         ["500" pd h v s l (random-ints) (random-ints)])))
-
-(def sample-static-tap
-  (vec (for [[h v s l] modis-sample]
-         ["500" h v s l 14141 35 (random-eco) (rand-int 2)])))
-
-(fact
- (logistic-prob (to-double-rowmat [1 2 3])
-                (to-double-rowmat [0.5 0.5 0.5])) => (roughly 0.9525))
-
-
-
-;; (score-seq beta-init y X) => 
-;; #<DoubleMatrix [-379.0; 0.0; 30621.542477607727; -1166.0903274796437; -177.81596113101114; -5.0; -2252.5; 31312.711433410645; 46206.15969371796; -829.2855146437614; 1294.593096722383; -104.96217569007422; 383.63241966150235; -21590.0; 10.0; 2.0; -166.34467628318816; -0.6342561841011047; -5.259043335914612; -0.3465735912322998]>
 
