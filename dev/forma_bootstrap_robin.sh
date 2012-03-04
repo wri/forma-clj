@@ -46,9 +46,11 @@ echo "repl='screen -Lm hadoop jar forma-0.2.0-SNAPSHOT-standalone.jar clojure.ma
 echo "export repl" >> /home/hadoop/.bashrc
 
 # get lein and install - easier to edit/compile on cluster
+cd bin
 wget https://raw.github.com/technomancy/leiningen/stable/bin/lein
 chmod u+x lein
-./lein
+cd ..
+lein
 
 # setup for git
 sudo apt-get install git
