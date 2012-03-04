@@ -125,4 +125,8 @@ first and last specified, as below."
   (vec (for [[h v s l] modis-sample]
          ["500" h v s l 14141 35 (random-eco) (rand-int 2)])))
 
+(def beta )
 
+(facts
+ (let [beta (repeat (count (first X)) 1)]
+   (reduce + (probability-calc beta X)) => (roughly 1.3288)))

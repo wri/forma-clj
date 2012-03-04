@@ -30,11 +30,17 @@
   (DoubleMatrix.
    (into-array (map double-array mat))))
 
+;; (defn logistic-prob
+;;   "returns the probability of a binary outcome given a parameter
+;;   vector `beta-seq` and a feature vector for a given observation"
+;;   [beta-seq feature-seq]
+;;   (logistic-fn (dot-product beta-seq feature-seq)))
+
 (defn logistic-prob
-  "returns the probability of a binary outcome given a parameter
-  vector `beta-seq` and a feature vector for a given observation"
-  [beta-seq feature-seq]
-  (logistic-fn (dot-product beta-seq feature-seq)))
+  [^DoubleMatrix beta ^DoubleMatrix features]
+  (logistic-fn
+   (.dot beta features)))
+
 
 (defn log-likelihood
   "returns the log likelihood of a given pixel, conditional on its
@@ -53,11 +59,31 @@
                  label-seq
                  feature-mat)))
 
+;; (defn probability-calc
+;;   "returns a vector of probabilities for each observation"
+;;   [beta-seq feature-mat]
+;;   (map (partial logistic-prob beta-seq)
+;;        feature-mat))
+
+(defn in-place-apply-fn
+  [f ^DoubleMatrix row-mat]
+  (let [row (.copy (to-double-matrix [[]]) row-mat)
+        n (.columns row)]
+    (loop [idx 0
+           place []]
+      (if (> idx (dec n))
+        row
+        (recur
+         (inc idx)
+         (do (let [old-val (.get row 0 idx)] 
+               (.put row 0 idx (double (f old-val))))))))))
+
 (defn probability-calc
-  "returns a vector of probabilities for each observation"
-  [beta-seq feature-mat]
-  (map (partial logistic-prob beta-seq)
-       feature-mat))
+  [^DoubleMatrix beta ^DoubleMatrix feature-mat]
+  (let [prob-row (.mmul beta (.transpose feature-mat))]
+    (in-place-apply-fn logistic-fn prob-row)))
+
+
 
 (defn score-seq
   "returns the scores for each parameter"
