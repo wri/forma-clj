@@ -65,9 +65,13 @@
 ;;   (map (partial logistic-prob beta-seq)
 ;;        feature-mat))
 
+(defn copy-row
+  [^DoubleMatrix row]
+  (.copy (to-double-matrix [[]]) row))
+
 (defn in-place-apply-fn
   [f ^DoubleMatrix row-mat]
-  (let [row (.copy (to-double-matrix [[]]) row-mat)
+  (let [row (copy-row row-mat)
         n (.columns row)]
     (loop [idx 0
            place []]
@@ -83,46 +87,99 @@
   (let [prob-row (.mmul beta (.transpose feature-mat))]
     (in-place-apply-fn logistic-fn prob-row)))
 
-
-
 (defn score-seq
-  "returns the scores for each parameter"
-  [beta-seq label-seq feature-mat]
-  (let [prob-seq (probability-calc beta-seq feature-mat)
-        features (to-double-matrix feature-mat)]
-    (.mmul (.transpose features)
-           (DoubleMatrix.
-            (double-array
-             (map - label-seq prob-seq))))))
+  "returns the score for each parameter "
+  [^DoubleMatrix beta ^DoubleMatrix labels ^DoubleMatrix feature-mat]
+    (let [prob-seq (probability-calc beta feature-mat)]
+    (.mmul (.transpose feature-mat)
+           (.transpose (.sub labels prob-seq)))))
+
+;; (defn score-seq
+;;   "returns the scores for each parameter"
+;;   [beta-seq label-seq feature-mat]
+;;   (let [prob-seq (probability-calc beta-seq feature-mat)
+;;         features (to-double-matrix feature-mat)]
+;;     (.mmul (.transpose features)
+;;            (DoubleMatrix.
+;;             (double-array
+;;              (map - label-seq prob-seq))))))
+
+(defn to-double-rowmat
+  [coll]
+  (to-double-matrix [(vec coll)]))
+
+(def bm (to-double-rowmat (repeat 5 1)))
+(def ym (to-double-rowmat (interleave (repeat 10 0) (repeat 10 1))))
+(defn reshape [v c]
+  (if (= (count v) 1)
+    c
+    (recur (butlast v)
+           (partition (last v) c))))
+(def feat (reshape '(10 5) (range 100)))
+(def Xm (to-double-matrix  feat))
+;; (score-seq b lab feat)
+;; #<DoubleMatrix [-450.0; -459.9999546021313; -469.9999092042626; -479.9998638063939; -489.9998184085252]>
 
 (defn info-matrix
-  "returns the square information matrix for the logistic probability
-  function; the dimension is given by the number of features"
-  [beta-seq feature-mat]
-  (let [mult-func (fn [x] (* x (- 1 x)))
-        prob-seq  (->> (probability-calc beta-seq feature-mat)
-                       (map mult-func))
-        scale-feat (multiply-rows
-                    prob-seq
-                    (transpose feature-mat))]
-    (.mmul (to-double-matrix scale-feat)
-           (to-double-matrix feature-mat))))
+  [^DoubleMatrix beta-row ^DoubleMatrix feature-mat]
+  {:pre [(= (.columns beta-row) (.columns feature-mat))]}
+  (let [mult-func (fn [x] (* (- 1 x)))
+        prob-row (probability-calc beta-row feature-mat)
+        transformed-row (in-place-apply-fn mult-func prob-row)]
+    (.mmul (.muliRowVector (.transpose feature-mat) transformed-row)
+           feature-mat)))
+
+;; (defn info-matrix
+;;   "returns the square information matrix for the logistic probability
+;;   function; the dimension is given by the number of features"
+;;   [beta-seq feature-mat]
+;;   (let [mult-func (fn [x] (* x (- 1 x)))
+;;         prob-seq  (->> (probability-calc beta-seq feature-mat)
+;;                        (map mult-func))
+;;         scale-feat (multiply-rows
+;;                     prob-seq
+;;                     (transpose feature-mat))]
+;;     (.mmul (to-double-matrix scale-feat)
+;;            (to-double-matrix feature-mat))))
+
+
+;; (info-matrix b feat)
+;; #<DoubleMatrix [1.665334536937734E-14, 1.9984014443252805E-14, 2.3314683517128275E-14, 2.664535259100374E-14, 2.997602166487921E-14; 1.9984014443252805E-14, 4.539580775988847E-5, 9.079161549979293E-5, 1.3618742323969737E-4, 1.8158323097960185E-4; 2.331468351712827E-14, 9.079161549979293E-5, 1.8158323097627118E-4, 2.723748464527494E-4, 3.6316646192922767E-4; 2.664535259100374E-14, 1.3618742323969737E-4, 2.723748464527494E-4, 4.085622696658014E-4, 5.447496928788534E-4; 2.9976021664879214E-14, 1.8158323097960185E-4, 3.6316646192922767E-4, 5.447496928788534E-4, 7.263329238284793E-4]>
+
+;; (defn beta-update
+;;   "returns a vector of updates for the parameter vector; the
+;;   ridge-constant is a very small scalar, used to ensure that the
+;;   inverted information matrix is non-singular."
+;;   [beta-seq label-seq feature-mat rdg-cons]
+;;   (let [num-features (count beta-seq)
+;;         info-adj (.addi
+;;                   (info-matrix beta-seq feature-mat)
+;;                   (.muli (DoubleMatrix/eye (int num-features))
+;;                          (float rdg-cons)))]
+;;     (vec (.toArray
+;;           (.mmul (Solve/solve
+;;                   info-adj
+;;                   (DoubleMatrix/eye (int num-features)))
+;;                  (score-seq beta-seq label-seq feature-mat))))))
+
 
 (defn beta-update
   "returns a vector of updates for the parameter vector; the
   ridge-constant is a very small scalar, used to ensure that the
   inverted information matrix is non-singular."
-  [beta-seq label-seq feature-mat rdg-cons]
-  (let [num-features (count beta-seq)
+  [beta-row label-row feature-mat rdg-cons]
+  (let [num-features (.columns beta-row)
         info-adj (.addi
-                  (info-matrix beta-seq feature-mat)
+                  (info-matrix beta-row feature-mat)
                   (.muli (DoubleMatrix/eye (int num-features))
-                         (float rdg-cons)))]
-    (vec (.toArray
-          (.mmul (Solve/solve
-                  info-adj
-                  (DoubleMatrix/eye (int num-features)))
-                 (score-seq beta-seq label-seq feature-mat))))))
+                         (double rdg-cons)))]
+    (.mmul (Solve/solve info-adj
+                        (DoubleMatrix/eye (int num-features)))
+           (score-seq beta-row label-row feature-mat))))
+
+;; (beta-update b lab feat 1e-4)
+;; [-4500000.112138934 -3109448.5835883324 -1718897.0550377304 -328345.52648712834 1062206.0020634746]
+
 
 (defn logistic-beta-vector
   "return the estimated parameter vector; which is used, in turn, to
