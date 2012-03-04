@@ -42,8 +42,7 @@ echo "export LD_LIBRARY_PATH=/usr/local/fwtools/usr/lib:$hadoop_lib:\$LD_LIBRARY
 echo "export JAVA_LIBRARY_PATH=$hadoop_lib:\$JAVA_LIBRARY_PATH" >> /home/hadoop/.bashrc
 
 # a few things for convenience
-echo "repl='screen -Lm hadoop jar forma-0.2.0-SNAPSHOT-standalone.jar clojure.main'" >> /home/hadoop/.bashrc
-echo "export repl" >> /home/hadoop/.bashrc
+echo "alias repl='screen -Lm hadoop jar /home/hadoom/forma-clj/forma-0.2.0-SNAPSHOT-standalone.jar clojure.main'" >> /home/hadoop/.bashrc
 
 # get lein and install - easier to edit/compile on cluster
 cd bin
@@ -87,8 +86,11 @@ echo 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC8E8/69PILGcLSNm34BK37d8P/Qt6dTbOsF7
 echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> /home/hadoop/.ssh/config
 cd /home/hadoop/
 
-git clone git@github.com:sritchie/forma-clj.git
-
 source /home/hadoop/.bashrc
+
+git clone git@github.com:sritchie/forma-clj.git
+cd forma-clj
+lein deps
+lein uberjar
 
 exit 0
