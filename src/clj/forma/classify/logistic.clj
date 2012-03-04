@@ -130,25 +130,51 @@
 ;; (beta-update b lab feat 1e-4)
 ;; [-4500000.112138934 -3109448.5835883324 -1718897.0550377304 -328345.52648712834 1062206.0020634746]
 
+(defn initial-beta
+  [^DoubleMatrix feature-mat]
+  (let [n (.columns feature-mat)]
+    (to-double-rowmat (repeat n 0))))
 
 (defn logistic-beta-vector
   "return the estimated parameter vector; which is used, in turn, to
-  calculate the estimated probability of the binary label"
-  [label-seq feature-mat rdg-cons converge-threshold max-iter]
-  (let [beta-init (repeat (count (first feature-mat)) 0)]
+  calculate the estimated probability of the binary label; the initial
+  beta-diff value is an arbitrarily large value."
+  [^DoubleMatrix label-row ^DoubleMatrix feature-mat
+   rdg-cons converge-threshold max-iter]
+  (let [beta-init (initial-beta feature-mat)]
     (loop [beta beta-init
            iter max-iter
            beta-diff 100]
       (if (or (zero? iter)
               (< beta-diff converge-threshold))
         beta
-        (let [update (beta-update beta label-seq feature-mat rdg-cons)
-              beta-new (map + beta update)
-              diff (reduce + (map (comp abs -) beta beta-new))]
+        (let [update (beta-update beta label-row feature-mat rdg-cons)
+              beta-new (.addRowVector beta update)
+              diff (.norm1 (.subRowVector beta beta-new))]
           (recur
            beta-new
            (dec iter)
            diff))))))
+
+
+;; (defn logistic-beta-vector
+;;   "return the estimated parameter vector; which is used, in turn, to
+;;   calculate the estimated probability of the binary label"
+;;   [label-seq feature-mat rdg-cons converge-threshold max-iter]
+;;   (let [beta-init (repeat (count (first feature-mat)) 0)]
+;;     (loop [beta beta-init
+;;            iter max-iter
+;;            beta-diff 100]
+;;       (if (or (zero? iter)
+;;               (< beta-diff converge-threshold))
+;;         beta
+;;         (let [update (beta-update beta label-seq feature-mat rdg-cons)
+;;               beta-new (map + beta update)
+;;               diff (reduce + (map (comp abs -) beta beta-new))]
+;;           (recur
+;;            beta-new
+;;            (dec iter)
+;;            diff))))))
 
 
 
