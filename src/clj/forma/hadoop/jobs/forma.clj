@@ -169,7 +169,7 @@ value, and the aggregate of the neighbors."
            :long-block 30
            :window 10
            :ridge-const 1e-8
-           :convergence-thresh 1e-6
+           :convergence-thresh 1e-10
            :max-iterations 500}
         ndvi-src [[1 (schema/chunk-value
                       "ndvi" "32" nil

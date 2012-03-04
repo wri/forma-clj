@@ -174,6 +174,7 @@
         fire-neighbor (unpack-fire fire-neighbors)]
     (into [] (concat fire-seq [short long t-stat] fire-neighbor more))))
 
+
 (defn make-binary
   [x]
   (if (zero? x) 0 1))
