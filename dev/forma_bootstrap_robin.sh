@@ -44,16 +44,12 @@ echo "export JAVA_LIBRARY_PATH=$hadoop_lib:\$JAVA_LIBRARY_PATH" >> /home/hadoop/
 # a few things for convenience
 echo "alias repl='screen -Lm hadoop jar /home/hadoom/forma-clj/forma-0.2.0-SNAPSHOT-standalone.jar clojure.main'" >> /home/hadoop/.bashrc
 
-# get lein and install - easier to edit/compile on cluster
-cd bin
-wget https://raw.github.com/technomancy/leiningen/stable/bin/lein
-chmod u+x lein
-cd ..
-lein
-
 # setup for git
-sudo apt-get install git
+sudo apt-get -y --force-yes install git
+mkdir .ssh
+
 # ssh-keygen -t rsa -N "" -f "/hadoop/hadoop/.ssh/instance" -C "rkraft4@gmail.com"
+
 echo '-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAvBPP+vTyCxnC0jZt+ASt+3fD/0LenU2zrBe5F8GVmhb964xV
 1UojASmtuZqvk8RqaS6PXRi2VGxwkVVDjS8l9kciF5a2l4D0b4Z+dpefciyzoE1T
@@ -82,14 +78,24 @@ Bx7mDb0xI/K9gjO1y2aY3zE2hH14cWulXwGKKJwH0VAdqwF4+WW9rq5IKr5XywH0
 4zTeZUepNBKu7LYjFjJdFg/9qbfy0Qc5o6L5Nt/8dMQm165FOmz3
 -----END RSA PRIVATE KEY-----' > /home/hadoop/.ssh/id_rsa
 echo 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC8E8/69PILGcLSNm34BK37d8P/Qt6dTbOsF7kXwZWaFv3rjFXVSiMBKa25mq+TxGppLo9dGLZUbHCRVUONLyX2RyIXlraXgPRvhn52l59yLLOgTVPasmR4dhM/an07oSdxCYe9nFMps1DtJCHrLGgUcoBOCUL06Ul+Fie1OOrLBm9i+CXbq3Lr0T1upyW2bXIiKXxd1Kf6+b4hsPFNV4B0IUxgUoN16C8brcHmwvyckA032xYAsbb97Xos7sqaFrXAUPasuWPCJr9mXiY11/kIgX9aWAIPk6fOyrMAOef7W2OWPgA022HFpb7Pe0rf+lA7cA2XZOfs0xayTbRF690n rkraft4@gmail.com' > /home/hadoop/.ssh/id_rsa.pub
+chmod 600 /home/hadoop/.ssh/id_rsa.pub
 
 echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> /home/hadoop/.ssh/config
 cd /home/hadoop/
 
 source /home/hadoop/.bashrc
 
+# get lein and install - easier to edit/compile on cluster
+cd bin
+wget https://raw.github.com/technomancy/leiningen/stable/bin/lein
+chmod u+x lein
+cd ..
+
 git clone git@github.com:sritchie/forma-clj.git
 cd forma-clj
+
+# run once
+lein
 lein deps
 lein uberjar
 
