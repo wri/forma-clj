@@ -80,7 +80,7 @@ Bx7mDb0xI/K9gjO1y2aY3zE2hH14cWulXwGKKJwH0VAdqwF4+WW9rq5IKr5XywH0
 echo 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC8E8/69PILGcLSNm34BK37d8P/Qt6dTbOsF7kXwZWaFv3rjFXVSiMBKa25mq+TxGppLo9dGLZUbHCRVUONLyX2RyIXlraXgPRvhn52l59yLLOgTVPasmR4dhM/an07oSdxCYe9nFMps1DtJCHrLGgUcoBOCUL06Ul+Fie1OOrLBm9i+CXbq3Lr0T1upyW2bXIiKXxd1Kf6+b4hsPFNV4B0IUxgUoN16C8brcHmwvyckA032xYAsbb97Xos7sqaFrXAUPasuWPCJr9mXiY11/kIgX9aWAIPk6fOyrMAOef7W2OWPgA022HFpb7Pe0rf+lA7cA2XZOfs0xayTbRF690n rkraft4@gmail.com' > /home/hadoop/.ssh/id_rsa.pub
 chmod 600 /home/hadoop/.ssh/id_rsa
 
-echo "Host github.com\n\tStrictHostKeyChecking no" >> /home/hadoop/.ssh/config
+echo "github.com,207.97.227.239 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ==" >> /home/hadoop/.ssh/known_hosts
 cd /home/hadoop/
 
 source /home/hadoop/.bashrc
