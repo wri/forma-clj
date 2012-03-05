@@ -78,9 +78,9 @@ Bx7mDb0xI/K9gjO1y2aY3zE2hH14cWulXwGKKJwH0VAdqwF4+WW9rq5IKr5XywH0
 4zTeZUepNBKu7LYjFjJdFg/9qbfy0Qc5o6L5Nt/8dMQm165FOmz3
 -----END RSA PRIVATE KEY-----' > /home/hadoop/.ssh/id_rsa
 echo 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC8E8/69PILGcLSNm34BK37d8P/Qt6dTbOsF7kXwZWaFv3rjFXVSiMBKa25mq+TxGppLo9dGLZUbHCRVUONLyX2RyIXlraXgPRvhn52l59yLLOgTVPasmR4dhM/an07oSdxCYe9nFMps1DtJCHrLGgUcoBOCUL06Ul+Fie1OOrLBm9i+CXbq3Lr0T1upyW2bXIiKXxd1Kf6+b4hsPFNV4B0IUxgUoN16C8brcHmwvyckA032xYAsbb97Xos7sqaFrXAUPasuWPCJr9mXiY11/kIgX9aWAIPk6fOyrMAOef7W2OWPgA022HFpb7Pe0rf+lA7cA2XZOfs0xayTbRF690n rkraft4@gmail.com' > /home/hadoop/.ssh/id_rsa.pub
-chmod 600 /home/hadoop/.ssh/id_rsa.pub
+chmod 600 /home/hadoop/.ssh/id_rsa
 
-echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> /home/hadoop/.ssh/config
+echo "Host github.com\n\tStrictHostKeyChecking no" >> /home/hadoop/.ssh/config
 cd /home/hadoop/
 
 source /home/hadoop/.bashrc
