@@ -42,7 +42,7 @@ echo "export LD_LIBRARY_PATH=/usr/local/fwtools/usr/lib:$hadoop_lib:\$LD_LIBRARY
 echo "export JAVA_LIBRARY_PATH=$hadoop_lib:\$JAVA_LIBRARY_PATH" >> /home/hadoop/.bashrc
 
 # a few things for convenience
-echo "alias repl='screen -Lm hadoop jar /home/hadoom/forma-clj/forma-0.2.0-SNAPSHOT-standalone.jar clojure.main'" >> /home/hadoop/.bashrc
+echo "alias repl='screen -Lm hadoop jar /home/hadoop/forma-clj/forma-0.2.0-SNAPSHOT-standalone.jar clojure.main'" >> /home/hadoop/.bashrc
 
 # setup for git
 sudo apt-get -y --force-yes install git
