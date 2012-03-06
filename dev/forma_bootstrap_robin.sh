@@ -103,7 +103,6 @@ cd forma-clj
 git checkout robin-test
 
 # now ready to use!
-cd forma-clj
 lein deps
 lein uberjar
 
