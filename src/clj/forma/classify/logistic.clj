@@ -198,13 +198,27 @@
   {(keyword (str (second v)))
    (last v)})
 
-(defn beta-dict [eco-beta-src full-beta-src]
+(defn beta-dict 
+  "create dictionary of beta vectors by ecoregion, adding an intelligent default (average) for ecoregions without betavectors"
+  [eco-beta-src]
   (let [src (name-vars eco-beta-src
                        ["?s-res" "?eco" "?beta"])
-        full-src (name-vars full-beta-src
-                            ["?s-res" "?beta"])
-        beta-full (first (??- (c/first-n full-src 1)))
-        beta-vec  (first (??- (c/first-n src 200)))]
+        beta-vec    (first (??- (c/first-n src 200)))
+        n           (count (last (first beta-vec)))
+        avg-beta-vec (map #(/ % n)
+                         (apply map + (map last beta-vec)))]
     (assoc (apply merge-with identity
                   (map make-dict beta-vec))
-      :full (last (first beta-full)))))
+      :full avg-beta-vec)))
+
+
+;; (defn beta-dict [eco-beta-src full-beta-src]
+;;   (let [src (name-vars eco-beta-src
+;;                        ["?s-res" "?eco" "?beta"])
+;;         full-src (name-vars full-beta-src
+;;                             ["?s-res" "?beta"])
+;;         beta-full (first (??- (c/first-n full-src 1)))
+;;         beta-vec  (first (??- (c/first-n src 200)))]
+;;     (assoc (apply merge-with identity
+;;                   (map make-dict beta-vec))
+;;       :full (last (first beta-full)))))
