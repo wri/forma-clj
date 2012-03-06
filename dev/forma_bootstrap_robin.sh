@@ -46,7 +46,7 @@ echo "alias repl='screen -Lm hadoop jar /home/hadoop/forma-clj/forma-0.2.0-SNAPS
 
 # setup for git
 sudo apt-get -y --force-yes install git
-mkdir /home/hadoop/.ssh
+# mkdir /home/hadoop/.ssh
 
 echo '-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAvBPP+vTyCxnC0jZt+ASt+3fD/0LenU2zrBe5F8GVmhb964xV
@@ -99,7 +99,6 @@ cd ..
 
 # get forma repo - easier to edit, test code
 git clone git@github.com:sritchie/forma-clj.git
-checkout robin-test
 
 # now ready to use!
 cd forma-clj
