@@ -99,6 +99,7 @@ cd ..
 
 # get forma repo - easier to edit, test code
 git clone git@github.com:sritchie/forma-clj.git
+checkout robin-test
 
 # now ready to use!
 cd forma-clj
