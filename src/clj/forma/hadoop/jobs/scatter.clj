@@ -278,28 +278,53 @@
   [tmp-root eco-beta-path full-beta-path static-path final-path out-path country-or-eco]
   (let [est-map (forma-run-parameters "500-16")]
     (workflow [tmp-root]              
-              ;; genbetas
-              ;; ([]
-              ;;    (let [beta-path (if (= "eco" country-or-eco)
-              ;;                      eco-beta-path
-              ;;                      full-beta-path)]
-              ;;      (?- (hfs-seqfile beta-path)
-              ;;          (forma/beta-generator est-map
-              ;;                                (hfs-seqfile final-path)
-              ;;                                (hfs-seqfile static-path))))))))
-              applybetas
-              ([] (?- (hfs-seqfile out-path)
-                      (forma/forma-estimate (hfs-seqfile eco-beta-path)
-                                            (hfs-seqfile final-path)
-                                            (hfs-seqfile static-path)))))))
+              genbetas
+              ([]
+                 (let [beta-path (if (= "eco" country-or-eco)
+                                   eco-beta-path
+                                   full-beta-path)]
+                   (?- (hfs-seqfile beta-path)
+                       (forma/beta-generator est-map
+                                             (hfs-seqfile final-path)
+                                             (hfs-seqfile static-path))))))))
+              ;; applybetas
+              ;; ([] (?- (hfs-seqfile out-path)
+              ;;         (forma/forma-estimate (hfs-seqfile eco-beta-path)
+              ;;                               (hfs-seqfile final-path)
+              ;;                               (hfs-seqfile static-path))))
 
+;; (comment
+;;   "Run this:"
+;;   (ultrarunner "/user/hadoop/checkpoint"
+;;                "s3n://formaresults/ecobetatemp"
+;;                "s3n://formaresults/fullbetatemp"               
+;;                "s3n://formaresults/staticbuckettemp"
+;;                "s3n://formaresults/finalbuckettemp"
+;;                "s3n://formaresults/finaloutput"
+;;                "eco"))
+
+
+
+(defmain prebeta
+  "do everything but actually estimate the beta vector - we want the data all in one file we can download"
+  [tmp-root eco-beta-path full-beta-path static-path final-path out-path country-or-eco]
+  (let [est-map (forma-run-parameters "500-16")]
+    (workflow [tmp-root]              
+              genbetas
+              ([]
+                 (let [beta-path (if (= "eco" country-or-eco)
+                                   eco-beta-path
+                                   full-beta-path)]
+                   (?- (hfs-seqfile beta-path)
+                       (forma/beta-generator-40103 est-map
+                                             (hfs-seqfile final-path)
+                                             (hfs-seqfile static-path))))))))
 (comment
   "Run this:"
-  (ultrarunner "/user/hadoop/checkpoint"
-               "s3n://formaresults/ecobetatemp"
+  (prebeta "/user/hadoop/checkpoint"
+               "s3n://formaresults/singlebeta"
                "s3n://formaresults/fullbetatemp"               
                "s3n://formaresults/staticbuckettemp"
                "s3n://formaresults/finalbuckettemp"
                "s3n://formaresults/finaloutput"
                "eco"))
-
