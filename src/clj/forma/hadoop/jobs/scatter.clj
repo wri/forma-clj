@@ -13,7 +13,8 @@
             [forma.trends.stretch :as stretch]
             [forma.hadoop.predicate :as p]
             [forma.hadoop.jobs.forma :as forma]
-            [forma.hadoop.jobs.timeseries :as tseries]))
+            [forma.hadoop.jobs.timeseries :as tseries]
+            [forma.date-time :as date]))
 
 (def convert-line-src
   (hfs-textline "s3n://modisfiles/ascii/admin-map.csv"))
@@ -304,27 +305,33 @@
 ;;                "eco"))
 
 
+(defn sink-40103-for-betas
+  "query to return the beta vector associated with each ecoregion"
+  [{:keys [t-res est-start ridge-const convergence-thresh max-iterations]}
+   dynamic-src static-src]
+  (let [first-idx (date/datetime->period t-res est-start)]
+    (<- [?s-res ?eco ?beta]
+        (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
+        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen)
+        (= ?pd first-idx)
+        (= 40103 ?eco)
+        (:distinct false))))
 
 (defmain prebeta
   "do everything but actually estimate the beta vector - we want the data all in one file we can download"
-  [tmp-root eco-beta-path full-beta-path static-path final-path out-path country-or-eco]
+  [tmp-root static-path final-path out-path]
   (let [est-map (forma-run-parameters "500-16")]
     (workflow [tmp-root]              
               genbetas
               ([]
-                 (let [beta-path (if (= "eco" country-or-eco)
-                                   eco-beta-path
-                                   full-beta-path)]
-                   (?- (hfs-seqfile beta-path)
-                       (forma/beta-generator-40103 est-map
+                 (?- (hfs-seqfile out-path :sinkmode :replace)
+                       (sink-40103-for-betas est-map
                                              (hfs-seqfile final-path)
-                                             (hfs-seqfile static-path))))))))
+                                             (hfs-seqfile static-path)))))))
+
 (comment
   "Run this:"
   (prebeta "/user/hadoop/checkpoint"
-               "s3n://formaresults/singlebeta"
-               "s3n://formaresults/fullbetatemp"               
                "s3n://formaresults/staticbuckettemp"
                "s3n://formaresults/finalbuckettemp"
-               "s3n://formaresults/finaloutput"
-               "eco"))
+               "s3n://forma_test/delete/eco-40103"))
