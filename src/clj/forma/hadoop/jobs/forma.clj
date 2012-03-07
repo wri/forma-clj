@@ -146,7 +146,11 @@ value, and the aggregate of the neighbors."
                                 ?hansen ?val ?neighbor-val :> ?beta)
         (:distinct false))))
 
-(defmapop apply-betas
+;; inserting beta-dict in [] is sort of like hardcoding it into the
+;; function, like partial(?) or a closure
+
+
+(defmapop [apply-betas [beta-dict]]
   [beta-dict eco val neighbor-val]
   (let [beta (beta-dict (keyword (str eco)))
         beta-full (beta-dict :full)]
@@ -162,7 +166,7 @@ value, and the aggregate of the neighbors."
     (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
       (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
       (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)
-      (apply-betas beta-dict ?eco ?val ?neighbor-val :> ?prob)
+      (apply-betas [beta-dict] ?eco ?val ?neighbor-val :> ?prob)
       (log/mk-timeseries ?pd ?prob :> ?prob-series)
       (:distinct false))))
 
