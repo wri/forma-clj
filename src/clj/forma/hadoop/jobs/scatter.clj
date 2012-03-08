@@ -14,7 +14,8 @@
             [forma.hadoop.predicate :as p]
             [forma.hadoop.jobs.forma :as forma]
             [forma.hadoop.jobs.timeseries :as tseries]
-            [forma.date-time :as date]))
+            [forma.date-time :as date]
+            [forma.classify.logistic :as log]))
 
 (def convert-line-src
   (hfs-textline "s3n://modisfiles/ascii/admin-map.csv"))
@@ -305,6 +306,23 @@
 ;;                "eco"))
 
 
+
+(defbufferop eco-bufferop
+  "returns a vector of parameter coefficients.  note that this is
+  where the intercept is added (to the front of each stacked vector in
+  the feature matrix
+
+  TODO: The intercept is included in the feature vector for now, as a
+  kludge when we removed the hansen statistic.  When we include the
+  hansen stat, we will have to replace the feature-mat binding below
+  with a line that tacks on a 1 to each feature vector.
+  "
+  [tuples]
+  (let [val-mat      (map second tuples) 
+        neighbor-mat (map last tuples)
+        feature-mat  (map log/unpack-feature-vec val-mat neighbor-mat)]
+    [[]]))
+
 (defn sink-eco
   [{:keys [t-res est-start ridge-const convergence-thresh max-iterations]}
    dynamic-src static-src ecoid]
@@ -324,10 +342,10 @@
               genbetas
               ([]
                  (?- (hfs-seqfile out-path :sinkmode :replace)
-                       (sink-eco est-map
-                                             (hfs-seqfile final-path)
-                                             (hfs-seqfile static-path)
-                                             ecoid))))))
+                     (sink-eco est-map
+                               (hfs-seqfile final-path)
+                               (hfs-seqfile static-path)
+                               ecoid))))))
 
 (comment
   "Run this:"
@@ -336,3 +354,53 @@
                "s3n://formaresults/finalbuckettemp"
                "s3n://formaresults/ecofeaturemat"
                40102))
+
+(defn my-info-mat
+  [feature-mat]
+  (let [fm (log/to-double-matrix feature-mat)
+        tp (.transpose fm)]
+    (vec (.toArray (.mmul tp fm)))))
+
+(defbufferop [local-info-matrix]
+  [tuples]
+  (let [val-mat      (map second tuples) 
+        neighbor-mat (map last tuples)
+        feature-mat  (map log/unpack-feature-vec val-mat neighbor-mat)]
+    [[(first (last (repeatedly 1 #(my-info-mat feature-mat))))]]))
+
+(defn run-local-info
+  [in]
+  (let [src (hfs-seqfile in)]
+    (??<- [?mat]
+          (src ?hansen ?val ?neighbor-val)
+          (local-info-matrix ?hansen ?val ?neighbor-val :> ?mat))))
+
+(defn simple-beta-generator
+  "query to return the beta vector associated with an ecoregion"
+  [{:keys [t-res est-start ridge-const convergence-thresh max-iterations]} src]
+  (let [first-idx (date/datetime->period t-res est-start)]
+    (<- [?beta]
+        (src ?hansen ?val ?neighbor-val)
+        (log/logistic-beta-wrap [ridge-const convergence-thresh max-iterations]
+                                ?hansen ?val ?neighbor-val :> ?beta)
+        (:distinct false))))
+
+(defmain run-simple-beta-generator
+  [tmp-root in-path out-path]
+  (let [est-map (forma-run-parameters "500-16")]
+    (workflow [tmp-root]              
+              genbetas
+              ([]
+                 (?- (hfs-seqfile out-path :sinkmode :replace)
+                     (simple-beta-generator est-map
+                                            (hfs-seqfile in-path)))))))
+
+(comment
+  (run-simple-beta-generator "/user/hadoop/checkpoint"
+                             "s3n://formaresults/ecofeaturemat"
+                             "s3n://formaresults/ecobetatests"))
+
+;; (run-local-info "/Users/robin/Downloads/eco-40103-small")
+
+;; (local-beta-generator (forma-run-parameters "500-16"))
+;; (use 'forma.hadoop.jobs.scatter)
