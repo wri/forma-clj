@@ -305,32 +305,34 @@
 ;;                "eco"))
 
 
-(defn sink-40103-for-betas
+(defn sink-eco
   [{:keys [t-res est-start ridge-const convergence-thresh max-iterations]}
-   dynamic-src static-src]
+   dynamic-src static-src ecoid]
   (let [first-idx (date/datetime->period t-res est-start)]
     (<- [?hansen ?val ?neighbor-val]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen)
         (= ?pd first-idx)
-        (= 40103 ?eco)
+        (= ecoid ?eco)
         (:distinct false))))
 
 (defmain prebeta
   "do everything but actually estimate the beta vector - we want the data all in one file we can download"
-  [tmp-root static-path final-path out-path]
+  [tmp-root static-path final-path out-path ecoid]
   (let [est-map (forma-run-parameters "500-16")]
     (workflow [tmp-root]              
               genbetas
               ([]
                  (?- (hfs-seqfile out-path :sinkmode :replace)
-                       (sink-40103-for-betas est-map
+                       (sink-eco est-map
                                              (hfs-seqfile final-path)
-                                             (hfs-seqfile static-path)))))))
+                                             (hfs-seqfile static-path)
+                                             ecoid))))))
 
 (comment
   "Run this:"
   (prebeta "/user/hadoop/checkpoint"
                "s3n://formaresults/staticbuckettemp"
                "s3n://formaresults/finalbuckettemp"
-               "s3n://forma_test/delete/eco-40103"))
+               "s3n://formaresults/ecofeaturemat"
+               40102))
