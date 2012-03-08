@@ -306,11 +306,10 @@
 
 
 (defn sink-40103-for-betas
-  "query to return the beta vector associated with each ecoregion"
   [{:keys [t-res est-start ridge-const convergence-thresh max-iterations]}
    dynamic-src static-src]
   (let [first-idx (date/datetime->period t-res est-start)]
-    (<- [?s-res ?eco]
+    (<- [?hansen ?val ?neighbor-val]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen)
         (= ?pd first-idx)
