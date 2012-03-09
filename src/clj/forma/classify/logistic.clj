@@ -25,8 +25,14 @@
   (let [exp-x (Math/exp x)]
     (/ exp-x (inc exp-x))))
 
+(defn jblas-logistic-fn
+  [x]
+  (let [exp-x (MatrixFunctions/exp x)
+        one (DoubleMatrix/ones 1)]
+    (.divi exp-x (.add exp-x one))))
+
 (defn to-double-matrix
-  "returns a DoubleMatrix instance for use with jBLAS functions"
+  "returns a DoubleMatrix ins"
   [mat]
   (DoubleMatrix.
    (into-array (map double-array mat))))
@@ -36,11 +42,11 @@
   (to-double-matrix [(vec coll)]))
 
 (defn copy-row
-  [^DoubleMatrix row]
+  [row]
   (.copy (to-double-matrix [[]]) row))
 
 (defn logistic-prob
-  [^DoubleMatrix beta ^DoubleMatrix features]
+  [beta features]
   (logistic-fn
    (.dot beta features)))
 
@@ -65,7 +71,7 @@
                  feature-mat)))
 
 (defn in-place-apply-fn
-  [f ^DoubleMatrix row-mat]
+  [f row-mat]
   (let [row (copy-row row-mat)
         n (.columns row)]
     (loop [idx 0
@@ -78,19 +84,25 @@
                (.put row 0 idx (double (f old-val))))))))))
 
 (defn probability-calc
-  [^DoubleMatrix beta ^DoubleMatrix feature-mat]
+  [beta feature-mat]
   (let [prob-row (.mmul beta (.transpose feature-mat))]
-    (in-place-apply-fn logistic-fn prob-row)))
+    (jblas-logistic-fn prob-row)))
 
 (defn score-seq
   "returns the score for each parameter "
-  [^DoubleMatrix beta ^DoubleMatrix labels ^DoubleMatrix feature-mat]
+  [beta labels feature-mat]
     (let [prob-seq (probability-calc beta feature-mat)]
     (.mmul (.transpose feature-mat)
            (.transpose (.sub labels prob-seq)))))
 
+(defn jblas-mult-fn
+  [x]
+  (let [one (DoubleMatrix/ones 1)
+        sub-mat (.sub x one)]
+    (.muli x sub-mat)))
+
 (defn info-matrix
-  [^DoubleMatrix beta-row ^DoubleMatrix feature-mat]
+  [beta-row feature-mat]
   {:pre [(= (.columns beta-row) (.columns feature-mat))]}
   (let [mult-func (fn [x] (* (- 1 x)))
         prob-row (probability-calc beta-row feature-mat)
@@ -102,7 +114,7 @@
   "returns a vector of updates for the parameter vector; the
   ridge-constant is a very small scalar, used to ensure that the
   inverted information matrix is non-singular."
-  [^DoubleMatrix beta-row ^DoubleMatrix label-row ^DoubleMatrix feature-mat rdg-cons]
+  [beta-row label-row feature-mat rdg-cons]
   (let [num-features (.columns beta-row)
         info-adj (.addi
                   (info-matrix beta-row feature-mat)
@@ -113,15 +125,14 @@
            (score-seq beta-row label-row feature-mat))))
 
 (defn initial-beta
-  [^DoubleMatrix feature-mat]
-  (let [n (.columns feature-mat)]
-    (to-double-rowmat (repeat n 0))))
+  [feature-mat]
+  (.transpose (DoubleMatrix/zeros (.columns feature-mat))))
 
 (defn logistic-beta-vector
   "return the estimated parameter vector; which is used, in turn, to
   calculate the estimated probability of the binary label; the initial
   beta-diff value is an arbitrarily large value."
-  [^DoubleMatrix label-row ^DoubleMatrix feature-mat
+  [label-row feature-mat
    rdg-cons converge-threshold max-iter]
   (let [beta-init (initial-beta feature-mat)]
     (loop [beta beta-init
