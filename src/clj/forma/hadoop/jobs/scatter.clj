@@ -405,6 +405,12 @@
 ;; (local-beta-generator (forma-run-parameters "500-16"))
 ;; (use 'forma.hadoop.jobs.scatter)
 
+(defn my-info-mat
+  [feature-mat]
+  (let [fm (log/to-double-matrix feature-mat)
+        tp (.transpose fm)]
+    (vec (.toArray (.mmul tp fm)))))
+
 (defbufferop [eco-bufferop [r c m]]
   [tuples]
   (let [val-mat      (map second tuples) 
@@ -412,14 +418,24 @@
         feature-mat  (map log/unpack-feature-vec val-mat neighbor-mat)]
     [[(first feature-mat)]]))
 
+(defbufferop [info-matrix-bufferop [r c m]]
+  [tuples]
+  (let [val-mat      (map second tuples) 
+        neighbor-mat (map last tuples)
+        feature-mat  (map log/unpack-feature-vec val-mat neighbor-mat)]
+    [[(first (last (repeatedly 1 #(my-info-mat feature-mat))))]]))
+
 (defn buffer-generator
   "query to return the beta vector associated with an ecoregion"
   [{:keys [t-res est-start ridge-const convergence-thresh max-iterations]} src]
   (let [first-idx (date/datetime->period t-res est-start)]
     (<- [?beta]
         (src ?hansen ?val ?neighbor-val)
-        (eco-bufferop [ridge-const convergence-thresh max-iterations]
-                                ?hansen ?val ?neighbor-val :> ?beta)
+        ;;        (eco-bufferop [ridge-const convergence-thresh max-iterations]
+        ;;              ?hansen ?val ?neighbor-val :> ?beta)
+        (info-matrix-bufferop [ridge-const convergence-thresh max-iterations]
+                      ?hansen ?val ?neighbor-val :> ?beta)
+        
         (:distinct false))))
 
 (defmain run-buffer-generator
@@ -430,4 +446,10 @@
               ([]
                  (?- (hfs-seqfile out-path :sinkmode :replace)
                      (buffer-generator est-map
-                                            (hfs-seqfile in-path)))))))
+                                       (hfs-seqfile in-path)))))))
+
+(comment
+  (let [src (hfs-seqfile "s3n://formaresults/ecofeaturemat")]
+  (??<- [?count]
+        (src ?hansen ?val ?neighbor)
+        (c/count ?count))))
