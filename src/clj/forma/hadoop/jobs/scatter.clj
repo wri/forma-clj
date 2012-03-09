@@ -404,3 +404,30 @@
 
 ;; (local-beta-generator (forma-run-parameters "500-16"))
 ;; (use 'forma.hadoop.jobs.scatter)
+
+(defbufferop [eco-bufferop [r c m]]
+  [tuples]
+  (let [val-mat      (map second tuples) 
+        neighbor-mat (map last tuples)
+        feature-mat  (map log/unpack-feature-vec val-mat neighbor-mat)]
+    [[(first feature-mat)]]))
+
+(defn buffer-generator
+  "query to return the beta vector associated with an ecoregion"
+  [{:keys [t-res est-start ridge-const convergence-thresh max-iterations]} src]
+  (let [first-idx (date/datetime->period t-res est-start)]
+    (<- [?beta]
+        (src ?hansen ?val ?neighbor-val)
+        (eco-bufferop [ridge-const convergence-thresh max-iterations]
+                                ?hansen ?val ?neighbor-val :> ?beta)
+        (:distinct false))))
+
+(defmain run-buffer-generator
+  [tmp-root in-path out-path]
+  (let [est-map (forma-run-parameters "500-16")]
+    (workflow [tmp-root]              
+              genbetas
+              ([]
+                 (?- (hfs-seqfile out-path :sinkmode :replace)
+                     (buffer-generator est-map
+                                            (hfs-seqfile in-path)))))))
