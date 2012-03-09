@@ -450,6 +450,18 @@
 
 (comment
   (let [src (hfs-seqfile "s3n://formaresults/ecofeaturemat")]
-  (??<- [?count]
-        (src ?hansen ?val ?neighbor)
-        (c/count ?count))))
+    (??<- [?count]
+          (src ?hansen ?val ?neighbor)
+          (c/count ?count)))
+
+  (let [src (hfs-seqfile "s3n://formaresults/ecobetatests")]
+    (??<- [?val]
+          (src ?val)))
+  
+  (run-buffer-generator "/Users/robin/delete/hadoop"
+                        "/Users/robin/Downloads/eco-40102"
+                        "/Users/robin/delete/betas")
+
+  (run-buffer-generator "/user/hadoop/checkpoint"
+                             "s3n://formaresults/ecofeaturemat"
+                             "s3n://formaresults/ecobetatests"))
