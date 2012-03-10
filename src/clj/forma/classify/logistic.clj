@@ -27,24 +27,25 @@
         one (DoubleMatrix/ones 1)]
     (.divi exp-x (.add exp-x one))))
 
-(defn to-double-matrix
+(defn ^DoubleMatrix
+  to-double-matrix
   "returns a DoubleMatrix instance for use with jBLAS functions"
   [mat]
   (DoubleMatrix.
    (into-array (map double-array mat))))
 
-(defn to-double-rowmat
+(defn ^DoubleMatrix
+  to-double-rowmat
   [coll]
   (to-double-matrix [(vec coll)]))
 
-(defn
-  ^DoubleMatrix
+(defn ^DoubleMatrix
   copy-row
   [row]
   (.copy (to-double-matrix [[]]) row))
 
-(defn logistic-prob
-  ^DoubleMatrix
+(defn ^DoubleMatrix
+  logistic-prob
   [beta features]
   (logistic-fn
    (.dot beta features)))
