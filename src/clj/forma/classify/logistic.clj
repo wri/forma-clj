@@ -112,7 +112,7 @@
                          (double rdg-cons)))]
     (.mmul (Solve/solve info-adj
                         (DoubleMatrix/eye (int num-features)))
-           (jblas-score-seq beta-row label-row feature-mat))))
+           (score-seq beta-row label-row feature-mat))))
 
 (defn ^DoubleMatrix
   initial-beta
