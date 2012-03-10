@@ -74,7 +74,7 @@
 
 
 
-(def init-beta
+(def beta-init
   (initial-beta X-mat))
 
 
@@ -101,3 +101,90 @@
 ;;         transformed-row (in-place-apply-fn mult-func prob-row)]
 ;;     (.mmul (.muliRowVector (.transpose feature-mat) transformed-row)
 ;;            feature-mat))
+
+
+
+
+
+(fact
+  (jblas-probability-calc beta-init X-mat) => (probability-calc beta-init X-mat))
+
+(fact
+  (let [e (DoubleMatrix/eye 2)]
+    (jblas-mult-fn e) => (in-place-apply-fn mult-fn e)))
+
+(fact
+  (jblas-info-matrix beta-init X-mat) => (info-matrix beta-init X-mat))
+
+(comment
+  (let [prob-row (probability-calc beta-row feature-mat)
+      transformed-row (in-place-apply-fn mult-func prob-row)]
+    (.mmul (.muliRowVector (.transpose feature-mat) transformed-row)
+           feature-mat)))
+
+(fact
+  (let [mat (let [init-mat (.transpose (DoubleMatrix/zeros 4)) 
+                  to-insert (double 2)]
+              (.put init-mat 0 to-insert)
+              (.put init-mat 3 to-insert))
+        out-mat
+        (let [init-mat (.transpose (DoubleMatrix/zeros 4)) 
+              to-insert (double -2)]
+          (.put init-mat 0 to-insert)
+          (.put init-mat 3 to-insert))]
+    (in-place-apply-fn mult-fn mat) => out-mat))
+
+(fact
+  (let [mat (let [init-mat (.transpose (DoubleMatrix/zeros 4)) 
+                  to-insert (double 2)]
+              (.put init-mat 0 to-insert)
+              (.put init-mat 3 to-insert))
+        out-mat
+        (let [init-mat (.transpose (DoubleMatrix/zeros 4)) 
+              to-insert (double -2)]
+          (.put init-mat 0 to-insert)
+          (.put init-mat 3 to-insert))]
+    (jblas-mult-fn mat) => out-mat))
+
+(let [init-mat (.transpose (DoubleMatrix/zeros 4)) 
+          to-insert (double 2)]
+      (.put init-mat 0 to-insert))
+  
+
+(defn ^DoubleMatrix jbmul
+  [x]
+  (let [one (DoubleMatrix/ones 1)
+        one-minus-x (.sub one x)]
+    (.mul x one-minus-x)))
+
+(defn mk-data
+  [n]
+  (let 
+    [
+     ]))
+
+(defn multiplier
+  [n]
+  ((partial * 1000) n))
+
+(defn mk-x
+  [n]
+  (DoubleMatrix/rand (multiplier n) 20))
+
+(defn mk-y
+  [n]
+  (to-double-rowmat (repeatedly (multiplier n) #(rand-int 2))))
+
+(defn run-jblas
+  [n]
+  (let [big-X (mk-x n)
+        big-y (mk-y n)]
+    (prn (.rows big-X) (.columns big-X))
+    (jblas-logistic-beta-vector big-y big-X 1e-8 1e-10 6)))
+
+(defn run-reg
+  [n]
+  (let [big-X (mk-x n)
+        big-y (mk-y n)]
+    (prn (.rows big-X) (.columns big-X))
+    (logistic-beta-vector big-y big-X 1e-8 1e-10 6)))
