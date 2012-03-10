@@ -49,6 +49,50 @@
 (def X-mat
   (to-double-matrix X))
 
+(fact
+  (probability-calc beta-init X-mat) => [5])
+
+(fact
+  (let [e (DoubleMatrix/eye 2)]
+    (mult-fn e) => [5]))
+
+(fact
+  (info-matrix beta-init X-mat) => [5])
+
+(fact
+  "Make sure mult-fn is working for tiny matrix"
+  (let [mat
+        (let [init-mat (.transpose (DoubleMatrix/zeros 4)) 
+              to-insert (double 2)]
+          (.put init-mat 0 to-insert)
+          (.put init-mat 3 to-insert))
+        out-mat
+        (let [init-mat (.transpose (DoubleMatrix/zeros 4)) 
+              to-insert (double -2)]
+          (.put init-mat 0 to-insert)
+          (.put init-mat 3 to-insert))]
+    (mult-fn mat) => out-mat))
+
+(defn multiplier
+  [n]
+  ((partial * 1000) n))
+
+(defn mk-x
+  [n]
+  (DoubleMatrix/rand (multiplier n) 20))
+
+(defn mk-y
+  [n]
+  (to-double-rowmat (repeatedly (multiplier n) #(rand-int 2))))
+
+(defn run-logistic-beta-vector
+  "Run logistic-beta-vector on dataset of size n * 1000, with up to specified iterations"
+  [n iterations]
+  (let [big-X (mk-x n)
+        big-y (mk-y n)]
+    (prn (.rows big-X) (.columns big-X))
+    (logistic-beta-vector big-y big-X 1e-8 1e-10 iterations)))
+
 (comment
   (fact
   (let [r 1e-8
@@ -71,120 +115,3 @@
              (<- (hfs-textline "/Users/robin/delete/eco-40103" :sinkmode :replace)
                  [?hansen ?val ?n-val]
                  (src ?hansen ?val ?n-val))))
-
-
-
-(def beta-init
-  (initial-beta X-mat))
-
-
-;; (defn run-beta-vec
-;;   []
-;;   (let [XX (to-double-matrix (concat X X))
-;;         yy (to-double-rowmat (concat y y))]
-;;     (time (logistic-beta-vector ym X 1e-8 1e-10 6))))
-
-
-(defn run-info-mat
-  []
-  (info-matrix init-beta X-mat))
-
-
-(defn mult-trans
-  [b fm]
-  (.mmul b (.transpose fm)))
-
-;; (probability-calc init-beta X-mat)
-
-;; (let [mult-func (fn [x] (* (- 1 x)))
-;;         prob-row (probability-calc beta-row feature-mat)
-;;         transformed-row (in-place-apply-fn mult-func prob-row)]
-;;     (.mmul (.muliRowVector (.transpose feature-mat) transformed-row)
-;;            feature-mat))
-
-
-
-
-
-(fact
-  (jblas-probability-calc beta-init X-mat) => (probability-calc beta-init X-mat))
-
-(fact
-  (let [e (DoubleMatrix/eye 2)]
-    (jblas-mult-fn e) => (in-place-apply-fn mult-fn e)))
-
-(fact
-  (jblas-info-matrix beta-init X-mat) => (info-matrix beta-init X-mat))
-
-(comment
-  (let [prob-row (probability-calc beta-row feature-mat)
-      transformed-row (in-place-apply-fn mult-func prob-row)]
-    (.mmul (.muliRowVector (.transpose feature-mat) transformed-row)
-           feature-mat)))
-
-(fact
-  (let [mat (let [init-mat (.transpose (DoubleMatrix/zeros 4)) 
-                  to-insert (double 2)]
-              (.put init-mat 0 to-insert)
-              (.put init-mat 3 to-insert))
-        out-mat
-        (let [init-mat (.transpose (DoubleMatrix/zeros 4)) 
-              to-insert (double -2)]
-          (.put init-mat 0 to-insert)
-          (.put init-mat 3 to-insert))]
-    (in-place-apply-fn mult-fn mat) => out-mat))
-
-(fact
-  (let [mat (let [init-mat (.transpose (DoubleMatrix/zeros 4)) 
-                  to-insert (double 2)]
-              (.put init-mat 0 to-insert)
-              (.put init-mat 3 to-insert))
-        out-mat
-        (let [init-mat (.transpose (DoubleMatrix/zeros 4)) 
-              to-insert (double -2)]
-          (.put init-mat 0 to-insert)
-          (.put init-mat 3 to-insert))]
-    (jblas-mult-fn mat) => out-mat))
-
-(let [init-mat (.transpose (DoubleMatrix/zeros 4)) 
-          to-insert (double 2)]
-      (.put init-mat 0 to-insert))
-  
-
-(defn ^DoubleMatrix jbmul
-  [x]
-  (let [one (DoubleMatrix/ones 1)
-        one-minus-x (.sub one x)]
-    (.mul x one-minus-x)))
-
-(defn mk-data
-  [n]
-  (let 
-    [
-     ]))
-
-(defn multiplier
-  [n]
-  ((partial * 1000) n))
-
-(defn mk-x
-  [n]
-  (DoubleMatrix/rand (multiplier n) 20))
-
-(defn mk-y
-  [n]
-  (to-double-rowmat (repeatedly (multiplier n) #(rand-int 2))))
-
-(defn run-jblas
-  [n]
-  (let [big-X (mk-x n)
-        big-y (mk-y n)]
-    (prn (.rows big-X) (.columns big-X))
-    (jblas-logistic-beta-vector big-y big-X 1e-8 1e-10 6)))
-
-(defn run-reg
-  [n]
-  (let [big-X (mk-x n)
-        big-y (mk-y n)]
-    (prn (.rows big-X) (.columns big-X))
-    (logistic-beta-vector big-y big-X 1e-8 1e-10 6)))

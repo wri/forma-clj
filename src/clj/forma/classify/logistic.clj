@@ -19,15 +19,9 @@
 ;; and feature sequences are consistently positioned in the label and
 ;; feature collections.
 
-(defn logistic-fn
-  "returns the value of the logistic function, given input `x`"
-  [x]
-  (let [exp-x (Math/exp x)]
-    (/ exp-x (inc exp-x))))
-
 (defn
   ^DoubleMatrix
-  jblas-logistic-fn
+  logistic-fn
   [x]
   (let [exp-x (MatrixFunctions/exp x)
         one (DoubleMatrix/ones 1)]
@@ -43,12 +37,15 @@
   [coll]
   (to-double-matrix [(vec coll)]))
 
-(defn copy-row
-  [^DoubleMatrix row]
+(defn
+  ^DoubleMatrix
+  copy-row
+  [row]
   (.copy (to-double-matrix [[]]) row))
 
 (defn logistic-prob
-  [^DoubleMatrix beta ^DoubleMatrix features]
+  ^DoubleMatrix
+  [beta features]
   (logistic-fn
    (.dot beta features)))
 
@@ -72,97 +69,45 @@
                  label-seq
                  feature-mat)))
 
-(defn
-  in-place-apply-fn
-  [f ^DoubleMatrix row-mat]
-  (let [row (copy-row row-mat)
-        n (.columns row)]
-    (loop [idx 0
-           place []]
-      (if (> idx (dec n))
-        row
-        (recur
-         (inc idx)
-         (do (let [old-val (.get row 0 idx)] 
-               (.put row 0 idx (double (f old-val))))))))))
-
-(defn probability-calc
+(defn ^DoubleMatrix
+  probability-calc
   [beta feature-mat]
   (let [prob-row (.mmul beta (.transpose feature-mat))]
-    (in-place-apply-fn logistic-fn prob-row)))
+    (logistic-fn prob-row)))
 
 (defn ^DoubleMatrix
-  jblas-probability-calc
-  [beta feature-mat]
-  (let [prob-row (.mmul beta (.transpose feature-mat))]
-    (jblas-logistic-fn prob-row)))
-
-(defn score-seq
+  score-seq
   "returns the score for each parameter "
-  [^DoubleMatrix beta ^DoubleMatrix labels ^DoubleMatrix feature-mat]
+  [beta labels feature-mat]
     (let [prob-seq (probability-calc beta feature-mat)]
     (.mmul (.transpose feature-mat)
            (.transpose (.sub labels prob-seq)))))
 
 (defn ^DoubleMatrix
-  jblas-score-seq
-  "returns the score for each parameter "
-  [beta labels feature-mat]
-    (let [prob-seq (jblas-probability-calc beta feature-mat)]
-    (.mmul (.transpose feature-mat)
-           (.transpose (.sub labels prob-seq)))))
-
-(defn mult-fn
-  [x]
-  (* x (- 1 x)))
-
-(defn ^DoubleMatrix
-  jblas-mult-fn
+  mult-fn
   [x]
   (let [ones (DoubleMatrix/ones (.rows x) (.columns x))
         new-mat (.add ones (.neg x))]
     (.mul x new-mat)))
 
-(defn info-matrix
+(defn ^DoubleMatrix
+  info-matrix
   [beta-row feature-mat]
   {:pre [(= (.columns beta-row) (.columns feature-mat))]}
   (let [prob-row (probability-calc beta-row feature-mat)
-        transformed-row (in-place-apply-fn mult-fn prob-row)]
+        transformed-row (mult-fn prob-row)]
     (.mmul (.muliRowVector (.transpose feature-mat) transformed-row)
            feature-mat)))
 
 (defn ^DoubleMatrix
-  jblas-info-matrix
-  [beta-row feature-mat]
-  {:pre [(= (.columns beta-row) (.columns feature-mat))]}
-  (let [prob-row (jblas-probability-calc beta-row feature-mat)
-        transformed-row (jblas-mult-fn prob-row)]
-    (.mmul (.muliRowVector (.transpose feature-mat) transformed-row)
-           feature-mat)))
-
-(defn beta-update
-  "returns a vector of updates for the parameter vector; the
-  ridge-constant is a very small scalar, used to ensure that the
-  inverted information matrix is non-singular."
-  [^DoubleMatrix beta-row ^DoubleMatrix label-row ^DoubleMatrix feature-mat rdg-cons]
-  (let [num-features (.columns beta-row)
-        info-adj (.addi
-                  (info-matrix beta-row feature-mat)
-                  (.muli (DoubleMatrix/eye (int num-features))
-                         (double rdg-cons)))]
-    (.mmul (Solve/solve info-adj
-                        (DoubleMatrix/eye (int num-features)))
-           (score-seq beta-row label-row feature-mat))))
-
-(defn ^DoubleMatrix
-  jblas-beta-update
+  beta-update
   "returns a vector of updates for the parameter vector; the
   ridge-constant is a very small scalar, used to ensure that the
   inverted information matrix is non-singular."
   [beta-row label-row feature-mat rdg-cons]
   (let [num-features (.columns beta-row)
         info-adj (.addi
-                  (jblas-info-matrix beta-row feature-mat)
+                  (info-matrix beta-row feature-mat)
                   (.muli (DoubleMatrix/eye (int num-features))
                          (double rdg-cons)))]
     (.mmul (Solve/solve info-adj
@@ -174,27 +119,6 @@
   [feature-mat]
   (let [n (.columns feature-mat)]
     (to-double-rowmat (repeat n 0))))
-
-(defn jblas-logistic-beta-vector
-  "return the estimated parameter vector; which is used, in turn, to
-  calculate the estimated probability of the binary label; the initial
-  beta-diff value is an arbitrarily large value."
-  [label-row feature-mat
-   rdg-cons converge-threshold max-iter]
-  (let [beta-init (initial-beta feature-mat)]
-    (loop [beta beta-init
-           iter max-iter
-           beta-diff 100]
-      (if (or (zero? iter)
-              (< beta-diff converge-threshold))
-        (vec (.toArray beta))
-        (let [update (jblas-beta-update beta label-row feature-mat rdg-cons)
-              beta-new (.addRowVector beta update)
-              diff (.distance2 beta beta-new)]
-          (recur
-           beta-new
-           (dec iter)
-           diff))))))
 
 (defn logistic-beta-vector
   "return the estimated parameter vector; which is used, in turn, to
