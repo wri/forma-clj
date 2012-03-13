@@ -15,6 +15,9 @@ hadoop_lib=/home/hadoop/native/Linux-amd64-64
 sudo apt-get -y --force-yes install screen
 sudo apt-get -y --force-yes install exim4
 
+# install htop - helpful for monitoring slave nodes
+sudo apt-get -y --force-yes install htop
+
 # Install libhdf4
 sudo aptitude -fy install libhdf4-dev
 
