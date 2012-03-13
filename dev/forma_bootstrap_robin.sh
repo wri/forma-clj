@@ -103,7 +103,7 @@ cd ..
 # Get forma repo - easier to edit, test code
 git clone git@github.com:sritchie/forma-clj.git
 cd forma-clj
-git checkout robin-test
+git checkout dan-work
 
 # Now ready to use!
 lein deps
