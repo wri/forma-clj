@@ -4,7 +4,8 @@
         [clojure.math.numeric-tower :only (abs)]
         [forma.matrix.utils]
         [cascalog.api])
-  (:require [incanter.core :as i])
+  (:require [incanter.core :as i]
+            [cascalog.ops :as c])
   (:import [org.jblas FloatMatrix MatrixFunctions Solve DoubleMatrix]))
 
 ;; TODO: correct for error induced by ridge
@@ -210,3 +211,21 @@
 (defbufferop mk-timeseries
   [tuples]
   [[(map second (sort-by first tuples))]])
+
+(defn make-dict
+  [v]
+  {(keyword (str (second v)))
+   (last v)})
+
+(defn beta-dict 
+  "create dictionary of beta vectors by ecoregion, adding an intelligent default (average) for ecoregions without betavectors"
+  [eco-beta-src]
+  (let [src (name-vars eco-beta-src
+                       ["?s-res" "?eco" "?beta"])
+        beta-vec    (first (??- (c/first-n src 500)))
+        n           (count (last (first beta-vec)))
+        avg-beta-vec (map #(/ % n)
+                         (apply map + (map last beta-vec)))]
+    (assoc (apply merge-with identity
+                  (map make-dict beta-vec))
+      :full avg-beta-vec)))

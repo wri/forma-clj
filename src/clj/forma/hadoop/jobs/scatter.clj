@@ -9,6 +9,7 @@
   (:require [cascalog.ops :as c]
             [forma.utils :only (throw-illegal)]
             [forma.reproject :as r]
+            [forma.date-time :as date]
             [forma.schema :as schema]
             [forma.trends.stretch :as stretch]
             [forma.hadoop.predicate :as p]
@@ -278,29 +279,29 @@
   [tmp-root eco-beta-path full-beta-path static-path final-path out-path country-or-eco]
   (let [est-map (forma-run-parameters "500-16")]
     (workflow [tmp-root]              
-              genbetas
-              ([]
-                 (let [beta-path (if (= "eco" country-or-eco)
-                                   eco-beta-path
-                                   full-beta-path)]
-                   (?- (hfs-seqfile beta-path)
-                       (forma/beta-generator est-map
-                                             (hfs-seqfile final-path)
-                                             (hfs-seqfile static-path))))))))
+              ;; genbetas
+              ;; ([]
+              ;;    (let [beta-path (if (= "eco" country-or-eco)
+              ;;                      eco-beta-path
+              ;;                      full-beta-path)]
+              ;;      (?- (hfs-seqfile beta-path)
+              ;;          (forma/beta-generator est-map
+              ;;                                (hfs-seqfile final-path)
+              ;;                                (hfs-seqfile static-path)))))
+              applybetas
+              ([] (?- (hfs-seqfile out-path :sinkmode :replace)
+                      (forma/forma-estimate (hfs-seqfile eco-beta-path)
+                                            (hfs-seqfile final-path)
+                                            (hfs-seqfile static-path)))))))
 
-              ;; applybetas
-              ;; ([] (?- (hfs-seqfile out-path :sinkmode :replace)
-              ;;         (forma/forma-estimate (hfs-seqfile eco-beta-path)
-              ;;                               (hfs-seqfile full-beta-path)
-              ;;                               (hfs-seqfile final-path)
-              ;;                               (hfs-seqfile static-path))))
 
 (comment
   "Run this:"
-  (ultrarunner "/user/hadoop/checkpoint"
+   (ultrarunner "/user/hadoop/checkpoint"
                "s3n://formaresults/ecobetatemp"
                "s3n://formaresults/countrybetatemp"               
                "s3n://formaresults/staticbuckettemp"
                "s3n://formaresults/finalbuckettemp"
                "s3n://formaresults/finaloutput"
                "eco"))
+

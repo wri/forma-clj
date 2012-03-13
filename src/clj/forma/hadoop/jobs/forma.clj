@@ -146,17 +146,25 @@ value, and the aggregate of the neighbors."
                                 ?hansen ?val ?neighbor-val :> ?beta)
         (:distinct false))))
 
+(defmapop [apply-betas [beta-dict]]
+  [beta-dict eco val neighbor-val]
+  (let [beta (beta-dict (keyword (str eco)))
+        beta-full (beta-dict :full)]
+    (if (nil? beta)
+      (log/logistic-prob-wrap beta-full val neighbor-val)
+      (log/logistic-prob-wrap beta val neighbor-val))))
+
 (defn forma-estimate
   "query to end all queries: estimate the probabilities for each
   period after the training period."
-  [beta-src dynamic-src static-src]
-  (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
-      (beta-src ?s-res ?eco ?beta)
+  [eco-beta-src dynamic-src static-src]
+  (let [beta-dict (log/beta-dict eco-beta-src)]
+    (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
       (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
       (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)
-      (log/logistic-prob-wrap ?beta ?val ?neighbor-val :> ?prob)
+      (apply-betas [beta-dict] ?eco ?val ?neighbor-val :> ?prob)
       (log/mk-timeseries ?pd ?prob :> ?prob-series)
-      (:distinct false)))
+      (:distinct false))))
 
 (comment
   (let [m {:est-start "2005-12-31"
