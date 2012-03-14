@@ -158,13 +158,13 @@ value, and the aggregate of the neighbors."
   "query to end all queries: estimate the probabilities for each
   period after the training period."
   [eco-beta-src dynamic-src static-src]
-  (let [beta-dict (log/beta-dict eco-beta-src)]
+  (let [betas (log/beta-dict eco-beta-src)]
     (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)
-        (apply-betas [beta-dict] ?eco ?val ?neighbor-val :> ?prob)
+        (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
         (log/mk-timeseries ?pd ?prob :> ?prob-series)
-      (:distinct false))))
+        (:distinct false))))
 
 (comment
   (let [m {:est-start "2005-12-31"
