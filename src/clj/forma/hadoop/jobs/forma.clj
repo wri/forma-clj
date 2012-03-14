@@ -166,6 +166,12 @@ value, and the aggregate of the neighbors."
         (log/mk-timeseries ?pd ?prob :> ?prob-series)
         (:distinct false))))
 
+(defn prep-for-betas
+  [dynamic-src static-src]
+  (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
+        (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
+        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)))
+
 (comment
   (let [m {:est-start "2005-12-31"
            :est-end "2010-01-17"

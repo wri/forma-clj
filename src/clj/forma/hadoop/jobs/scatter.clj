@@ -276,7 +276,7 @@
    "fs.s3n.multipart.uploads.enabled" true})
 
 (defmain ultrarunner
-  [tmp-root eco-beta-path full-beta-path static-path final-path out-path country-or-eco]
+  [tmp-root eco-beta-path full-beta-path static-path dynamic-path out-path country-or-eco pre-beta-out-path]
   (let [est-map (forma-run-parameters "500-16")]
     (workflow [tmp-root]              
               ;; genbetas
@@ -288,11 +288,17 @@
               ;;          (forma/beta-generator est-map
               ;;                                (hfs-seqfile final-path)
               ;;                                (hfs-seqfile static-path)))))
-              applybetas
-              ([] (?- (hfs-seqfile out-path :sinkmode :replace)
-                      (forma/forma-estimate (hfs-seqfile eco-beta-path)
-                                            (hfs-seqfile final-path)
-                                            (hfs-seqfile static-path)))))))
+              ;; applybetas
+              ;; ([] (?- (hfs-seqfile out-path :sinkmode :replace)
+              ;;         (forma/forma-estimate (hfs-seqfile eco-beta-path)
+              ;;                               (hfs-seqfile dynamic-path-path)
+              ;;                               (hfs-seqfile
+              ;;                               static-path))))
+              pre-beta-apply
+              ([] (?- (hfs-seqfile pre-beta-out-path :sinkmode :replace)
+                      (forma/prep-for-betas
+                       (hfs-seqfile dynamic-path)
+                       (hfs-seqfile static-path)))))))
 
 
 (comment
@@ -303,5 +309,6 @@
                "s3n://formaresults/staticbuckettemp"
                "s3n://formaresults/finalbuckettemp"
                "s3n://formaresults/finaloutput"
-               "eco"))
+               "eco"
+               "s3n://formaresults/ecobetapreapply"))
 
