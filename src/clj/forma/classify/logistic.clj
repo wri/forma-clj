@@ -222,7 +222,7 @@
   [eco-beta-src]
   (let [src (name-vars eco-beta-src
                        ["?s-res" "?eco" "?beta"])
-        beta-vec    (first (??- (c/first-n src 500)))
+        beta-vec    (first (??- (c/first-n src 200)))
         n           (count (last (first beta-vec)))
         avg-beta-vec (map #(/ % n)
                          (apply map + (map last beta-vec)))]
