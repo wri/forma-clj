@@ -168,7 +168,7 @@ value, and the aggregate of the neighbors."
 
 (defn prep-for-betas
   [dynamic-src static-src]
-  (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
+  (<- [?s-res ?mod-h ?mod-v ?s ?l ?eco ?val ?neighbor-val]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)))
 
