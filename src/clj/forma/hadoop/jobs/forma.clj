@@ -146,25 +146,25 @@ value, and the aggregate of the neighbors."
                                 ?hansen ?val ?neighbor-val :> ?beta)
         (:distinct false))))
 
-(defmapop [apply-betas [beta-dict]]
-  [beta-dict eco val neighbor-val]
-  (let [beta (beta-dict (keyword (str eco)))
-        beta-full (beta-dict :full)]
-    (if (nil? beta)
-      (log/logistic-prob-wrap beta-full val neighbor-val)
-      (log/logistic-prob-wrap beta val neighbor-val))))
+;; (defmapop [apply-betas [betas]]
+;;   [beta-dict eco val neighbor-val]
+;;   (let [beta (beta-dict (keyword (str eco)))]
+;;     (if (nil? beta)
+;;       (log/logistic-prob-wrap beta-full val neighbor-val)
+;;       (log/logistic-prob-wrap beta val neighbor-val))))
 
 (defn forma-estimate
   "query to end all queries: estimate the probabilities for each
   period after the training period."
-  [eco-beta-src dynamic-src static-src]
-  (let [betas (log/beta-dict eco-beta-src)]
-    (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
+  [beta-src dynamic-src static-src]
+  (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
+        (beta-src ?s-res ?eco ?beta)
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)
-        (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
+        ;;(apply-betas [?beta] ?eco ?val ?neighbor-val :> ?prob)
+        (log/logistic-prob-wrap ?beta ?val ?neighbor-val)
         (log/mk-timeseries ?pd ?prob :> ?prob-series)
-        (:distinct false))))
+        (:distinct false)))
 
 (defn prep-for-betas
   [dynamic-src static-src]
