@@ -47,9 +47,9 @@
 
 (defn ^DoubleMatrix
   logistic-prob
-  [beta features]
+  [beta-mat features-mat]
   (logistic-fn
-   (.dot beta features)))
+   (to-double-rowmat [(.dot beta-mat features-mat)])))
 
 ;; TODO: convert the functions that are useful but not actually used
 ;; in estimation, like `log-likelihood` and `total-log-likelihood`.
@@ -206,7 +206,9 @@
 
 (defn logistic-prob-wrap
   [beta-vec val neighbor-val]
-  (logistic-prob beta-vec (unpack-feature-vec val neighbor-val)))
+  (let [beta-mat (to-double-matrix beta-vec)
+        features-mat (to-double-rowmat (unpack-feature-vec val neighbor-val)) ]
+    [(vec (.toArray (logistic-prob beta-mat features-mat)))]))
 
 (defbufferop mk-timeseries
   [tuples]

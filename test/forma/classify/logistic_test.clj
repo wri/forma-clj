@@ -41,8 +41,7 @@
    (vector? beta) => true
    (last beta)    => (roughly -8.4745)
    (first beta)   => (roughly -1.7796)
-   (logistic-prob (initial-beta Xm) x) => 0.5))
-
+   (logistic-prob-wrap beta) => [0.5]))
 
 (def y-mat
   (to-double-rowmat y))
@@ -118,8 +117,43 @@
                  [?hansen ?val ?n-val]
                  (src ?hansen ?val ?n-val))))
 
+(def feature-vec
+  [[0 0 0 0 -157.69368186874303 0.19138443637714708 0.04501147771152674 0 0 0 0 4 -153.08778642936596 -226.48974416017805 6.2492727447048075 -3.550102068394011 1.4331905477662108 -0.7384098147942525]])
+
 (def beta-src
+  ;; designed to match static-src eco-id
   [["500" 40102 [0.0 0.0 0.0 0.0 0.014124574304861895 -0.07149047035736451 -0.26117313338623815 0.0 0.0 0.0 0.0 -0.8754775060538595 0.014841138264409883 -0.028689426585205655 -0.03933755108463727 0.012033437671756119 0.05472598631539089 -0.5607842240019152]]])
+
+(def beta-vec
+  [0.0 0.0 0.0 0.0 0.014124574304861895 -0.07149047035736451 -0.26117313338623815 0.0 0.0 0.0 0.0 -0.8754775060538595 0.014841138264409883 -0.028689426585205655 -0.03933755108463727 0.012033437671756119 0.05472598631539089 -0.5607842240019152])
+
+(def static-src
+  ;; defined to match something on robin's computer
+  [["500" 31 9 1480 583 -9999	57 40102 0]])
 
 (fact
   (beta-dict beta-src) => {:40102 [0.0 0.0 0.0 0.0 0.014124574304861895 -0.07149047035736451 -0.26117313338623815 0.0 0.0 0.0 0.0 -0.8754775060538595 0.014841138264409883 -0.028689426585205655 -0.03933755108463727 0.012033437671756119 0.05472598631539089 -0.5607842240019152]})
+
+(def my-val
+  [["500" 31 9 1480 583 [{:temp-330 0, :conf-50 0, :both-preds 0, :count 0} -157.69368186874303 1 0.19138443637714708 0.04501147771152674]]])
+
+(def my-neighbor-val
+  [["500" 31 9 1480 583 [{:fire-value #forma.schema.FireValue{:temp-330 0, :conf-50 0, :both-preds 0, :count 0}, :neighbor-count 4, :avg-short-drop -153.08778642936596, :min-short-drop -226.48974416017805, :avg-param-break 1, :min-param-break 1, :avg-long-drop 6.2492727447048075, :min-long-drop -3.550102068394011, :avg-t-stat 1.4331905477662108, :min-t-stat -0.7384098147942525}]]])
+
+(comment
+  (fact
+    (let [dynamic-src (hfs-seqfile "/Users/robin/Downloads/dynamic")]
+      (??<- [?mod-h ?mod-v ?s ?l ?eco ?val ?neighbor-val]
+            (beta-src ?s-res ?eco ?beta)
+            (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen)
+            (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
+            (logistic-prob-wrap ?beta ?val ?neighbor-val :> ?prob))) => (produces [0.5])))
+
+(fact
+  (let [dynamic-src (hfs-seqfile "/Users/robin/Downloads/dynamic")]
+      (??<- [?prob]
+            (beta-src ?s-res ?eco ?beta)
+            (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen)
+            (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
+            (logistic-prob-wrap ?beta ?val ?neighbor-val :> ?prob))) => [[0.5]])
+;; (logistic-prob (to-double-matrix feature-vec) (to-double-rowmat beta-vec))

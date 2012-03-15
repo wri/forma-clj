@@ -160,8 +160,9 @@ value, and the aggregate of the neighbors."
   (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
         (beta-src ?s-res ?eco ?beta)
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
+        ;; (= ?pd 693)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)
-        ;;(apply-betas [?beta] ?eco ?val ?neighbor-val :> ?prob)
+        ;; (apply-betas [?beta] ?eco ?val ?neighbor-val :> ?prob)
         (log/logistic-prob-wrap ?beta ?val ?neighbor-val :> ?prob)
         (log/mk-timeseries ?pd ?prob :> ?prob-series)
         (:distinct false)))

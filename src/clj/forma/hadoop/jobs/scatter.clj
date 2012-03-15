@@ -294,12 +294,6 @@
                                             (hfs-seqfile dynamic-path)
                                             (hfs-seqfile
                                             static-path)))))))
-              ;; pre-beta-apply
-              ;; ([] (?- (hfs-seqfile pre-beta-out-path :sinkmode :replace)
-              ;;         (forma/prep-for-betas
-              ;;          (hfs-seqfile dynamic-path)
-              ;;          (hfs-seqfile static-path)))))))
-
 
 (comment
   "Run this:"
@@ -312,18 +306,16 @@
                "eco"
                "s3n://formaresults/ecobetapreapply"))
 
-
-
-(defn run-me
+(defn run-forma-estimate
   [beta-src dynamic-src static-src out-loc]
   (?- (hfs-seqfile out-loc :sinkmode :replace)
       (forma/forma-estimate 
        (hfs-seqfile beta-src)
        (hfs-seqfile dynamic-src)
-       (hfs-seqfile static-src))))  
+       (hfs-seqfile static-src))))
 
 (comment
   (run-me "s3n://formaresults/ecobetatemp"
-        "s3n://formaresults/finalbuckettemp"
-        "s3n://formaresults/staticbuckettemp"
-        "s3n://formaresults/finaloutput"))
+          "s3n://formaresults/finalbuckettemp"
+          "s3n://formaresults/staticbuckettemp"
+          "s3n://formaresults/finaloutput"))
