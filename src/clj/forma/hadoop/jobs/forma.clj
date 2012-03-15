@@ -165,7 +165,7 @@ value, and the aggregate of the neighbors."
         (log/logistic-prob-wrap ?beta ?val ?neighbor-val :> ?prob)
         (log/mk-timeseries ?pd ?prob :> ?prob-series)
         (:distinct false)
-        (= ?pd 693)))
+        (= ?pd 827)))
 
 (defn prep-for-betas
   [dynamic-src static-src]
