@@ -165,7 +165,6 @@ value, and the aggregate of the neighbors."
         (log/logistic-prob-wrap ?beta ?val ?neighbor-val :> ?prob)
         (log/mk-timeseries ?pd ?prob :> ?prob-series)
         (:distinct false)
-        (= ?pd 827)
         (:trap (hfs-seqfile "s3://formaresults/trapped"))))
 
 (defn prep-for-betas
