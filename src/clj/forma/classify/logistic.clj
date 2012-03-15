@@ -206,9 +206,9 @@
 
 (defn logistic-prob-wrap
   [beta-vec val neighbor-val]
-  (let [beta-mat (to-double-matrix beta-vec)
-        features-mat (to-double-rowmat (unpack-feature-vec val neighbor-val)) ]
-    [(vec (.toArray (logistic-prob beta-mat features-mat)))]))
+  (let [beta-mat (to-double-rowmat beta-vec)
+        features-mat (to-double-rowmat (unpack-feature-vec val neighbor-val))]
+    (flatten (vec (.toArray (logistic-prob beta-mat features-mat))))))
 
 (defbufferop mk-timeseries
   [tuples]
