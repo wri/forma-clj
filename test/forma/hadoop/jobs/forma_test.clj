@@ -48,12 +48,12 @@
             ["1000" 13 9 sample line series]))))
 
 (def outer-src
-  (let [no-fire-3 (schema/forma-value nil 3 3 3)
-        no-fire-2 (schema/forma-value nil 2 2 2)
-        no-fire-1 (schema/forma-value nil 1 1 1)
-        forma-3 (schema/forma-value (schema/fire-value 1 1 1 1) 3 3 3)
-        forma-2 (schema/forma-value (schema/fire-value 0 1 1 1) 2 2 2)
-        forma-1 (schema/forma-value (schema/fire-value 3 2 1 1) 1 1 1)]
+  (let [no-fire-3 (schema/forma-value nil 3 3 3 3)
+        no-fire-2 (schema/forma-value nil 2 2 2 2)
+        no-fire-1 (schema/forma-value nil 1 1 1 1)
+        forma-3 (schema/forma-value (schema/fire-value 1 1 1 1) 3 3 3 3)
+        forma-2 (schema/forma-value (schema/fire-value 0 1 1 1) 2 2 2 2)
+        forma-1 (schema/forma-value (schema/fire-value 3 2 1 1) 1 1 1 1)]
     [["1000" 370 13 9 0 0 forma-3]
      ["1000" 371 13 9 0 0 forma-2]
      ["1000" 372 13 9 0 0 forma-1]
@@ -242,8 +242,6 @@
           (provided
             (forma-tap est-map :n-src :reli-src :r-src :v-src :f-src) => outer-tap)))
 
-(def beta-src
-  ["500" 40102 [0.0 0.0 0.0 0.0 0.014124574304861895 -0.07149047035736451 -0.26117313338623815 0.0 0.0 0.0 0.0 -0.8754775060538595 0.014841138264409883 -0.028689426585205655 -0.03933755108463727 0.012033437671756119 0.05472598631539089 -0.5607842240019152]])
 
 
-(<- )
+
