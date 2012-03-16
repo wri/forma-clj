@@ -47,6 +47,7 @@
 
 (defn ^DoubleMatrix
   logistic-prob
+  ".dot returns a double, which needs to be converted to a DoubleMatrix for logistic-fn"
   [beta-mat features-mat]
   (logistic-fn
    (to-double-rowmat [(.dot beta-mat features-mat)])))
@@ -214,20 +215,19 @@
   [tuples]
   [[(map second (sort-by first tuples))]])
 
+(defn mk-key
+  [k]
+  (keyword (str k))) 
+
 (defn make-dict
   [v]
-  {(keyword (str (second v)))
+  {(mk-key (second v))
    (last v)})
 
-(defn beta-dict 
+(defn beta-dict
   "create dictionary of beta vectors by ecoregion, adding an intelligent default (average) for ecoregions without betavectors"
   [eco-beta-src]
-  (let [src (name-vars eco-beta-src
-                       ["?s-res" "?eco" "?beta"])
-        beta-vec    (first (??- (c/first-n src 200)))
-        n           (count (last (first beta-vec)))
-        avg-beta-vec (map #(/ % n)
-                         (apply map + (map last beta-vec)))]
-    (assoc (apply merge-with identity
-                  (map make-dict beta-vec))
-      :full avg-beta-vec)))
+  (let [src (name-vars eco-beta-src ["?s-res" "?eco" "?beta"])
+        beta-vec    (first (??- (c/first-n src 500)))]
+    (apply merge-with identity
+           (map make-dict beta-vec))))

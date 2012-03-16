@@ -122,7 +122,8 @@
 
 (def beta-src
   ;; designed to match static-src eco-id
-  [["500" 40102 [0.0 0.0 0.0 0.0 0.014124574304861895 -0.07149047035736451 -0.26117313338623815 0.0 0.0 0.0 0.0 -0.8754775060538595 0.014841138264409883 -0.028689426585205655 -0.03933755108463727 0.012033437671756119 0.05472598631539089 -0.5607842240019152]]])
+  [["500" 40102 [0.0 0.0 0.0 0.0 0.014124574304861895 -0.07149047035736451 -0.26117313338623815 0.0 0.0 0.0 0.0 -0.8754775060538595 0.014841138264409883 -0.028689426585205655 -0.03933755108463727 0.012033437671756119 0.05472598631539089 -0.5607842240019152]]
+   ["500" 40103 (vec (repeat 18 1.3))]])
 
 (def beta-vec
   [0.0 0.0 0.0 0.0 0.014124574304861895 -0.07149047035736451 -0.26117313338623815 0.0 0.0 0.0 0.0 -0.8754775060538595 0.014841138264409883 -0.028689426585205655 -0.03933755108463727 0.012033437671756119 0.05472598631539089 -0.5607842240019152])
@@ -151,9 +152,34 @@
 
 (fact
   (let [dynamic-src (hfs-seqfile "/Users/robin/Downloads/dynamic")]
-      (??<- [?prob]
+      (<- [?prob]
             (beta-src ?s-res ?eco ?beta)
             (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen)
             (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
             (logistic-prob-wrap ?beta ?val ?neighbor-val :> ?prob))) => [[0.5]])
 ;; (logistic-prob (to-double-matrix feature-vec) (to-double-rowmat beta-vec))
+
+
+(defmapop [mj [betas]]
+  [eco-id]
+  (let [eco-key (keyword (str eco-id))]
+    [(eco-key betas)]))
+
+(comment
+  (let [betas (beta-dict (hfs-seqfile "/Users/robin/Downloads/betas"))]
+    (??<- [?joined-beta]
+          (beta-src ?s-res ?eco-id ?beta)
+          (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco-id _)
+          (apply-betas [betas] ?eco-id :> ?joined-beta)
+          ;;(mj)
+          ;;(mult-eco-mean-beta [betas] ?eco-id :> ?eco-transform)
+          )))
+
+;; "s3://formaresults/trapped"
+
+(comment
+  (let [beta-src (hfs-seqfile "/Users/robin/Downloads/betas")
+        dynamic-src (hfs-seqfile "/Users/robin/Downloads/dynamic")
+        out (hfs-textline "/Users/robin/Downloads/text/apply" :sinkmode :replace)]
+    (?<- out []
+         (forma-estimate src ?a ?b ?c ?d ?e ?f ?g ?h))))

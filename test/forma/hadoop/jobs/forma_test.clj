@@ -242,6 +242,15 @@
           (provided
             (forma-tap est-map :n-src :reli-src :r-src :v-src :f-src) => outer-tap)))
 
+(def static-src
+  ;; defined to match something on robin's computer
+  [["500" 31 9 1480 583 -9999	57 40102 0]
+   ["500" 32 9 2099 2256 -9999 57 40102 0]])
 
-
-
+(comment
+  (let [beta-src (hfs-seqfile "/Users/robin/Downloads/betas")
+        dynamic-src (hfs-seqfile "/Users/robin/Downloads/dynamic")
+        out (hfs-textline "/Users/robin/Downloads/text/apply" :sinkmode :replace)
+        ;; trap-tap (hfs-seqfile "/Users/robin/Downloads/trap")
+        ]
+    (?- out (forma-estimate beta-src dynamic-src static-src ))))
