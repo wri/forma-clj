@@ -165,7 +165,7 @@ value, and the aggregate of the neighbors."
         (log/mk-timeseries ?pd ?prob :> ?prob-series)
         (= ?pd 827)
         (:distinct false)
-        ;;(:trap (hfs-seqfile trap-tap))
+        (:trap (hfs-seqfile trap-tap))
         )))
 
 (comment
