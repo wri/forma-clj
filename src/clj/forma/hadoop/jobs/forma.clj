@@ -154,8 +154,7 @@ value, and the aggregate of the neighbors."
 (defn forma-estimate
   "query to end all queries: estimate the probabilities for each
   period after the training period."
-  [beta-src dynamic-src static-src]
-  ;; trap-tap arg
+  [beta-src dynamic-src static-src trap-tap]
   (let [betas (log/beta-dict beta-src)]
       (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
         (beta-src ?s-res ?eco ?beta)
