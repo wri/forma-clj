@@ -203,7 +203,9 @@
 
 (defn logistic-prob-wrap
   [beta-vec val neighbor-val]
-  (logistic-prob beta-vec (unpack-feature-vec val neighbor-val)))
+  (let [beta-mat (to-double-rowmat beta-vec)
+        feature-mat (to-double-rowmat (unpack-feature-vec val neighbor-val))]
+     (vec (.toArray (logistic-prob beta-mat feature-mat)))))
 
 (defbufferop mk-timeseries
   [tuples]
@@ -218,18 +220,19 @@
          (first ?prob-series :> ?thresh)
          (> ?thresh 0.5))))
 
+(defn mk-key
+  [k]
+  (keyword (str k)))
+
 (defn make-dict
   [v]
-  {(keyword (str (second v)))
+  {(mk-key (second v))
    (last v)})
 
-(defn beta-dict [eco-beta-src full-beta-src]
-  (let [src (name-vars eco-beta-src
+(defn beta-dict [beta-src]
+  (let [src (name-vars beta-src
                        ["?s-res" "?eco" "?beta"])
-        full-src (name-vars full-beta-src
-                            ["?s-res" "?beta"])
-        beta-full (first (??- (c/first-n full-src 1)))
-        beta-vec  (first (??- (c/first-n src 200)))]
-    (assoc (apply merge-with identity
-                  (map make-dict beta-vec))
-      :full (last (first beta-full)))))
+        beta-vec  (first (??- (c/first-n src 1000)))]
+    (apply merge-with identity
+                  (map make-dict beta-vec))))
+

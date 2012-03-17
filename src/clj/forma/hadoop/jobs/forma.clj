@@ -146,25 +146,36 @@ value, and the aggregate of the neighbors."
                                 ?hansen ?val ?neighbor-val :> ?beta)
         (:distinct false))))
 
-(defn apply-betas
-  [eco-beta-src full-beta-src eco val neighbor-val]
-  (let [beta-map (log/beta-dict eco-beta-src full-beta-src)
-        beta (beta-map (keyword (str eco)))
-        beta-full (beta-map :full)]
-    (if (nil? beta)
-      (log/logistic-prob-wrap beta-full val neighbor-val)
-      (log/logistic-prob-wrap beta val neighbor-val))))
+(defmapop [apply-betas [betas]]
+  [eco val neighbor-val]
+  (let [beta ((log/mk-key eco) betas)]
+    (log/logistic-prob-wrap beta val neighbor-val)))
 
 (defn forma-estimate
   "query to end all queries: estimate the probabilities for each
   period after the training period."
-  [eco-beta-src full-beta-src dynamic-src static-src]
-  (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
-      (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-      (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)
-      (apply-betas ?eco ?val ?neighbor-val :> ?prob)
-      (log/mk-timeseries ?pd ?prob :> ?prob-series)
-      (:distinct false)))
+  [beta-src dynamic-src static-src trap-tap period]
+  (let [betas (log/beta-dict beta-src)]
+    (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
+        (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
+        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)
+        (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
+        (log/mk-timeseries ?pd ?prob :> ?prob-series)
+        (= ?pd period)
+        (:distinct false)
+        ;;(:trap trap-tap)
+        )))
+
+(defn run-estimate
+  []
+  (let [static-src [["500" 31 9 1480 583 -9999 57 40102 0]
+                    ["500" 32 9 2099 2256 -9999 57 40102 0]]
+        dynamic-src [["500" 901 32 9 2099 2256 [#forma.schema.FireValue{:temp-330 0, :conf-50 0, :both-preds 0, :count 0} -466.2011790878755 1 1.6012421078702275 0.2656590124101372] #forma.schema.NeighborValue{:fire-value #forma.schema.FireValue{:temp-330 0, :conf-50 0, :both-preds 0, :count 0}, :neighbor-count 4, :avg-short-drop -174.58885428253615, :min-short-drop -309.94680756395996, :avg-param-break 1, :min-param-break 1, :avg-long-drop 4.25231304252854, :min-long-drop 0.7720724721357737, :avg-t-stat 0.637545513914194, :min-t-stat 0.12022165725363915}]]
+        beta-src (hfs-seqfile "/Users/robin/Downloads/betas")
+        out (hfs-seqfile "/Users/robin/Downloads/text/apply" :sinkmode :replace)
+        trap-tap (hfs-seqfile "/Users/robin/Downloads/trap")
+        dynamic-src-1 (hfs-seqfile "/Users/robin/Downloads/dynamic")]
+  (?- out (forma-estimate beta-src dynamic-src-1 static-src trap-tap 901))))
 
 (comment
   (let [m {:est-start "2005-12-31"
