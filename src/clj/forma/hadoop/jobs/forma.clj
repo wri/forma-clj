@@ -162,7 +162,7 @@ value, and the aggregate of the neighbors."
         (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
         (log/mk-timeseries ?pd ?prob :> ?prob-series)
         (:distinct false)
-        (= ?pd period)
+        ;;(= ?pd period)
         (:distinct false)
         (:trap trap-tap))))
 

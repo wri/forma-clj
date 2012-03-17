@@ -307,18 +307,20 @@
                "s3n://formaresults/ecobetapreapply"))
 
 (defn run-forma-estimate
-  [beta-src dynamic-src static-src out-loc trap-path]
+  [beta-src dynamic-src static-src out-loc trap-path period]
   (?- (hfs-seqfile out-loc :sinkmode :replace)
       (forma/forma-estimate 
        (hfs-seqfile beta-src)
        (hfs-seqfile dynamic-src)
        (hfs-seqfile static-src)
-       (hfs-seqfile trap-path))))
+       (hfs-seqfile trap-path)
+       period)))
 
 (comment
   (run-forma-estimate "s3n://formaresults/ecobetatemp"
                       "s3n://formaresults/finalbuckettemp"
                       "s3n://formaresults/staticbuckettemp"
                       "s3n://formaresults/finaloutput"
-                      "s3n://formaresults/trapped"))
+                      "s3n://formaresults/trapped"
+                      827))
 
