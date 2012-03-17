@@ -157,13 +157,13 @@ value, and the aggregate of the neighbors."
   [beta-src dynamic-src static-src trap-tap]
   (let [betas (log/beta-dict beta-src)]
       (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
-        (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)
-        (apply-betas [?beta] ?eco ?val ?neighbor-val :> ?prob)
-        (log/mk-timeseries ?pd ?prob :> ?prob-series)
-        (= ?pd 827)
-        (:distinct false)
-        (:trap (hfs-seqfile trap-tap)))))
+          (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
+          (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)
+          (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
+          (log/mk-timeseries ?pd ?prob :> ?prob-series)
+          (= ?pd 827)
+          (:distinct false)
+          (:trap (hfs-seqfile trap-tap)))))
 
 (comment
   (let [m {:est-start "2005-12-31"
