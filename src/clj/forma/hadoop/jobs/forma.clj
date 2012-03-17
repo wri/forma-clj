@@ -154,16 +154,17 @@ value, and the aggregate of the neighbors."
 (defn forma-estimate
   "query to end all queries: estimate the probabilities for each
   period after the training period."
-  [beta-src dynamic-src static-src trap-tap]
+  [beta-src dynamic-src static-src trap-tap period]
   (let [betas (log/beta-dict beta-src)]
-      (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
-          (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-          (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)
-          (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
-          (log/mk-timeseries ?pd ?prob :> ?prob-series)
-          (= ?pd 827)
-          (:distinct false)
-          (:trap (hfs-seqfile trap-tap)))))
+    (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
+        (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
+        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)
+        (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
+        (log/mk-timeseries ?pd ?prob :> ?prob-series)
+        (= ?pd 827)
+        (:distinct false)
+        ;;(:trap (hfs-seqfile trap-tap))
+        )))
 
 (comment
   (let [m {:est-start "2005-12-31"
