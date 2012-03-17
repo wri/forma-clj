@@ -3,8 +3,8 @@
   (:use [midje sweet cascalog]
         [clojure-csv.core]
         [cascalog.api]
-        [clojure.test]
-        [midje.cascalog])
+        [midje.cascalog]
+        [clojure-csv.core])
   (:import [org.jblas FloatMatrix MatrixFunctions DoubleMatrix])
   (:require [incanter.core :as i]
             [forma.testing :as t]
@@ -41,7 +41,7 @@
    (vector? beta) => true
    (last beta)    => (roughly -8.4745)
    (first beta)   => (roughly -1.7796)
-   (logistic-prob-wrap beta) => [0.5]))
+   (logistic-prob beta Xm x) => 0.5))
 
 (def y-mat
   (to-double-rowmat y))

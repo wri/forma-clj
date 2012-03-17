@@ -4,10 +4,11 @@
         [clojure.math.numeric-tower :only (abs)]
         [forma.matrix.utils]
         [cascalog.api])
-  (:require [incanter.core :as i]
+(:require [incanter.core :as i]
             [cascalog.ops :as c])
   (:import [org.jblas FloatMatrix MatrixFunctions Solve DoubleMatrix]))
 
+;;        [clojure-csv.core])
 ;; TODO: correct for error induced by ridge
 ;; TODO: Add docs!!!
 
@@ -225,9 +226,9 @@
    (last v)})
 
 (defn beta-dict
-  "create dictionary of beta vectors by ecoregion, adding an intelligent default (average) for ecoregions without betavectors"
-  [eco-beta-src]
-  (let [src (name-vars eco-beta-src ["?s-res" "?eco" "?beta"])
-        beta-vec    (first (??- (c/first-n src 500)))]
+  "create dictionary of beta vectors"
+  [beta-src]
+  (let [src (name-vars beta-src ["?s-res" "?eco" "?beta"])
+        beta-vec (first (??- (c/first-n src 500)))]
     (apply merge-with identity
            (map make-dict beta-vec))))

@@ -161,10 +161,10 @@ value, and the aggregate of the neighbors."
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)
         (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
         (log/mk-timeseries ?pd ?prob :> ?prob-series)
-        (= ?pd 827)
         (:distinct false)
-        ;;(:trap (hfs-seqfile trap-tap))
-        )))
+        (= ?pd period)
+        (:distinct false)
+        (:trap trap-tap))))
 
 (comment
   (let [m {:est-start "2005-12-31"
