@@ -186,21 +186,3 @@ valid arguments."
 
 (def byte-array-type
   (class (make-array Byte/TYPE 0)))
-
-;; We define a function below that flips the endian order of a
-;; sequence of bytes -- we can use this to coerce groups of
-;; little-endian bytes into big-endian floats.
-
-(defn flipped-endian-float
-  "Flips the endian order of each byte in the supplied byte sequence,
-  and converts the sequence into a float. Currently we limit the size
-  of the `byte-seq` to 4."
-  [byte-seq]
-  {:pre [(= 4 (count byte-seq))]}
-  (->> byte-seq
-       (map-indexed (fn [idx bit]
-                      (bit-shift-left
-                       (bit-and bit 0xff)
-                       (* 8 idx))))
-       (reduce +)
-       (Float/intBitsToFloat)))

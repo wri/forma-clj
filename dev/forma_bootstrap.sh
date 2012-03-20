@@ -15,27 +15,6 @@ hadoop_lib=/home/hadoop/native/Linux-amd64-64
 sudo apt-get -y --force-yes install screen
 sudo apt-get -y --force-yes install exim4
 
-# Upgrading GCC requires a restart of certain services; this is a
-# little hacky, but rather than do this manually we'll move the
-# services out of init.d, place them back in after the upgrade and
-# restart them manually.
-sudo mv /etc/init.d/mysql /home/hadoop/mysql
-sudo mv /etc/init.d/cron /home/hadoop/cron
-sudo mv /etc/init.d/exim4 /home/hadoop/exim4
-
-# Upgrade GCC.
-sudo aptitude install -y libc-bin
-
-# Move services back...
-sudo mv /home/hadoop/mysql /etc/init.d/mysql 
-sudo mv /home/hadoop/cron /etc/init.d/cron 
-sudo mv /home/hadoop/exim4 /etc/init.d/exim4 
-
-# and restart.
-sudo /etc/init.d/mysql restart
-sudo /etc/init.d/cron restart
-sudo /etc/init.d/exim4 restart
-
 # Install libhdf4
 sudo aptitude -fy install libhdf4-dev
 
@@ -45,12 +24,13 @@ sudo mkdir -p /usr/local/fwtools
 sudo tar -C /usr/local/fwtools --strip-components=2 -xvzf $fwtools
 sudo chown --recursive hadoop /usr/local/fwtools
 
-# Install Native Java Bindings
+# Download native Java bindings for gdal and jblas
 wget -S -T 10 -t 5 http://$bucket.s3.amazonaws.com/$native
 wget -S -T 10 -t 5 http://$bucket.s3.amazonaws.com/$jblas
-sudo mkdir -p /home/hadoop/native
+
+# Untar everything into EMR's native library path
 sudo tar -C $hadoop_lib --strip-components=2 -xvzf $native
-sudo tar -C $hadoop_lib --strip-components=2 -xvzf $jblas
+sudo tar -C $hadoop_lib --strip-components=1 -xvzf $jblas
 sudo chown --recursive hadoop $hadoop_lib
 
 # Add proper configs to hadoop-env.

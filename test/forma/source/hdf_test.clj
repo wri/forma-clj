@@ -98,6 +98,7 @@ resolution of 1000m; otherwise, the relationship between chunk-size
 and total chunks becomes off."
   (let [subquery (->> (io/hfs-wholefile hdf-path)
                       (modis-chunks [:ndvi] 24000))]
-    (fact?<- [[60]] [?count]
+    (fact?<- [[60]]
+             [?count]
              (subquery ?datachunk)
              (c/count ?count))))

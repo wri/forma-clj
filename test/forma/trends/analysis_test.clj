@@ -1,59 +1,29 @@
-
 (ns forma.trends.analysis-test
   (:use [forma.trends.analysis] :reload)
-  (:use [midje.sweet]
-        [forma.trends.data]
-        [forma.matrix.utils]
-        [forma.utils]
-        [clojure.math.numeric-tower :only (sqrt floor abs expt)])
-  (:require [incanter.core :as i]
-            [incanter.stats :as s]))
+  (:use [cascalog.api]
+        [forma.matrix.utils :only (transpose)]
+        [midje sweet cascalog]
+        [forma.trends.data :only (ndvi rain reli Yt)]
+        [forma.matrix.utils :only (transpose)]
+        [forma.utils :only (idx)]
+        [forma.schema :only (timeseries-value)]
+        [forma.trends.stretch :only (ts-expander)]
+        [clojure.math.numeric-tower :only (floor abs expt)]
+        [clojure.test :only (deftest)]))
 
 (defn num-equals [expected]
   (fn [actual] (== expected actual)))
 
 (fact
-  "Check square matrix"
-  (let [mat (i/matrix [[1 2 3 4]
-                       [5 6 7 8]
-                       [9 10 11 12]
-                       [13 14 15 16]])]
-    (is-square? mat) => true))
+ "Check element-wise sum of components of vector of vectors"
+ (element-sum [[1 2 3] [1 2 3]]) => [2 4 6])
 
 (fact
-  "check singular matrix"
-  (let [mat (i/matrix [[3 6]
-                       [1 2]])]
-    (singular? mat) => true))
-
-(fact
-  "Check that indexing is correct"
-  (idx [4 5 6]) => [1 2 3])
-
-(fact
-  "Check windowed-map"
-  (windowed-map ols-trend 2 [1 2 50]) => (contains (map roughly [1.0 48.0])))
-
-(fact
-  "Does transpose work as planned? Sure looks like it!"
-  (transpose [[1 2 3] [4 5 6]] ) => [[1 4] [2 5] [3 6]])
-
-(fact
-  "Checking outer product calculation against Numpy function np.outer() for mat and mat.T, where mat is [1 2 3]"
-  (outer-product [1 2 3]) => [1.0 2.0 3.0 2.0 4.0 6.0 3.0 6.0 9.0])
-
-(fact
-  "Check element-wise sum of components of vector of vectors"
-  (element-sum [[1 2 3] [1 2 3]]) => [2 4 6])
-
-(fact
-  "Check average of vector.
-   Casting as float to generalize for another vector as necessary"
-  (float (average [1 2 3.])) => (num-equals 2.0))
-
-(fact
-  "Check moving average"
-  (moving-average 2 [1 2 3]) => [3/2 5/2])
+ "check raising residuals of linear model to given power"
+ (let [y Yt
+       X (idx Yt)
+       power 2]
+   (last (expt-residuals y X power))) => (roughly 0.044304))
 
 (tabular
  (fact
@@ -65,38 +35,12 @@
  [1 2 50] (roughly 24.5 0.00000001)
  [2 50] (roughly 48. 0.00000001))
 
-(tabular
- "check calculation of minimum short-term trend. ?long is the window, ?short is the moving average smoothing"
- (fact
-   (min-short-trend ?long ?short ?ts) => ?expected)
- ?long ?short ?ts ?expected
- 2      1    [1 2 3 4 3 2 1] (roughly -1.)
- 3      1    [1 2 3 4 3 2 1] (roughly -1.)
- 3      1    [1 2 3 4 3 2 0] (roughly -1.5)
- 3      2    [1 2 3 4 3 2 0] (roughly -1.25))
-
-(fact
-  "check raising residuals of linear model to given power"
-  (let [y Yt
-        X (idx Yt)
-        power 2]
-    (last (expt-residuals y X power))) => 0.04430432657988476)
-
-(tabular
- (fact
-   "check scaling all elements of a vector by a scalar"
-   (scale ?scalar ?coll) => ?expected)
- ?scalar ?coll ?expected
- 1 [1 2 3] [1 2 3]
- 2 [1 2 3] [2 4 6]
- 1.5 [1 2 3] [1.5 3.0 4.5])
-
 (facts
  "test that `long-stats` yields the trend coefficient and t-test
 statistic on `ndvi`"
  (let [[coeff t-test] (long-stats ndvi)]
-   coeff  => -1.1430015917806315
-   t-test => -0.918260660209))
+   coeff  => (roughly -1.14300)
+   t-test => (roughly -0.91826)))
 
 (fact
  "first-order-conditions has been checked"
@@ -126,15 +70,118 @@ first-order conditions"
     (hansen-stat ndvi)) => pos?)
 
 (facts
- "test that the magnitude of the short-term drop of the
-transformed (shifted down) time series is higher than that of the
-original time series"
- (let [s-drop (short-trend 23 30 10 reli (shift-down-end ndvi))]
-   s-drop => (roughly -207.1324832578859)
-   (- (abs s-drop)
-      (abs (short-trend 23 30 10 reli ndvi))) => pos?))
+ "check that the appropriate number of periods are included in the
+ results vector, after the appropriate number of intervals (strictly
+ within the training period) are dropped.  Suppose, for example, that
+ there are exactly 100 intervals in the training period, with 271
+ intervals total (length of test data, ndvi).  There should be 172
+ values in the result vector: 1 to mark the end of the training
+ period, and then 171 thereafter.
+
+ Parameter list:
+
+ 30: length of long-block for OLS trend
+ 10: length of moving average window
+ 23: frequency of 16-day intervals (annually)
+ 100: example length of the training period
+ 271: last period in test time series"
+ (count (telescoping-long-trend 23 100 271 ndvi reli rain)) => 172
+ (count (first (telescoping-long-trend 23 100 271 ndvi reli rain))) => 3
+ (count (telescoping-short-trend 30 10 23 100 271 ndvi reli))  => 172)
 
 (fact
- ""
- (telescoping-short-trend 140 142 23 30 10 ndvi reli)
- => [-63.86454150922382 -63.80705626756505 -63.757505861590836])
+ "test that the magnitude of the short-term drop of the
+ transformed (shifted down) time series is higher than that of the
+ original time series"
+ (let [s-drop (telescoping-short-trend 30 10 23 138 271 ndvi reli)
+       big-drop (telescoping-short-trend 30 10 23 138 271 (shift-down-end ndvi) reli)]
+   (- (abs (reduce min big-drop)) (abs (reduce min s-drop))) => pos?))
+
+;; Benchmark
+
+;; (time (dotimes [_ 100] (hansen-stat ndvi)))
+;; "Elapsed time: 4465.948 msecs"
+;; (hansen-stat ndvi) => 0.9113170920764364
+
+;; (time (dotimes [_ 1]
+;;         (dorun (telescoping-long-trend 23 140 271 ndvi reli rain))))
+;; "Elapsed time: 3320.463 msecs"
+
+;; Newest implementation
+
+;; (time (dotimes [_ 1]
+        ;; (dorun (telescoping-short-trend 30 10 23 138 271 ndvi reli))))
+;; "Elapsed time: 52.322 msecs"
+
+;; [for reference and encouragement] Original function, which mapped
+;; the short-trend across small blocks
+
+;; (time (dotimes [_ 1]
+;;         (dorun (telescoping-short-trend 140 271 23 30 10 ndvi reli))))
+;; "Elapsed time: 5650.48 msecs"
+
+
+(def ts-tap
+  "sample tap that mimics 2 identical pixels (each with the same time series)"
+  (vec (repeat 2 {:start 0 :end 271 :ndvi ndvi :reli reli :rain rain})))
+
+(defn long-trend-results
+  "returns three vectors, the first with the hansen statistic for time
+  series ranging from 0 through 135 (end of training period) and 136;
+  the second with the long-term drop value; and the third with the
+  long-term t-statisic. Input a map, generated by total-tap.  The
+  start and end index don't matter for this application, but are left
+  in there anyway to ensure forward compatibility"
+  [m]
+  (let [start 135
+        end 136
+        [ndvi-ts reli-ts rain-ts] ((juxt :ndvi :reli :rain) m)]
+    (vec (map
+          (partial timeseries-value start end)
+          (transpose
+           (telescoping-long-trend 23 start end ndvi-ts reli-ts rain-ts))))))
+
+(defn short-trend-results
+  "returns three vectors, the first with the hansen statistic for time
+  series ranging from 0 through 135 (end of training period) and 136;
+  the second with the long-term drop value; and the third with the
+  long-term t-statisic.  Input a map, generated by total-tap.  The
+  start and end index don't matter for this application, but are left
+  in there anyway to ensure forward compatibility"
+  [m]
+  (let [start 135
+        end 136
+        [ndvi-ts reli-ts] ((juxt :ndvi :reli) m)]
+    (timeseries-value start end
+     (telescoping-short-trend 30 10 23 start end ndvi-ts reli-ts))))
+
+(deftest long-trends-test
+  (facts
+   "check that the long- and short-term statistics match the expected
+values of the test data vectors."
+   (let [long-trend-query
+         (<- [?han-stat ?long-drop ?long-tstat]
+             (ts-tap ?ts-map)
+             (long-trend-results ?ts-map :> ?han-stat ?long-drop ?long-tstat)
+             (:distinct false))
+         short-trend-query
+         (<- [?min-drop]
+             (ts-tap ?ts-map)
+             (short-trend-results ?ts-map :> ?min-drop)
+             (:distinct false))]
+     long-trend-query =>
+     (produces-some [[{:start-idx 135
+                       :end-idx 136
+                       :series [1.2393550741169639 1.2133709085855648]}
+                      {:start-idx 135
+                       :end-idx 136
+                       :series [2.4915869043482424 1.3049908881259853]}
+                      {:start-idx 135
+                       :end-idx 136
+                       :series [1.1504228201940752 0.5951173333726173]}]])
+     short-trend-query =>
+     (produces-some [[{:start-idx 135
+                       :end-idx 136
+                       :series [-63.23936661263988 -63.23936661263988]}]]))))
+
+

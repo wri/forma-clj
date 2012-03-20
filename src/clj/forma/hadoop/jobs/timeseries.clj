@@ -29,7 +29,6 @@
                        (partial into [])
                        vector)]
     (->> chunks
-         (map :series)
          (apply map tupleize)
          (map-indexed cons))))
 
@@ -49,20 +48,24 @@
   timeseries."
   [chunk-source missing-val]
   (let [mk-tseries (form-tseries missing-val)
-        series-src (<- [?name ?t-res ?location ?pix-idx ?timeseries]
+        data-src   (<- [?name ?t-res ?date ?s-res ?mod-h ?mod-v ?chunk-idx ?size ?datachunk]
                        (chunk-source _ ?chunk)
-                       (schema/unpack-chunk-val ?chunk
-                                            :> ?name ?t-res ?date ?location ?datachunk)
-                       (mk-tseries ?t-res ?date ?datachunk
-                                   :> ?pix-idx ?start ?end ?tseries)
+                       (schema/unpack-chunk-val ?chunk :> ?name ?t-res ?date ?location ?datachunk)
+                       (schema/unpack-chunk-location ?location :> ?s-res ?mod-h ?mod-v ?chunk-idx ?size)
+                       (:distinct false))
+        series-src (<- [?name ?t-res ?s-res ?mod-h ?mod-v ?chunk-idx ?size ?pix-idx ?timeseries]
+                       (data-src ?name ?t-res ?date ?s-res ?mod-h ?mod-v ?chunk-idx ?size ?datachunk)
+                       (mk-tseries ?t-res ?date ?datachunk :> ?pix-idx ?start ?end ?tseries)
                        (schema/timeseries-value ?start ?end ?tseries :> ?timeseries))]
     (<- [?chunk]
-        (series-src ?name ?t-res ?location ?pix-idx ?timeseries)
-        (schema/chunkloc->pixloc ?location ?pix-idx :> ?pix-location)
+        (series-src ?name ?t-res ?s-res ?mod-h ?mod-v ?chunk-idx ?size ?pix-idx ?timeseries)
+        (r/tile-position ?s-res ?size ?chunk-idx ?pix-idx :> ?sample ?line)
+        (schema/pixel-location ?s-res ?mod-h ?mod-v ?sample ?line :> ?pix-location)
         (schema/chunk-value ?name ?t-res nil ?pix-location ?timeseries :> ?chunk)
         (:distinct false))))
 
-(def ^:dynamic *missing-val* -9999)
+(def ^:dynamic *missing-val*
+  -9999)
 
 (defn tseries-query
   [pail-path datasets]
@@ -71,19 +74,22 @@
 
 (defmain DynamicTimeseries
   "TODO: Process a pattern, here"
-  [source-pail-path ts-pail-path s-res t-res & datasets]
-  (let [datasets (or datasets ["precl" "ndvi" "reli" "qual" "evi"])]
-    (->> (for [dset datasets]
-           [dset (format "%s-%s" s-res t-res)])
-         (tseries-query source-pail-path)
-         (pail/to-pail ts-pail-path))))
+  [source-pail-path ts-pail-path s-res t-res datasets & countries]
+  {:pre [(vector? (read-string datasets))]}
+  (->> (for [dset  (read-string datasets)
+             [h v] (->> countries
+                        (map read-string)
+                        (apply tile-set))]
+         [dset (format "%s-%s" s-res t-res) (r/hv->tilestring h v)])
+       (tseries-query source-pail-path)
+       (pail/to-pail ts-pail-path)))
 
 ;; #### Fire Time Series Processing
 
 (defparallelagg merge-firetuples
   "Aggregates a number of firetuples by adding up the values of each
   `FireTuple` property."
-  :init-var #'identity
+  :init-var    #'identity
   :combine-var #'schema/add-fires)
 
 (defmapop running-fire-sum
@@ -98,11 +104,12 @@
   "Converts the datestring into a time period based on the supplied
   temporal resolution."
   [src t-res]
-  (<- [?name ?datestring ?location ?tuple]
+  (<- [?name ?datestring ?s-res ?mod-h ?mod-v ?s ?l ?tuple]
       (src _ ?chunk)
       (map ?chunk [:dataset :location :date :value] :> ?name ?location ?date ?val)
       (merge-firetuples ?val :> ?tuple)
       (date/beginning t-res ?date :> ?datestring)
+      (schema/unpack-pixel-location ?location :> ?s-res ?mod-h ?mod-v ?s ?l)
       (:distinct false)))
 
 (defn create-fire-series
@@ -112,14 +119,16 @@
         length          (inc (- end start))
         mk-fire-tseries (p/vals->sparsevec start length (schema/fire-value 0 0 0 0))
         series-src      (aggregate-fires src t-res)
-        query (<- [?name ?location ?fire-series]
-                  (series-src ?name ?datestring ?location ?tuple)
+        query (<- [?name ?s-res ?mod-h ?mod-v ?s ?l ?fire-series]
+                  (series-src ?name ?datestring ?s-res ?mod-h ?mod-v ?s ?l ?tuple)
                   (date/datetime->period t-res ?datestring :> ?tperiod)
                   (mk-fire-tseries ?tperiod ?tuple :> _ ?tseries)
                   (running-fire-sum start ?tseries :> ?fire-series))]
     (<- [?chunk]
-        (query ?name ?location ?fire-series)
-        (schema/chunk-value ?name t-res nil ?location ?fire-series :> ?chunk))))
+        (query ?name ?s-res ?mod-h ?mod-v ?s ?l ?fire-series)
+        (schema/pixel-location ?s-res ?mod-h ?mod-v ?s ?l :> ?location)
+        (schema/chunk-value ?name t-res nil ?location ?fire-series :> ?chunk)
+        (:distinct false))))
 
 (defn fire-query
   "Returns a source of fire timeseries data chunk objects."

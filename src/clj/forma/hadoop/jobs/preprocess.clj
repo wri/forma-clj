@@ -33,7 +33,7 @@
 
 (defn static-chunker
   [m-res chunk-size tile-seq dataset agg ascii-path pail-path]
-  (with-fs-tmp [fs tmp-dir]
+  (with-fs-tmp [_ tmp-dir]
     (let [line-tap (hfs-textline ascii-path)
           pix-tap  (p/pixel-generator tmp-dir m-res tile-seq)]
       (->> (s/static-chunks m-res chunk-size dataset agg line-tap pix-tap)
@@ -42,7 +42,7 @@
 (defmain PreprocessStatic
   "See project wiki for example usage."
   [dataset ascii-path output-path & countries]
-  (static-chunker "1000"
+  (static-chunker "500"
                   static/chunk-size
                   (->> countries
                        (map read-string)

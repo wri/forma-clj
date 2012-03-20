@@ -12,7 +12,6 @@
 
 (fact (floats-for-step 0.5) => 1036800)
 
-(future-fact "big-floats test.")
 (future-fact "rain-tuples test.")
 (future-fact "unpack-rain test.")
 

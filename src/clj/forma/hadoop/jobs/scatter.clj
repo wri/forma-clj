@@ -1,11 +1,15 @@
 (ns forma.hadoop.jobs.scatter
   "Namespace for arbitrary queries."
   (:use cascalog.api
-        [forma.source.tilesets :only (tile-set)]
-        [forma.hadoop.pail :only (?pail- split-chunk-tap)])
+        forma.trends.data
+        [forma.hadoop.pail :only (to-pail)]
+        [forma.source.tilesets :only (tile-set country-tiles)]
+        [forma.hadoop.pail :only (?pail- split-chunk-tap)]
+        [cascalog.checkpoint :only (workflow)])
   (:require [cascalog.ops :as c]
             [forma.utils :only (throw-illegal)]
             [forma.reproject :as r]
+            [forma.date-time :as date]
             [forma.schema :as schema]
             [forma.trends.stretch :as stretch]
             [forma.hadoop.predicate :as p]
@@ -34,15 +38,14 @@
 
 (defmain GetStatic
   [pail-path out-path]
-  (let [[vcf hansen ecoid gadm border] (map (comp static-tap
-                                                  (partial split-chunk-tap pail-path))
-                                            [["vcf"] ["hansen"]
-                                             ["ecoid"] ["gadm"]
-                                             ["border"]])]
+  (let [[vcf hansen ecoid gadm border]
+        (map (comp static-tap (partial split-chunk-tap pail-path))
+             [["vcf"] ["hansen"] ["ecoid"] ["gadm"] ["border"]])]
     (?<- (hfs-textline out-path
                        :sinkparts 3
                        :sink-template "%s/")
-         [?country ?lat ?lon ?mod-h ?mod-v ?sample ?line ?hansen ?ecoid ?vcf ?gadm ?border]
+         [?country ?lat ?lon ?mod-h ?mod-v
+          ?sample ?line ?hansen ?ecoid ?vcf ?gadm ?border]
          (vcf    ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
          (hansen ?s-res ?mod-h ?mod-v ?sample ?line ?hansen)
          (ecoid  ?s-res ?mod-h ?mod-v ?sample ?line ?ecoid)
@@ -53,10 +56,22 @@
          (p/converter ?textline :> ?country ?gadm)
          (>= ?vcf 25))))
 
+(defn static-src [{:keys [vcf-limit]} pail-path]
+  (let [[vcf hansen ecoid gadm border]
+        (map (comp static-tap (partial split-chunk-tap pail-path))
+             [["vcf"] ["hansen"] ["ecoid"] ["gadm"] ["border"]])]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?gadm ?vcf ?ecoid ?hansen]
+        (vcf    ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
+        (hansen ?s-res ?mod-h ?mod-v ?sample ?line ?hansen)
+        (ecoid  ?s-res ?mod-h ?mod-v ?sample ?line ?ecoid)
+        (gadm   ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
+        (>= ?vcf vcf-limit))))
+
 ;; ## Forma
+
 (def forma-run-parameters
-  {"1000-32" {:est-start "2005-12-01"
-              :est-end "2011-08-01"
+  {"1000-32" {:est-start "2005-12-31"
+              :est-end "2011-08-01" ;; I KEEP FUCKING THIS UP
               :s-res "1000"
               :t-res "32"
               :neighbors 1
@@ -64,15 +79,18 @@
               :vcf-limit 25
               :long-block 15
               :window 5}
-   "1000-16" {:est-start "2005-12-01"
-              :est-end "2011-08-01"
-              :s-res "1000"
-              :t-res "16"
-              :neighbors 1
-              :window-dims [600 600]
-              :vcf-limit 25
-              :long-block 30
-              :window 10}})
+   "500-16" {:est-start "2005-12-31"
+             :est-end "2012-01-17"
+             :s-res "500"
+             :t-res "16"
+             :neighbors 1
+             :window-dims [600 600]
+             :vcf-limit 25
+             :long-block 30
+             :window 10
+             :ridge-const 1e-8
+             :convergence-thresh 1e-6
+             :max-iterations 500}})
 
 (defn paths-for-dataset
   [dataset s-res t-res tile-seq]
@@ -94,115 +112,215 @@
     (if (= t-res base-t-res)
       precl-tap
       (<- [?path ?final-chunk]
-          (precl-tap ?path ?chunk)
-          (map ?chunk [:location :value] :> ?location ?series)
-          (stretch/ts-expander base-t-res t-res ?series :> ?new-series)
-          (assoc ?chunk
-            :value ?new-series
-            :temporal-res t-res :> ?final-chunk)))))
+        (precl-tap ?path ?chunk)
+        (map ?chunk [:location :value] :> ?location ?series)
+        (schema/unpack-pixel-location ?locat)
+        (stretch/ts-expander base-t-res t-res ?series :> ?new-series)
+        (assoc ?chunk
+          :value ?new-series
+          :temporal-res t-res :> ?final-chunk)
+        (:distinct false)))))
 
-(defn process-forma
+(defmapcatop expand-rain-pixel
+  [sample line]
+  (let [sample-0 (* 2 sample)
+        line-0   (* 2 line)]
+    (for [x (range 2)
+          y (range 2)]
+      [(+ sample-0 x) (+ line-0 y)])))
+
+(defn new-adjusted-precl-tap
+  "More brittle version that assumes conversion from 1000 to 500m."
+  [ts-pail-path s-res base-t-res t-res country-seq]
+  (let [precl-tap (constrained-tap ts-pail-path "precl" s-res base-t-res country-seq)]
+    (<- [?path ?final-chunk]
+        (precl-tap ?path ?chunk)
+        (forma/get-loc ?chunk :> ?s-res ?mod-h ?mod-v ?s ?l ?series)
+        (expand-rain-pixel ?s ?l :> ?sample ?line)
+        (schema/pixel-location "500" ?mod-h ?mod-v ?sample ?line :> ?location)
+        (stretch/ts-expander base-t-res t-res ?series :> ?new-series)
+        (assoc ?chunk
+          :value ?new-series
+          :location ?location
+          :temporal-res t-res :> ?final-chunk)
+        (:distinct false))))
+
+(comment
+  (??<- [?a ?b]
+        ((constrained-tap
+          "/Users/sritchie/Desktop/mypail" "vcf" "500" "00" [[8 6]]) ?a ?b)
+        (:distinct false))
+
+  "This command runs FORMA."
+  (use 'forma.hadoop.jobs.scatter)
+  (in-ns 'forma.hadoop.jobs.scatter)
+  (formarunner "/user/hadoop/checkpoints"
+               "s3n://pailbucket/master"
+               "s3n://pailbucket/series"
+               "s3n://formaresults/forma2012"
+               "500-16"
+               [:IDN]))
+
+(defn first-half-query
+  "Poorly named! Returns a query that generates a number of position
+  and dataset identifier"
   [pail-path ts-pail-path out-path run-key country-seq]
-  (let [{:keys [s-res t-res] :as forma-map} (forma-run-parameters run-key)]
+  (let [{:keys [s-res t-res est-end] :as forma-map} (forma-run-parameters run-key)]
     (assert forma-map (str run-key " is not a valid run key!"))
-    (?- (hfs-seqfile out-path :sinkmode :replace)
-        (forma/forma-query forma-map
-                           (constrained-tap ts-pail-path "ndvi" s-res t-res country-seq)
-                           (adjusted-precl-tap ts-pail-path s-res "32" t-res country-seq)
-                           (constrained-tap pail-path "vcf" s-res "00" country-seq)
-                           (country-tap (constrained-tap pail-path "gadm" s-res "00" country-seq)
-                                        convert-line-src)
-                           (tseries/fire-query pail-path
-                                               t-res
-                                               "2000-11-01"
-                                               "2011-06-01"
-                                               country-seq)))))
+    (with-job-conf {"mapreduce.jobtracker.split.metainfo.maxsize" 100000000000}
+      (?- (hfs-seqfile out-path :sinkmode :replace)
+          (forma/forma-query
+           forma-map
+           (constrained-tap ts-pail-path "ndvi" s-res t-res country-seq)
+           (constrained-tap ts-pail-path "reli" s-res t-res country-seq)
+           (new-adjusted-precl-tap ts-pail-path "1000" "32" t-res country-seq)
+           (constrained-tap pail-path "vcf" s-res "00" country-seq)
+           (tseries/fire-query pail-path
+                               t-res
+                               "2000-11-01"
+                               est-end
+                               country-seq))))))
 
-;; TODO: Note that if we go from tap to tap, we have no reducers
-;; involved.
-(defn bucket-forma
-  "TODO: Get these country numbers turned into codes! Then uncomment
-  code below, and remove that final `src`. Accept countries to
-  bucket "
-  [unbucketed-path bucketed-path country-code-seq]
-  (let [keep-countries (into [] (map vector country-code-seq))
-        template-fields ["?s-res" "?country"]
-        data-fields     ["?datestring" "?mod-h" "?mod-v" "?sample" "?line" "?text"]
-        forma-fields    (concat template-fields data-fields)
-        src (hfs-seqfile unbucketed-path)]
-    (?- (hfs-textline bucketed-path
-                      :sinkmode :replace
-                      :sink-template "%s/%s/"
-                      :outfields data-fields
-                      :templatefields template-fields
-                      :sinkparts 3)
-        (if country-code-seq
-          (<- forma-fields
-              (src :>> forma-fields)
-              (keep-countries ?country :> true)
-              (:distinct false))
-          (name-vars src forma-fields)))))
+(defmain formarunner
+  [tmp-root pail-path ts-pail-path out-path run-key country-seq]
+  (let [{:keys [s-res t-res est-end] :as est-map} (forma-run-parameters run-key)
+        mk-filter (fn [vcf-path ts-src]
+                    (forma/filter-query (hfs-seqfile vcf-path)
+                                        (:vcf-limit est-map)
+                                        ts-src))]
+    (assert est-map (str run-key " is not a valid run key!"))
+    (workflow [tmp-root]
+              vcf-step
+              ([:tmp-dirs vcf-path]
+                 (?- (hfs-seqfile vcf-path)
+                     (<- [?a ?b]
+                         ((constrained-tap
+                           pail-path "vcf" s-res "00" country-seq) ?a ?b)
+                         (:distinct false))))
 
-(defmain RunForma
-  [pail-path ts-pail-path results-path run-key & countries]
-  (let [countries (->> (or countries [":IDN" ":MYS"])
-                       (map read-string))
-        temp-path "s3n://formares/unbucketed"]
-    (process-forma pail-path ts-pail-path temp-path run-key countries)
-    (bucket-forma temp-path results-path (map name countries))))
+              ndvi-step
+              ([:tmp-dirs ndvi-path]
+                 (with-job-conf {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
+                   (?- (hfs-seqfile ndvi-path)
+                       (mk-filter vcf-path
+                                  (constrained-tap
+                                   ts-pail-path "ndvi" s-res t-res country-seq)))))
 
-(defmain BucketForma
-  [source-path results-path & codes]
-  (bucket-forma source-path results-path codes))
+              fire-step ([:tmp-dirs fire-path]
+                           (?- (hfs-seqfile fire-path)
+                               (tseries/fire-query pail-path
+                                                   t-res
+                                                   "2000-11-01"
+                                                   est-end
+                                                   country-seq)))
 
-(defmapop [find-first [re]]
-  [s]
-  (re-find re s))
+              adjustfires
+              ([:tmp-dirs adjusted-fire-path]
+                 (with-job-conf
+                   {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
+                   (?- (hfs-seqfile adjusted-fire-path)
+                       (forma/fire-tap est-map (hfs-seqfile fire-path)))))
 
-(defmain BucketCountry
-  [source-path dest-path]
-  (let [src (hfs-textline source-path)]
-    (?<- (hfs-textline dest-path
-                       :sinkmode :replace
-                       :sink-template "%s/"
-                       :templatefields ["?datestring"]
-                       :outfields ["?text"]
-                       :sinkparts 3)
-         [?datestring ?text]
-         (src ?text)
-         (find-first [#"[^\s]+"] ?text :> ?datestring))))
+              rain-step
+              ([:tmp-dirs rain-path]
+                 (with-job-conf {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
+                   (?- (hfs-seqfile rain-path)
+                       (mk-filter vcf-path
+                                  (new-adjusted-precl-tap
+                                   ts-pail-path "1000" "32" t-res country-seq)))))
 
-;; ## Rain Processing, for Dan
-;;
-;; Dan wanted some means of generating the average rainfall per
-;; administrative region. As we've already projected the data into
-;; modis coordinates, we can simply take an average of all values per
-;; administrative boundary; MODIS is far finer than gadm, so this will
-;; mimic a weighted average.
+              reli-step
+              ([:tmp-dirs reli-path]
+                 (with-job-conf {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
+                   (?- (hfs-seqfile reli-path)
+                       (mk-filter vcf-path
+                                  (constrained-tap
+                                   ts-pail-path "reli" s-res t-res country-seq)))))
+              
+              adjustseries
+              ([:tmp-dirs adjusted-series-path]
+                 "Adjusts the lengths of all timeseries
+                               and filters out timeseries below the proper VCF value."
+                 (with-job-conf {"mapred.min.split.size" 805306368
+                                 "cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
+                   (?- (hfs-seqfile adjusted-series-path)
+                       (forma/dynamic-filter (hfs-seqfile ndvi-path)
+                                             (hfs-seqfile reli-path)
+                                             (hfs-seqfile rain-path)))))
 
-(defn rain-query
-  [gadm-src rain-src]
-  (<- [?gadm ?date ?avg-rain]
-      (rain-src _ ?rain-chunk)
-      (gadm-src _ ?gadm-chunk)
-      (get ?rain-chunk :date :> ?date)
-      (p/blossom-chunk ?rain-chunk :> _ ?mod-h ?mod-v ?sample ?line ?rain)
-      (p/blossom-chunk ?gadm-chunk :> _ ?mod-h ?mod-v ?sample ?line ?gadm)
-      (c/avg ?rain :> ?avg-rain)))
+              trends ([:tmp-dirs dynamic-path]
+                        "Runs the trends processing."
+                        (with-job-conf {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
+                          (?- (hfs-seqfile dynamic-path)
+                              (forma/dynamic-tap
+                               est-map (hfs-seqfile adjusted-series-path)))))
 
-(defmain ProcessRain
-  [pail-path output-path]
-  (?- (hfs-textline output-path)
-      (rain-query (split-chunk-tap pail-path ["gadm"])
-                  (split-chunk-tap pail-path ["rain"]))))
+              mid-forma ([:tmp-dirs forma-mid-path
+                          :deps [trends adjustfires]]
+                           (with-job-conf {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
+                             (?- (hfs-seqfile forma-mid-path)
+                                 (forma/forma-tap (hfs-seqfile dynamic-path)
+                                                  (hfs-seqfile adjusted-fire-path)))))
+              
+              final-forma
+              ([] (let [names ["?s-res" "?period" "?mod-h" "?mod-v"
+                               "?sample" "?line" "?forma-val"]
+                        mid-src (-> (hfs-seqfile forma-mid-path)
+                                    (name-vars names))]
+                    (with-job-conf {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
+                      (?- (hfs-seqfile out-path)
+                          (forma/forma-query est-map mid-src))))))))
 
-(defmain GrabTimeseries
-  [ts-pail-path output-path dataset position-seq]
-  (let [positions (vec (read-string position-seq))
-        src (split-chunk-tap ts-pail-path [dataset])]
-    (?<- (hfs-seqfile output-path)
-         [?ts-chunk]
-         (src _ ?ts-chunk)
-         (get ?ts-chunk :location :> ?location)
-         (schema/unpack-pixel-location ?location :> ?s-res ?mod-h ?mod-v ?sample ?line)
-         (positions ?mod-h ?mod-v ?sample ?line :> true))))
+(def kryo-conf
+  {"cascading.kryo.serializations"   "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"
+   "fs.s3n.multipart.uploads.enabled" true})
+
+(defmain ultrarunner
+  [tmp-root eco-beta-path full-beta-path static-path dynamic-path out-path country-or-eco pre-beta-out-path]
+  (let [est-map (forma-run-parameters "500-16")]
+    (workflow [tmp-root]              
+              ;; genbetas
+              ;; ([]
+              ;;    (let [beta-path (if (= "eco" country-or-eco)
+              ;;                      eco-beta-path
+              ;;                      full-beta-path)]
+              ;;      (?- (hfs-seqfile beta-path)
+              ;;          (forma/beta-generator est-map
+              ;;                                (hfs-seqfile final-path)
+              ;;                                (hfs-seqfile static-path)))))
+              applybetas
+              ([] (?- (hfs-seqfile out-path :sinkmode :replace)
+                      (forma/forma-estimate (hfs-seqfile eco-beta-path)
+                                            (hfs-seqfile dynamic-path)
+                                            (hfs-seqfile
+                                            static-path)))))))
+
+(comment
+  "Run this:"
+   (ultrarunner "/user/hadoop/checkpoint"
+               "s3n://formaresults/ecobetatemp"
+               "s3n://formaresults/countrybetatemp"               
+               "s3n://formaresults/staticbuckettemp"
+               "s3n://formaresults/finalbuckettemp"
+               "s3n://formaresults/finaloutput"
+               "eco"
+               "s3n://formaresults/ecobetapreapply"))
+
+(defn run-forma-estimate
+  [beta-src dynamic-src static-src out-loc trap-path period]
+  (?- (hfs-seqfile out-loc :sinkmode :replace)
+      (forma/forma-estimate 
+       (hfs-seqfile beta-src)
+       (hfs-seqfile dynamic-src)
+       (hfs-seqfile static-src)
+       (hfs-seqfile trap-path)
+       period)))
+
+(comment
+  (run-forma-estimate "s3n://formaresults/ecobetatemp"
+                      "s3n://formaresults/finalbuckettemp"
+                      "s3n://formaresults/staticbuckettemp"
+                      "s3n://formaresults/finaloutput"
+                      "s3n://formaresults/trapped"
+                      827))
+
