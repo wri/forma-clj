@@ -38,6 +38,29 @@
            (error (str "TIMESERIES ISSUES: " ts ", " cofactors) e)))))
 
 
+(defn linear-residual
+  "predict the residual from a coefficient vector"
+  [y-val beta-vec x-vec]
+  {:pre [(vector? beta-vec) (vector? x-vec)]}
+  (- y-val (utils/dot-product beta-vec x-vec)))
+
+(defn inv-mat
+  "returns the scale matrix, (X'X)^{-1}, from the normal equations of
+  a simple linear regression; note that we pass in the transpose of X,
+  since X is large, and we only want to apply transpose once"
+  [X Xt]
+  (i/solve (i/mmult Xt X)))
+
+(defn ols-beta
+  [y-vec X Xt]
+  (i/mmult (inv-mat X Xt) Xt y-vec))
+
+(defn recresid-series
+  [y X]
+  (loop [idx 2
+         res [0]
+         y-sub (subvec y 0 )]))
+
 ;; (defn linear-residuals [y X] (:residuals (s/linear-model y X)))
 ;;
 ;; (defn expt-residuals
