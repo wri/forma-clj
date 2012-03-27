@@ -28,8 +28,9 @@
      :nodata no-data-value}
 
    [NOAA PRECL](http://goo.gl/yDQhA) :: Global precipitation rates in
-   mm/day, gridded at 0.5 degree resolution. The linked dataset is 2.5
-   degree -- we use a higher resolution dataset in binary format.
+   mm/day, by month, gridded at 0.5 degree resolution. The linked dataset 
+   is 2.5 degree -- we use a higher resolution dataset in binary 
+   format. Considered static relative to frequency of MODIS data.
 
    gadm :: administrative boundaries, found
    [here](http://goo.gl/2N5CT), and converted to a raster with the

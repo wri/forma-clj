@@ -9,6 +9,7 @@
   (:require [cascalog.ops :as c]
             [forma.utils :only (throw-illegal)]
             [forma.reproject :as r]
+            [forma.date-time :as date]
             [forma.schema :as schema]
             [forma.trends.stretch :as stretch]
             [forma.hadoop.predicate :as p]
@@ -277,23 +278,24 @@
    "fs.s3n.multipart.uploads.enabled" true})
 
 (defmain ultrarunner
-  [tmp-root eco-beta-path full-beta-path static-path final-path out-path country-or-eco]
+  [tmp-root eco-beta-path full-beta-path static-path dynamic-path out-path country-or-eco pre-beta-out-path]
   (let [est-map (forma-run-parameters "500-16")]
     (workflow [tmp-root]              
-              genbetas
-              ([]
-                 (let [beta-path (if (= "eco" country-or-eco)
-                                   eco-beta-path
-                                   full-beta-path)]
-                   (?- (hfs-seqfile beta-path)
-                       (forma/beta-generator est-map
-                                             (hfs-seqfile final-path)
-                                             (hfs-seqfile static-path))))))))
-              ;; applybetas
-              ;; ([] (?- (hfs-seqfile out-path)
-              ;;         (forma/forma-estimate (hfs-seqfile eco-beta-path)
-              ;;                               (hfs-seqfile final-path)
-              ;;                               (hfs-seqfile static-path))))
+              ;; genbetas
+              ;; ([]
+              ;;    (let [beta-path (if (= "eco" country-or-eco)
+              ;;                      eco-beta-path
+              ;;                      full-beta-path)]
+              ;;      (?- (hfs-seqfile beta-path)
+              ;;          (forma/beta-generator est-map
+              ;;                                (hfs-seqfile final-path)
+              ;;                                (hfs-seqfile static-path)))))
+              applybetas
+              ([] (?- (hfs-seqfile out-path :sinkmode :replace)
+                      (forma/forma-estimate (hfs-seqfile eco-beta-path)
+                                            (hfs-seqfile dynamic-path)
+                                            (hfs-seqfile
+                                            static-path)))))))
 
 ;; (comment
 ;;   "Run this:"
@@ -349,119 +351,30 @@
 
 (comment
   "Run this:"
-  (prebeta "/user/hadoop/checkpoint"
+   (ultrarunner "/user/hadoop/checkpoint"
+               "s3n://formaresults/ecobetatemp"
+               "s3n://formaresults/countrybetatemp"               
                "s3n://formaresults/staticbuckettemp"
                "s3n://formaresults/finalbuckettemp"
-               "s3n://formaresults/ecofeaturemat"
-               40102))
+               "s3n://formaresults/finaloutput"
+               "eco"
+               "s3n://formaresults/ecobetapreapply"))
 
-(defn my-info-mat
-  [feature-mat]
-  (let [fm (log/to-double-matrix feature-mat)
-        tp (.transpose fm)]
-    (vec (.toArray (.mmul tp fm)))))
-
-(defbufferop [local-info-matrix]
-  [tuples]
-  (let [val-mat      (map second tuples) 
-        neighbor-mat (map last tuples)
-        feature-mat  (map log/unpack-feature-vec val-mat neighbor-mat)]
-    [[(first (last (repeatedly 1 #(my-info-mat feature-mat))))]]))
-
-(defn run-local-info
-  [in]
-  (let [src (hfs-seqfile in)]
-    (??<- [?mat]
-          (src ?hansen ?val ?neighbor-val)
-          (local-info-matrix ?hansen ?val ?neighbor-val :> ?mat))))
-
-(defn simple-beta-generator
-  "query to return the beta vector associated with an ecoregion"
-  [{:keys [t-res est-start ridge-const convergence-thresh max-iterations]} src]
-  (let [first-idx (date/datetime->period t-res est-start)]
-    (<- [?beta]
-        (src ?hansen ?val ?neighbor-val)
-        (log/logistic-beta-wrap [ridge-const convergence-thresh max-iterations]
-                                ?hansen ?val ?neighbor-val :> ?beta)
-        (:distinct false))))
-
-(defmain run-simple-beta-generator
-  [tmp-root in-path out-path]
-  (let [est-map (forma-run-parameters "500-16")]
-    (workflow [tmp-root]              
-              genbetas
-              ([]
-                 (?- (hfs-seqfile out-path :sinkmode :replace)
-                     (simple-beta-generator est-map
-                                            (hfs-seqfile in-path)))))))
+(defn run-forma-estimate
+  [beta-src dynamic-src static-src out-loc trap-path period]
+  (?- (hfs-seqfile out-loc :sinkmode :replace)
+      (forma/forma-estimate 
+       (hfs-seqfile beta-src)
+       (hfs-seqfile dynamic-src)
+       (hfs-seqfile static-src)
+       (hfs-seqfile trap-path)
+       period)))
 
 (comment
-  (run-simple-beta-generator "/user/hadoop/checkpoint"
-                             "s3n://formaresults/ecofeaturemat"
-                             "s3n://formaresults/ecobetatests"))
+  (run-forma-estimate "s3n://formaresults/ecobetatemp"
+                      "s3n://formaresults/finalbuckettemp"
+                      "s3n://formaresults/staticbuckettemp"
+                      "s3n://formaresults/finaloutput"
+                      "s3n://formaresults/trapped"
+                      827))
 
-;; (run-local-info "/Users/robin/Downloads/eco-40103-small")
-
-;; (local-beta-generator (forma-run-parameters "500-16"))
-;; (use 'forma.hadoop.jobs.scatter)
-
-(defn my-info-mat
-  [feature-mat]
-  (let [fm (log/to-double-matrix feature-mat)
-        tp (.transpose fm)]
-    (vec (.toArray (.mmul tp fm)))))
-
-(defbufferop [eco-bufferop [r c m]]
-  [tuples]
-  (let [val-mat      (map second tuples) 
-        neighbor-mat (map last tuples)
-        feature-mat  (map log/unpack-feature-vec val-mat neighbor-mat)]
-    [[(first feature-mat)]]))
-
-(defbufferop [info-matrix-bufferop [r c m]]
-  [tuples]
-  (let [val-mat      (map second tuples) 
-        neighbor-mat (map last tuples)
-        feature-mat  (map log/unpack-feature-vec val-mat neighbor-mat)]
-    [[(first (last (repeatedly 1 #(my-info-mat feature-mat))))]]))
-
-(defn buffer-generator
-  "query to return the beta vector associated with an ecoregion"
-  [{:keys [t-res est-start ridge-const convergence-thresh max-iterations]} src]
-  (let [first-idx (date/datetime->period t-res est-start)]
-    (<- [?beta]
-        (src ?hansen ?val ?neighbor-val)
-        ;;        (eco-bufferop [ridge-const convergence-thresh max-iterations]
-        ;;              ?hansen ?val ?neighbor-val :> ?beta)
-        (info-matrix-bufferop [ridge-const convergence-thresh max-iterations]
-                      ?hansen ?val ?neighbor-val :> ?beta)
-        
-        (:distinct false))))
-
-(defmain run-buffer-generator
-  [tmp-root in-path out-path]
-  (let [est-map (forma-run-parameters "500-16")]
-    (workflow [tmp-root]              
-              genbetas
-              ([]
-                 (?- (hfs-seqfile out-path :sinkmode :replace)
-                     (buffer-generator est-map
-                                       (hfs-seqfile in-path)))))))
-
-(comment
-  (let [src (hfs-seqfile "s3n://formaresults/ecofeaturemat")]
-    (??<- [?count]
-          (src ?hansen ?val ?neighbor)
-          (c/count ?count)))
-
-  (let [src (hfs-seqfile "s3n://formaresults/ecobetatests")]
-    (??<- [?val]
-          (src ?val)))
-  
-  (run-buffer-generator "/Users/robin/delete/hadoop"
-                        "/Users/robin/Downloads/eco-40102"
-                        "/Users/robin/delete/betas")
-
-  (run-buffer-generator "/user/hadoop/checkpoint"
-                             "s3n://formaresults/ecofeaturemat"
-                             "s3n://formaresults/ecobetatests"))

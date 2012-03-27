@@ -3,40 +3,58 @@
         [forma.schema :only (unpack-neighbor-val)]
         [clojure.math.numeric-tower :only (abs)]
         [forma.matrix.utils]
-        [cascalog.api]
-        [clojure-csv.core])
-  (:require [incanter.core :as i]
+        [cascalog.api])
+(:require [incanter.core :as i]
             [cascalog.ops :as c])
   (:import [org.jblas FloatMatrix MatrixFunctions Solve DoubleMatrix]))
 
+;;        [clojure-csv.core])
 ;; TODO: correct for error induced by ridge
+;; TODO: Add docs!!!
 
 ;; Namespace Conventions: Each observation is assigned a binary
 ;; `label` which indicates deforestation during the training period.
-;; These labels are collected for a group of pixels into `label-seq`.
-;; Each pixel also has a sequence of features, or `feature-seq`.  The
+;; These labels are collected for a group of pixels into `label-row`.
+;; Each pixel also has a matrix of features, or `feature-mat`.  The
 ;; pixel is identified by the order its attributes appear in the
 ;; feature and label sequence.  That is, it is vital that the labels
 ;; and feature sequences are consistently positioned in the label and
 ;; feature collections.
 
-(defn logistic-fn
-  "returns the value of the logistic function, given input `x`"
+(defn
+  ^DoubleMatrix
+  logistic-fn
   [x]
-  (let [exp-x (Math/exp x)]
-    (/ exp-x (inc exp-x))))
+  (let [exp-x (MatrixFunctions/exp x)
+        one (DoubleMatrix/ones 1)]
+    (.divi exp-x (.add exp-x one))))
 
-(defn to-double-matrix
+(defn ^DoubleMatrix
+  to-double-matrix
   "returns a DoubleMatrix instance for use with jBLAS functions"
   [mat]
   (DoubleMatrix.
    (into-array (map double-array mat))))
 
-(defn logistic-prob
-  "returns the probability of a binary outcome given a parameter
-  vector `beta-seq` and a feature vector for a given observation"
-  [beta-seq feature-seq]
-  (logistic-fn (dot-product beta-seq feature-seq)))
+(defn ^DoubleMatrix
+  to-double-rowmat
+  [coll]
+  (to-double-matrix [(vec coll)]))
+
+(defn ^DoubleMatrix
+  copy-row
+  [row]
+  (.copy (to-double-matrix [[]]) row))
+
+(defn ^DoubleMatrix
+  logistic-prob
+  ".dot returns a double, which needs to be converted to a DoubleMatrix for logistic-fn"
+  [beta-mat features-mat]
+  (logistic-fn
+   (to-double-rowmat [(.dot beta-mat features-mat)])))
+
+;; TODO: convert the functions that are useful but not actually used
+;; in estimation, like `log-likelihood` and `total-log-likelihood`.
 
 (defn log-likelihood
   "returns the log likelihood of a given pixel, conditional on its
@@ -55,65 +73,73 @@
                  label-seq
                  feature-mat)))
 
-(defn probability-calc
-  "returns a vector of probabilities for each observation"
-  [beta-seq feature-mat]
-  (map (partial logistic-prob beta-seq)
-       feature-mat))
+(defn ^DoubleMatrix
+  probability-calc
+  [beta feature-mat]
+  (let [prob-row (.mmul beta (.transpose feature-mat))]
+    (logistic-fn prob-row)))
 
-(defn score-seq
-  "returns the scores for each parameter"
-  [beta-seq label-seq feature-mat]
-  (let [prob-seq (probability-calc beta-seq feature-mat)
-        features (to-double-matrix feature-mat)]
-    (.mmul (.transpose features)
-           (DoubleMatrix.
-            (double-array
-             (map - label-seq prob-seq))))))
+(defn ^DoubleMatrix
+  score-seq
+  "returns the score for each parameter "
+  [beta labels feature-mat]
+    (let [prob-seq (probability-calc beta feature-mat)]
+    (.mmul (.transpose feature-mat)
+           (.transpose (.sub labels prob-seq)))))
 
-(defn info-matrix
-  "returns the square information matrix for the logistic probability
-  function; the dimension is given by the number of features"
-  [beta-seq feature-mat]
-  (let [mult-func (fn [x] (* x (- 1 x)))
-        prob-seq  (->> (probability-calc beta-seq feature-mat)
-                       (map mult-func))
-        scale-feat (multiply-rows
-                    prob-seq
-                    (transpose feature-mat))]
-    (.mmul (to-double-matrix scale-feat)
-           (to-double-matrix feature-mat))))
+(defn ^DoubleMatrix
+  mult-fn
+  [x]
+  (let [ones (DoubleMatrix/ones (.rows x) (.columns x))
+        new-mat (.add ones (.neg x))]
+    (.mul x new-mat)))
 
-(defn beta-update
+(defn ^DoubleMatrix
+  info-matrix
+  [beta-row feature-mat]
+  {:pre [(= (.columns beta-row) (.columns feature-mat))]}
+  (let [prob-row (probability-calc beta-row feature-mat)
+        transformed-row (mult-fn prob-row)]
+    (.mmul (.muliRowVector (.transpose feature-mat) transformed-row)
+           feature-mat)))
+
+(defn ^DoubleMatrix
+  beta-update
   "returns a vector of updates for the parameter vector; the
   ridge-constant is a very small scalar, used to ensure that the
   inverted information matrix is non-singular."
-  [beta-seq label-seq feature-mat rdg-cons]
-  (let [num-features (count beta-seq)
+  [beta-row label-row feature-mat rdg-cons]
+  (let [num-features (.columns beta-row)
         info-adj (.addi
-                  (info-matrix beta-seq feature-mat)
+                  (info-matrix beta-row feature-mat)
                   (.muli (DoubleMatrix/eye (int num-features))
-                         (float rdg-cons)))]
-    (vec (.toArray
-          (.mmul (Solve/solve
-                  info-adj
-                  (DoubleMatrix/eye (int num-features)))
-                 (score-seq beta-seq label-seq feature-mat))))))
+                         (double rdg-cons)))]
+    (.mmul (Solve/solve info-adj
+                        (DoubleMatrix/eye (int num-features)))
+           (score-seq beta-row label-row feature-mat))))
+
+(defn ^DoubleMatrix
+  initial-beta
+  [feature-mat]
+  (let [n (.columns feature-mat)]
+    (to-double-rowmat (repeat n 0))))
 
 (defn logistic-beta-vector
   "return the estimated parameter vector; which is used, in turn, to
-  calculate the estimated probability of the binary label"
-  [label-seq feature-mat rdg-cons converge-threshold max-iter]
-  (let [beta-init (repeat (count (first feature-mat)) 0)]
+  calculate the estimated probability of the binary label; the initial
+  beta-diff value is an arbitrarily large value."
+  [label-row feature-mat
+   rdg-cons converge-threshold max-iter]
+  (let [beta-init (initial-beta feature-mat)]
     (loop [beta beta-init
            iter max-iter
            beta-diff 100]
       (if (or (zero? iter)
               (< beta-diff converge-threshold))
-        beta
-        (let [update (beta-update beta label-seq feature-mat rdg-cons)
-              beta-new (map + beta update)
-              diff (reduce + (map (comp abs -) beta beta-new))]
+        (vec (.toArray beta))
+        (let [update (beta-update beta label-row feature-mat rdg-cons)
+              beta-new (.addRowVector beta update)
+              diff (.distance2 beta beta-new)]
           (recur
            beta-new
            (dec iter)
@@ -155,6 +181,7 @@
         fire-neighbor (unpack-fire fire-neighbors)]
     (into [] (concat fire-seq [short long t-stat] fire-neighbor more))))
 
+
 (defn make-binary
   [x]
   (if (zero? x) 0 1))
@@ -174,51 +201,35 @@
         val-mat      (map second tuples) 
         neighbor-mat (map last tuples)
         feature-mat  (map unpack-feature-vec val-mat neighbor-mat)]
-    [[(logistic-beta-vector label-seq feature-mat r c m)]]))
+    [[(logistic-beta-vector
+       (to-double-rowmat label-seq)
+       (to-double-matrix feature-mat)
+       r c m)]]))
 
 (defn logistic-prob-wrap
   [beta-vec val neighbor-val]
-  (logistic-prob beta-vec (unpack-feature-vec val neighbor-val)))
+  (let [beta-mat (to-double-rowmat beta-vec)
+        features-mat (to-double-rowmat (unpack-feature-vec val neighbor-val))]
+    (flatten (vec (.toArray (logistic-prob beta-mat features-mat))))))
 
 (defbufferop mk-timeseries
   [tuples]
   [[(map second (sort-by first tuples))]])
 
-(defn look-at-output
-  [path textpath]
-  (let [src (hfs-seqfile path)]
-    (?<- (hfs-textline textpath)
-         [?mod-h ?mod-v ?s ?l ?thresh]
-         (src ?s-res ?mod-h ?mod-v ?s ?l ?prob-series)
-         (first ?prob-series :> ?thresh)
-         (> ?thresh 0.5))))
+(defn mk-key
+  [k]
+  (keyword (str k))) 
 
 (defn make-dict
   [v]
-  {(keyword (str (second v)))
+  {(mk-key (second v))
    (last v)})
 
-(defn beta-dict 
-  "create dictionary of beta vectors by ecoregion, adding an intelligent default (average) for ecoregions without betavectors"
-  [eco-beta-src]
-  (let [src (name-vars eco-beta-src
-                       ["?s-res" "?eco" "?beta"])
-        beta-vec    (first (??- (c/first-n src 200)))
-        n           (count (last (first beta-vec)))
-        avg-beta-vec (map #(/ % n)
-                         (apply map + (map last beta-vec)))]
-    (assoc (apply merge-with identity
-                  (map make-dict beta-vec))
-      :full avg-beta-vec)))
+(defn beta-dict
+  "create dictionary of beta vectors"
+  [beta-src]
+  (let [src (name-vars beta-src ["?s-res" "?eco" "?beta"])
+        beta-vec (first (??- (c/first-n src 500)))]
+    (apply merge-with identity
+           (map make-dict beta-vec))))
 
-
-;; (defn beta-dict [eco-beta-src full-beta-src]
-;;   (let [src (name-vars eco-beta-src
-;;                        ["?s-res" "?eco" "?beta"])
-;;         full-src (name-vars full-beta-src
-;;                             ["?s-res" "?beta"])
-;;         beta-full (first (??- (c/first-n full-src 1)))
-;;         beta-vec  (first (??- (c/first-n src 200)))]
-;;     (assoc (apply merge-with identity
-;;                   (map make-dict beta-vec))
-;;       :full (last (first beta-full)))))

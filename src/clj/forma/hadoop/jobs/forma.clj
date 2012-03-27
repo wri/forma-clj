@@ -146,28 +146,25 @@ value, and the aggregate of the neighbors."
                                 ?hansen ?val ?neighbor-val :> ?beta)
         (:distinct false))))
 
-;; inserting beta-dict in [] is sort of like hardcoding it into the
-;; function, like partial(?) or a closure
-
-(defmapop [apply-betas [beta-dict]]
-  [beta-dict eco val neighbor-val]
-  (let [beta (beta-dict (keyword (str eco)))
-        beta-full (beta-dict :full)]
-    (if (nil? beta)
-      (log/logistic-prob-wrap beta-full val neighbor-val)
-      (log/logistic-prob-wrap beta val neighbor-val))))
+(defmapop [apply-betas [betas]]
+  [eco val neighbor-val]
+  (let [beta ((log/mk-key eco) betas)]
+    (log/logistic-prob-wrap beta val neighbor-val)))
 
 (defn forma-estimate
   "query to end all queries: estimate the probabilities for each
   period after the training period."
-  [eco-beta-src dynamic-src static-src]
-  (let [beta-dict (log/beta-dict eco-beta-src)]
+  [beta-src dynamic-src static-src trap-tap period]
+  (let [betas (log/beta-dict beta-src)]
     (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
-      (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-      (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)
-      (apply-betas [beta-dict] ?eco ?val ?neighbor-val :> ?prob)
-      (log/mk-timeseries ?pd ?prob :> ?prob-series)
-      (:distinct false))))
+        (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
+        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)
+        (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
+        (log/mk-timeseries ?pd ?prob :> ?prob-series)
+        (:distinct false)
+        ;;(= ?pd period)
+        (:distinct false)
+        (:trap trap-tap))))
 
 (comment
   (let [m {:est-start "2005-12-31"
@@ -180,7 +177,7 @@ value, and the aggregate of the neighbors."
            :long-block 30
            :window 10
            :ridge-const 1e-8
-           :convergence-thresh 1e-6
+           :convergence-thresh 1e-10
            :max-iterations 500}
         ndvi-src [[1 (schema/chunk-value
                       "ndvi" "32" nil
