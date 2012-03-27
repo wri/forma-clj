@@ -297,69 +297,6 @@
                                             (hfs-seqfile
                                             static-path)))))))
 
-;; (comment
-;;   "Run this:"
-;;   (ultrarunner "/user/hadoop/checkpoint"
-;;                "s3n://formaresults/ecobetatemp"
-;;                "s3n://formaresults/fullbetatemp"               
-;;                "s3n://formaresults/staticbuckettemp"
-;;                "s3n://formaresults/finalbuckettemp"
-;;                "s3n://formaresults/finaloutput"
-;;                "eco"))
-
-
-
-(defbufferop eco-bufferop
-  "returns a vector of parameter coefficients.  note that this is
-  where the intercept is added (to the front of each stacked vector in
-  the feature matrix
-
-  TODO: The intercept is included in the feature vector for now, as a
-  kludge when we removed the hansen statistic.  When we include the
-  hansen stat, we will have to replace the feature-mat binding below
-  with a line that tacks on a 1 to each feature vector.
-  "
-  [tuples]
-  (let [val-mat      (map second tuples) 
-        neighbor-mat (map last tuples)
-        feature-mat  (map log/unpack-feature-vec val-mat neighbor-mat)]
-    [[]]))
-
-(defn sink-eco
-  [{:keys [t-res est-start ridge-const convergence-thresh max-iterations]}
-   dynamic-src static-src ecoid]
-  (let [first-idx (date/datetime->period t-res est-start)]
-    (<- [?hansen ?val ?neighbor-val]
-        (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen)
-        (= ?pd first-idx)
-        (= ecoid ?eco)
-        (:distinct false))))
-
-(defmain prebeta
-  "do everything but actually estimate the beta vector - we want the data all in one file we can download"
-  [tmp-root static-path final-path out-path ecoid]
-  (let [est-map (forma-run-parameters "500-16")]
-    (workflow [tmp-root]              
-              genbetas
-              ([]
-                 (?- (hfs-seqfile out-path :sinkmode :replace)
-                     (sink-eco est-map
-                               (hfs-seqfile final-path)
-                               (hfs-seqfile static-path)
-                               ecoid))))))
-
-(comment
-  "Run this:"
-   (ultrarunner "/user/hadoop/checkpoint"
-               "s3n://formaresults/ecobetatemp"
-               "s3n://formaresults/countrybetatemp"               
-               "s3n://formaresults/staticbuckettemp"
-               "s3n://formaresults/finalbuckettemp"
-               "s3n://formaresults/finaloutput"
-               "eco"
-               "s3n://formaresults/ecobetapreapply"))
-
 (defn run-forma-estimate
   [beta-src dynamic-src static-src out-loc trap-path period]
   (?- (hfs-seqfile out-loc :sinkmode :replace)
