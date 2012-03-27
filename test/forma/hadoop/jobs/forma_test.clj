@@ -255,19 +255,7 @@
   (let [data (hfs-seqfile "/Users/robin/Downloads/dynamic")
         my-fields ["?s-res" "?pd" "?mod-h" "?mod-v" "?s" "?l" "?val" "?neighbor-val"]
         src (<- my-fields (data :>> my-fields))]
-    (c/first-n src 1)))
-
-(let [src (hfs-seqfile "/Users/robin/Downloads/dynamic")]
-  (?<- (stdout) [?a ?b ?c ?d ?e ?f ?g]
-       (src ?a ?b ?c ?d ?e ?f ?g ?h)))
-
-(let [data (hfs-seqfile "/Users/robin/Downloads/dynamic")
-      my-fields ["?s-res" "?pd" "?mod-h" "?mod-v" "?s" "?l" "val" "?neighbor-val"]
-      src (<- my-fields (data :>> my-fields))]
-
-  (c/first-n src 1))
-
-
+    (??- (c/first-n src 1))))
 
 (comment
   (let [static-src [["500" 31 9 1480 583 -9999 57 40102 0]
@@ -277,3 +265,13 @@
         out (hfs-textline "/Users/robin/Downloads/text/apply" :sinkmode :replace)
         trap-tap (hfs-seqfile "/Users/robin/Downloads/trap")]
     (?- out (forma-estimate beta-src dynamic-src static-src trap-tap 827))))
+
+(defn run-estimate
+  []
+  (let [static-src [["500" 31 9 1480 583 -9999 57 40102 0]
+                    ["500" 32 9 2099 2256 -9999 57 40102 0]]
+        beta-src (hfs-seqfile "/Users/robin/Downloads/betas")
+        out (hfs-textline "/Users/robin/Downloads/text/apply" :sinkmode :replace)
+        trap-tap (hfs-seqfile "/Users/robin/Downloads/trap")
+        dynamic-src (hfs-seqfile "/Users/robin/Downloads/dynamic")]
+  (?- out (forma-estimate beta-src dynamic-src static-src trap-tap 901))))
