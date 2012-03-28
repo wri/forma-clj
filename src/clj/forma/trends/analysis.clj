@@ -38,7 +38,12 @@
          (catch Throwable e
            (error (str "TIMESERIES ISSUES: " ts ", " cofactors) e)))))
 
-(defn linear-residuals [y X] (:residuals (s/linear-model y X)))
+(defn linear-residuals
+  [y x & {:keys [intercept] :or {intercept true}}]
+    (let [_x (if intercept (i/bind-columns (replicate (i/nrow x) 1) x) x)
+          xtx (i/mmult (i/trans _x) _x)
+          coefs (i/mmult (i/solve xtx) (i/trans _x) y)]
+      (i/minus y (i/mmult _x coefs))))
 
 (defn first-order-conditions
   "returns a matrix with residual weighted cofactors (incl. constant
@@ -52,7 +57,7 @@
         resid (linear-residuals coll X)
         sq-resid (i/mult resid resid)
         mu (utils/average sq-resid)]
-    (i/bind-rows (map * resid X) resid (i/minus sq-resid mu))))
+    (i/trans (i/bind-columns (i/mult resid X) resid (i/minus sq-resid mu)))))
 
 (defn hansen-stat
   "returns the Hansen (1992) test statistic, based on (1) the first-order
