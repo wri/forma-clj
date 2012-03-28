@@ -11,13 +11,6 @@
             [incanter.stats :as s]
             [forma.schema :as schema]))
 
-(defn element-sum
-  "returns a vector of sums of each respective element in a vector of vectors,
-  i.e., a vector with the first element being the sum of the first
-  elements in each sub-vector."
-  [coll]
-  (apply (partial map +) coll))
-
 (defn ols-trend
   "returns the OLS trend coefficient from the input vector; an
   intercept is implicitly assumed"
