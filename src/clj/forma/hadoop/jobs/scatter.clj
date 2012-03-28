@@ -9,7 +9,6 @@
   (:require [cascalog.ops :as c]
             [forma.utils :only (throw-illegal)]
             [forma.reproject :as r]
-            [forma.date-time :as date]
             [forma.schema :as schema]
             [forma.trends.stretch :as stretch]
             [forma.hadoop.predicate :as p]
