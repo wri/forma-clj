@@ -10,6 +10,7 @@ Head to the [Project Wiki](https://github.com/sritchie/forma-clj/wiki) for more 
 
 FORMA stands for Forest Monitoring for Action (FORMA) and it uses freely available satellite data to generate rapidly updated online maps of tropical forest clearing, providing useful information for local and national forest conservation programs, as well as international efforts to curb greenhouse gas emissions by paying to keep forests intact.
 
+FORMA was originally a project of the Center for Global Development, an economics think tank in Washington, DC. It is now part of World Resources Institute's Global Forest Watch. WRI is an environmental think tank based in Washington, DC.
 
 # Let's get started #
 
