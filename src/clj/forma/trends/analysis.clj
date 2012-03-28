@@ -40,12 +40,6 @@
 
 (defn linear-residuals [y X] (:residuals (s/linear-model y X)))
 
-(defn expt-residuals
-  "returns a list of residuals from the linear regression of `y` on
-  `X`, raised to `power`"
-  [power residuals]
-  (map #(expt % power) residuals))
-
 (defn first-order-conditions
   "returns a matrix with residual weighted cofactors (incl. constant
   vector) and deviations from mean; corresponds to first-order
@@ -54,14 +48,11 @@
   Policy Modeling, 14(4), pp. 517-533"
   [coll]
   {:pre [(i/matrix? coll)]}
-  (let [n (count coll)
-        X (i/matrix (range n))
+  (let [X (i/matrix (range (count coll)))
         resid (linear-residuals coll X)
-        sq-resid (expt-residuals 2 resid)
+        sq-resid (i/mult resid resid)
         mu (utils/average sq-resid)]
-    (i/bind-rows (map * resid X)
-                 (map * resid (repeat n 1))
-                 (map #(- % mu) sq-resid))))
+    (i/bind-rows (map * resid X) resid (i/minus sq-resid mu))))
 
 (defn hansen-stat
   "returns the Hansen (1992) test statistic, based on (1) the first-order
