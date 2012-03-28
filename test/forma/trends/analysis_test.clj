@@ -9,7 +9,8 @@
         [forma.schema :only (timeseries-value)]
         [forma.trends.stretch :only (ts-expander)]
         [clojure.math.numeric-tower :only (floor abs expt)]
-        [clojure.test :only (deftest)]))
+        [clojure.test :only (deftest)])
+  (:require [incanter.core :as i]))
 
 (defn num-equals [expected]
   (fn [actual] (== expected actual)))
@@ -18,12 +19,6 @@
  "Check element-wise sum of components of vector of vectors"
  (element-sum [[1 2 3] [1 2 3]]) => [2 4 6])
 
-(fact
- "check raising residuals of linear model to given power"
- (let [y Yt
-       X (idx Yt)
-       power 2]
-   (last (expt-residuals y X power))) => (roughly 0.044304))
 
 (tabular
  (fact
@@ -44,14 +39,8 @@ statistic on `ndvi`"
 
 (fact
  "first-order-conditions has been checked"
- (map last (first-order-conditions ndvi))
+ (map last (first-order-conditions (i/matrix ndvi)))
  => [-440347.2867647055 -1624.8977371391347 89557.2243993124])
-
-(fact
- "should return flattened (square) matrices of the element sums (read:
-summing in place) of the first-order conditions and the cumulative
-first-order conditions"
- (count (hansen-mats ndvi)) => 2)
 
 (defn shift-down-end
   "returns a transformed collection, where the last half is shifted
@@ -66,8 +55,12 @@ first-order conditions"
 (fact
  "test that the Hansen test statistic is relatively high for a time
  series with a constructed, short-term break"
- (- (hansen-stat (shift-down-end ndvi))
-    (hansen-stat ndvi)) => pos?)
+ (- (hansen-stat (i/matrix (shift-down-end ndvi)))
+    (hansen-stat (i/matrix ndvi))) => pos?)
+
+(fact
+  "test the value of the hansen stat, based off standard "
+  (hansen-stat (i/matrix ndvi)))
 
 (facts
  "check that the appropriate number of periods are included in the
