@@ -14,7 +14,9 @@
             [forma.trends.stretch :as stretch]
             [forma.hadoop.predicate :as p]
             [forma.hadoop.jobs.forma :as forma]
-            [forma.hadoop.jobs.timeseries :as tseries]))
+            [forma.hadoop.jobs.timeseries :as tseries]
+            [forma.date-time :as date]
+            [forma.classify.logistic :as log]))
 
 (def convert-line-src
   (hfs-textline "s3n://modisfiles/ascii/admin-map.csv"))
@@ -294,17 +296,6 @@
                                             (hfs-seqfile dynamic-path)
                                             (hfs-seqfile
                                             static-path)))))))
-
-(comment
-  "Run this:"
-   (ultrarunner "/user/hadoop/checkpoint"
-               "s3n://formaresults/ecobetatemp"
-               "s3n://formaresults/countrybetatemp"               
-               "s3n://formaresults/staticbuckettemp"
-               "s3n://formaresults/finalbuckettemp"
-               "s3n://formaresults/finaloutput"
-               "eco"
-               "s3n://formaresults/ecobetapreapply"))
 
 (defn run-forma-estimate
   [beta-src dynamic-src static-src out-loc trap-path period]

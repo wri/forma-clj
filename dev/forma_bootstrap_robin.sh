@@ -15,6 +15,9 @@ hadoop_lib=/home/hadoop/native/Linux-amd64-64
 sudo apt-get -y --force-yes install screen
 sudo apt-get -y --force-yes install exim4
 
+# Install htop - helpful for monitoring slave nodes
+sudo apt-get -y --force-yes install htop
+
 # Install libhdf4
 sudo aptitude -fy install libhdf4-dev
 
@@ -41,10 +44,10 @@ echo "export JAVA_LIBRARY_PATH=$hadoop_lib:\$JAVA_LIBRARY_PATH" >> /home/hadoop/
 echo "export LD_LIBRARY_PATH=/usr/local/fwtools/usr/lib:$hadoop_lib:\$LD_LIBRARY_PATH" >> /home/hadoop/.bashrc
 echo "export JAVA_LIBRARY_PATH=$hadoop_lib:\$JAVA_LIBRARY_PATH" >> /home/hadoop/.bashrc
 
-# convenient 'repl' command
+# Convenient 'repl' command
 echo "alias repl='screen -Lm hadoop jar /home/hadoop/forma-clj/forma-0.2.0-SNAPSHOT-standalone.jar clojure.main'" >> /home/hadoop/.bashrc
 
-# setup for git
+# Setup for git
 sudo apt-get -y --force-yes install git
 # mkdir /home/hadoop/.ssh
 
@@ -56,28 +59,29 @@ chmod 600 /home/hadoop/.ssh/id_rsa
 # add public key
 echo 'INSERT PUBLIC KEY HERE - THERE HAS TO BE A BETTER WAY TO USE GIT ON CLUSTER - CORRECT KEY IS IN S3 VERSION' > /home/hadoop/.ssh/id_rsa.pub
 
-# add github to known_hosts
+# Add github to known_hosts
 echo "github.com,207.97.227.239 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ==" >> /home/hadoop/.ssh/known_hosts
 
 cd /home/hadoop/
 source /home/hadoop/.bashrc
 
-# install lein
+# Install lein
 cd bin
 wget https://raw.github.com/technomancy/leiningen/stable/bin/lein
 chmod u+x lein
 
-# bootstrap lein
+# Bootstrap lein
 lein
 cd ..
 
-# get forma repo - easier to edit, test code
+# Get forma repo - easier to edit, test code
 git clone git@github.com:sritchie/forma-clj.git
+cd forma-clj
 git checkout dan-work
 
-# now ready to use!
-cd forma-clj
+# Now ready to use!
 lein deps
 lein uberjar
 
 exit 0
+
