@@ -2,7 +2,6 @@
   (:use [forma.matrix.utils]
         [midje.cascalog]
         [cascalog.api]
-        [forma.trends.data]
         [clojure.math.numeric-tower :only (sqrt floor abs expt)]
         [forma.trends.filter]
         [clojure.tools.logging :only (error)])
@@ -11,13 +10,11 @@
             [incanter.stats :as s]
             [forma.schema :as schema]))
 
-(defn ols-trend
-  "returns the OLS trend coefficient from the input vector; an
-  intercept is implicitly assumed"
-  [v]
-  (let [time-step (utils/idx v)]
-    (second (:coefs (s/simple-regression v time-step)))))
+;; TODO: rearrange functions for better understanding of how things
+;; fit together.
 
+;; TODO: replace `s/linear-model` with a custom, pared down function
+;; to just grab the t-tests and coefs.
 (defn long-stats
   "returns a list with both the value and t-statistic for the OLS
   trend coefficient for a time series, conditioning on a variable
@@ -32,6 +29,8 @@
            (error (str "TIMESERIES ISSUES: " ts ", " cofactors) e)))))
 
 (defn linear-residuals
+  "returns the residuals from a linear model; cribbed from
+  incanter.stats linear model"
   [y x & {:keys [intercept] :or {intercept true}}]
     (let [_x (if intercept (i/bind-columns (replicate (i/nrow x) 1) x) x)
           xtx (i/mmult (i/trans _x) _x)

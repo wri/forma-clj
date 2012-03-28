@@ -8,10 +8,6 @@
             [cascalog.ops :as c])
   (:import [org.jblas FloatMatrix MatrixFunctions Solve DoubleMatrix]))
 
-;;        [clojure-csv.core])
-;; TODO: correct for error induced by ridge
-;; TODO: Add docs!!!
-
 ;; Namespace Conventions: Each observation is assigned a binary
 ;; `label` which indicates deforestation during the training period.
 ;; These labels are collected for a group of pixels into `label-row`.
@@ -48,7 +44,8 @@
 
 (defn ^DoubleMatrix
   logistic-prob
-  ".dot returns a double, which needs to be converted to a DoubleMatrix for logistic-fn"
+  ".dot returns a double, which needs to be converted to a
+  DoubleMatrix for logistic-fn"
   [beta-mat features-mat]
   (logistic-fn
    (to-double-rowmat [(.dot beta-mat features-mat)])))
@@ -104,22 +101,52 @@
            feature-mat)))
 
 (defn ^DoubleMatrix
+  beta-increment
+  "increment beta without ridge correction; NOTE: cannot refactor
+  DoubleMatrix/eye since it changes in memory, i.e., jBLAS objects
+  don't behave like clojure data structures"
+  [info-mat scores rdg-cons]
+  (let [num-features (.rows info-mat)
+        rdg-mat (.muli (DoubleMatrix/eye (int num-features)) (double rdg-cons))
+        info-adj (.addi info-mat rdg-mat)]
+    (.mmul (Solve/solve info-adj (DoubleMatrix/eye (int num-features)))
+           scores)))
+
+(defn ^DoubleMatrix
+  ridge-correction
+  "returns a vector of corrections to the beta-update, given the
+  current iteration of the information matrix and score sequence. The
+  vector a is analogous to f(rdg_cons) = a*rdg_cons + b, and we are
+  interested in the correction factor that is calculated as follows:
+  Let v = rdg_cons.  Then we originally assume that f(0) = f(v)
+  [equivalent to no added constant along the diagnol], which may not
+  be correct.  A better approximation is f(0) - b, where b = f(v) -
+  a*v.  Then, correction = f(0) - b = f(v) - f(v) + a*v = a*v."
+  [info-mat scores rdg-cons]
+  (let [stepsize (/ rdg-cons 10)
+        upperbound (+ rdg-cons stepsize)
+        lowerbound (- rdg-cons stepsize)
+        f_upper (beta-increment info-mat scores upperbound)
+        f_lower (beta-increment info-mat scores lowerbound)]
+    (.divi (.muli (.rsubi f_upper f_lower) (double rdg-cons))
+           (double (* 2 stepsize)))))
+
+(defn ^DoubleMatrix
   beta-update
-  "returns a vector of updates for the parameter vector; the
-  ridge-constant is a very small scalar, used to ensure that the
-  inverted information matrix is non-singular."
+  "full beta update, including correction"
   [beta-row label-row feature-mat rdg-cons]
-  (let [num-features (.columns beta-row)
-        info-adj (.addi
-                  (info-matrix beta-row feature-mat)
-                  (.muli (DoubleMatrix/eye (int num-features))
-                         (double rdg-cons)))]
-    (.mmul (Solve/solve info-adj
-                        (DoubleMatrix/eye (int num-features)))
-           (score-seq beta-row label-row feature-mat))))
+  (let [scores (score-seq beta-row label-row feature-mat)
+        info-mat (info-matrix beta-row feature-mat)]
+    (.addi (beta-increment info-mat scores rdg-cons)
+           (ridge-correction info-mat scores rdg-cons))))
 
 (defn ^DoubleMatrix
   initial-beta
+  "returns a vector of intial weights; this can be changed to reflect
+  the method of moments estimator as a starting point, but for now it
+  is fine to assume no knowledge about the betas.  The probabilities
+  start a 0.5 and are pushed to the 0 and 1 extremes as the likelihood
+  function is maximized."
   [feature-mat]
   (let [n (.columns feature-mat)]
     (to-double-rowmat (repeat n 0))))
