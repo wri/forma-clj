@@ -155,8 +155,7 @@
   "return the estimated parameter vector; which is used, in turn, to
   calculate the estimated probability of the binary label; the initial
   beta-diff value is an arbitrarily large value."
-  [label-row feature-mat
-   rdg-cons converge-threshold max-iter]
+  [label-row feature-mat rdg-cons converge-threshold max-iter]
   (let [beta-init (initial-beta feature-mat)]
     (loop [beta beta-init
            iter max-iter
