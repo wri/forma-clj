@@ -11,8 +11,6 @@
             [forma.date-time :as date]
             [cascalog.ops :as c]))
 
-;; TODO: Write cascalog.midje tests
-
 (defn read-mys-csv
   "returns a properly adjusted list of the malaysia test data."
   [file-name]
@@ -62,6 +60,8 @@ sure mult-fn is working for tiny matrix"
           (.put init-mat 3 to-insert))]
     (mult-fn mat) => out-mat))
 
+;; USEFUL FOR BENCHMARK
+
 (defn multiplier
   [n]
   ((partial * 1000) n))
@@ -81,3 +81,7 @@ sure mult-fn is working for tiny matrix"
         big-y (mk-y n)]
     (prn (.rows big-X) (.columns big-X))
     (logistic-beta-vector big-y big-X 1e-8 1e-10 iterations)))
+
+;; TIME required to calculate logistic betas for 1 million obs, 10 iterations
+;; (time (run-logistic-beta-vector 1000 10))
+;; "Elapsed time: 5014.590245 msecs"
