@@ -91,6 +91,28 @@
     (for [x (range start-index (inc end-index))]
       (subvec base-vec 0 x))))
 
+;; Functions to collect cleaning functions for use in the trend
+;; feature extraction
+
+(defn clean-trend
+  "filter out bad values and remove seasonal component for a spectral
+  time series (with frequency `freq`) using information in an
+  associated reliability time series"
+  [freq spectral-ts reli-ts]
+  spectral-ts)
+
+(defn clean-tele-trends
+  "clean trends (i.e., filter out bad values and remove seasonal
+  component) for each intervening time period between `start-idx` and
+  `end-idx`.
+
+  TODO: THIS is the most time-intensive function of all the trend
+  analysis."
+  [freq start-idx end-idx spectral-ts reli-ts]
+  (map (partial clean-trend freq)
+       (lengthening-ts start-idx end-idx spectral-ts)
+       (lengthening-ts start-idx end-idx reli-ts)))
+
 ;; Short-term trend characteristic; supporting functions
 
 (defn trend-mat
@@ -138,27 +160,7 @@
        (moving-subvec block-len
                       (i/matrix (clean-trend freq spectral-ts reli-ts)))))
 
-;; Functions to collect cleaning functions for use in the trend
-;; feature extraction
 
-(defn clean-trend
-  "filter out bad values and remove seasonal component for a spectral
-  time series (with frequency `freq`) using information in an
-  associated reliability time series"
-  [freq spectral-ts reli-ts]
-  spectral-ts)
-
-(defn clean-tele-trends
-  "clean trends (i.e., filter out bad values and remove seasonal
-  component) for each intervening time period between `start-idx` and
-  `end-idx`.
-
-  TODO: THIS is the most time-intensive function of all the trend
-  analysis."
-  [freq start-idx end-idx spectral-ts reli-ts]
-  (map (partial clean-trend freq)
-       (lengthening-ts start-idx end-idx spectral-ts)
-       (lengthening-ts start-idx end-idx reli-ts)))
 
 ;; Collect the long- and short-term trend characteristics
 
