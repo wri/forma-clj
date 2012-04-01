@@ -3,6 +3,7 @@
         [midje sweet cascalog]
         [clojure.string :only (join)] forma.hadoop.jobs.forma)
   (:require [forma.schema :as schema]
+            [forma.date-time :as date]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
             [cascalog.ops :as c]))
@@ -21,7 +22,7 @@
   "Test function that displays the output of the dynamic tap."
   []
   (?- (stdout)
-      (-> (dynamic-tap some-map
+      (-> (dynamic-cleaned-tap some-map
                        (hfs-seqfile "/Users/sritchie/Desktop/ndviseries1000/")
                        (hfs-seqfile "/Users/sritchie/Desktop/ndviseries1000/"))
           (c/first-n 10))))
@@ -231,7 +232,7 @@
           outer-src
           (forma-tap est-map :n-src :reli-src :r-src :v-src :f-src)
           (provided
-            (dynamic-tap
+            (dynamic-cleaned-tap
              est-map
              (dynamic-filter 25 :n-src :reli-src :r-src :v-src)) => dynamic-tuples
             (fire-tap est-map :f-src) => fire-values))
@@ -275,3 +276,34 @@
         trap-tap (hfs-seqfile "/Users/robin/Downloads/trap")
         dynamic-src (hfs-seqfile "/Users/robin/Downloads/dynamic")]
   (?- out (forma-estimate beta-src dynamic-src static-src trap-tap 901))))
+
+;; (def e-map
+;;   {:est-start "2005-12-19"
+;;    :est-end "2011-04-01"
+;;    :t-res "16"
+;;    :neighbors 1
+;;    :window-dims [600 600]
+;;    :vcf-limit 25
+;;    :long-block 15
+;;    :window 5})
+
+;; (defn run-dynamic
+;;   "Test function that displays the output of the dynamic tap."
+;;   []
+;;   (let [ndvi (vec (range 8000 8300))
+;;         reli (vec (repeatedly 300 (partial rand-int 4)))
+;;         dynamic-src [["500" 28 8 0 0 827 ndvi [1 2 3] reli]]]
+;;     (?- (stdout)
+;;       (dynamic-clean-long e-map dynamic-src))))
+
+(defn clean-it
+  []
+  (let [ndvi [[1 (vec (range 8000 8300))]]
+        reli [[1 (vec (repeatedly 300 (partial rand-int 4)))]]
+        ts-start (date/datetime->period "16" "2000-02-18")
+        est-map {:t-res "16" :est-start "2005-12-31" :est-end "2010-12-31"}]
+    (??<- [?id ?series]
+          (ndvi ?id ?ndvi)
+          (reli ?id ?reli)
+          (clean-timeseries-shell-long est-map ts-start ?ndvi ?reli :> ?series)
+          (:distinct false))))

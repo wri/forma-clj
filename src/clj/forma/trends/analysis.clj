@@ -4,6 +4,7 @@
         [cascalog.api]
         [clojure.math.numeric-tower :only (sqrt floor abs expt)]
         [forma.trends.filter]
+        [forma.date-time :as date]
         [clojure.tools.logging :only (error)])
   (:require [forma.utils :as utils]
             [incanter.core :as i]
@@ -73,14 +74,19 @@
     (for [x (range start-index (inc end-index))]
       (subvec base-vec 0 x))))
 
+(defn fake-deseasonalize
+  [series]
+  series)
+
 (defn clean-trend
   "filter out bad values and remove seasonal component for a spectral
   time series (with frequency `freq`) using information in an
   associated reliability time series"
   [freq spectral-ts reli-ts]
-  spectral-ts)
+  (-> (make-reliable #{3 2} #{1 0} reli-ts spectral-ts)
+      (fake-deseasonalize)))
 
-(defn clean-tele-trends
+(defn clean-timeseries
   "clean trends (i.e., filter out bad values and remove seasonal
   component) for each intervening time period between `start-idx` and
   `end-idx`.
@@ -98,7 +104,7 @@
   and `end-idx` (inclusive)."
   [freq start-idx end-idx spectral-ts reli-ts cofactor-ts]
   (let [params [freq start-idx end-idx spectral-ts reli-ts]
-        clean-ts (apply clean-tele-trends params)
+        clean-ts (apply clean-timeseries params)
         cofactor-tele (lengthening-ts start-idx end-idx cofactor-ts)]
     (map flatten
          (transpose [(map hansen-stat clean-ts)

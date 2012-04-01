@@ -178,3 +178,5 @@ values of the test data vectors."
                        :series [-63.23936661263988 -63.23936661263988]}]]))))
 
 
+(fact
+ (clean-tele-trends 30 10 23 138 271 ndvi reli) => (produces [[1]]))
