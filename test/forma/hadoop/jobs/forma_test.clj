@@ -277,33 +277,34 @@
         dynamic-src (hfs-seqfile "/Users/robin/Downloads/dynamic")]
   (?- out (forma-estimate beta-src dynamic-src static-src trap-tap 901))))
 
-;; (def e-map
-;;   {:est-start "2005-12-19"
-;;    :est-end "2011-04-01"
-;;    :t-res "16"
-;;    :neighbors 1
-;;    :window-dims [600 600]
-;;    :vcf-limit 25
-;;    :long-block 15
-;;    :window 5})
+(fact
+  "Uses simple timeseries to check cleaning operation"
+  (let [t-res "16"
+        ts-length 20
+        est-map {:est-start (date/period->datetime t-res (- ts-length 10))
+                 :est-end (date/period->datetime t-res ts-length)
+                 :t-res t-res}
+        ndvi [[1 (vec (range 8000 (+ 8000 ts-length)))]]
+        precl [[1 (vec (range ts-length))]]
+        reli [[1 [0 2 3 0 1 0 3 1 1 0 2 1 2 0 3 2 1 2 3 1]]]]
+    (<- [?id ?series]
+        (ndvi ?id ?ndvi)
+        (reli ?id ?reli)
+        (clean-timeseries-shell-long est-map 0 ?ndvi ?reli :> ?series)
+        (:distinct false))) => (produces-some [[1 [8000.0 8001.5 8003.0 8003 8004 8005.0 8007.0 8007 8008 8009]]
+                                               [1 [8000.0 8001.5 8003.0 8003 8004 8005.0 8007.0 8007 8008 8009.0 8011.0 8011.0 8013.0 8013.0 8014.5 8016.0 8016.0 8017.5 8019.0 8019]]]))
 
-;; (defn run-dynamic
-;;   "Test function that displays the output of the dynamic tap."
-;;   []
-;;   (let [ndvi (vec (range 8000 8300))
-;;         reli (vec (repeatedly 300 (partial rand-int 4)))
-;;         dynamic-src [["500" 28 8 0 0 827 ndvi [1 2 3] reli]]]
-;;     (?- (stdout)
-;;       (dynamic-clean-long e-map dynamic-src))))
 
-(defn clean-it
-  []
-  (let [ndvi [[1 (vec (range 8000 8300))]]
-        reli [[1 (vec (repeatedly 300 (partial rand-int 4)))]]
-        ts-start (date/datetime->period "16" "2000-02-18")
-        est-map {:t-res "16" :est-start "2005-12-31" :est-end "2010-12-31"}]
-    (??<- [?id ?series]
-          (ndvi ?id ?ndvi)
-          (reli ?id ?reli)
-          (clean-timeseries-shell-long est-map ts-start ?ndvi ?reli :> ?series)
-          (:distinct false))))
+(fact
+  "Uses simple timeseries to test cleaning query"
+  (let [t-res "16"
+        ts-length 20
+        est-map {:est-start (date/period->datetime t-res (- ts-length 10))
+                 :est-end (date/period->datetime t-res ts-length)
+                 :t-res t-res}
+        ndvi (vec (range 8000 (+ 8000 ts-length)))
+        precl (vec (range ts-length))
+        reli [0 2 3 0 1 0 3 1 1 0 2 1 2 0 3 2 1 2 3 1]
+        dynamic-src [["500" 28 8 0 0 0 ndvi precl reli]]]
+    (dynamic-clean-long est-map dynamic-src) => (produces-some [["500" 28 8 0 0 0 [8000.0 8001.5 8003.0 8003 8004 8005.0 8007.0 8007 8008 8009]]
+                                                                ["500" 28 8 0 0 0 [8000.0 8001.5 8003.0 8003 8004 8005.0 8007.0 8007 8008 8009.0 8011.0 8011.0 8013.0 8013.0 8014.5 8016.0 8016.0 8017.5 8019.0 8019]]])))

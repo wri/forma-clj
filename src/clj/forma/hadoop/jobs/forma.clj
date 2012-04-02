@@ -115,9 +115,9 @@
   occur before the analysis. Note that all variable names within this
   query are TIMESERIES, not individual values."
   [est-map dynamic-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?ndvi ?precl]
-      (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl ?reli)
-      (clean-timeseries-shell-long est-map ?start ?ndvi ?reli :> ?ndvi)
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start !ndvi]
+      (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi _ ?reli)
+      (clean-timeseries-shell-long est-map ?start ?ndvi ?reli :> !ndvi)
       (:distinct false)))
 
 (defn dynamic-cleaned-tap

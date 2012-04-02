@@ -253,7 +253,7 @@
                         "Runs the trends processing."
                         (with-job-conf {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
                           (?- (hfs-seqfile dynamic-path)
-                              (forma/dynamic-tap
+                              (forma/dynamic-clean-long
                                est-map (hfs-seqfile adjusted-series-path)))))
 
               mid-forma ([:tmp-dirs forma-mid-path
@@ -314,3 +314,30 @@
                       "s3n://formaresults/trapped"
                       827))
 
+
+(defmain trendsrunner
+  [tmp-root pail-path ts-pail-path out-path run-key country-seq]
+  (let [{:keys [s-res t-res est-end] :as est-map} (forma-run-parameters run-key)
+        mk-filter (fn [vcf-path ts-src]
+                    (forma/filter-query (hfs-seqfile vcf-path)
+                                        (:vcf-limit est-map)
+                                        ts-src))]
+    (assert est-map (str run-key " is not a valid run key!"))
+    (workflow [tmp-root]
+
+              clean ([:tmp-dirs clean]
+                        "Runs the trends processing."
+                        (with-job-conf {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
+                          (?- (hfs-seqfile "s3n://formaresults/test/cleantemp" :sinkmode :replace)
+                              (forma/dynamic-clean-long
+                               est-map (hfs-seqfile "s3n://formaresults/test/adjustedseries"))))))))
+
+(comment
+  (use 'forma.hadoop.jobs.scatter)
+  (in-ns 'forma.hadoop.jobs.scatter)
+  (trendsrunner "/user/hadoop/checkpoints"
+               "s3n://pailbucket/master"
+               "s3n://pailbucket/series"
+               "s3n://formaresults/forma2012"
+               "500-16"
+               [:IDN]))
