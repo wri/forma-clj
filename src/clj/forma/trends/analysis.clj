@@ -181,7 +181,7 @@
   and `end-idx` (inclusive)."
   [freq start-idx end-idx spectral-ts reli-ts cofactor-ts]
   (let [params [freq start-idx end-idx spectral-ts reli-ts]
-        clean-ts (apply clean-tele-trends params)
+        clean-ts (apply clean-timeseries params)
         cofactor-tele (lengthening-ts start-idx end-idx cofactor-ts)]
     (map flatten
          (transpose [(map hansen-stat (map i/matrix clean-ts))
