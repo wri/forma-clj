@@ -11,32 +11,17 @@
             [incanter.stats :as s]
             [forma.schema :as schema]))
 
-;; TODO: rearrange functions for better understanding of how things
-;; fit together.
-
-;; TODO: replace `s/linear-model` with a custom, pared down function
-;; to just grab the t-tests and coefs.
-(defn long-stats
-  "returns a list with both the value and t-statistic for the OLS
-  trend coefficient for a time series, conditioning on a variable
-  number of cofactors"
-  [ts & cofactors]
-  (let [time-step (utils/idx ts)
-        X (if (empty? cofactors)
-            (i/matrix time-step)
-            (apply i/bind-columns time-step cofactors))]
-    (try (map second (map (s/linear-model ts X) [:coefs :t-tests]))
-         (catch Throwable e
-           (error (str "TIMESERIES ISSUES: " ts ", " cofactors) e)))))
+;; Hansen break statistic
 
 (defn linear-residuals
   "returns the residuals from a linear model; cribbed from
   incanter.stats linear model"
   [y x & {:keys [intercept] :or {intercept true}}]
-    (let [_x (if intercept (i/bind-columns (replicate (i/nrow x) 1) x) x)
-          xtx (i/mmult (i/trans _x) _x)
-          coefs (i/mmult (i/solve xtx) (i/trans _x) y)]
-      (i/minus y (i/mmult _x coefs))))
+  (let [_x (if intercept (i/bind-columns (replicate (i/nrow x) 1) x) x)
+        xt (i/trans _x)
+        xtx (i/mmult xt _x)
+        coefs (i/mmult (i/solve xtx) xt y)]
+    (i/minus y (i/mmult _x coefs))))
 
 (defn first-order-conditions
   "returns a matrix with residual weighted cofactors (incl. constant
@@ -50,7 +35,10 @@
         resid (linear-residuals coll X)
         sq-resid (i/mult resid resid)
         mu (utils/average sq-resid)]
-    (i/trans (i/bind-columns (i/mult resid X) resid (i/minus sq-resid mu)))))
+    (i/trans (i/bind-columns
+              (i/mult resid X)
+              resid
+              (i/minus sq-resid mu)))))
 
 (defn hansen-stat
   "returns the Hansen (1992) test statistic, based on (1) the first-order
@@ -65,6 +53,36 @@
       (i/solve (i/mult foc-mat (count coll)))
       focsum-mat))))
 
+;; Long-term trend characteristic; supporting functions 
+
+(defn trend-characteristics
+  [y x & {:keys [intercept] :or {intercept true}}]
+  (let [_x (if intercept (i/bind-columns (replicate (i/nrow x) 1) x) x)
+        xt (i/trans _x)
+        xtx (i/mmult xt _x)
+        coefs (i/mmult (i/solve xtx) xt y)
+        fitted (i/mmult _x coefs)
+        resid (i/to-list (i/minus y fitted))
+        sse (i/sum-of-squares resid)
+        mse (/ sse (- (i/nrow y) (i/ncol _x)))
+        coef-var (i/mult mse (i/solve xtx))
+        std-errors (i/sqrt (i/diag coef-var))
+        t-tests (i/div coefs std-errors)]
+    [coefs t-tests]))
+
+(defn long-stats
+  "returns a list with both the value and t-statistic for the OLS
+  trend coefficient for a time series, conditioning on a variable
+  number of cofactors"
+  [ts & cofactors]
+  (let [time-step (utils/idx ts)
+        X (if (empty? cofactors)
+            (i/matrix time-step)
+            (apply i/bind-columns time-step cofactors))]
+    (try (map second (trend-characteristics ts X))
+         (catch Throwable e
+           (error (str "TIMESERIES ISSUES: " ts ", " cofactors) e)))))
+
 (defn lengthening-ts
   "create a sequence of sequences, where each incremental sequence is
   one element longer than the last, pinned to the same starting
@@ -74,9 +92,14 @@
     (for [x (range start-index (inc end-index))]
       (subvec base-vec 0 x))))
 
+<<<<<<< HEAD
 (defn fake-deseasonalize
   [series freq]
   series)
+=======
+;; Functions to collect cleaning functions for use in the trend
+;; feature extraction
+>>>>>>> upstream/develop
 
 (defn clean-trend
   "Filter out bad values and remove seasonal component for a spectral
@@ -105,6 +128,7 @@
        (lengthening-ts start-idx end-idx spectral-ts)
        (lengthening-ts start-idx end-idx reli-ts)))
 
+<<<<<<< HEAD
 (defn telescoping-long-trend
   "returns a three-tuple with the trend coefficient, trend t-stat, and
   the hansen statistic for each period between `start-idx` (inclusive)
@@ -116,6 +140,9 @@
     (map flatten
          (transpose [(map hansen-stat clean-ts)
                      (map long-stats clean-ts cofactor-tele)]))))
+=======
+;; Short-term trend characteristic; supporting functions
+>>>>>>> upstream/develop
 
 (defn trend-mat
   "returns a (`len` x 2) matrix, with first column of ones; and second
@@ -137,8 +164,8 @@
 (defn grab-trend
   "returns the trend from an ordinary least squares regression of a
   spectral time series on an intercept and a trend variable"
-  [proj-mat sub-coll]
-  (second (i/mmult proj-mat sub-coll)))
+  [hat-mat sub-coll]
+  (second (i/mmult hat-mat sub-coll)))
 
 (defn moving-subvec
   "returns a vector of incanter sub-matrices, offset by 1 and of
@@ -161,6 +188,22 @@
   (map (partial grab-trend (hat-mat block-len))
        (moving-subvec block-len
                       (i/matrix (clean-trend freq spectral-ts reli-ts)))))
+
+
+
+;; Collect the long- and short-term trend characteristics
+
+(defn telescoping-long-trend
+  "returns a three-tuple with the trend coefficient, trend t-stat, and
+  the hansen statistic for each period between `start-idx` (inclusive)
+  and `end-idx` (inclusive)."
+  [freq start-idx end-idx spectral-ts reli-ts cofactor-ts]
+  (let [params [freq start-idx end-idx spectral-ts reli-ts]
+        clean-ts (apply clean-tele-trends params)
+        cofactor-tele (lengthening-ts start-idx end-idx cofactor-ts)]
+    (map flatten
+         (transpose [(map hansen-stat (map i/matrix clean-ts))
+                     (map long-stats clean-ts cofactor-tele)]))))
 
 (defn telescoping-short-trend
   "returns a vector of the short-term trend coefficients over time
