@@ -4,7 +4,6 @@
         [forma.matrix.utils :only (transpose)]
         [midje sweet cascalog]
         [forma.trends.data :only (ndvi rain reli Yt)]
-        [forma.matrix.utils :only (transpose)]
         [forma.utils :only (idx)]
         [forma.schema :only (timeseries-value)]
         [forma.trends.stretch :only (ts-expander)]
@@ -15,13 +14,13 @@
 (defn num-equals [expected]
   (fn [actual] (== expected actual)))
 
-(fact
+(future-fact
  "Check element-wise sum of components of vector of vectors"
  (element-sum [[1 2 3] [1 2 3]]) => [2 4 6])
 
 
 (tabular
- (fact
+ (future-fact
    "Calculates simple OLS trend, assuming 0 intercept."
    (ols-trend ?v) => ?expected)
  ?v ?expected
@@ -176,3 +175,13 @@ values of the test data vectors."
      (produces-some [[{:start-idx 135
                        :end-idx 136
                        :series [-63.23936661263988 -63.23936661263988]}]]))))
+
+(tabular
+ (fact
+   (clean-trend 1 ?spectral-ts ?reli-ts) => ?res)
+ ?spectral-ts ?reli-ts ?res
+ [1 1 1] [0 0 0] [1 1 1]
+ [1 1 1] [0 1 0] [1 1 1]
+ [1 1 1] [1 1 1] [1 1 1]
+ [1 1 1] [2 2 2] nil
+ [1 2 3] [1 2 1] [1.0 3.0 3])

@@ -75,16 +75,23 @@
       (subvec base-vec 0 x))))
 
 (defn fake-deseasonalize
-  [series]
+  [series freq]
   series)
 
 (defn clean-trend
-  "filter out bad values and remove seasonal component for a spectral
+  "Filter out bad values and remove seasonal component for a spectral
   time series (with frequency `freq`) using information in an
-  associated reliability time series"
+  associated reliability time series. Conditions check first whether series
+  contains all bad or all good values, and returns nil or the original series,
+  respectively"
   [freq spectral-ts reli-ts]
-  (-> (make-reliable #{3 2} #{1 0} reli-ts spectral-ts)
-      (fake-deseasonalize)))
+  (let [good-set #{1 0}
+        bad-set #{255 3 2}
+        reli-set (set reli-ts)]
+    (cond (empty? (clojure.set/intersection good-set reli-set)) nil
+          (empty? (clojure.set/difference reli-set good-set)) spectral-ts
+          :else (-> (make-reliable bad-set good-set reli-ts spectral-ts)
+                    (fake-deseasonalize freq)))))
 
 (defn clean-timeseries
   "clean trends (i.e., filter out bad values and remove seasonal
