@@ -92,21 +92,19 @@
     (for [x (range start-index (inc end-index))]
       (subvec base-vec 0 x))))
 
-<<<<<<< HEAD
+;; Functions to collect cleaning functions for use in the trend
+;; feature extraction
+
 (defn fake-deseasonalize
   [series freq]
   series)
-=======
-;; Functions to collect cleaning functions for use in the trend
-;; feature extraction
->>>>>>> upstream/develop
 
 (defn clean-trend
-  "Filter out bad values and remove seasonal component for a spectral
+  "Interpolate over bad values and remove seasonal component for a spectral
   time series (with frequency `freq`) using information in an
   associated reliability time series. Conditions check first whether series
   contains all bad or all good values, and returns nil or the original series,
-  respectively"
+  respectively."
   [freq spectral-ts reli-ts]
   (let [good-set #{1 0}
         bad-set #{255 3 2}
@@ -128,21 +126,7 @@
        (lengthening-ts start-idx end-idx spectral-ts)
        (lengthening-ts start-idx end-idx reli-ts)))
 
-<<<<<<< HEAD
-(defn telescoping-long-trend
-  "returns a three-tuple with the trend coefficient, trend t-stat, and
-  the hansen statistic for each period between `start-idx` (inclusive)
-  and `end-idx` (inclusive)."
-  [freq start-idx end-idx spectral-ts reli-ts cofactor-ts]
-  (let [params [freq start-idx end-idx spectral-ts reli-ts]
-        clean-ts (apply clean-timeseries params)
-        cofactor-tele (lengthening-ts start-idx end-idx cofactor-ts)]
-    (map flatten
-         (transpose [(map hansen-stat clean-ts)
-                     (map long-stats clean-ts cofactor-tele)]))))
-=======
 ;; Short-term trend characteristic; supporting functions
->>>>>>> upstream/develop
 
 (defn trend-mat
   "returns a (`len` x 2) matrix, with first column of ones; and second
@@ -188,8 +172,6 @@
   (map (partial grab-trend (hat-mat block-len))
        (moving-subvec block-len
                       (i/matrix (clean-trend freq spectral-ts reli-ts)))))
-
-
 
 ;; Collect the long- and short-term trend characteristics
 
