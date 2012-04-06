@@ -4,7 +4,6 @@
         [forma.matrix.utils :only (transpose)]
         [midje sweet cascalog]
         [forma.trends.data :only (ndvi rain reli Yt)]
-        [forma.matrix.utils :only (transpose)]
         [forma.utils :only (idx)]
         [forma.schema :only (timeseries-value)]
         [forma.trends.stretch :only (ts-expander)]
@@ -167,5 +166,3 @@ values of the test data vectors."
      (produces-some [[{:start-idx 135
                        :end-idx 136
                        :series [-63.23936661263988 -63.23936661263988]}]]))))
-
-

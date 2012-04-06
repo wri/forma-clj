@@ -25,14 +25,29 @@ same mean as the original time series"
 
 (facts
  "that filtering cloudy or otherwise poor quality observations does not change the length of the vector"
- (count (neutralize-ends #{3 2} reli ndvi)) => (count ndvi)
- (count (make-reliable #{3 2} #{1 0} reli ndvi)) => (count ndvi))
+ (count (neutralize-ends #{3 2} ndvi reli)) => (count ndvi)
+ (count (make-reliable #{3 2} #{1 0} ndvi reli)) => (count ndvi))
+
+(facts
+  "`interpolate` is actually linear interpolation"
+  (interpolate 2 4 3) => [(float 2.0) (float 2.6666667) (float 3.3333333)]
+  (interpolate 2 4 2) => [(float 2.0) (float 3.0)])
 
 (fact
  "number of values that are different in ndvi-test, after applying the
 final compositions of functions."
- (let [reliable (make-reliable #{3 2} #{1 0} reli ndvi)]
-   (count
-    (filter (complement zero?)
-            (map - reliable ndvi)))) => 96)
+ (let [reliable (make-reliable #{3 2} #{1 0} ndvi reli)]
+   (count (filter (complement zero?)
+                  (map - reliable ndvi)))) => 96)
 
+(tabular
+ (fact
+   (make-clean 1 #{0 1} #{2 3 255} ?spectral-ts ?reli-ts) => ?res)
+ ?spectral-ts ?reli-ts ?res
+ [1 1 1] [0 0 0] [1 1 1]
+ [1 1 1] [0 1 0] [1 1 1]
+ [1 1 1] [1 1 1] [1 1 1]
+ [1 1 1] [2 2 1] [1.0 1.0 1]
+ [1 1 1] [2 2 2] nil
+ [1 2 3] [1 2 1] [1.0 2.0 3]
+ (vec (repeat 10 10)) (vec (repeat 10 3)) nil)
