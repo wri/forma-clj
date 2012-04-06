@@ -169,10 +169,13 @@ values of the test data vectors."
 
 (tabular
  (fact
-   (clean-trend 1 ?spectral-ts ?reli-ts) => ?res)
+   (make-clean 1 #{0 1} #{2 3 255} ?spectral-ts ?reli-ts) => ?res)
  ?spectral-ts ?reli-ts ?res
  [1 1 1] [0 0 0] [1 1 1]
  [1 1 1] [0 1 0] [1 1 1]
  [1 1 1] [1 1 1] [1 1 1]
+ [1 1 1] [2 2 1] [1.0 1.0 1]
  [1 1 1] [2 2 2] nil
- [1 2 3] [1 2 1] [1.0 3.0 3])
+ [1 2 3] [1 2 1] [1.0 2.0 3]
+ (vec (repeat 10 10)) (vec (repeat 10 3)) nil)
+
