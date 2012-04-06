@@ -3,6 +3,7 @@
         [midje sweet cascalog]
         [clojure.string :only (join)] forma.hadoop.jobs.forma)
   (:require [forma.schema :as schema]
+            [forma.date-time :as date]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
             [cascalog.ops :as c]))
@@ -21,7 +22,7 @@
   "Test function that displays the output of the dynamic tap."
   []
   (?- (stdout)
-      (-> (dynamic-tap some-map
+      (-> (dynamic-cleaned-tap some-map
                        (hfs-seqfile "/Users/sritchie/Desktop/ndviseries1000/")
                        (hfs-seqfile "/Users/sritchie/Desktop/ndviseries1000/"))
           (c/first-n 10))))
@@ -231,10 +232,10 @@
           outer-src
           (forma-tap est-map :n-src :reli-src :r-src :v-src :f-src)
           (provided
-            (dynamic-tap
+            (dynamic-cleaned-tap
              est-map
              (dynamic-filter 25 :n-src :reli-src :r-src :v-src)) => dynamic-tuples
-            (fire-tap est-map :f-src) => fire-values))
+             (fire-tap est-map :f-src) => fire-values))
   
   (fact?- "Can forma follow through?"
           forma-results
@@ -242,36 +243,18 @@
           (provided
             (forma-tap est-map :n-src :reli-src :r-src :v-src :f-src) => outer-tap)))
 
-(def static-src
-  ;; defined to match something on robin's computer
-  [["500" 31 9 1480 583 -9999 57 40102 0]
-   ["500" 32 9 2099 2256 -9999 57 40102 0]])
 
-(def dynamic-src
-  ["500" 901 32 9 2099 2256 [#forma.schema.FireValue{:temp-330 0, :conf-50 0, :both-preds 0, :count 0} -466.2011790878755 1 1.6012421078702275 0.2656590124101372] #forma.schema.NeighborValue{:fire-value #forma.schema.FireValue{:temp-330 0, :conf-50 0, :both-preds 0, :count 0}, :neighbor-count 4, :avg-short-drop -174.58885428253615, :min-short-drop -309.94680756395996, :avg-param-break 1, :min-param-break 1, :avg-long-drop 4.25231304252854, :min-long-drop 0.7720724721357737, :avg-t-stat 0.637545513914194, :min-t-stat 0.12022165725363915}])
 
-(defn get-dynamic
-  []
-  (let [data (hfs-seqfile "/Users/robin/Downloads/dynamic")
-        my-fields ["?s-res" "?pd" "?mod-h" "?mod-v" "?s" "?l" "?val" "?neighbor-val"]
-        src (<- my-fields (data :>> my-fields))]
-    (??- (c/first-n src 1))))
 
-(comment
-  (let [static-src [["500" 31 9 1480 583 -9999 57 40102 0]
-                    ["500" 32 9 2099 2256 -9999 57 40102 0]]
-        dynamic-src ["500" 901 32 9 2099 2256 [#forma.schema.FireValue{:temp-330 0, :conf-50 0, :both-preds 0, :count 0} -466.2011790878755 1 1.6012421078702275 0.2656590124101372] #forma.schema.NeighborValue{:fire-value #forma.schema.FireValue{:temp-330 0, :conf-50 0, :both-preds 0, :count 0}, :neighbor-count 4, :avg-short-drop -174.58885428253615, :min-short-drop -309.94680756395996, :avg-param-break 1, :min-param-break 1, :avg-long-drop 4.25231304252854, :min-long-drop 0.7720724721357737, :avg-t-stat 0.637545513914194, :min-t-stat 0.12022165725363915}]
-        beta-src (hfs-seqfile "/Users/robin/Downloads/betas")
-        out (hfs-textline "/Users/robin/Downloads/text/apply" :sinkmode :replace)
-        trap-tap (hfs-seqfile "/Users/robin/Downloads/trap")]
-    (?- out (forma-estimate beta-src dynamic-src static-src trap-tap 827))))
 
-(defn run-estimate
-  []
-  (let [static-src [["500" 31 9 1480 583 -9999 57 40102 0]
-                    ["500" 32 9 2099 2256 -9999 57 40102 0]]
-        beta-src (hfs-seqfile "/Users/robin/Downloads/betas")
-        out (hfs-textline "/Users/robin/Downloads/text/apply" :sinkmode :replace)
-        trap-tap (hfs-seqfile "/Users/robin/Downloads/trap")
-        dynamic-src (hfs-seqfile "/Users/robin/Downloads/dynamic")]
-  (?- out (forma-estimate beta-src dynamic-src static-src trap-tap 901))))
+
+
+
+
+
+
+
+
+
+
+

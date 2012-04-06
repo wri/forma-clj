@@ -4,6 +4,7 @@
         [cascalog.api]
         [clojure.math.numeric-tower :only (sqrt floor abs expt)]
         [forma.trends.filter]
+        [forma.date-time :as date]
         [clojure.tools.logging :only (error)])
   (:require [forma.utils :as utils]
             [incanter.core :as i]
@@ -94,24 +95,15 @@
 ;; Functions to collect cleaning functions for use in the trend
 ;; feature extraction
 
-(defn clean-trend
-  "filter out bad values and remove seasonal component for a spectral
-  time series (with frequency `freq`) using information in an
-  associated reliability time series"
-  [freq spectral-ts reli-ts]
-  spectral-ts)
+(defn deseasonalize
+  [series freq]
+  series)
 
-(defn clean-tele-trends
-  "clean trends (i.e., filter out bad values and remove seasonal
-  component) for each intervening time period between `start-idx` and
-  `end-idx`.
-
-  TODO: THIS is the most time-intensive function of all the trend
-  analysis."
-  [freq start-idx end-idx spectral-ts reli-ts]
-  (map (partial clean-trend freq)
-       (lengthening-ts start-idx end-idx spectral-ts)
-       (lengthening-ts start-idx end-idx reli-ts)))
+(defn make-clean
+  "Interpolate over bad values and remove seasonal component using reliability."
+  [freq good-set bad-set spectral-ts reli-ts]
+  (-> (make-reliable good-set bad-set spectral-ts reli-ts)
+      (deseasonalize freq)))
 
 ;; Short-term trend characteristic; supporting functions
 
@@ -158,9 +150,7 @@
   [block-len freq spectral-ts reli-ts]
   (map (partial grab-trend (hat-mat block-len))
        (moving-subvec block-len
-                      (i/matrix (clean-trend freq spectral-ts reli-ts)))))
-
-
+                      (i/matrix spectral-ts reli-ts))))
 
 ;; Collect the long- and short-term trend characteristics
 
@@ -168,13 +158,11 @@
   "returns a three-tuple with the trend coefficient, trend t-stat, and
   the hansen statistic for each period between `start-idx` (inclusive)
   and `end-idx` (inclusive)."
-  [freq start-idx end-idx spectral-ts reli-ts cofactor-ts]
-  (let [params [freq start-idx end-idx spectral-ts reli-ts]
-        clean-ts (apply clean-tele-trends params)
-        cofactor-tele (lengthening-ts start-idx end-idx cofactor-ts)]
+  [freq start-idx end-idx spectral-ts cofactor-ts]
+  (let [cofactor-tele (take (count spectral-ts) cofactor-ts)]
     (map flatten
-         (transpose [(map hansen-stat (map i/matrix clean-ts))
-                     (map long-stats clean-ts cofactor-tele)]))))
+         (transpose [(map hansen-stat (map i/matrix spectral-ts))
+                     (map long-stats spectral-ts cofactor-tele)]))))
 
 (defn telescoping-short-trend
   "returns a vector of the short-term trend coefficients over time
