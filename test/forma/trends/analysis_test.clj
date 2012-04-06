@@ -4,7 +4,6 @@
         [forma.matrix.utils :only (transpose)]
         [midje sweet cascalog]
         [forma.trends.data :only (ndvi rain reli Yt)]
-        [forma.matrix.utils :only (transpose)]
         [forma.utils :only (idx)]
         [forma.schema :only (timeseries-value)]
         [forma.trends.stretch :only (ts-expander)]
@@ -12,23 +11,15 @@
         [clojure.test :only (deftest)])
   (:require [incanter.core :as i]))
 
-(defn num-equals [expected]
-  (fn [actual] (== expected actual)))
-
-(fact
- "Check element-wise sum of components of vector of vectors"
- (element-sum [[1 2 3] [1 2 3]]) => [2 4 6])
-
-
-(tabular
- (fact
-   "Calculates simple OLS trend, assuming 0 intercept."
-   (ols-trend ?v) => ?expected)
- ?v ?expected
- [1 2] (roughly 1. 0.00000001)
- [1 2 4] (roughly 1.5 0.00000001)
- [1 2 50] (roughly 24.5 0.00000001)
- [2 50] (roughly 48. 0.00000001))
+;; (tabular
+;;  (fact
+;;    "Calculates simple OLS trend, assuming 0 intercept."
+;;    (ols-trend ?v) => ?expected)
+;;  ?v ?expected
+;;  [1 2] (roughly 1. 0.00000001)
+;;  [1 2 4] (roughly 1.5 0.00000001)
+;;  [1 2 50] (roughly 24.5 0.00000001)
+;;  [2 50] (roughly 48. 0.00000001))
 
 (facts
  "test that `long-stats` yields the trend coefficient and t-test
@@ -39,8 +30,7 @@ statistic on `ndvi`"
 
 (fact
  "first-order-conditions has been checked"
- (map last (first-order-conditions (i/matrix ndvi)))
- => [-440347.2867647055 -1624.8977371391347 89557.2243993124])
+ (last (map last (first-order-conditions (i/matrix ndvi)))) => (roughly 89557.2243))
 
 (defn shift-down-end
   "returns a transformed collection, where the last half is shifted
@@ -59,11 +49,11 @@ statistic on `ndvi`"
     (hansen-stat (i/matrix ndvi))) => pos?)
 
 (fact
-  "test the value of the hansen stat, based off standard "
-  (hansen-stat (i/matrix ndvi)))
+  "test the value of the hansen stat, based off standard NDVI test series"
+  (hansen-stat (i/matrix ndvi)) => (roughly 0.911317))
 
 (facts
- "check that the appropriate number of periods are included in the
+  "check that the appropriate number of periods are included in the
  results vector, after the appropriate number of intervals (strictly
  within the training period) are dropped.  Suppose, for example, that
  there are exactly 100 intervals in the training period, with 271
@@ -78,9 +68,9 @@ statistic on `ndvi`"
  23: frequency of 16-day intervals (annually)
  100: example length of the training period
  271: last period in test time series"
- (count (telescoping-long-trend 23 100 271 ndvi reli rain)) => 172
- (count (first (telescoping-long-trend 23 100 271 ndvi reli rain))) => 3
- (count (telescoping-short-trend 30 10 23 100 271 ndvi reli))  => 172)
+  (count (telescoping-long-trend 23 100 271 ndvi reli rain)) => 172
+  (count (first (telescoping-long-trend 23 100 271 ndvi reli rain))) => 3
+  (count (telescoping-short-trend 30 10 23 100 271 ndvi reli))  => 172)
 
 (fact
  "test that the magnitude of the short-term drop of the
@@ -177,4 +167,15 @@ values of the test data vectors."
                        :end-idx 136
                        :series [-63.23936661263988 -63.23936661263988]}]]))))
 
+(tabular
+ (fact
+   (make-clean 1 #{0 1} #{2 3 255} ?spectral-ts ?reli-ts) => ?res)
+ ?spectral-ts ?reli-ts ?res
+ [1 1 1] [0 0 0] [1 1 1]
+ [1 1 1] [0 1 0] [1 1 1]
+ [1 1 1] [1 1 1] [1 1 1]
+ [1 1 1] [2 2 1] [1.0 1.0 1]
+ [1 1 1] [2 2 2] nil
+ [1 2 3] [1 2 1] [1.0 2.0 3]
+ (vec (repeat 10 10)) (vec (repeat 10 3)) nil)
 
