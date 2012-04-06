@@ -38,7 +38,7 @@ same mean as the original time series"
 final compositions of functions."
  (let [reliable (make-reliable #{3 2} #{1 0} ndvi reli)]
    (count (filter (complement zero?)
-                  (map - reliable ndvi)))) => 96)
+                  (map - reliable ndvi)))) => 175)
 
 (tabular
  (fact
