@@ -82,17 +82,18 @@
 (defmapcatop tele-clean
   "Return clean timeseries with telescoping window, nil if no good training data"
   [{:keys [est-start est-end t-res]}
-   good-set bad-set start-period spectral-ts reli-ts]
-  (let [freq        (date/res->period-count t-res)
-        [start-idx end-idx] (date/relative-period t-res
-                                                  start-period
+   good-set bad-set start-period val-ts reli-ts]
+  (let [freq (date/res->period-count t-res)
+        [start-idx end-idx] (date/relative-period t-res start-period
                                                   [est-start est-end])
-        training-reli-set (set (take start-idx reli-ts))]
-    (cond (empty? (clojure.set/intersection good-set training-reli-set)) [[nil]]
-          :else (map (comp vector
-                           (partial f/make-clean freq good-set bad-set)) 
-                     (f/lengthening-ts start-idx end-idx spectral-ts)
-                     (f/lengthening-ts start-idx end-idx reli-ts)))))
+        training-reli (take start-idx reli-ts)
+        training-reli-set (set training-reli)
+        clean-fn (comp vector (partial f/make-clean freq good-set bad-set))]
+    (cond (f/reliable?
+           good-set 0.5 training-reli) (map clean-fn
+                                            (f/tele-ts start-idx end-idx val-ts)
+                                            (f/tele-ts start-idx end-idx reli-ts))
+          :else [[nil]])))
 
 (defn dynamic-clean
   "Accepts an est-map, and sources for ndvi and rain timeseries and

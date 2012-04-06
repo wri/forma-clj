@@ -242,3 +242,17 @@
           (forma-query est-map :n-src :reli-src :r-src :v-src country-src :f-src)  
           (provided
             (forma-tap est-map :n-src :reli-src :r-src :v-src :f-src) => outer-tap)))
+
+(fact
+  "Uses simple timeseries to test cleaning query"
+  (let [t-res "16"
+        ts-length 10
+        est-map {:est-start (date/period->datetime t-res (- ts-length 5))
+                 :est-end (date/period->datetime t-res ts-length)
+                 :t-res t-res}
+        ndvi [1 2 3 4 5 6 7 8 9 10] ;;(vec (range 8000 (+ 8000 ts-length)))
+        precl (vec (range ts-length))
+        reli [0 2 3 0 1 0 3 1 1 0]
+        dynamic-src [["500" 28 8 0 0 0 ndvi precl reli]]]
+    (dynamic-clean est-map dynamic-src) => (produces-some
+                                            [["500" 28 8 0 0 0 [1.0 2.0 3.0 4 5]] ["500" 28 8 0 0 0 [1.0 2.0 3.0 4 5 6]]])))
