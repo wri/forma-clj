@@ -7,9 +7,11 @@
             [forma.schema :as schema]
             [forma.hadoop.predicate :as p]
             [forma.trends.analysis :as a]
+            [forma.trends.filter :as f]
             [forma.classify.logistic :as log]))
 
 ;; TODO: Convert these two to Cascalog queries.
+
 
 (defn short-trend-shell
   "a wrapper to collect the short-term trends into a form that can be
@@ -77,7 +79,22 @@
                      :> ?start-idx ?precl-ts ?ndvi-ts ?reli-ts)
       (:distinct false)))
 
-(defn dynamic-tap
+(defmapcatop tele-clean
+  "Return clean timeseries with telescoping window, nil if no good training data"
+  [{:keys [est-start est-end t-res]}
+   good-set bad-set start-period spectral-ts reli-ts]
+  (let [freq        (date/res->period-count t-res)
+        [start-idx end-idx] (date/relative-period t-res
+                                                  start-period
+                                                  [est-start est-end])
+        training-reli-set (set (take start-idx reli-ts))]
+    (cond (empty? (clojure.set/intersection good-set training-reli-set)) [[nil]]
+          :else (map (comp vector
+                           (partial f/make-clean freq good-set bad-set)) 
+                     (f/lengthening-ts start-idx end-idx spectral-ts)
+                     (f/lengthening-ts start-idx end-idx reli-ts)))))
+
+(defn dynamic-clean
   "Accepts an est-map, and sources for ndvi and rain timeseries and
   vcf values split up by pixel.
 
@@ -85,10 +102,25 @@
   occur before the analysis. Note that all variable names within this
   query are TIMESERIES, not individual values."
   [est-map dynamic-src]
+  (let [good-set #{0 1}
+        bad-set #{2 3 255}]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?clean-ndvi]
+        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi _ ?reli)
+        (tele-clean est-map good-set bad-set ?start ?ndvi ?reli :> ?clean-ndvi)
+        (:distinct false))))
+
+(defn dynamic-cleaned-tap
+  "Accepts an est-map, and sources for ndvi and rain timeseries and
+  vcf values split up by pixel.
+
+  We break this apart from dynamic-filter to force the filtering to
+  occur before the analysis. Note that all variable names within this
+  query are TIMESERIES, not individual values."
+  [est-map clean-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?new-start ?short ?break ?long ?t-stat]
-      (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl ?reli)
-      (short-trend-shell est-map ?start ?ndvi ?reli :> ?new-start ?short)
-      (long-trend-shell est-map ?start ?ndvi ?reli ?precl :> _ ?break ?long ?t-stat)
+      (clean-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?clean-ndvi ?precl)
+      (short-trend-shell est-map ?start ?clean-ndvi ?precl :> ?new-start ?short)
+      (long-trend-shell est-map ?start ?clean-ndvi ?precl :> _ ?break ?long ?t-stat)
       (:distinct false)))
 
 (defn forma-tap
