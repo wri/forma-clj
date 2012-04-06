@@ -242,19 +242,3 @@
           (forma-query est-map :n-src :reli-src :r-src :v-src country-src :f-src)  
           (provided
             (forma-tap est-map :n-src :reli-src :r-src :v-src :f-src) => outer-tap)))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

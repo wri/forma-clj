@@ -175,3 +175,25 @@
                   (vec (flatten [(map (partial stretch-ts new-vals)
                                       (partition 2 1 good-seq))
                                  (nth new-vals (last good-seq))]))))))
+
+;; Functions to collect cleaning functions for use in the trend
+;; feature extraction
+
+(defn lengthening-ts
+  "create a sequence of sequences, where each incremental sequence is
+  one element longer than the last, pinned to the same starting
+  element."
+  [start-index end-index base-seq]
+  (let [base-vec (vec base-seq)]
+    (for [x (range start-index (inc end-index))]
+      (subvec base-vec 0 x))))
+
+(defn deseasonalize
+  [series freq]
+  series)
+
+(defn make-clean
+  "Interpolate over bad values and remove seasonal component using reliability."
+  [freq good-set bad-set spectral-ts reli-ts]
+  (-> (make-reliable good-set bad-set spectral-ts reli-ts)
+      (deseasonalize freq)))

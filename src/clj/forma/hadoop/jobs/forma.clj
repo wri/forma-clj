@@ -7,6 +7,7 @@
             [forma.schema :as schema]
             [forma.hadoop.predicate :as p]
             [forma.trends.analysis :as a]
+            [forma.trends.filter :as f]
             [forma.classify.logistic :as log]))
 
 ;; TODO: Convert these two to Cascalog queries.
@@ -78,27 +79,6 @@
                      :> ?start-idx ?precl-ts ?ndvi-ts ?reli-ts)
       (:distinct false)))
 
-;; (defn clean-timeseries-shell-wide
-;;   [{:keys [est-start est-end t-res]}
-;;    ts-start spectral-ts reli-ts]
-;;   (let [freq        (date/res->period-count t-res)
-;;         new-start   (date/datetime->period t-res est-start)
-;;         [start-idx end-idx] (date/relative-period t-res ts-start [est-start est-end])]
-;;     [(vec (map vec (a/clean-timeseries freq start-idx end-idx spectral-ts reli-ts)))]))
-
-;; (defn dynamic-clean-wide
-;;   "Accepts an est-map, and sources for ndvi and rain timeseries and
-;;   vcf values split up by pixel.
-
-;;   We break this apart from dynamic-filter to force the filtering to
-;;   occur before the analysis. Note that all variable names within this
-;;   query are TIMESERIES, not individual values."
-;;   [est-map dynamic-src]
-;;   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?clean-ndvi-vecs ?precl]
-;;       (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl ?reli)
-;;       (clean-timeseries-shell-wide est-map ?start ?ndvi ?reli :> ?clean-ndvi-vecs)
-;;       (:distinct false)))
-
 (defmapcatop tele-clean
   "Return clean timeseries with telescoping window, nil if no good training data"
   [{:keys [est-start est-end t-res]}
@@ -110,9 +90,9 @@
         training-reli-set (set (take start-idx reli-ts))]
     (cond (empty? (clojure.set/intersection good-set training-reli-set)) [[nil]]
           :else (map (comp vector
-                           (partial a/make-clean freq good-set bad-set)) 
-                     (a/lengthening-ts start-idx end-idx spectral-ts)
-                     (a/lengthening-ts start-idx end-idx reli-ts)))))
+                           (partial f/make-clean freq good-set bad-set)) 
+                     (f/lengthening-ts start-idx end-idx spectral-ts)
+                     (f/lengthening-ts start-idx end-idx reli-ts)))))
 
 (defn dynamic-clean
   "Accepts an est-map, and sources for ndvi and rain timeseries and

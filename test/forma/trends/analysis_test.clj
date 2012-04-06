@@ -166,16 +166,3 @@ values of the test data vectors."
      (produces-some [[{:start-idx 135
                        :end-idx 136
                        :series [-63.23936661263988 -63.23936661263988]}]]))))
-
-(tabular
- (fact
-   (make-clean 1 #{0 1} #{2 3 255} ?spectral-ts ?reli-ts) => ?res)
- ?spectral-ts ?reli-ts ?res
- [1 1 1] [0 0 0] [1 1 1]
- [1 1 1] [0 1 0] [1 1 1]
- [1 1 1] [1 1 1] [1 1 1]
- [1 1 1] [2 2 1] [1.0 1.0 1]
- [1 1 1] [2 2 2] nil
- [1 2 3] [1 2 1] [1.0 2.0 3]
- (vec (repeat 10 10)) (vec (repeat 10 3)) nil)
-

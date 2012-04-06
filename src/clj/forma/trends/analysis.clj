@@ -3,7 +3,6 @@
         [midje.cascalog]
         [cascalog.api]
         [clojure.math.numeric-tower :only (sqrt floor abs expt)]
-        [forma.trends.filter]
         [forma.date-time :as date]
         [clojure.tools.logging :only (error)])
   (:require [forma.utils :as utils]
@@ -82,28 +81,6 @@
     (try (map second (trend-characteristics ts X))
          (catch Throwable e
            (error (str "TIMESERIES ISSUES: " ts ", " cofactors) e)))))
-
-(defn lengthening-ts
-  "create a sequence of sequences, where each incremental sequence is
-  one element longer than the last, pinned to the same starting
-  element."
-  [start-index end-index base-seq]
-  (let [base-vec (vec base-seq)]
-    (for [x (range start-index (inc end-index))]
-      (subvec base-vec 0 x))))
-
-;; Functions to collect cleaning functions for use in the trend
-;; feature extraction
-
-(defn deseasonalize
-  [series freq]
-  series)
-
-(defn make-clean
-  "Interpolate over bad values and remove seasonal component using reliability."
-  [freq good-set bad-set spectral-ts reli-ts]
-  (-> (make-reliable good-set bad-set spectral-ts reli-ts)
-      (deseasonalize freq)))
 
 ;; Short-term trend characteristic; supporting functions
 
