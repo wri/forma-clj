@@ -158,13 +158,11 @@
   "returns a three-tuple with the trend coefficient, trend t-stat, and
   the hansen statistic for each period between `start-idx` (inclusive)
   and `end-idx` (inclusive)."
-  [freq start-idx end-idx spectral-ts reli-ts cofactor-ts]
-  (let [params [freq start-idx end-idx spectral-ts reli-ts]
-        clean-ts (apply clean-timeseries params)
-        cofactor-tele (lengthening-ts start-idx end-idx cofactor-ts)]
+  [freq start-idx end-idx spectral-ts cofactor-ts]
+  (let [cofactor-tele (take (count spectral-ts) cofactor-ts)]
     (map flatten
-         (transpose [(map hansen-stat (map i/matrix clean-ts))
-                     (map long-stats clean-ts cofactor-tele)]))))
+         (transpose [(map hansen-stat (map i/matrix spectral-ts))
+                     (map long-stats spectral-ts cofactor-tele)]))))
 
 (defn telescoping-short-trend
   "returns a vector of the short-term trend coefficients over time
