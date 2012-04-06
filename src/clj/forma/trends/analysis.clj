@@ -95,36 +95,15 @@
 ;; Functions to collect cleaning functions for use in the trend
 ;; feature extraction
 
-(defn fake-deseasonalize
+(defn deseasonalize
   [series freq]
   series)
 
-(defn clean-trend
-  "Interpolate over bad values and remove seasonal component for a spectral
-  time series (with frequency `freq`) using information in an
-  associated reliability time series. Conditions check first whether series
-  contains all bad or all good values, and returns nil or the original series,
-  respectively."
-  [freq spectral-ts reli-ts]
-  (let [good-set #{1 0}
-        bad-set #{255 3 2}
-        reli-set (set reli-ts)]
-    (cond (empty? (clojure.set/intersection good-set reli-set)) nil
-          (empty? (clojure.set/difference reli-set good-set)) spectral-ts
-          :else (-> (make-reliable bad-set good-set reli-ts spectral-ts)
-                    (fake-deseasonalize freq)))))
-
-(defn clean-timeseries
-  "clean trends (i.e., filter out bad values and remove seasonal
-  component) for each intervening time period between `start-idx` and
-  `end-idx`.
-
-  TODO: THIS is the most time-intensive function of all the trend
-  analysis."
-  [freq start-idx end-idx spectral-ts reli-ts]
-  (map (partial clean-trend freq)
-       (lengthening-ts start-idx end-idx spectral-ts)
-       (lengthening-ts start-idx end-idx reli-ts)))
+(defn make-clean
+  "Interpolate over bad values and remove seasonal component using reliability."
+  [freq good-set bad-set spectral-ts reli-ts]
+  (-> (make-reliable good-set bad-set spectral-ts reli-ts)
+      (deseasonalize freq)))
 
 ;; Short-term trend characteristic; supporting functions
 
@@ -171,7 +150,7 @@
   [block-len freq spectral-ts reli-ts]
   (map (partial grab-trend (hat-mat block-len))
        (moving-subvec block-len
-                      (i/matrix (clean-trend freq spectral-ts reli-ts)))))
+                      (i/matrix spectral-ts reli-ts))))
 
 ;; Collect the long- and short-term trend characteristics
 

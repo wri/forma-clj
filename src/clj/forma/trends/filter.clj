@@ -159,10 +159,10 @@
   collection, `quality-coll`.  The `good-set` parameter is a set of
   passable values, presumably interchangeable.  If this assumption is
   not true, then an adjustment will have to be made to this function."
-  [bad-set good-set quality-coll value-coll]
+  [good-set bad-set value-coll quality-coll]
   (let [qual-set (set quality-coll)]
     (cond (empty? (seq (clojure.set/intersection good-set qual-set))) nil
-          (empty? (clojure.set/difference qual-set good-set)) value-coll
+          (empty? (clojure.set/difference qual-set good-set)) (vec value-coll)
           :else (let [bad-end-set (bad-ends bad-set quality-coll)
                       new-qual (replace-index-set bad-end-set
                                                   (first good-set)

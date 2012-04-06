@@ -99,15 +99,22 @@
 ;;       (clean-timeseries-shell-wide est-map ?start ?ndvi ?reli :> ?clean-ndvi-vecs)
 ;;       (:distinct false)))
 
-(defmapcatop clean-timeseries-shell-long
+(defmapcatop tele-clean
+  "Return clean timeseries with telescoping window, nil if no good training data"
   [{:keys [est-start est-end t-res]}
-   ts-start spectral-ts reli-ts]
+   good-set bad-set start-period spectral-ts reli-ts]
   (let [freq        (date/res->period-count t-res)
-        new-start   (date/datetime->period t-res est-start)
-        [start-idx end-idx] (date/relative-period t-res ts-start [est-start est-end])]
-    (map vector (a/clean-timeseries freq start-idx end-idx spectral-ts reli-ts))))
+        [start-idx end-idx] (date/relative-period t-res
+                                                  start-period
+                                                  [est-start est-end])
+        training-reli-set (set (take start-idx reli-ts))]
+    (cond (empty? (clojure.set/intersection good-set training-reli-set)) [[nil]]
+          :else (map (comp vector
+                           (partial a/make-clean freq good-set bad-set)) 
+                     (a/lengthening-ts start-idx end-idx spectral-ts)
+                     (a/lengthening-ts start-idx end-idx reli-ts)))))
 
-(defn dynamic-clean-long
+(defn dynamic-clean
   "Accepts an est-map, and sources for ndvi and rain timeseries and
   vcf values split up by pixel.
 
@@ -115,10 +122,12 @@
   occur before the analysis. Note that all variable names within this
   query are TIMESERIES, not individual values."
   [est-map dynamic-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start !ndvi]
-      (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi _ ?reli)
-      (clean-timeseries-shell-long est-map ?start ?ndvi ?reli :> !ndvi)
-      (:distinct false)))
+  (let [good-set #{0 1}
+        bad-set #{2 3 255}]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?clean-ndvi]
+        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi _ ?reli)
+        (tele-clean est-map good-set bad-set ?start ?ndvi ?reli :> ?clean-ndvi)
+        (:distinct false))))
 
 (defn dynamic-cleaned-tap
   "Accepts an est-map, and sources for ndvi and rain timeseries and
