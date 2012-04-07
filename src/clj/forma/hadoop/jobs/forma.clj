@@ -83,7 +83,7 @@
   "Return clean timeseries with telescoping window, nil if no (or not enough) good training data"
   [{:keys [est-start est-end t-res]}
    good-set bad-set start-period val-ts reli-ts]
-  (let [reli-thresh 0.5
+  (let [reli-thresh 0.1
         freq (date/res->period-count t-res)
         [start-idx end-idx] (date/relative-period t-res start-period
                                                   [est-start est-end])
