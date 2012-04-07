@@ -179,10 +179,9 @@
 ;; Functions to collect cleaning functions for use in the trend
 ;; feature extraction
 
-(defn lengthening-ts
-  "create a sequence of sequences, where each incremental sequence is
-  one element longer than the last, pinned to the same starting
-  element."
+(defn tele-ts
+  "create a telescoping sequence of sequences, where each incremental sequence
+  is one element longer than the last, pinned to the same starting element."
   [start-index end-index base-seq]
   (let [base-vec (vec base-seq)]
     (for [x (range start-index (inc end-index))]
@@ -197,3 +196,23 @@
   [freq good-set bad-set spectral-ts reli-ts]
   (-> (make-reliable good-set bad-set spectral-ts reli-ts)
       (deseasonalize freq)))
+
+(defn reliable?
+  "Checks whether the share of reliable pixels exceeds a supplied minimum.
+
+  This should be used to filter out pixels that are too unreliable for analysis, given that we linearly interpolate to replace unreliable periods. We have not hardcoded a specific threshold, but the papers below provide guidence:
+
+  0.8 reliable in de Beurs (2009) http://dx.doi.org/10.1088/1748-9326/4/4/045012
+  0.9 reliable in Verbesselt 2010 http://dx.doi.org/10.1016/j.rse.2010.08.003
+
+  Usage:
+
+  (reliable? #{0 1} 0.9 [0 0 0 1 1 0 1 1 0 0])
+  ;=> true
+
+  (reliable? #{0 1} 0.9 [0 0 0 2 2 0 1 1 0 0])
+  ;=> false"
+  [good-set good-min reli-ts]
+  (<= good-min (float
+                (/ (count (filter good-set reli-ts))
+                   (count reli-ts)))))
