@@ -157,7 +157,12 @@
 (defn grab-trend
   "returns the trend coefficient from an OLS regression of a from an
   ordinary least squares regression of a `coll` of values on an
-  intercept and time step."
+  intercept and time step.
+
+  Example:
+    (use 'forma.trends.data)
+    (def pseudo-mat (pseudoinverse (trend-mat 30)))
+    (grab-trend pseudo-mat (take 30 ndvi))"
   [pseudo-trend-mat coll]
   (let [v (i/matrix coll)]
     (second (i/mmult pseudo-trend-mat v))))
