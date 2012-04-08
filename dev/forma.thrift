@@ -1,4 +1,4 @@
-namespace java forma.generated
+namespace java forma.schema
 
 struct FireTuple {
   1: i32 temp330;
@@ -12,7 +12,7 @@ struct FormaValue {
   2: double shortDrop;
   3: double longDrop;
   4: double tStat;
-  5: double paramBreak;
+  5: optional double paramBreak;
 }
 
 struct NeighborValue {
@@ -24,8 +24,8 @@ struct NeighborValue {
   6: double minLongDrop;
   7: double avgTStat;
   8: double minTStat;
-  9: double avgParamBreak;
-  10: double minParamBreak;
+  9: optional double avgParamBreak;
+  10: optional double minParamBreak;
 }
 
 # Collection Wrappers
@@ -34,8 +34,8 @@ struct DoubleArray {
   1: list<double> doubles
 }
 
-struct IntArray {
-  1: list<i32> ints
+struct LongArray {
+  1: list<i64> longs
 }
 
 struct FireSeries {
@@ -44,9 +44,8 @@ struct FireSeries {
   3: list<FireTuple> values
 }
 
-# TODO: Can we add this to DataValue directly?
 union ArrayValue {
-  1: IntArray ints;
+  1: LongArray ints;
   2: DoubleArray doubles;
 }
 
@@ -57,8 +56,8 @@ struct TimeSeries {
 }
 
 union DataValue {
-  1: i32 intVal;
-  2: IntArray ints;
+  1: i64 longVal;
+  2: LongArray longs;
   3: double doubleVal;
   4: DoubleArray doubles;
   5: FireTuple fireVal;
