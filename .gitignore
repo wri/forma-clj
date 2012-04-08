@@ -19,6 +19,6 @@ doc/
 .DS_Store
 .repl
 .idea
-*.iml
 *.ipr
 *.iws
+.lein-plugins
