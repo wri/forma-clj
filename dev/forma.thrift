@@ -44,6 +44,10 @@ struct FireSeries {
   3: list<FireTuple> values
 }
 
+struct FormaSeries {
+  1: list<FormaValue> values;
+}
+
 union ArrayValue {
   1: LongArray ints;
   2: DoubleArray doubles;
@@ -63,4 +67,37 @@ union DataValue {
   5: FireTuple fireVal;
   6: TimeSeries timeSeries;
   7: FireSeries fireSeries;
+}
+
+struct ModisPixelLocation {
+  1: string resolution;
+  2: i32 tileH;
+  3: i32 tileV;
+  4: i32 sample;
+  5: i32 line;
+}
+
+struct ModisChunkLocation {
+  1: string resolution;
+  2: i32 tileH;
+  3: i32 tileV;
+  4: i32 chunkID;
+  5: i32 chunkSize;
+}
+
+union LocationPropertyValue {
+  1: ModisPixelLocation pixelLocation;
+  2: ModisChunkLocation chunkLocation;
+}
+
+struct LocationProperty {
+  1: LocationPropertyValue property;
+}
+
+struct DataChunk {
+  1: string dataset;
+  2: LocationProperty locationProperty;
+  3: DataValue chunkValue;
+  4: string temporalRes;
+  5: optional string date;
 }

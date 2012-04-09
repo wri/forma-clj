@@ -8,7 +8,7 @@
             ModisPixelLocation DataValue]
            [backtype.cascading.tap PailTap PailTap$PailTapOptions]
            [backtype.hadoop.pail PailStructure Pail]
-           [forma.tap KryoPailStructure]))
+           [forma.tap ThriftPailStructure]))
 
 ;; ## Pail Data Structures
 
@@ -24,10 +24,11 @@
            :prefix "split-")
 
 (defn split-getTarget [this ^DataChunk d]
-  [(.getDataset d)
-   (format "%s-%s"
-           (.getResolution location)
-           (.getTemporalRes d))])
+  (let [location   (-> d .getLocationProperty .getProperty .getFieldValue)
+        resolution (format "%s-%s"
+                           (.getResolution location)
+                           (.getTemporalRes d))]
+    [(.getDataset d) resolution]))
 
 (defn split-isValidTarget [this dirs]
   (boolean (#{2 3} (count dirs))))
