@@ -17,7 +17,7 @@ public abstract class KryoPailStructure implements PailStructure<Object> {
         if(kryoBuf == null) {
             ClojureKryoSerialization serialization = new ClojureKryoSerialization();
 
-            kryoBuf = KryoFactory.newBuffer(serialization.makeKryo());
+            kryoBuf = KryoFactory.newBuffer(serialization.populatedKryo());
         }
         return kryoBuf;
     }
