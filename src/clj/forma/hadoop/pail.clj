@@ -2,41 +2,47 @@
   (:use cascalog.api
         [cascalog.io :only (with-fs-tmp)]
         [forma.reproject :only (hv->tilestring)])
-  (:import [backtype.cascading.tap PailTap PailTap$PailTapOptions]
+  (:import [java.util List]
+           [forma.schema DataChunk FireTuple FormaValue
+            LocationProperty LocationPropertyValue
+            ModisPixelLocation DataValue]
+           [backtype.cascading.tap PailTap PailTap$PailTapOptions]
            [backtype.hadoop.pail PailStructure Pail]
-           [forma.tap KryoPailStructure]))
+           [forma.tap ThriftPailStructure]))
 
 ;; ## Pail Data Structures
 
 (gen-class :name forma.hadoop.pail.DataChunkPailStructure
-           :extends forma.tap.KryoPailStructure
+           :extends forma.tap.ThriftPailStructure
            :prefix "pail-")
 
-(defn pail-getType [this]
-  java.util.Map)
+(defn pail-getType [this] DataChunk)
+(defn pail-createThriftObject [this] (DataChunk.))
 
-(defn pail-getTarget
-  [this m]
-  (let [{:keys [location temporal-res dataset]} m
-         {:keys [spatial-res mod-h mod-v]} location
-        resolution (format "%s-%s" spatial-res temporal-res)
-        tilestring (hv->tilestring mod-h mod-v)]
-    [dataset resolution tilestring]))
+(gen-class :name forma.hadoop.pail.SplitDataChunkPailStructure
+           :extends forma.hadoop.pail.DataChunkPailStructure
+           :prefix "split-")
 
-(defn pail-isValidTarget
-  [this dir-seq]
-  (boolean (#{3 4} (count dir-seq))))
+(defn split-getTarget [this ^DataChunk d]
+  (let [location   (-> d .getLocationProperty .getProperty .getFieldValue)
+        resolution (format "%s-%s"
+                           (.getResolution location)
+                           (.getTemporalRes d))]
+    [(.getDataset d) resolution]))
+
+(defn split-isValidTarget [this dirs]
+  (boolean (#{2 3} (count dirs))))
 
 (defn pail-structure []
-  (forma.hadoop.pail.DataChunkPailStructure.))
+  (forma.hadoop.pail.SplitDataChunkPailStructure.))
 
 ;; ## Pail Taps
 
 (defn- pail-tap
   [path colls structure]
-  (let [seqs (into-array java.util.List colls)
+  (let [seqs (into-array List colls)
         spec (PailTap/makeSpec nil structure)
-        opts (PailTap$PailTapOptions. spec "datachunk" seqs nil)]
+        opts (PailTap$PailTapOptions. spec "!datachunk" seqs nil)]
     (PailTap. path opts)))
 
 (defn split-chunk-tap [path & colls]
