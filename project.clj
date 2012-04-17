@@ -19,6 +19,7 @@
                  [forma/gdal "1.8.0"]
                  [forma/jblas "1.2.1"]
                  [cascalog "1.9.0-wip"]
+                 [cascalog-lzo "0.1.0-wip7"]
                  [cascalog-checkpoint "0.1.1"]
                  [backtype/dfs-datastores "1.1.0"]
                  ;; [org.apache.thrift/libthrift "0.8.0"]

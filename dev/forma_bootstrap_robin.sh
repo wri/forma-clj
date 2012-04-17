@@ -65,6 +65,23 @@ echo "github.com,207.97.227.239 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9
 cd /home/hadoop/
 source /home/hadoop/.bashrc
 
+# Install lzo support
+sudo apt-get -y --force-yes install liblzo2-dev
+
+# Build lzo support for Hadoop
+git clone https://github.com/kevinweil/hadoop-lzo.git
+cd hadoop-lzo
+export CFLAGS=-m64
+export CXXFLAGS=-m64
+ant compile-native tar
+
+# Move lzo files into place
+cd build
+cp hadoop-lzo-*.jar /home/hadoop/lib/
+tar -xvf hadoop-lzo-*.tar.gz
+cp -r native/Linux-amd64-64/* /home/hadoop/native/
+cd /home/hadoop
+
 # Install lein
 cd bin
 wget https://raw.github.com/technomancy/leiningen/stable/bin/lein
@@ -77,7 +94,7 @@ cd ..
 # Get forma repo - easier to edit, test code
 git clone git@github.com:sritchie/forma-clj.git
 cd forma-clj
-git checkout dan-work
+git checkout develop
 
 # Now ready to use!
 lein deps
