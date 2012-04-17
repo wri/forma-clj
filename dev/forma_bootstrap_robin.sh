@@ -78,7 +78,6 @@ ant compile-native tar
 # Move lzo files into place
 cd build
 cp hadoop-lzo-*.jar /home/hadoop/lib/
-tar -xvf hadoop-lzo-*.tar.gz
 cp -r native/Linux-amd64-64/* /home/hadoop/native/
 cd /home/hadoop
 
