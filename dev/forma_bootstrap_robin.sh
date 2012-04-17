@@ -92,7 +92,7 @@ lein
 cd ..
 
 # Get forma repo - easier to edit, test code
-git clone git@github.com:sritchie/forma-clj.git
+git clone git@github.com:reddmetrics/forma-clj.git
 cd forma-clj
 git checkout develop
 
