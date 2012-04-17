@@ -216,3 +216,8 @@
   (<= good-min (float
                 (/ (count (filter good-set reli-ts))
                    (count reli-ts)))))
+
+(defn shorten-ts
+  "Shorten timeseries to length of match timeseries"
+  [model-ts ts]
+  [(vec (take (count model-ts) ts))])

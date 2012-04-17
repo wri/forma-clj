@@ -51,3 +51,7 @@ final compositions of functions."
  [1 1 1] [2 2 2] nil
  [1 2 3] [1 2 1] [1.0 2.0 3]
  (vec (repeat 10 10)) (vec (repeat 10 3)) nil)
+
+(fact
+  "Make sure rain is shortened to length of input ts"
+  (shorten-rain [1 2 3] [1 2 3 4 5]) => [1 2 3])
