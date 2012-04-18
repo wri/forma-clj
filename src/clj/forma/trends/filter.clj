@@ -82,7 +82,7 @@
   "calculate a linear interpolation between `x1` and `x2` with the specified
   `length` between them."
   [x1 x2 length]
-  (let [delta (/ (- x2 x1) (dec length))]
+  (let [delta (/ (- x2 x1) length)]
     (vec
      (for [n (range length)]
        (float (+ x1 (* n delta)))))))
@@ -130,8 +130,8 @@
             (map #(for [[m n] % :while (bad-set n)] m)
                  [m-coll r-coll])))))
 
-(defn act-on-good
-  "apply function `func` to all non-nil values within a collection `coll`"
+(defn apply-to-valid
+  "apply function `f` to all valid (non-nil) values within a collection `coll`"
   [f coll]
   (f (filter (complement nil?) coll)))
 
@@ -142,7 +142,7 @@
   `neutralize-ends` will return the original time-series. `bad-set` is a set of
   `reli-coll` values that indicate unreliable pixels."
   [bad-set reli-coll val-coll]
-  (let [avg (act-on-good u/coll-avg
+  (let [avg (apply-to-valid u/coll-avg
                          (mask bad-set reli-coll val-coll))]
     (replace-index-set (bad-ends bad-set reli-coll)
                        avg
@@ -159,17 +159,60 @@
   collection, `quality-coll`.  The `good-set` parameter is a set of
   passable values, presumably interchangeable.  If this assumption is
   not true, then an adjustment will have to be made to this function."
-  [bad-set good-set quality-coll value-coll]
-  (when (seq (filter bad-set quality-coll))
-    (let [bad-end-set (bad-ends bad-set quality-coll)
-          new-qual (replace-index-set bad-end-set
-                                      (first good-set)
-                                      quality-coll)
-          new-vals (neutralize-ends bad-set
-                                    quality-coll
-                                    value-coll)
-          good-seq (positions (complement bad-set)
-                              new-qual)]
-      (vec (flatten [(map (partial stretch-ts new-vals)
-                          (partition 2 1 good-seq))
-                     (nth new-vals (last good-seq))])))))
+  [good-set bad-set value-coll quality-coll]
+  (let [qual-set (set quality-coll)]
+    (cond (empty? (seq (clojure.set/intersection good-set qual-set))) nil
+          (empty? (clojure.set/difference qual-set good-set)) (vec value-coll)
+          :else (let [bad-end-set (bad-ends bad-set quality-coll)
+                      new-qual (replace-index-set bad-end-set
+                                                  (first good-set)
+                                                  quality-coll)
+                      new-vals (neutralize-ends bad-set
+                                                quality-coll
+                                                value-coll)
+                      good-seq (positions (complement bad-set)
+                                          new-qual)]
+                  (vec (flatten [(map (partial stretch-ts new-vals)
+                                      (partition 2 1 good-seq))
+                                 (nth new-vals (last good-seq))]))))))
+
+;; Functions to collect cleaning functions for use in the trend
+;; feature extraction
+
+(defn tele-ts
+  "create a telescoping sequence of sequences, where each incremental sequence
+  is one element longer than the last, pinned to the same starting element."
+  [start-index end-index base-seq]
+  (let [base-vec (vec base-seq)]
+    (for [x (range start-index (inc end-index))]
+      (subvec base-vec 0 x))))
+
+(defn deseasonalize
+  [series freq]
+  series)
+
+(defn make-clean
+  "Interpolate over bad values and remove seasonal component using reliability."
+  [freq good-set bad-set spectral-ts reli-ts]
+  (-> (make-reliable good-set bad-set spectral-ts reli-ts)
+      (deseasonalize freq)))
+
+(defn reliable?
+  "Checks whether the share of reliable pixels exceeds a supplied minimum.
+
+  This should be used to filter out pixels that are too unreliable for analysis, given that we linearly interpolate to replace unreliable periods. We have not hardcoded a specific threshold, but the papers below provide guidence:
+
+  0.8 reliable in de Beurs (2009) http://dx.doi.org/10.1088/1748-9326/4/4/045012
+  0.9 reliable in Verbesselt 2010 http://dx.doi.org/10.1016/j.rse.2010.08.003
+
+  Usage:
+
+  (reliable? #{0 1} 0.9 [0 0 0 1 1 0 1 1 0 0])
+  ;=> true
+
+  (reliable? #{0 1} 0.9 [0 0 0 2 2 0 1 1 0 0])
+  ;=> false"
+  [good-set good-min reli-ts]
+  (<= good-min (float
+                (/ (count (filter good-set reli-ts))
+                   (count reli-ts)))))

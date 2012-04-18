@@ -121,7 +121,7 @@
   "return a list of indices starting with 1 equal to the length of
   input"
   [coll]
-  (map inc (range (count coll))))
+  (vec (map inc (range (count coll)))))
 
 ;; ## IO Utils
 
