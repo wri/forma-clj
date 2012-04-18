@@ -17,41 +17,82 @@
 ;; and feature sequences are consistently positioned in the label and
 ;; feature collections.
 
-(defn
-  ^DoubleMatrix
-  logistic-fn
-  [x]
-  (let [exp-x (MatrixFunctions/exp x)
-        one (DoubleMatrix/ones 1)]
-    (.divi exp-x (.add exp-x one))))
-
 (defn ^DoubleMatrix
   to-double-matrix
-  "returns a DoubleMatrix instance for use with jBLAS functions"
+  "converts a clojure matrix representation to a DoubleMatrix instance
+  for use with jBLAS functions
+
+  Argument:
+    vector of vectors; clojure representation of a matrix
+
+  Example:
+    (to-double-matrix [0]) => #<DoubleMatrix []>
+    (to-double-matrix [[0]]) => #<DoubleMatrix [0.0]>
+    (to-double-matrix [[0] [1]]) => #<DoubleMatrix [0.0; 1.0]>
+
+  Reference:
+    http://jblas.org/javadoc/org/jblas/DoubleMatrix.html"
   [mat]
   (DoubleMatrix.
    (into-array (map double-array mat))))
 
 (defn ^DoubleMatrix
   to-double-rowmat
+  "converts a clojure vector to a DoubleMatrix row vector
+
+  Argument:
+    persistent vector
+
+  Example:
+    (to-double-rowmat [1 2 3]) => #<DoubleMatrix [1.0, 2.0, 3.0]>
+
+  Reference:
+    http://jblas.org/javadoc/org/jblas/DoubleMatrix.html"
   [coll]
   (to-double-matrix [(vec coll)]))
 
 (defn ^DoubleMatrix
-  copy-row
-  [row]
-  (.copy (to-double-matrix [[]]) row))
+  logistic-fn
+  "returns the value of the logistic curve at supplied `x` value;
+  output is a DoubleMatrix (org.jblas.DoubleMatrix).
+
+  Argument:
+    DoubleMatrix instance (org.jblas.DoubleMatrix) with only one
+    value
+
+  Example:
+    (logistic-fn (to-double-rowmat [0])) => #<DoubleMatrix [0.5]>
+
+  Reference:
+    http://en.wikipedia.org/wiki/Logistic_function"
+  [x]
+  (let [exp-x (MatrixFunctions/exp x)
+        one (DoubleMatrix/ones 1)]
+    (.divi exp-x (.add exp-x one))))
+
 
 (defn ^DoubleMatrix
   logistic-prob
-  ".dot returns a double, which needs to be converted to a
-  DoubleMatrix for logistic-fn"
-  [beta-mat features-mat]
+  "returns the DoubleMatrix value of the logistic curve at the value
+  given by the dot product of the parameter vector and the feature
+  vector. Both arguments and return values are DoubleMatrix instances.
+
+  Arguments: 
+    beta-rowmat: DoubleMatrix row vector
+    features-rowmat: DoubleMatrix row vector, of equal length as
+                     beta-rowmat
+
+  Example:
+    (def beta (to-double-rowmat [0 0]))
+    (def features (to-double-rowmat [1 2]))
+    (logistic-prob beta features) => #<DoubleMatrix [0.5]>"
+  [beta-rowmat features-rowmat]
   (logistic-fn
-   (to-double-rowmat [(.dot beta-mat features-mat)])))
+   (to-double-rowmat [(.dot beta-rowmat features-rowmat)])))
 
 ;; TODO: convert the functions that are useful but not actually used
-;; in estimation, like `log-likelihood` and `total-log-likelihood`.
+;; in this version of estimation, including `log-likelihood` and
+;; `total-log-likelihood`.
 
 (defn log-likelihood
   "returns the log likelihood of a given pixel, conditional on its
@@ -72,31 +113,72 @@
 
 (defn ^DoubleMatrix
   probability-calc
-  [beta feature-mat]
-  (let [prob-row (.mmul beta (.transpose feature-mat))]
+  "returns a DoubleMatrix row vector of probabilities given by the
+  in-place dot product (read: matrix multiplication) of the beta
+  vector and the feature vectors collected in the feature matrix. Both
+  arguments and return values are DoubleMatrix instances.
+
+  Example:
+    (def beta (to-double-rowmat [0 0]))
+    (def feat (to-double-matrix [[1 2] [4 5]]))
+    (probability-calc beta feat) => #<DoubleMatrix [0.5, 0.5]>"
+  [beta-rowmat feature-mat]
+  (let [prob-row (.mmul beta-rowmat (.transpose feature-mat))]
     (logistic-fn prob-row)))
 
 (defn ^DoubleMatrix
   score-seq
-  "returns the score for each parameter "
+  "returns the score for each parameter at the current iteration,
+  based on the estimated probabilities and the true labels. Both
+  arguments and return values are DoubleMatrix instances.
+
+  Example:
+    (def beta (to-double-rowmat [0 0]))
+    (def feat (to-double-matrix [[1 2] [4 5]]))
+    (def label (to-double-rowmat [1 0]))
+    (score-seq beta label feat) => #<DoubleMatrix [-1.5; -1.5]>
+
+  Reference:
+    http://en.wikipedia.org/wiki/Scoring_algorithm"
   [beta labels feature-mat]
     (let [prob-seq (probability-calc beta feature-mat)]
     (.mmul (.transpose feature-mat)
            (.transpose (.sub labels prob-seq)))))
 
 (defn ^DoubleMatrix
-  mult-fn
-  [x]
-  (let [ones (DoubleMatrix/ones (.rows x) (.columns x))
-        new-mat (.add ones (.neg x))]
-    (.mul x new-mat)))
+  bernoulli-var
+  "returns the variance of a bernoulli random variable, given a row
+  matrix of probabilities `row-prob`.  Both arguments and return
+  values are DoubleMatrix instances.
+
+  Example:
+    (def row-prob (to-double-rowmat [0.5 0.5]))
+    (bernoulli-var row-prob) => #<DoubleMatrix [0.25, 0.25]>
+
+  Reference:
+    http://en.wikipedia.org/wiki/Bernoulli_distribution"
+  [row-prob]
+  (let [ones (DoubleMatrix/ones (.rows row-prob) (.columns row-prob))
+        new-mat (.add ones (.neg row-prob))]
+    (.mul row-prob new-mat)))
 
 (defn ^DoubleMatrix
   info-matrix
+  "returns the (symmetric) information matrix at the current iteration
+  of the scoring algorithm (specifically the Newton-Raphson method.
+
+  Example:
+    (def beta (to-double-rowmat [0 0]))
+    (def feat (to-double-matrix [[1 2] [4 5]]))
+    (info-matrix beta feat) => #<DoubleMatrix [4.25, 5.5; 5.5, 7.25]>
+
+  Reference:
+    http://en.wikipedia.org/wiki/Scoring_algorithm
+    http://en.wikipedia.org/wiki/Fisher_information"
   [beta-row feature-mat]
   {:pre [(= (.columns beta-row) (.columns feature-mat))]}
   (let [prob-row (probability-calc beta-row feature-mat)
-        transformed-row (mult-fn prob-row)]
+        transformed-row (bernoulli-var prob-row)]
     (.mmul (.muliRowVector (.transpose feature-mat) transformed-row)
            feature-mat)))
 
