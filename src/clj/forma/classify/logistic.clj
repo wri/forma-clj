@@ -184,9 +184,21 @@
 
 (defn ^DoubleMatrix
   beta-increment
-  "increment beta without ridge correction; NOTE: cannot refactor
-  DoubleMatrix/eye since it changes in memory, i.e., jBLAS objects
-  don't behave like clojure data structures"
+  "returns a DoubleMatrix row vector to increment the parameter
+  vector, based on the information matrix.  The increment does not
+  include a correction for the addition of a ridge factor.
+
+  Example:
+    (def beta (to-double-rowmat [0 0]))
+    (def feat (to-double-matrix [[1 2] [4 5]]))
+    (def label (to-double-rowmat [1 0]))
+    (def score (score-seq beta label feat))
+    (def info (info-matrix beta feat))
+    (beta-increment info score 1e-2)
+     => #<DoubleMatrix [-3.8961038961039076; 2.7449822904368464]>
+
+  NOTE: cannot refactor DoubleMatrix/eye since it changes in memory,
+  i.e., jBLAS objects don't behave like clojure data structures"
   [info-mat scores rdg-cons]
   (let [num-features (.rows info-mat)
         rdg-mat (.muli (DoubleMatrix/eye (int num-features)) (double rdg-cons))
@@ -197,13 +209,14 @@
 (defn ^DoubleMatrix
   ridge-correction
   "returns a vector of corrections to the beta-update, given the
-  current iteration of the information matrix and score sequence. The
-  vector a is analogous to f(rdg_cons) = a*rdg_cons + b, and we are
-  interested in the correction factor that is calculated as follows:
-  Let v = rdg_cons.  Then we originally assume that f(0) = f(v)
-  [equivalent to no added constant along the diagnol], which may not
-  be correct.  A better approximation is f(0) - b, where b = f(v) -
-  a*v.  Then, correction = f(0) - b = f(v) - f(v) + a*v = a*v."
+  current iteration of the information matrix and score sequence.
+
+  NOTES: The vector a is analogous to f(rdg_cons) = a*rdg_cons + b,
+  and we are interested in the correction factor that is calculated as
+  follows: Let v = rdg_cons.  Then we originally assume that f(0) =
+  f(v) [equivalent to no added constant along the diagnol], which may
+  not be correct.  A better approximation is f(0) - b, where b = f(v)
+  - a*v.  Then, correction = f(0) - b = f(v) - f(v) + a*v = a*v."
   [info-mat scores rdg-cons]
   (let [stepsize (/ rdg-cons 10)
         upperbound (+ rdg-cons stepsize)
@@ -215,7 +228,7 @@
 
 (defn ^DoubleMatrix
   beta-update
-  "full beta update, including correction"
+  "returns a beta update, including the ridge correction"
   [beta-row label-row feature-mat rdg-cons]
   (let [scores (score-seq beta-row label-row feature-mat)
         info-mat (info-matrix beta-row feature-mat)]
@@ -234,9 +247,20 @@
     (to-double-rowmat (repeat n 0))))
 
 (defn logistic-beta-vector
-  "return the estimated parameter vector; which is used, in turn, to
-  calculate the estimated probability of the binary label; the initial
-  beta-diff value is an arbitrarily large value."
+  "return the estimated parameter vector (persistent vector); which is
+  used, in turn, to calculate the estimated probability of the binary
+  label.  The beta vector is based on the training labels and
+  associated features collected in the feature matrix.  The output can
+  be applied to new features using `probability-calc` in this
+  namespace.
+
+  Example:
+    (def feat (to-double-matrix [[1 2] [4 5]]))
+    (def label (to-double-rowmat [1 0]))
+    (logistic-beta-vector label feat 1e-8 1e-6 250)
+       => [-49.06118492894668 34.891861487354284]
+
+  NOTES: the initial beta-diff value is an arbitrarily large value."
   [label-row feature-mat rdg-cons converge-threshold max-iter]
   (let [beta-init (initial-beta feature-mat)]
     (loop [beta beta-init
@@ -253,21 +277,6 @@
            (dec iter)
            diff))))))
 
-(defn estimated-probabilities
-  "returns the set of probabilities, after applying the parameter
-  values estimated over the training data; both `label-seq` and
-  `traning-features` reflect data over the training period and
-  `updated-features` reflect data through some interval, which could
-  be the end of the training period (for internal validataion) but is
-  most likely some interval thereafter"
-  [label-seq training-features updated-features]
-  (let [new-beta (logistic-beta-vector
-                  label-seq
-                  training-features
-                  1e-8
-                  1e-6
-                  250)]
-    (probability-calc new-beta updated-features)))
 
 (defn unpack-neighbors
   "Returns a vector containing the fields of a forma-neighbor-value."
