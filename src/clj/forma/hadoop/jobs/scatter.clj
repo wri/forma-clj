@@ -253,7 +253,7 @@
                         "Runs the trends processing."
                         (with-job-conf {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
                           (?- (hfs-seqfile dynamic-path)
-                              (forma/dynamic-tap
+                              (forma/dynamic-clean
                                est-map (hfs-seqfile adjusted-series-path)))))
 
               mid-forma ([:tmp-dirs forma-mid-path
@@ -313,4 +313,5 @@
                       "s3n://formaresults/finaloutput"
                       "s3n://formaresults/trapped"
                       827))
+
 
