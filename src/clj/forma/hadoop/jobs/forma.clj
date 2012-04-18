@@ -7,7 +7,7 @@
             [forma.schema :as schema]
             [forma.hadoop.predicate :as p]
             [forma.trends.analysis :as a]
-            [forma.classify.logistic :as log]))
+            [forma.ops.classify :as log]))
 
 ;; TODO: Convert these two to Cascalog queries.
 

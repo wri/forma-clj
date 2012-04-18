@@ -5,7 +5,7 @@
         [forma.matrix.utils]
         [cascalog.api])
 (:require [incanter.core :as i]
-            [cascalog.ops :as c])
+          [cascalog.ops :as c])
   (:import [org.jblas FloatMatrix MatrixFunctions Solve DoubleMatrix]))
 
 ;; Namespace Conventions: Each observation is assigned a binary
@@ -276,5 +276,3 @@
            beta-new
            (dec iter)
            diff))))))
-
-
