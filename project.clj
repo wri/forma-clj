@@ -23,7 +23,6 @@
                  [cascalog "1.9.0-wip"]
                  [cascalog-lzo "0.1.0-wip"]
                  [cascalog-checkpoint "0.1.1"]
-                 [backtype/dfs-datastores "1.1.0"]
                  [backtype/dfs-datastores "1.1.3-SNAPSHOT"]
                  [backtype/dfs-datastores-cascading "1.1.3"]
                  [org.apache.thrift/libthrift "0.8.0"]]
