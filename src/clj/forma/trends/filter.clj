@@ -23,12 +23,7 @@
   the data in the supplied time series `ts`
 
   Example:
-    (deseasonalize 23 ndvi)
-
-  Benchmark:
-    (let [v (s/sample-normal 200)]
-      (time (dotimes [_ 150] (deseasonalize 23 v))))
-    ;;=> Elapsed time: 281.299262 msecs"
+    (deseasonalize 23 ndvi)"
   [freq ts]
   (let [x (dummy-mat freq (i/nrow ts))
         xt (i/trans x)
