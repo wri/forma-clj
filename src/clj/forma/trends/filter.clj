@@ -19,8 +19,9 @@
   (i/matrix (take n (cycle (i/identity-matrix freq)))))
 
 (defn deseasonalize
-  "returns a deseasonalized vector based on the frequency `freq` of
-  the measurements in the supplied timeseries `ts`
+  "accepts a timeseries `ts` with frequency `freq` and returns a
+  vector with the seasonal component removed; the returned vector is
+  only the trend component and the idiosyncratic disturbance.
 
   Example:
     (deseasonalize 23 (s/sample-uniform 200))"
