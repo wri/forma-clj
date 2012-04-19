@@ -9,8 +9,8 @@
   :jvm-opts ["-XX:MaxPermSize=128M"
              "-XX:+UseConcMarkSweepGC"
              "-Xms1024M" "-Xmx1048M" "-server"]
-  :plugins [[lein-midje "2.0.0-SNAPSHOT"]
-            [lein-swank "1.4.3"]]
+;;  :plugins [[lein-midje "2.0.0-SNAPSHOT"]
+;;            [lein-swank "1.4.3"]]
   :dependencies [[org.clojure/clojure "1.3.0"]
                  [org.clojure/tools.cli "0.1.0"]
                  [org.clojure/tools.logging "0.2.3"]
@@ -20,8 +20,8 @@
                  [clj-time "0.3.4"]
                  [forma/gdal "1.8.0"]
                  [forma/jblas "1.2.1"]
-                 [cascalog "1.9.0-wip7"]
-                 [cascalog-lzo "0.1.0-wip7"]
+                 [cascalog "1.9.0-wip"]
+                 [cascalog-lzo "0.1.0-wip"]
                  [cascalog-checkpoint "0.1.1"]
                  [backtype/dfs-datastores "1.1.0"]
                  [backtype/dfs-datastores "1.1.3-SNAPSHOT"]
