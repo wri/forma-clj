@@ -21,7 +21,8 @@
 (defn deseasonalize
   "accepts a timeseries `ts` with frequency `freq` and returns a
   vector with the seasonal component removed; the returned vector is
-  only the trend component and the idiosyncratic disturbance.
+  only the trend component and the idiosyncratic disturbance of the
+  original time series.
 
   Example:
     (deseasonalize 23 (s/sample-uniform 200))"
