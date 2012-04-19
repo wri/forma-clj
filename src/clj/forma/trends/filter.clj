@@ -12,7 +12,7 @@
   time series.
 
   Example:
-    (dummy-mat 23 (count ndvi))
+    (dummy-mat 23 (count (s/sample-normal 100)))
     ;; 23: frequency of 16-day MODIS data
     ;; 12: frequency of 32-day MODIS data"
   [freq n]
@@ -20,10 +20,10 @@
 
 (defn deseasonalize
   "returns a deseasonalized vector based on the frequency `freq` of
-  the data in the supplied time series `ts`
+  the measurements in the supplied timeseries `ts`
 
   Example:
-    (deseasonalize 23 ndvi)"
+    (deseasonalize 23 (s/sample-uniform 200))"
   [freq ts]
   (let [x (dummy-mat freq (i/nrow ts))
         xt (i/trans x)
