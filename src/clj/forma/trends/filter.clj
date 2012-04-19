@@ -4,6 +4,37 @@
              [incanter.core :as i]
              [incanter.stats :as s]))
 
+;; Remove seasonal component by basic dummy decomposition
+
+(defn dummy-mat
+  "returns an incanter matrix of `n` cycling identity matrices of
+  dimension `freq`, used as the cofactor matrix for deseasonalizing a
+  time series.
+
+  Example:
+    (dummy-mat 23 (count (s/sample-normal 100)))
+    ;; 23: frequency of 16-day MODIS data
+    ;; 12: frequency of 32-day MODIS data"
+  [freq n]
+  (i/matrix (take n (cycle (i/identity-matrix freq)))))
+
+(defn deseasonalize
+  "accepts a timeseries `ts` with frequency `freq` and returns a
+  vector with the seasonal component removed; the returned vector is
+  only the trend component and the idiosyncratic disturbance of the
+  original time series.
+
+  Example:
+    (deseasonalize 23 (s/sample-uniform 200))"
+  [freq ts]
+  (let [x (dummy-mat freq (i/nrow ts))
+        xt (i/trans x)
+        xtx (i/mmult xt x)
+        coefs (i/mmult (i/solve xtx) xt ts)
+        fitted (i/mmult x coefs)]
+    (i/plus (i/minus ts fitted)
+            (s/mean ts))))
+
 ;; Remove seasonal component by harmonic decomposition
 
 (defn harmonic-series
@@ -186,10 +217,6 @@
   (let [base-vec (vec base-seq)]
     (for [x (range start-index (inc end-index))]
       (subvec base-vec 0 x))))
-
-(defn deseasonalize
-  [series freq]
-  series)
 
 (defn make-clean
   "Interpolate over bad values and remove seasonal component using reliability."
