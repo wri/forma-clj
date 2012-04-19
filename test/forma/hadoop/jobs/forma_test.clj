@@ -19,14 +19,15 @@
    :long-block 15
    :window 5})
 
-(defn run-dynamic
+(comment
+  (defn run-dynamic
   "Test function that displays the output of the dynamic tap."
   []
   (?- (stdout)
-      (-> (dynamic-cleaned-tap some-map
+      (-> (analyze-trends some-map
                        (hfs-seqfile "/Users/sritchie/Desktop/ndviseries1000/")
                        (hfs-seqfile "/Users/sritchie/Desktop/ndviseries1000/"))
-          (c/first-n 10))))
+          (c/first-n 10)))))
 
 ;; FORMA, broken down into pieces. We're going to have sixteen sample
 ;; timeseries, to test the business with the neighbors.
@@ -233,7 +234,7 @@
           outer-src
           (forma-tap est-map :n-src :reli-src :r-src :v-src :f-src)
           (provided
-            (dynamic-cleaned-tap
+            (analyze-trends
              est-map
              (dynamic-filter 25 :n-src :reli-src :r-src :v-src)) => dynamic-tuples
              (fire-tap est-map :f-src) => fire-values))
