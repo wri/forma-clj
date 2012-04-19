@@ -7,8 +7,8 @@
             [forma.schema :as schema]
             [forma.hadoop.predicate :as p]
             [forma.trends.analysis :as a]
-            [forma.trends.filter :as f]
-            [forma.classify.logistic :as log]))
+            [forma.ops.classify :as log]))
+            [forma.trends.filter :as f]))
 
 ;; We're mapping across two sequences at the end, there; the
 ;; long-series and the t-stat-series.
