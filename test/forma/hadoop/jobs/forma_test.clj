@@ -4,6 +4,7 @@
         [clojure.string :only (join)] forma.hadoop.jobs.forma)
   (:require [forma.schema :as schema]
             [forma.date-time :as date]
+            [forma.trends.filter :as f]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
             [cascalog.ops :as c]))
@@ -18,14 +19,15 @@
    :long-block 15
    :window 5})
 
-(defn run-dynamic
+(comment
+  (defn run-dynamic
   "Test function that displays the output of the dynamic tap."
   []
   (?- (stdout)
-      (-> (dynamic-cleaned-tap some-map
+      (-> (analyze-trends some-map
                        (hfs-seqfile "/Users/sritchie/Desktop/ndviseries1000/")
                        (hfs-seqfile "/Users/sritchie/Desktop/ndviseries1000/"))
-          (c/first-n 10))))
+          (c/first-n 10)))))
 
 ;; FORMA, broken down into pieces. We're going to have sixteen sample
 ;; timeseries, to test the business with the neighbors.
@@ -232,7 +234,7 @@
           outer-src
           (forma-tap est-map :n-src :reli-src :r-src :v-src :f-src)
           (provided
-            (dynamic-cleaned-tap
+            (analyze-trends
              est-map
              (dynamic-filter 25 :n-src :reli-src :r-src :v-src)) => dynamic-tuples
              (fire-tap est-map :f-src) => fire-values))
@@ -256,3 +258,20 @@
         dynamic-src [["500" 28 8 0 0 0 ndvi precl reli]]]
     (dynamic-clean est-map dynamic-src) => (produces-some
                                             [["500" 28 8 0 0 0 [1.0 2.0 3.0 4 5]] ["500" 28 8 0 0 0 [1.0 2.0 3.0 4 5 6]]])))
+
+(fact
+  (let [model-ts [[1 [1 2 3]]]
+        ts [[1 [1 2 3 4 5]]]]
+    (<- [?id ?shorter]
+        (model-ts ?id ?model-ts)
+        (ts ?id ?ts)
+        (f/shorten-ts ?model-ts ?ts :> ?shorter))) => (produces [[1 [1 2 3]]]))
+
+(fact
+  (let [ts-length 50
+        est-map {:window 10 :long-block 30}
+        ndvi (flatten [(range 25) (range 25 0 -1)])
+        precl (flatten [(range 25 0 -1) (range 25)])
+        clean-src [["500" 28 8 0 0 0 ndvi]]
+        rain-src [["500" 28 8 0 0 0 -1 precl -1]]]
+    (analyze-trends est-map clean-src rain-src)) => (produces-some [["500" 28 8 0 0 0 -0.46384872080089 -4.198030811863873E-16 -2.86153967746369 4.3841345603546955]]))

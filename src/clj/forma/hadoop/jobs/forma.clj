@@ -7,40 +7,11 @@
             [forma.schema :as schema]
             [forma.hadoop.predicate :as p]
             [forma.trends.analysis :as a]
-            [forma.trends.filter :as f]
-            [forma.classify.logistic :as log]))
-
-;; TODO: Convert these two to Cascalog queries.
-
-
-(defn short-trend-shell
-  "a wrapper to collect the short-term trends into a form that can be
-  manipulated from within cascalog."
-  [{:keys [est-start est-end t-res long-block window]} ts-start spectral reli]
-  (let [freq        (date/res->period-count t-res)
-        new-start   (date/datetime->period t-res est-start)
-        [start end] (date/relative-period t-res ts-start [est-start est-end])]
-    [new-start
-     (a/telescoping-short-trend long-block window freq start end spectral reli)]))
+            [forma.ops.classify :as log]
+            [forma.trends.filter :as f]))
 
 ;; We're mapping across two sequences at the end, there; the
 ;; long-series and the t-stat-series.
-
-(defn long-trend-shell
-  "a wrapper that takes a map of options and attributes of the input
-  time-series (and cofactors) to extract the long-term trends and
-  t-statistics from the time-series."
-  [{:keys [est-start est-end t-res long-block window]}
-   ts-start ts-series reli-series rain-series]
-  (let [freq        (date/res->period-count t-res)
-        new-start   (date/datetime->period t-res est-start)
-        [start end] (date/relative-period t-res ts-start [est-start est-end])]
-    (cons new-start
-          (apply map vector
-                 (a/telescoping-long-trend freq start end
-                                           ts-series
-                                           reli-series
-                                           rain-series)))))
 
 (def get-loc
   (<- [?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val]
@@ -111,19 +82,24 @@
         (tele-clean est-map good-set bad-set ?start ?ndvi ?reli :> ?clean-ndvi)
         (:distinct false))))
 
-(defn dynamic-cleaned-tap
+(defn analyze-trends
   "Accepts an est-map, and sources for ndvi and rain timeseries and
   vcf values split up by pixel.
 
   We break this apart from dynamic-filter to force the filtering to
   occur before the analysis. Note that all variable names within this
   query are TIMESERIES, not individual values."
-  [est-map clean-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?new-start ?short ?break ?long ?t-stat]
-      (clean-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?clean-ndvi ?precl)
-      (short-trend-shell est-map ?start ?clean-ndvi ?precl :> ?new-start ?short)
-      (long-trend-shell est-map ?start ?clean-ndvi ?precl :> _ ?break ?long ?t-stat)
-      (:distinct false)))
+  [est-map clean-src rain-src]
+  (let [long-block (est-map :long-block)
+        short-block (est-map :window)]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?short ?long ?t-stat ?break]
+        (rain-src ?s-res ?mod-h ?mod-v ?sample ?line ?start _ ?precl _)
+        (f/shorten-ts ?ndvi ?precl :> ?short-precl)
+        (clean-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi)
+        (a/short-stat long-block short-block ?ndvi :> ?short)
+        (a/long-stats ?ndvi ?short-precl :> ?long ?t-stat)
+        (a/hansen-stat ?ndvi :> ?break)
+        (:distinct false))))
 
 (defn forma-tap
   "Accepts an est-map and sources for ndvi, rain, and fire timeseries,
