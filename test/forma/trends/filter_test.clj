@@ -42,7 +42,7 @@ final compositions of functions."
 
 (tabular
  (fact
-   (make-clean 1 #{0 1} #{2 3 255} ?spectral-ts ?reli-ts) => ?res)
+   (make-reliable #{0 1} #{2 3 255} ?spectral-ts ?reli-ts) => ?res)
  ?spectral-ts ?reli-ts ?res
  [1 1 1] [0 0 0] [1 1 1]
  [1 1 1] [0 1 0] [1 1 1]
@@ -51,3 +51,11 @@ final compositions of functions."
  [1 1 1] [2 2 2] nil
  [1 2 3] [1 2 1] [1.0 2.0 3]
  (vec (repeat 10 10)) (vec (repeat 10 3)) nil)
+
+(fact
+  "Make sure rain is shortened to length of input ts"
+  (shorten-ts [1 2 3] [1 2 3 4 5]) => [1 2 3])
+
+(tabular
+ (fact
+   (deseasonalize 23 (repeat 100 100)) => 5))
