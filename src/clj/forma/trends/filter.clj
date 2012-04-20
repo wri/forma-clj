@@ -18,6 +18,10 @@
   [freq n]
   (i/matrix (take n (cycle (i/identity-matrix freq)))))
 
+(defn dummy-deseasonalize
+  [freq ts]
+  ts)
+
 (defn deseasonalize
   "accepts a timeseries `ts` with frequency `freq` and returns a
   vector with the seasonal component removed; the returned vector is
@@ -224,7 +228,7 @@
   "Interpolate over bad values and remove seasonal component using reliability."
   [freq good-set bad-set spectral-ts reli-ts]
   (-> (make-reliable good-set bad-set spectral-ts reli-ts)
-      (deseasonalize freq)))
+      (dummy-deseasonalize freq)))
 
 (defn reliable?
   "Checks whether the share of reliable pixels exceeds a supplied minimum.
