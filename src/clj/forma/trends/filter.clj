@@ -18,6 +18,10 @@
   [freq n]
   (i/matrix (take n (cycle (i/identity-matrix freq)))))
 
+(defn dummy-deseasonalize
+  [ts freq]
+  ts)
+
 (defn deseasonalize
   "accepts a timeseries `ts` with frequency `freq` and returns a
   vector with the seasonal component removed; the returned vector is
@@ -27,13 +31,15 @@
   Example:
     (deseasonalize 23 (s/sample-uniform 200))"
   [freq ts]
-  (let [x (dummy-mat freq (i/nrow ts))
-        xt (i/trans x)
-        xtx (i/mmult xt x)
-        coefs (i/mmult (i/solve xtx) xt ts)
-        fitted (i/mmult x coefs)]
-    (i/plus (i/minus ts fitted)
-            (s/mean ts))))
+  (cond
+      (nil? ts) nil
+      :else (let [x (dummy-mat freq (i/nrow ts))
+                  xt (i/trans x)
+                  xtx (i/mmult xt x)
+                  coefs (i/mmult (i/solve xtx) xt ts)
+                  fitted (i/mmult x coefs)]
+              (i/to-vect (i/plus (i/minus ts fitted)
+                                 (s/mean ts))))))
 
 ;; Remove seasonal component by harmonic decomposition
 
@@ -200,7 +206,7 @@
                                                   quality-coll)
                       new-vals (neutralize-ends bad-set
                                                 quality-coll
-                                                value-coll)
+                                                 value-coll)
                       good-seq (positions (complement bad-set)
                                           new-qual)]
                   (vec (flatten [(map (partial stretch-ts new-vals)
@@ -221,8 +227,8 @@
 (defn make-clean
   "Interpolate over bad values and remove seasonal component using reliability."
   [freq good-set bad-set spectral-ts reli-ts]
-  (-> (make-reliable good-set bad-set spectral-ts reli-ts)
-      (deseasonalize freq)))
+  (->> (make-reliable good-set bad-set spectral-ts reli-ts)
+       (deseasonalize freq)))
 
 (defn reliable?
   "Checks whether the share of reliable pixels exceeds a supplied minimum.
@@ -243,3 +249,9 @@
   (<= good-min (float
                 (/ (count (filter good-set reli-ts))
                    (count reli-ts)))))
+
+(defn shorten-ts
+  "Shorten timeseries to length of match timeseries"
+  [model-ts ts]
+  [(vec (take (count model-ts) ts))])
+
