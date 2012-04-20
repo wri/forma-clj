@@ -260,7 +260,7 @@
               trends ([:tmp-dirs trends-path]
                         "Runs the trends processing."
                         (with-job-conf {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
-                          (?- (hfs-seqfile dynamic-path)
+                          (?- (hfs-seqfile trends-path)
                               (forma/analyze-trends
                                est-map (hfs-lzo-textline clean-series)))))
 
