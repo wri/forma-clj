@@ -32,8 +32,8 @@
         xtx (i/mmult xt x)
         coefs (i/mmult (i/solve xtx) xt ts)
         fitted (i/mmult x coefs)]
-    (i/plus (i/minus ts fitted)
-            (s/mean ts))))
+    (i/to-vect (i/plus (i/minus ts fitted)
+                       (s/mean ts)))))
 
 ;; Remove seasonal component by harmonic decomposition
 
