@@ -253,7 +253,7 @@
               cleanseries ([:tmp-dirs clean-series]
                         "Runs the trends processing."
                         (with-job-conf {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
-                          (?- (hfs-lzo-textline dynamic-path)
+                          (?- (hfs-lzo-textline clean-series)
                               (forma/dynamic-clean
                                est-map (hfs-seqfile adjusted-series-path)))))
 
