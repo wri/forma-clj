@@ -29,8 +29,8 @@
   original time series.
 
   Example:
-    (deseasonalize (s/sample-uniform 200) 23)"
-  [ts freq]
+    (deseasonalize 23 (s/sample-uniform 200))"
+  [freq ts]
   (cond
       (nil? ts) nil
       :else (let [x (dummy-mat freq (i/nrow ts))
@@ -227,8 +227,8 @@
 (defn make-clean
   "Interpolate over bad values and remove seasonal component using reliability."
   [freq good-set bad-set spectral-ts reli-ts]
-  (-> (make-reliable good-set bad-set spectral-ts reli-ts)
-      (deseasonalize freq)))
+  (->> (make-reliable good-set bad-set spectral-ts reli-ts)
+       (deseasonalize freq)))
 
 (defn reliable?
   "Checks whether the share of reliable pixels exceeds a supplied minimum.
