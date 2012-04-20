@@ -245,7 +245,7 @@
                                and filters out timeseries below the proper VCF value."
                  (with-job-conf {"mapred.min.split.size" 805306368
                                  "cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
-                   (?- (hfs-seqfile adjusted-series-path)
+                   (?- (hfs-lzo-textline adjusted-series-path)
                        (forma/dynamic-filter (hfs-seqfile ndvi-path)
                                              (hfs-seqfile reli-path)
                                              (hfs-seqfile rain-path)))))
@@ -255,7 +255,7 @@
                         (with-job-conf {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
                           (?- (hfs-lzo-textline clean-series)
                               (forma/dynamic-clean
-                               est-map (hfs-seqfile adjusted-series-path)))))
+                               est-map (hfs-lzo-textline adjusted-series-path)))))
 
               trends ([:tmp-dirs trends-path]
                         "Runs the trends processing."
