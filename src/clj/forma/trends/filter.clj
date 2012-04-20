@@ -27,13 +27,15 @@
   Example:
     (deseasonalize 23 (s/sample-uniform 200))"
   [freq ts]
-  (let [x (dummy-mat freq (i/nrow ts))
-        xt (i/trans x)
-        xtx (i/mmult xt x)
-        coefs (i/mmult (i/solve xtx) xt ts)
-        fitted (i/mmult x coefs)]
-    (i/to-vect (i/plus (i/minus ts fitted)
-                       (s/mean ts)))))
+  (cond
+      (nil? ts) nil
+      :else (let [x (dummy-mat freq (i/nrow ts))
+                  xt (i/trans x)
+                  xtx (i/mmult xt x)
+                  coefs (i/mmult (i/solve xtx) xt ts)
+                  fitted (i/mmult x coefs)]
+              (i/to-vect (i/plus (i/minus ts fitted)
+                                 (s/mean ts))))))
 
 ;; Remove seasonal component by harmonic decomposition
 
@@ -200,7 +202,7 @@
                                                   quality-coll)
                       new-vals (neutralize-ends bad-set
                                                 quality-coll
-                                                value-coll)
+                                                 value-coll)
                       good-seq (positions (complement bad-set)
                                           new-qual)]
                   (vec (flatten [(map (partial stretch-ts new-vals)
