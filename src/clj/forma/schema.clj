@@ -53,25 +53,7 @@
         :end-idx   end-idx
         :series    (vec series)})))
 
-(gen-class :name forma.kryo.RecordComparator
-           :prefix "fields-"
-           :methods
-           [^{:static true}
-            [recordCompare [java.util.Map java.util.Map java.util.List] int]])
-
-(defn fields-recordCompare
-  [m1 m2 fn-seq]
-  (loop [[f & more] fn-seq]
-    (let [val (compare (f m1) (f m2))]
-      (if (and more (zero? val))
-        (recur more)
-        val))))
-
-(defrecord TimeSeriesValue [start-idx end-idx series]
-  Comparable
-  (compareTo [m1 m2]
-    (forma.kryo.RecordComparator/recordCompare
-     m1 m2 [:start-idx :end-idx (comp vec :series)])))
+(defrecord TimeSeriesValue [start-idx end-idx series])
 
 (defn ts-record
   ([start-idx series]
@@ -112,11 +94,7 @@
    :count      "number of fires on the given day."})
 
 ;; Record to hold a FireValue.
-(defrecord FireValue [temp-330 conf-50 both-preds count]
-  Comparable
-  (compareTo [m1 m2]
-    (forma.kryo.RecordComparator/recordCompare
-     m1 m2 [:temp-330 :conf-50 :both-preds :count])))
+(defrecord FireValue [temp-330 conf-50 both-preds count])
 
 (defn fire-value
   "Creates a `fire-value` object with counts of fires meeting certain criteria:
@@ -177,11 +155,7 @@
    :t-stat      "t-statistic for the relevant month."})
 
 (defrecord FormaValue
-    [fire-value short-drop param-break long-drop t-stat]
-  Comparable
-  (compareTo [m1 m2]
-    (forma.kryo.RecordComparator/recordCompare
-     m1 m2 [:t-stat :fire :short :param-break :long])))
+    [fire-value short-drop param-break long-drop t-stat])
 
 (defn forma-value
   "Returns a vector containing a FireValue, short-term drop,
@@ -196,13 +170,7 @@
 (defrecord NeighborValue
     [fire-value neighbor-count avg-short-drop min-short-drop
      avg-param-break min-param-break avg-long-drop min-long-drop
-     avg-t-stat min-t-stat]
-  Comparable
-  (compareTo [m1 m2]
-    (forma.kryo.RecordComparator/recordCompare
-     m1 m2 [:neighbor-count :fire-value :avg-short-drop :min-short-drop
-            :avg-param-break :min-param-break :avg-long-drop :min-long-drop
-            :avg-t-stat :min-t-stat])))
+     avg-t-stat min-t-stat])
 
 (defn neighbor-value
   "Accepts either a forma value or a sequence of sub-values."
