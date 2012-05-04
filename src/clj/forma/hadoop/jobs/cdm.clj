@@ -10,6 +10,18 @@
             [forma.date-time :as date]
             [cascalog.ops :as c]))
 
+(defbufferop min-period
+  "Returns the minimum value in tuples."
+  [tuples]
+  [(reduce min (map first tuples))])
+
+(defn yomama []
+  (let [src [[1 1 16 2] [1 1 16 1]]]
+  (??<- [?x ?y ?z ?p]
+        (src ?x ?y ?z ?p)
+        ;; (min-period ?p :> ?minp)
+        )))
+
 (defn first-hit
   "Returns the first value in a vector of numbers that is greater than or equal
    to a threshold.
