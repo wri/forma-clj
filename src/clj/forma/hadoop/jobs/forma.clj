@@ -58,14 +58,14 @@
         freq (date/res->period-count t-res)
         [start-idx end-idx] (date/relative-period t-res start-period
                                                   [est-start est-end])
-        training-reli (take start-idx reli-ts)
+        training-reli     (take start-idx reli-ts)
         training-reli-set (set training-reli)
         clean-fn (comp vector (partial f/make-clean freq good-set bad-set))]
-    (cond (f/reliable?
-           good-set reli-thresh training-reli) (map clean-fn
-                                                (f/tele-ts start-idx end-idx val-ts)
-                                                (f/tele-ts start-idx end-idx reli-ts))
-          :else [[nil]])))
+    (if (f/reliable? good-set reli-thresh training-reli)
+      (map clean-fn
+           (f/tele-ts start-idx end-idx val-ts)
+           (f/tele-ts start-idx end-idx reli-ts))
+      [[nil]])))
 
 (defn dynamic-clean
   "Accepts an est-map, and sources for ndvi and rain timeseries and
@@ -90,8 +90,8 @@
   occur before the analysis. Note that all variable names within this
   query are TIMESERIES, not individual values."
   [est-map clean-src rain-src]
-  (let [long-block (est-map :long-block)
-        short-block (est-map :window)]
+  (let [long-block (:long-block est-map)
+        short-block (:window est-map)]
     (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?short ?long ?t-stat ?break]
         (rain-src ?s-res ?mod-h ?mod-v ?sample ?line ?start _ ?precl _)
         (f/shorten-ts ?ndvi ?precl :> ?short-precl)
@@ -117,7 +117,6 @@
 (defmapcatop [process-neighbors [num-neighbors]]
   "Processes all neighbors... Returns the index within the chunk, the
 value, and the aggregate of the neighbors."
-
   [window]
   (for [[idx [val neighbors]] (->> (w/neighbor-scan num-neighbors window)
                                    (map-indexed vector))
