@@ -24,7 +24,7 @@
                  [cascalog-lzo "0.1.0-wip"]
                  [cascalog-checkpoint "0.1.1"]
                  [backtype/dfs-datastores "1.1.3-SNAPSHOT"]
-                 [backtype/dfs-datastores-cascading "1.1.3"]
+		 [backtype/dfs-datastores-cascading "1.1.4"]
                  [org.apache.thrift/libthrift "0.8.0" :exclusions [org.slf4j/slf4j-api]]]
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
                      [midje-cascalog "0.4.0"]]
