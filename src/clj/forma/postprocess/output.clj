@@ -3,8 +3,7 @@
         [forma.reproject :only (modis->latlon)]
         [forma.date-time :only (period->datetime datetime->period)]
         [clojure.string :only (split join)]
-        [forma.utils :only (moving-average average)])
-  (:require [cascalog.ops :as c]))
+        [forma.utils :only (moving-average average)]))
 
 (defn get-val
   [out-m & k]
@@ -54,6 +53,21 @@ Ex. (backward-looking-mavg 3 [1 2 3 4]) expands to [nil nil 1 2 3 4]. Nils are f
   [series]
   (vec-ify (cons (first series) (rest (reductions max series)))))
 
+(defn dec->int100
+  [coll]
+  (map (comp int round (partial * 100)) coll))
+
+(defn clean-probs
+  "smooth the probabilities with a backward-looking moving average, make the 
+  series monotonically increasing, and finally make each probability 0->1 an 
+  integer 0->100"
+  [coll]
+  (let [window 3]
+    [(vec (-> coll
+              (backward-looking-mavg window)
+              (mono-inc)
+              (dec->int100)))]))
+
 (defn date-no-sep
   [date-str]
   (reduce str (split date-str #"-")))
@@ -70,16 +84,3 @@ Ex. (backward-looking-mavg 3 [1 2 3 4]) expands to [nil nil 1 2 3 4]. Nils are f
   (let [dates (mk-date-header tres date-prefix ts)
         header (csv-ify args)]
     (csv-ify header dates)))
-
-(defn make-csv
-  [output-map window]
-  (<- [?out-str]
-      (output-map ?m)
-      (get-series ?m :> ?series)
-      (get-val ?m :modh :modv :sample :line :> ?modh ?modv ?sample ?line)
-      (convert-to-latlon ?m :> ?lat ?lon)
-      (float->str-10 ?lat :> ?str-lat)
-      (float->str-10 ?lon :> ?str-lon)
-      (backward-looking-mavg window ?series :> ?mavg-series)
-      (mono-inc ?mavg-series :> ?inc-series)
-      (csv-ify ?modh ?modv ?sample ?line ?str-lat ?str-lon ?inc-series :> ?out-str)))
