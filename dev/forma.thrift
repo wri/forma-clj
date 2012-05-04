@@ -38,14 +38,6 @@ struct LongArray {
   1: list<i64> longs
 }
 
-struct ShortArray {
-  1: list<i16> shorts
-}
-
-struct IntArray {
-  1: list<i32> ints
-}
-
 struct FireSeries {
   1: i32 startIdx
   2: i32 endIdx;
