@@ -3,7 +3,8 @@
         [forma.reproject :only (modis->latlon)]
         [forma.date-time :only (period->datetime datetime->period)]
         [clojure.string :only (split join)]
-        [forma.utils :only (moving-average average)]))
+        [forma.utils :only (moving-average average)]
+        [clojure.math.numeric-tower :only (round)]))
 
 (defn get-val
   [out-m & k]
