@@ -15,13 +15,6 @@
   [tuples]
   [(reduce min (map first tuples))])
 
-(defn yomama []
-  (let [src [[1 1 16 2] [1 1 16 1]]]
-  (??<- [?x ?y ?z ?p]
-        (src ?x ?y ?z ?p)
-        ;; (min-period ?p :> ?minp)
-        )))
-
 (defn first-hit
   "Returns the first value in a vector of numbers that is greater than or equal
    to a threshold.
@@ -64,6 +57,7 @@
         (+ ts-start-period ?first-hit-idx :> ?period)
         (date/convert-period-res t-res out-t-res ?period :> ?period-new-res)
         (- ?period-new-res epoch-period :> ?relative-period)
+        (min-period ?relative-period :> ?min-relative-period)
         (r/modis->latlon ?s-res ?mod-h ?mod-v ?s ?l :> ?lat ?lon)
         (latlon->google-tile ?lat ?lon z :> ?tx ?ty)
         (identity z :> ?z))))
