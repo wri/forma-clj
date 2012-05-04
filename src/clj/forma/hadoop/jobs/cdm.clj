@@ -1,4 +1,7 @@
 (ns forma.hadoop.jobs.cdm
+  "This namespace defines a Cascalog query to convert FORMA data in MODIS
+  coordinates into map tile coordinates for use in Global Forest Watch
+  visualizations."
   (:use [cascalog.api]
         [forma.gfw.cdm :only (latlon->google-tile)]
         [forma.utils :only (positions)])
@@ -8,15 +11,36 @@
             [cascalog.ops :as c]))
 
 (defn first-hit
+  "Returns the first value in a vector of numbers that is greater than or equal
+   to a threshold.
+
+  Arguments:
+    thresh - The threshold value.
+    series - A vector of numbers.
+
+  Example usage:
+    > (first-hit 5 [1 2 3 4 5 6 7 8 9 10])
+    > 5
+  "
   [thresh series]
   (first (positions (partial <= thresh) series)))
 
 (defn convert-for-vizz
-  "Output x,y,z and period of first detection greater than threshold, per specification of common data model with Vizzuality.
+  "Output x,y,z and period of first detection greater than threshold, per
+   specification of common data model with Vizzuality.
 
-  Usage:
-   (?- (hfs-seqfile \"s3n://formaresults/analysis/xyzperiod\")
-     (get-first-hit (hfs-seqfile \"s3n://formaresults/finaloutput\") 50 \"16\"))"
+  Arguments:
+    est-map - A mapping that contains :est-start key with a datestring value
+    forma-src - The FORMA source data tap
+    thresh - The threshold number
+    t-res - The temporal resolution as a string
+    out-t-res - The output temporal resolution as a string
+      
+  Example usage:
+   > (let [source-tap (hfs-seqfile \"s3n://formaresults/finaloutput\")
+           sink-tap (hfs-seqfile \"s3n://formaresults/analysis/xyzperiod\")]
+   >   (?- sink-tap            
+   >     (convert-for-vizz source-tap 50 \"16\" \"32\"))"
   [est-map forma-src thresh t-res out-t-res]
   (let [epoch-period (date/datetime->period out-t-res "2000-01-01")
         ts-start-period (date/datetime->period t-res (:est-start est-map))
