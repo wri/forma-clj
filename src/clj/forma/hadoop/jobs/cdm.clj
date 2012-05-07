@@ -63,10 +63,13 @@
         (identity z :> ?z))))
 
 
-(let [source-tap (hfs-seqfile "s3n://formaresults/finaloutput")
-      sink-tap (hfs-delimited
-                "s3n://formaresults/analysis/cdm-map-tile-coordinates.csv"
-                :delimiter ","
-                :outfields ["?x" "?y" "?z" "?p"])]
-  (?- sink-tap            
-      (convert-for-vizz {:est-start "2005-12-31"} source-tap 50 "16" "32")))
+(defn forma->cdm
+  "Query that builds up the FORMA data for GFW."
+  []
+  (let [source-tap (hfs-seqfile "s3n://formaresults/finaloutput")
+        sink-tap (hfs-delimited
+                  "s3n://formaresults/analysis/cdm-map-tile-coordinates.csv"
+                  :delimiter ","
+                  :outfields ["?x" "?y" "?z" "?p"])]
+    (?- sink-tap            
+        (convert-for-vizz {:est-start "2005-12-31"} source-tap 50 "16" "32"))))
