@@ -64,8 +64,7 @@ Ex. (backward-looking-mavg 3 [1 2 3 4]) expands to [nil nil 1 2 3 4]. Nils are f
   integer 0->100"
   [coll]
   (let [window 3]
-    [(vec (-> coll
-              (backward-looking-mavg window)
+    [(vec (-> (backward-looking-mavg window coll)
               (mono-inc)
               (dec->int100)))]))
 
