@@ -45,7 +45,7 @@
    > (let [source-tap (hfs-seqfile \"s3n://formaresults/finaloutput\")
            sink-tap (hfs-seqfile \"s3n://formaresults/analysis/xyzperiod\")]
    >   (?- sink-tap            
-   >     (convert-for-vizz source-tap 50 \"16\" \"32\"))"
+   >     (convert-for-vizz source-tap {:est-start \"2005-12-31\" 50 \"16\" \"32\"))"
   [est-map forma-src thresh t-res out-t-res]
   (let [epoch-period (date/datetime->period out-t-res "2000-01-01")
         ts-start-period (date/datetime->period t-res (:est-start est-map))
@@ -61,7 +61,6 @@
         (r/modis->latlon ?s-res ?mod-h ?mod-v ?s ?l :> ?lat ?lon)
         (latlon->google-tile ?lat ?lon z :> ?x ?y)
         (identity z :> ?z))))
-
 
 (defn forma->cdm
   "Query that builds up the FORMA data for GFW."
