@@ -43,8 +43,8 @@ Expanded timeseries includes pre-pended nils. So moving average is actually forw
 Ex. (backward-looking-mavg 3 [1 2 3 4]) expands to [nil nil 1 2 3 4]. Nils are filtered out, so the output is effectively [(average [1]) (average [1 2]) (average [1 2 3]) (average 2 3 4)]"
   [window series]
   (let [expanded-ts (concat (repeat (dec window) nil) (flatten series))]
-    (vec-ify (map (comp float average (partial filter not-nil?))
-                  (partition window 1 expanded-ts)))))
+    (map (comp float average (partial filter not-nil?))
+                  (partition window 1 expanded-ts))))
 
 (defn mono-inc
   "Make a series of numbers monotonically increasing. Useful for retaining the maximum probability for a pixel over time.
@@ -52,7 +52,7 @@ Ex. (backward-looking-mavg 3 [1 2 3 4]) expands to [nil nil 1 2 3 4]. Nils are f
 (mono-inc [3 4 34 34 23 1 34 13 35 35 ])
 ==> (3 4 34 34 34 34 34 34 35 35)"
   [series]
-  (vec-ify (cons (first series) (rest (reductions max series)))))
+  (cons (first series) (rest (reductions max series))))
 
 (defn dec->int100
   [coll]
