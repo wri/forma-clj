@@ -20,7 +20,7 @@
                  [clj-time "0.3.4"]
                  [forma/gdal "1.8.0"]
                  [forma/jblas "1.2.1"]
-                 [cascalog "1.9.0-wip"]
+                 [cascalog "1.9.0-wip8"]
                  [cascalog-lzo "0.1.0-wip"]
                  [cascalog-checkpoint "0.1.1"]
                  [backtype/dfs-datastores "1.1.3-SNAPSHOT"]

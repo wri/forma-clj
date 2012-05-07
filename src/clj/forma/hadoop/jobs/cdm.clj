@@ -50,14 +50,23 @@
   (let [epoch-period (date/datetime->period out-t-res "2000-01-01")
         ts-start-period (date/datetime->period t-res (:est-start est-map))
         z 16]
-    (<- [?tx ?ty ?z ?relative-period]
+    (<- [?x ?y ?z ?p]
         (forma-src ?s-res ?mod-h ?mod-v ?s ?l ?prob-series)
         (o/clean-probs ?prob-series :> ?clean-series)
         (first-hit thresh ?clean-series :> ?first-hit-idx)
         (+ ts-start-period ?first-hit-idx :> ?period)
         (date/convert-period-res t-res out-t-res ?period :> ?period-new-res)
-        (- ?period-new-res epoch-period :> ?relative-period)
-        (min-period ?relative-period :> ?min-relative-period)
+        (- ?period-new-res epoch-period :> ?rp)
+        (min-period ?rp :> ?p)
         (r/modis->latlon ?s-res ?mod-h ?mod-v ?s ?l :> ?lat ?lon)
-        (latlon->google-tile ?lat ?lon z :> ?tx ?ty)
+        (latlon->google-tile ?lat ?lon z :> ?x ?y)
         (identity z :> ?z))))
+
+
+(let [source-tap (hfs-seqfile "s3n://formaresults/finaloutput")
+      sink-tap (hfs-delimited
+                "s3n://formaresults/analysis/cdm-map-tile-coordinates.csv"
+                :delimiter ","
+                :outfields ["?x" "?y" "?z" "?p"])]
+  (?- sink-tap            
+      (convert-for-vizz {:est-start "2005-12-31"} source-tap 50 "16" "32")))
