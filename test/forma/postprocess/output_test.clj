@@ -124,5 +124,3 @@
       (output-map ?out-m)
       (get-val ?out-m :modh :modv :> ?modh ?modv)) => (produces-some [[28 7]]))
 
-(fact
-  (make-csv output-map 3) => (produces-some [["28,7,10,4,19.9812500000,106.4516613766,0.1,0.25,0.25,0.43333334,0.6"]]))
