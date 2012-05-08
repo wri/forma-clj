@@ -520,14 +520,14 @@ public class FireSeries implements org.apache.thrift.TBase<FireSeries, FireSerie
           case 3: // VALUES
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
-                org.apache.thrift.protocol.TList _list16 = iprot.readListBegin();
-                struct.values = new ArrayList<FireTuple>(_list16.size);
-                for (int _i17 = 0; _i17 < _list16.size; ++_i17)
+                org.apache.thrift.protocol.TList _list32 = iprot.readListBegin();
+                struct.values = new ArrayList<FireTuple>(_list32.size);
+                for (int _i33 = 0; _i33 < _list32.size; ++_i33)
                 {
-                  FireTuple _elem18; // required
-                  _elem18 = new FireTuple();
-                  _elem18.read(iprot);
-                  struct.values.add(_elem18);
+                  FireTuple _elem34; // required
+                  _elem34 = new FireTuple();
+                  _elem34.read(iprot);
+                  struct.values.add(_elem34);
                 }
                 iprot.readListEnd();
               }
@@ -561,9 +561,9 @@ public class FireSeries implements org.apache.thrift.TBase<FireSeries, FireSerie
         oprot.writeFieldBegin(VALUES_FIELD_DESC);
         {
           oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.values.size()));
-          for (FireTuple _iter19 : struct.values)
+          for (FireTuple _iter35 : struct.values)
           {
-            _iter19.write(oprot);
+            _iter35.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -606,9 +606,9 @@ public class FireSeries implements org.apache.thrift.TBase<FireSeries, FireSerie
       if (struct.isSetValues()) {
         {
           oprot.writeI32(struct.values.size());
-          for (FireTuple _iter20 : struct.values)
+          for (FireTuple _iter36 : struct.values)
           {
-            _iter20.write(oprot);
+            _iter36.write(oprot);
           }
         }
       }
@@ -628,14 +628,14 @@ public class FireSeries implements org.apache.thrift.TBase<FireSeries, FireSerie
       }
       if (incoming.get(2)) {
         {
-          org.apache.thrift.protocol.TList _list21 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-          struct.values = new ArrayList<FireTuple>(_list21.size);
-          for (int _i22 = 0; _i22 < _list21.size; ++_i22)
+          org.apache.thrift.protocol.TList _list37 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+          struct.values = new ArrayList<FireTuple>(_list37.size);
+          for (int _i38 = 0; _i38 < _list37.size; ++_i38)
           {
-            FireTuple _elem23; // required
-            _elem23 = new FireTuple();
-            _elem23.read(iprot);
-            struct.values.add(_elem23);
+            FireTuple _elem39; // required
+            _elem39 = new FireTuple();
+            _elem39.read(iprot);
+            struct.values.add(_elem39);
           }
         }
         struct.setValuesIsSet(true);

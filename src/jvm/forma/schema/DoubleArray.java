@@ -343,13 +343,13 @@ public class DoubleArray implements org.apache.thrift.TBase<DoubleArray, DoubleA
           case 1: // DOUBLES
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
-                org.apache.thrift.protocol.TList _list0 = iprot.readListBegin();
-                struct.doubles = new ArrayList<Double>(_list0.size);
-                for (int _i1 = 0; _i1 < _list0.size; ++_i1)
+                org.apache.thrift.protocol.TList _list24 = iprot.readListBegin();
+                struct.doubles = new ArrayList<Double>(_list24.size);
+                for (int _i25 = 0; _i25 < _list24.size; ++_i25)
                 {
-                  double _elem2; // required
-                  _elem2 = iprot.readDouble();
-                  struct.doubles.add(_elem2);
+                  double _elem26; // required
+                  _elem26 = iprot.readDouble();
+                  struct.doubles.add(_elem26);
                 }
                 iprot.readListEnd();
               }
@@ -377,9 +377,9 @@ public class DoubleArray implements org.apache.thrift.TBase<DoubleArray, DoubleA
         oprot.writeFieldBegin(DOUBLES_FIELD_DESC);
         {
           oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.DOUBLE, struct.doubles.size()));
-          for (double _iter3 : struct.doubles)
+          for (double _iter27 : struct.doubles)
           {
-            oprot.writeDouble(_iter3);
+            oprot.writeDouble(_iter27);
           }
           oprot.writeListEnd();
         }
@@ -410,9 +410,9 @@ public class DoubleArray implements org.apache.thrift.TBase<DoubleArray, DoubleA
       if (struct.isSetDoubles()) {
         {
           oprot.writeI32(struct.doubles.size());
-          for (double _iter4 : struct.doubles)
+          for (double _iter28 : struct.doubles)
           {
-            oprot.writeDouble(_iter4);
+            oprot.writeDouble(_iter28);
           }
         }
       }
@@ -424,13 +424,13 @@ public class DoubleArray implements org.apache.thrift.TBase<DoubleArray, DoubleA
       BitSet incoming = iprot.readBitSet(1);
       if (incoming.get(0)) {
         {
-          org.apache.thrift.protocol.TList _list5 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.DOUBLE, iprot.readI32());
-          struct.doubles = new ArrayList<Double>(_list5.size);
-          for (int _i6 = 0; _i6 < _list5.size; ++_i6)
+          org.apache.thrift.protocol.TList _list29 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.DOUBLE, iprot.readI32());
+          struct.doubles = new ArrayList<Double>(_list29.size);
+          for (int _i30 = 0; _i30 < _list29.size; ++_i30)
           {
-            double _elem7; // required
-            _elem7 = iprot.readDouble();
-            struct.doubles.add(_elem7);
+            double _elem31; // required
+            _elem31 = iprot.readDouble();
+            struct.doubles.add(_elem31);
           }
         }
         struct.setDoublesIsSet(true);
