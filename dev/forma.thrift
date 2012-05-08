@@ -30,18 +30,26 @@ struct NeighborValue {
 
 # Collection Wrappers
 
-struct DoubleArray {
-  1: list<double> doubles
+struct ShortArray {
+  1: list<i16> shorts
+}
+
+struct IntArray {
+  1: list<i32> ints
 }
 
 struct LongArray {
   1: list<i64> longs
 }
 
+struct DoubleArray {
+  1: list<double> doubles
+}
+
 struct FireSeries {
-  1: i32 startIdx
+  1: i32 startIdx;
   2: i32 endIdx;
-  3: list<FireTuple> values
+  3: list<FireTuple> values;
 }
 
 struct FormaSeries {
@@ -49,12 +57,14 @@ struct FormaSeries {
 }
 
 union ArrayValue {
-  1: LongArray ints;
+  1: LongArray longs;
   2: DoubleArray doubles;
+  3: ShortArray shorts;
+  4: IntArray ints;
 }
 
 struct TimeSeries {
-  1: i32 startIdx
+  1: i32 startIdx;
   2: i32 endIdx;
   3: ArrayValue series;
 }
@@ -67,6 +77,8 @@ union DataValue {
   5: FireTuple fireVal;
   6: TimeSeries timeSeries;
   7: FireSeries fireSeries;
+  8: ShortArray shorts;
+  9: IntArray ints;
 }
 
 struct ModisPixelLocation {
