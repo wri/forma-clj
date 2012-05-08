@@ -28,22 +28,22 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._Fields>, java.io.Serializable, Cloneable {
-  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("LongArray");
+public class ShortArray implements org.apache.thrift.TBase<ShortArray, ShortArray._Fields>, java.io.Serializable, Cloneable {
+  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("ShortArray");
 
-  private static final org.apache.thrift.protocol.TField LONGS_FIELD_DESC = new org.apache.thrift.protocol.TField("longs", org.apache.thrift.protocol.TType.LIST, (short)1);
+  private static final org.apache.thrift.protocol.TField SHORTS_FIELD_DESC = new org.apache.thrift.protocol.TField("shorts", org.apache.thrift.protocol.TType.LIST, (short)1);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
-    schemes.put(StandardScheme.class, new LongArrayStandardSchemeFactory());
-    schemes.put(TupleScheme.class, new LongArrayTupleSchemeFactory());
+    schemes.put(StandardScheme.class, new ShortArrayStandardSchemeFactory());
+    schemes.put(TupleScheme.class, new ShortArrayTupleSchemeFactory());
   }
 
-  public List<Long> longs; // required
+  public List<Short> shorts; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
-    LONGS((short)1, "longs");
+    SHORTS((short)1, "shorts");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -58,8 +58,8 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
      */
     public static _Fields findByThriftId(int fieldId) {
       switch(fieldId) {
-        case 1: // LONGS
-          return LONGS;
+        case 1: // SHORTS
+          return SHORTS;
         default:
           return null;
       }
@@ -103,91 +103,91 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.LONGS, new org.apache.thrift.meta_data.FieldMetaData("longs", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+    tmpMap.put(_Fields.SHORTS, new org.apache.thrift.meta_data.FieldMetaData("shorts", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.ListMetaData(org.apache.thrift.protocol.TType.LIST, 
-            new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64))));
+            new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I16))));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
-    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(LongArray.class, metaDataMap);
+    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(ShortArray.class, metaDataMap);
   }
 
-  public LongArray() {
+  public ShortArray() {
   }
 
-  public LongArray(
-    List<Long> longs)
+  public ShortArray(
+    List<Short> shorts)
   {
     this();
-    this.longs = longs;
+    this.shorts = shorts;
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
-  public LongArray(LongArray other) {
-    if (other.isSetLongs()) {
-      List<Long> __this__longs = new ArrayList<Long>();
-      for (Long other_element : other.longs) {
-        __this__longs.add(other_element);
+  public ShortArray(ShortArray other) {
+    if (other.isSetShorts()) {
+      List<Short> __this__shorts = new ArrayList<Short>();
+      for (Short other_element : other.shorts) {
+        __this__shorts.add(other_element);
       }
-      this.longs = __this__longs;
+      this.shorts = __this__shorts;
     }
   }
 
-  public LongArray deepCopy() {
-    return new LongArray(this);
+  public ShortArray deepCopy() {
+    return new ShortArray(this);
   }
 
   @Override
   public void clear() {
-    this.longs = null;
+    this.shorts = null;
   }
 
-  public int getLongsSize() {
-    return (this.longs == null) ? 0 : this.longs.size();
+  public int getShortsSize() {
+    return (this.shorts == null) ? 0 : this.shorts.size();
   }
 
-  public java.util.Iterator<Long> getLongsIterator() {
-    return (this.longs == null) ? null : this.longs.iterator();
+  public java.util.Iterator<Short> getShortsIterator() {
+    return (this.shorts == null) ? null : this.shorts.iterator();
   }
 
-  public void addToLongs(long elem) {
-    if (this.longs == null) {
-      this.longs = new ArrayList<Long>();
+  public void addToShorts(short elem) {
+    if (this.shorts == null) {
+      this.shorts = new ArrayList<Short>();
     }
-    this.longs.add(elem);
+    this.shorts.add(elem);
   }
 
-  public List<Long> getLongs() {
-    return this.longs;
+  public List<Short> getShorts() {
+    return this.shorts;
   }
 
-  public LongArray setLongs(List<Long> longs) {
-    this.longs = longs;
+  public ShortArray setShorts(List<Short> shorts) {
+    this.shorts = shorts;
     return this;
   }
 
-  public void unsetLongs() {
-    this.longs = null;
+  public void unsetShorts() {
+    this.shorts = null;
   }
 
-  /** Returns true if field longs is set (has been assigned a value) and false otherwise */
-  public boolean isSetLongs() {
-    return this.longs != null;
+  /** Returns true if field shorts is set (has been assigned a value) and false otherwise */
+  public boolean isSetShorts() {
+    return this.shorts != null;
   }
 
-  public void setLongsIsSet(boolean value) {
+  public void setShortsIsSet(boolean value) {
     if (!value) {
-      this.longs = null;
+      this.shorts = null;
     }
   }
 
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
-    case LONGS:
+    case SHORTS:
       if (value == null) {
-        unsetLongs();
+        unsetShorts();
       } else {
-        setLongs((List<Long>)value);
+        setShorts((List<Short>)value);
       }
       break;
 
@@ -196,8 +196,8 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
 
   public Object getFieldValue(_Fields field) {
     switch (field) {
-    case LONGS:
-      return getLongs();
+    case SHORTS:
+      return getShorts();
 
     }
     throw new IllegalStateException();
@@ -210,8 +210,8 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
     }
 
     switch (field) {
-    case LONGS:
-      return isSetLongs();
+    case SHORTS:
+      return isSetShorts();
     }
     throw new IllegalStateException();
   }
@@ -220,21 +220,21 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
   public boolean equals(Object that) {
     if (that == null)
       return false;
-    if (that instanceof LongArray)
-      return this.equals((LongArray)that);
+    if (that instanceof ShortArray)
+      return this.equals((ShortArray)that);
     return false;
   }
 
-  public boolean equals(LongArray that) {
+  public boolean equals(ShortArray that) {
     if (that == null)
       return false;
 
-    boolean this_present_longs = true && this.isSetLongs();
-    boolean that_present_longs = true && that.isSetLongs();
-    if (this_present_longs || that_present_longs) {
-      if (!(this_present_longs && that_present_longs))
+    boolean this_present_shorts = true && this.isSetShorts();
+    boolean that_present_shorts = true && that.isSetShorts();
+    if (this_present_shorts || that_present_shorts) {
+      if (!(this_present_shorts && that_present_shorts))
         return false;
-      if (!this.longs.equals(that.longs))
+      if (!this.shorts.equals(that.shorts))
         return false;
     }
 
@@ -245,28 +245,28 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
   public int hashCode() {
     HashCodeBuilder builder = new HashCodeBuilder();
 
-    boolean present_longs = true && (isSetLongs());
-    builder.append(present_longs);
-    if (present_longs)
-      builder.append(longs);
+    boolean present_shorts = true && (isSetShorts());
+    builder.append(present_shorts);
+    if (present_shorts)
+      builder.append(shorts);
 
     return builder.toHashCode();
   }
 
-  public int compareTo(LongArray other) {
+  public int compareTo(ShortArray other) {
     if (!getClass().equals(other.getClass())) {
       return getClass().getName().compareTo(other.getClass().getName());
     }
 
     int lastComparison = 0;
-    LongArray typedOther = (LongArray)other;
+    ShortArray typedOther = (ShortArray)other;
 
-    lastComparison = Boolean.valueOf(isSetLongs()).compareTo(typedOther.isSetLongs());
+    lastComparison = Boolean.valueOf(isSetShorts()).compareTo(typedOther.isSetShorts());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetLongs()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.longs, typedOther.longs);
+    if (isSetShorts()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.shorts, typedOther.shorts);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -288,14 +288,14 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("LongArray(");
+    StringBuilder sb = new StringBuilder("ShortArray(");
     boolean first = true;
 
-    sb.append("longs:");
-    if (this.longs == null) {
+    sb.append("shorts:");
+    if (this.shorts == null) {
       sb.append("null");
     } else {
-      sb.append(this.longs);
+      sb.append(this.shorts);
     }
     first = false;
     sb.append(")");
@@ -322,15 +322,15 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
     }
   }
 
-  private static class LongArrayStandardSchemeFactory implements SchemeFactory {
-    public LongArrayStandardScheme getScheme() {
-      return new LongArrayStandardScheme();
+  private static class ShortArrayStandardSchemeFactory implements SchemeFactory {
+    public ShortArrayStandardScheme getScheme() {
+      return new ShortArrayStandardScheme();
     }
   }
 
-  private static class LongArrayStandardScheme extends StandardScheme<LongArray> {
+  private static class ShortArrayStandardScheme extends StandardScheme<ShortArray> {
 
-    public void read(org.apache.thrift.protocol.TProtocol iprot, LongArray struct) throws org.apache.thrift.TException {
+    public void read(org.apache.thrift.protocol.TProtocol iprot, ShortArray struct) throws org.apache.thrift.TException {
       org.apache.thrift.protocol.TField schemeField;
       iprot.readStructBegin();
       while (true)
@@ -340,20 +340,20 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
           break;
         }
         switch (schemeField.id) {
-          case 1: // LONGS
+          case 1: // SHORTS
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
-                org.apache.thrift.protocol.TList _list16 = iprot.readListBegin();
-                struct.longs = new ArrayList<Long>(_list16.size);
-                for (int _i17 = 0; _i17 < _list16.size; ++_i17)
+                org.apache.thrift.protocol.TList _list0 = iprot.readListBegin();
+                struct.shorts = new ArrayList<Short>(_list0.size);
+                for (int _i1 = 0; _i1 < _list0.size; ++_i1)
                 {
-                  long _elem18; // required
-                  _elem18 = iprot.readI64();
-                  struct.longs.add(_elem18);
+                  short _elem2; // required
+                  _elem2 = iprot.readI16();
+                  struct.shorts.add(_elem2);
                 }
                 iprot.readListEnd();
               }
-              struct.setLongsIsSet(true);
+              struct.setShortsIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -369,17 +369,17 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
       struct.validate();
     }
 
-    public void write(org.apache.thrift.protocol.TProtocol oprot, LongArray struct) throws org.apache.thrift.TException {
+    public void write(org.apache.thrift.protocol.TProtocol oprot, ShortArray struct) throws org.apache.thrift.TException {
       struct.validate();
 
       oprot.writeStructBegin(STRUCT_DESC);
-      if (struct.longs != null) {
-        oprot.writeFieldBegin(LONGS_FIELD_DESC);
+      if (struct.shorts != null) {
+        oprot.writeFieldBegin(SHORTS_FIELD_DESC);
         {
-          oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.I64, struct.longs.size()));
-          for (long _iter19 : struct.longs)
+          oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.I16, struct.shorts.size()));
+          for (short _iter3 : struct.shorts)
           {
-            oprot.writeI64(_iter19);
+            oprot.writeI16(_iter3);
           }
           oprot.writeListEnd();
         }
@@ -391,49 +391,49 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
 
   }
 
-  private static class LongArrayTupleSchemeFactory implements SchemeFactory {
-    public LongArrayTupleScheme getScheme() {
-      return new LongArrayTupleScheme();
+  private static class ShortArrayTupleSchemeFactory implements SchemeFactory {
+    public ShortArrayTupleScheme getScheme() {
+      return new ShortArrayTupleScheme();
     }
   }
 
-  private static class LongArrayTupleScheme extends TupleScheme<LongArray> {
+  private static class ShortArrayTupleScheme extends TupleScheme<ShortArray> {
 
     @Override
-    public void write(org.apache.thrift.protocol.TProtocol prot, LongArray struct) throws org.apache.thrift.TException {
+    public void write(org.apache.thrift.protocol.TProtocol prot, ShortArray struct) throws org.apache.thrift.TException {
       TTupleProtocol oprot = (TTupleProtocol) prot;
       BitSet optionals = new BitSet();
-      if (struct.isSetLongs()) {
+      if (struct.isSetShorts()) {
         optionals.set(0);
       }
       oprot.writeBitSet(optionals, 1);
-      if (struct.isSetLongs()) {
+      if (struct.isSetShorts()) {
         {
-          oprot.writeI32(struct.longs.size());
-          for (long _iter20 : struct.longs)
+          oprot.writeI32(struct.shorts.size());
+          for (short _iter4 : struct.shorts)
           {
-            oprot.writeI64(_iter20);
+            oprot.writeI16(_iter4);
           }
         }
       }
     }
 
     @Override
-    public void read(org.apache.thrift.protocol.TProtocol prot, LongArray struct) throws org.apache.thrift.TException {
+    public void read(org.apache.thrift.protocol.TProtocol prot, ShortArray struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
       BitSet incoming = iprot.readBitSet(1);
       if (incoming.get(0)) {
         {
-          org.apache.thrift.protocol.TList _list21 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.I64, iprot.readI32());
-          struct.longs = new ArrayList<Long>(_list21.size);
-          for (int _i22 = 0; _i22 < _list21.size; ++_i22)
+          org.apache.thrift.protocol.TList _list5 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.I16, iprot.readI32());
+          struct.shorts = new ArrayList<Short>(_list5.size);
+          for (int _i6 = 0; _i6 < _list5.size; ++_i6)
           {
-            long _elem23; // required
-            _elem23 = iprot.readI64();
-            struct.longs.add(_elem23);
+            short _elem7; // required
+            _elem7 = iprot.readI16();
+            struct.shorts.add(_elem7);
           }
         }
-        struct.setLongsIsSet(true);
+        struct.setShortsIsSet(true);
       }
     }
   }
