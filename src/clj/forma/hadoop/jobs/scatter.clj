@@ -92,7 +92,8 @@
              :window 10
              :ridge-const 1e-8
              :convergence-thresh 1e-6
-             :max-iterations 500}})
+             :max-iterations 500
+             :data-name "ndvi"}})
 
 (defn paths-for-dataset
   [dataset s-res t-res tile-seq]

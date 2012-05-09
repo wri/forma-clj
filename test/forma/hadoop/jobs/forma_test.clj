@@ -1,11 +1,11 @@
 (ns forma.hadoop.jobs.forma-test
   (:use cascalog.api
+        cascalog.lzo
         [midje sweet cascalog]
         [clojure.string :only (join)] forma.hadoop.jobs.forma)
   (:require [forma.schema :as schema]
             [forma.date-time :as date]
             [forma.trends.filter :as f]
-            [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
             [cascalog.ops :as c]))
 
@@ -236,20 +236,22 @@
             (forma-tap est-map :n-src :reli-src :r-src :v-src :f-src) => outer-tap)))
 
 (fact
-  "Uses simple timeseries to test cleaning query"
-  (let [t-res "16"
-        ts-length 10
-        est-map {:est-start (date/period->datetime t-res (- ts-length 5))
-                 :est-end (date/period->datetime t-res ts-length)
-                 :t-res t-res}
-        ndvi [1 2 3 4 5 6 7 8 9 10] ;;(vec (range 8000 (+ 8000 ts-length)))
-        precl (vec (range ts-length))
-        reli [0 2 3 0 1 0 3 1 1 0]
-        dynamic-src [["500" 28 8 0 0 0 ndvi precl reli]]]
-    (dynamic-clean est-map dynamic-src) => (produces-some
-                                            [["500" 28 8 0 0 0 [1.0 2.0 3.0 4 5]] ["500" 28 8 0 0 0 [1.0 2.0 3.0 4 5 6]]])))
+  "Test cleaning query using simple timeseries"
+  (let [ts-length 30
+        start-period 0
+        t-res "16"
+        est-map {:est-start (date/period->datetime t-res 24)
+                 :est-end (date/period->datetime t-res 26)
+                 :t-res t-res
+                 :reli-thresh 0.01}
+        ndvi (vec (range 8000 (+ 8000 ts-length)))
+        precl (vec (repeat ts-length 0))
+        reli (flatten (repeat (/ ts-length 5) [1 0 3 1 0]))
+        dynamic-src [["500" 28 8 0 0 start-period ndvi precl reli]]]
+    (dynamic-clean est-map dynamic-src) => (produces-some [["500" 28 8 0 0 0 [8000.0 8011.5 8011.5 8011.5 8011.5 8011.5 8011.5 8011.5 8011.5 8011.5 8011.5 8011.5 8011.5 8011.5 8011.5 8011.5 8011.5 8011.5 8011.5 8011.5 8011.5 8011.5 8011.5 8023.0]]])))
 
 (fact
+  "Check timeseries trimming in Cascalog context"
   (let [model-ts [[1 [1 2 3]]]
         ts [[1 [1 2 3 4 5]]]]
     (<- [?id ?shorter]
@@ -258,6 +260,7 @@
         (f/shorten-ts ?model-ts ?ts :> ?shorter))) => (produces [[1 [1 2 3]]]))
 
 (fact
+  "Test trends analysis using simple timeseries"
   (let [ts-length 50
         est-map {:window 10 :long-block 30}
         ndvi (flatten [(range 25) (range 25 0 -1)])
@@ -265,3 +268,15 @@
         clean-src [["500" 28 8 0 0 0 ndvi]]
         rain-src [["500" 28 8 0 0 0 -1 precl -1]]]
     (analyze-trends est-map clean-src rain-src)) => (produces-some [["500" 28 8 0 0 0 -0.46384872080089 -4.198030811863873E-16 -2.86153967746369 4.3841345603546955]]))
+
+(future-fact
+  "Support thrift version of cleaning")
+
+(fact
+  (let [ts-length 50
+        est-map {:window 10 :long-block 30}
+        ndvi (flatten [(range 25) (range 25 0 -1)])
+        precl (flatten [(range 25 0 -1) (range 25)])
+        clean-src [(schema/mk-short-data-chunk "ndvi" "500" "16" 28 8 0 0 "2000-01-01" ndvi)]
+        rain-src [["500" 28 8 0 0 690 -1 precl -1]]]
+    (analyze-trends-thrift est-map clean-src rain-src)) => (produces-some [["500" 28 8 0 0 690 -0.46384872080089 -4.198030811863873E-16 -2.86153967746369 4.3841345603546955]]))

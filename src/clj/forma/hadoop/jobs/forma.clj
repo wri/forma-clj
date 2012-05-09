@@ -51,21 +51,42 @@
       (:distinct false)))
 
 (defmapcatop tele-clean
-  "Return clean timeseries with telescoping window, nil if no (or not enough) good training data"
-  [{:keys [est-start est-end t-res]}
+  "Returns clean timeseries with telescoping window starting with end of training,
+   nil if no (or not enough) reliable training data"
+  [{:keys [est-start est-end reli-thresh t-res]}
    good-set bad-set start-period val-ts reli-ts]
-  (let [reli-thresh 0.1
-        freq (date/res->period-count t-res)
-        [start-idx end-idx] (date/relative-period t-res start-period
+  (let [freq (date/res->period-count t-res)
+        [start-idx end-idx-exact] (date/relative-period t-res start-period
                                                   [est-start est-end])
+        end-idx (inc end-idx-exact)
         training-reli (take start-idx reli-ts)
         training-reli-set (set training-reli)
-        clean-fn (comp vector (partial f/make-clean freq good-set bad-set))]
-    (cond (f/reliable?
-           good-set reli-thresh training-reli) (map clean-fn
-                                                (f/tele-ts start-idx end-idx val-ts)
-                                                (f/tele-ts start-idx end-idx reli-ts))
-          :else [[nil]])))
+        clean-fn (comp vector vec (partial f/make-clean freq good-set bad-set))]
+    (if (f/reliable? good-set reli-thresh training-reli)
+          (map clean-fn
+               (f/tele-ts start-idx end-idx val-ts)
+               (f/tele-ts start-idx end-idx reli-ts))
+          [[nil]])))
+
+(defn dynamic-clean-thrift
+  "Accepts an est-map, and sources for ndvi and rain timeseries and
+  vcf values split up by pixel.
+
+  We break this apart from dynamic-filter to force the filtering to
+  occur before the analysis. Note that all variable names within this
+  query are TIMESERIES, not individual values."
+  [est-map dynamic-src]
+  (let [good-set #{0 1}
+        bad-set #{2 3 255}
+        data-name (:data-name est-map)
+        t-res (:t-res est-map)]
+    (<- [?thrift-data-chunk]
+        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi _ ?reli)
+        (tele-clean est-map good-set bad-set ?start ?ndvi ?reli :> ?clean-ndvi)
+        (date/period->datetime t-res ?start :> ?start-date)
+        (schema/mk-short-data-chunk
+         data-name ?s-res t-res ?mod-h ?mod-v ?sample ?line ?start-date ?clean-ndvi :> ?thrift-data-chunk)
+        (:distinct false))))
 
 (defn dynamic-clean
   "Accepts an est-map, and sources for ndvi and rain timeseries and
@@ -80,6 +101,26 @@
     (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?clean-ndvi]
         (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi _ ?reli)
         (tele-clean est-map good-set bad-set ?start ?ndvi ?reli :> ?clean-ndvi)
+        (:distinct false))))
+
+(defn analyze-trends-thrift
+  "Accepts an est-map, and sources for ndvi and rain timeseries and
+  vcf values split up by pixel.
+
+  We break this apart from dynamic-filter to force the filtering to
+  occur before the analysis. Note that all variable names within this
+  query are TIMESERIES, not individual values."
+  [est-map clean-src rain-src]
+  (let [long-block (est-map :long-block)
+        short-block (est-map :window)]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?short ?long ?t-stat ?break]
+        (clean-src ?thrift-obj)
+        (schema/unpack-short-data-chunk ?thrift-obj :> ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi)
+        (rain-src ?s-res ?mod-h ?mod-v ?sample ?line ?start _ ?precl _)
+        (f/shorten-ts ?ndvi ?precl :> ?short-precl)
+        (a/short-stat long-block short-block ?ndvi :> ?short)
+        (a/long-stats ?ndvi ?short-precl :> ?long ?t-stat)
+        (a/hansen-stat ?ndvi :> ?break)
         (:distinct false))))
 
 (defn analyze-trends
