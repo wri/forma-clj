@@ -240,7 +240,8 @@
 (defn make-clean
   "Wrapper for `make-reliable`, `deseasonalize` and any future data cleaning
    functions we decide to include. See `make-reliable` and `deseasonalize` for
-   further documentation"
+   further documentation. We use round to remove unwarranted numerical precision
+   from cleaned timeseries values."
   [freq good-set bad-set spectral-ts reli-ts]
   (->> (make-reliable good-set bad-set spectral-ts reli-ts)
        (deseasonalize freq)
