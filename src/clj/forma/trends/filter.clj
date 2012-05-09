@@ -18,10 +18,6 @@
   [freq n]
   (i/matrix (take n (cycle (i/identity-matrix freq)))))
 
-(defn dummy-deseasonalize
-  [ts freq]
-  ts)
-
 (defn deseasonalize
   "accepts a timeseries `ts` with frequency `freq` and returns a
   vector with the seasonal component removed; the returned vector is
@@ -140,9 +136,10 @@
                  (- right left))))
 
 (defn mask
-  "create a new vector where values from `coll1` are only passed through
-  if they satisfy the predicate `pred` for `coll2`.  All other values are
-  set to nil."
+  "Apply `pred` to `coll1` to create a mask over `coll2`, returning a vector of
+   valid values and nils. If a value in `coll1` passes `pred`, the value in the
+   corresponding location in `coll2` will be included in the output vector.
+   Otherwise, that location will be set to `nil`."
   [pred coll1 coll2]
   {:pre [(= (count coll1) (count coll2))]}
   (map #(when-not (pred %2) %1)
@@ -176,14 +173,14 @@
   (f (filter (complement nil?) coll)))
 
 (defn neutralize-ends
-  "replace the ends of a value-collection (like NDVI) if the ends are unreliable,
-  according to an associated reliability index, manifest in `reli-test`. if there
-  are no bad values (as indicated by `bad-set` values in `reli-coll`) then
-  `neutralize-ends` will return the original time-series. `bad-set` is a set of
-  `reli-coll` values that indicate unreliable pixels."
+  "replace the ends of a value-collection (like NDVI) with the mean of valid values
+  if the ends are unreliable, according to an associated reliability index, manifest
+  in `reli-coll`. If there are no bad values (as indicated by `bad-set` values in
+  `reli-coll`) then `neutralize-ends` will return the original time-series.
+  `bad-set` is a set of `reli-coll` values that indicate unreliable pixels."
   [bad-set reli-coll val-coll]
   (let [avg (apply-to-valid u/coll-avg
-                         (mask bad-set reli-coll val-coll))]
+                            (mask bad-set reli-coll val-coll))]
     (replace-index-set (bad-ends bad-set reli-coll)
                        avg
                        val-coll)))
@@ -192,7 +189,11 @@
 ;; pre- and post-conditions.
 
 (defn make-reliable
-  "This function has two parts: (1) replace bad values at the ends
+  "Cleans up a timeseries by replacing or interpolating over low-quality
+   or unreliable values, such as those with cloud contamination. `good-set`
+   and `bad-set` are Clojure sets used to identify good and bad values.
+
+  This function has two parts: (1) replace bad values at the ends
   with the average of the reliable values in the target coll,
   `value-coll`. (2) smooth over *bad* values, given by `bad-set`,
   which are determined based on the reliability (or quality)
@@ -221,9 +222,13 @@
 
 (defn tele-ts
   "create a telescoping sequence of sequences, where each incremental sequence
-  is one element longer than the last, pinned to the same starting element.
+  is one element longer than the last, pinned to the same initial subsequence.
 
-  Avoid empty telescoped ts by providing `start-index` > 0"
+  `start-index` is interpreted such that the first output sequence
+  includes all values up to but not including the value at `start-index`.
+  `end-index` is interpreted similarly for the final output sequence.
+
+  `start-index` <= 0 will throw an exception to avoid returning empty vector"
   [start-index end-index base-seq]
   {:pre [(> start-index 0)]}
   (let [base-vec (vec base-seq)]
@@ -231,7 +236,9 @@
       (subvec base-vec 0 x))))
 
 (defn make-clean
-  "Interpolate over bad values and remove seasonal component using reliability."
+  "Wrapper for `make-reliable`, `deseasonalize` and any future data cleaning
+   functions we decide to include. See `make-reliable` and `deseasonalize` for
+   further documentation"
   [freq good-set bad-set spectral-ts reli-ts]
   (->> (make-reliable good-set bad-set spectral-ts reli-ts)
        (deseasonalize freq)
@@ -240,7 +247,9 @@
 (defn reliable?
   "Checks whether the share of reliable pixels exceeds a supplied minimum.
 
-  This should be used to filter out pixels that are too unreliable for analysis, given that we linearly interpolate to replace unreliable periods. We have not hardcoded a specific threshold, but the papers below provide guidence:
+  This should be used to filter out pixels that are too unreliable for analysis, given
+   that we use linear interpolation to replace unreliable periods. We have not hardcoded
+   a specific threshold, but the papers below provide guidance:
 
   0.8 reliable in de Beurs (2009) http://dx.doi.org/10.1088/1748-9326/4/4/045012
   0.9 reliable in Verbesselt 2010 http://dx.doi.org/10.1016/j.rse.2010.08.003
