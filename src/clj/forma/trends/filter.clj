@@ -235,7 +235,7 @@
   [freq good-set bad-set spectral-ts reli-ts]
   (->> (make-reliable good-set bad-set spectral-ts reli-ts)
        (deseasonalize freq)
-       (map #(Math/round %)))
+       (map #(Math/round %))))
 
 (defn reliable?
   "Checks whether the share of reliable pixels exceeds a supplied minimum.
