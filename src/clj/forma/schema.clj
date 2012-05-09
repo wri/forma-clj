@@ -453,7 +453,7 @@
         t-res (.getTemporalRes obj)]
     (date/datetime->period t-res date_str)))
 
-(defn unpack-data-chunk-short
+(defn unpack-short-data-chunk
   "Unpack `data-chunk` into familiar vector of fields for Cascalog
 
    Usage:
