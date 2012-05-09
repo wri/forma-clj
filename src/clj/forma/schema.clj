@@ -2,7 +2,14 @@
   (:require [clojure.string :as s]
             [forma.utils :as u]
             [forma.reproject :as r]
-            [forma.date-time :as date]))
+            [forma.date-time :as date])
+  (:import [forma.schema
+            ArrayValue DataChunk DataValue FormaSeries FireSeries FireTuple
+            FormaValue IntArray LocationProperty DoubleArray
+            NeighborValue LocationPropertyValue LongArray ModisPixelLocation
+            ModisChunkLocation
+            NeighborValue ShortArray TimeSeries]
+           [java.util ArrayList]))
 
 (defn boundaries
   "Accepts a sequence of pairs of <initial time period, collection>
@@ -381,3 +388,111 @@
   [(->> in-series
         (map #(or % (repeat %)))
         (apply map forma-value))])
+
+;; ## Handling thrift objects
+
+(defn list-of
+  "Maps `f` across all entries in `xs`, and returns the result wrapped
+  in an instance of `java.util.ArrayList`."
+  [f xs]
+  (ArrayList. (for [x xs]
+                (try (f x)
+                     (catch Exception e nil)))))
+
+(defn short-struct
+  "Casts all numbers in the supplied sequence to shorts, and returns
+  them wrapped in an instance of `forma.schema.ShortArray`."
+  [xs]
+  (let [shorts (list-of short xs)]
+    (doto (ShortArray.)
+      (.setShorts shorts))))
+
+(defn int-struct
+  "Casts all numbers in the supplied sequence to ints, and returns
+  them wrapped in an instance of `forma.schema.IntArray`."
+  [xs]
+  (let [ints (list-of int xs)]
+    (doto (IntArray.)
+      (.setInts ints))))
+
+(defn long-struct
+  "Casts all numbers in the supplied sequence to longs, and returns
+  them wrapped in an instance of `forma.schema.LongArray`."
+  [xs]
+  (let [longs (list-of long xs)]
+    (doto (LongArray.)
+      (.setLongs longs))))
+
+(defn mk-location-property
+  "Takes pixel location metadata and returns a thrift LocationProperty object
+
+   Usage:
+     (mk-location-property \"500\" 28 8 0 0)
+     #<LocationProperty LocationProperty(property:<LocationPropertyValue
+      pixelLocation:ModisPixelLocation(resolution:500, tileH:28, tileV:8, sample:0, line:0)>)>"
+  [s-res mod-h mod-v sample line]
+  (LocationProperty.
+   (LocationPropertyValue/pixelLocation
+    (ModisPixelLocation. s-res mod-h mod-v sample line))))
+
+(defn mk-short-data-chunk
+  "Takes pixel metadata and timeseries, returns a DataChunk object
+
+   Usage:
+     (mk-short-data-chunk \"ndvi\" \"500\" \"16\" 28 8 8 \"2000-01-01\" [1 2 3])
+     #<DataChunk DataChunk(dataset:ndvi, locationProperty:LocationProperty(property:<LocationPropertyValue pixelLocation:ModisPixelLocation(resolution:500, tileH:28, tileV:8, sample:0, line:0)>), chunkValue:<DataValue shorts:ShortArray(shorts:[1, 2, 3])>, temporalRes:16, date:2000-01-01)>"
+  [data-name s-res t-res mod-h mod-v sample line start-str series]
+  (let [loc-prop (mk-location-property s-res mod-h mod-v sample line)
+        data-val (DataValue/shorts (short-struct series))]
+    (-> (DataChunk. data-name loc-prop data-val t-res)
+        (.setDate start-str))))
+
+(defn get-short-vec
+  "Retrieve vector of shorts from thrift DataChunk object
+
+   Usage:
+     (get-short-vec obj)
+     [1 2 3]"
+  [obj]
+  (-> obj
+      (.getChunkValue)
+      (.getShorts)
+      (.getShorts)
+      (vec)))
+
+(defn get-location-properties
+  "Retrieve location properties from thrift DataChunk object
+
+   Usage:
+     (get-location-properties obj)
+     [\"500\" 28 8 0 0]"
+  [obj]
+  (let [loc-prop (.getLocationProperty obj)]
+    (-> loc-prop
+        (.getProperty)
+        (.getPixelLocation)
+        (bean)
+        (map [:resolution :tileH :tileV :sample :line])
+        (vec))))
+
+(defn get-start-period
+  "Retrieve date and temporal resolution from DataValue object and
+   convert to period
+   (get-start-period obj)
+   71"
+  [obj]
+  (let [date_str (.getDate obj)
+        t-res (.getTemporalRes obj)]
+    (date/datetime->period t-res date_str)))
+
+(defn unpack-data-chunk-short
+  "Unpack `data-chunk` into familiar vector of fields for Cascalog
+
+   Usage:
+     (unpack-data-chunk-short obj)
+     [\"500\" 28 8 0 0 71 [1 2 3]]"
+  [obj]
+  (let [loc-prop (get-location-properties obj)
+        short-vec (get-short-vec obj)
+        start-period (get-start-period obj)]
+    (conj loc-prop start-period short-vec)))
