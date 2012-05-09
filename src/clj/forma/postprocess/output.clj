@@ -75,7 +75,7 @@ Ex. (backward-looking-mavg 3 [1 2 3 4]) expands to [nil nil 1 2 3 4]. Nils are f
 (defn mk-date-header
   "(mk-date-header \"16\" \"p\" (s/timeseries-value 827 (range 141)))
     63	
-+  => (\"p20051219\" \"p20060101\" \"p20060117\" ... \"p20120117\")"
+   => (\"p20051219\" \"p20060101\" \"p20060117\" ... \"p20120117\")"
   [tres prefix ts]
   (map (comp (partial str prefix)
              date-no-sep
