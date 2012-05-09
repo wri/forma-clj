@@ -24,21 +24,23 @@
   only the trend component and the idiosyncratic disturbance of the
   original time series.
 
-  Precondition avoids singular matrix when `ts` is shorter than `freq`.
+  Precondition avoids singular matrix by throwing exception
+  when `ts` is shorter than `freq`. Throws an exception - due to meaningless
+  results - if `freq` equals 1 or in case we see `nil` as the `ts`.
 
   Example:
     (deseasonalize 23 (s/sample-uniform 200))"
   [freq ts]
-  {:pre [(>= (count ts) freq)]}
-  (if (nil? ts)
-    nil
-    (let [x (dummy-mat freq (i/nrow ts))
+  {:pre [(>= (count ts) freq)
+         (when nil? ts)
+         (< 1 freq)]}
+  (let [x (dummy-mat freq (i/nrow ts))
           xt (i/trans x)
           xtx (i/mmult xt x)
           coefs (i/mmult (i/solve xtx) xt ts)
           fitted (i/mmult x coefs)]
       (i/to-vect (i/plus (i/minus ts fitted)
-                         (s/mean ts))))))
+                         (s/mean ts)))))
 
 ;; Remove seasonal component by harmonic decomposition
 
