@@ -87,4 +87,4 @@
 (fact
   "Test full unpacking of DataChunk object into our standard location
    + series format"
-  (unpack-data-chunk-short test-obj) => ["500" 28 8 0 0 690 [1 2 3]])
+  (unpack-short-data-chunk test-obj) => ["500" 28 8 0 0 690 [1 2 3]])
