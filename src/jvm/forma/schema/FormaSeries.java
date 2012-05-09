@@ -343,14 +343,14 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
           case 1: // VALUES
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
-                org.apache.thrift.protocol.TList _list24 = iprot.readListBegin();
-                struct.values = new ArrayList<FormaValue>(_list24.size);
-                for (int _i25 = 0; _i25 < _list24.size; ++_i25)
+                org.apache.thrift.protocol.TList _list40 = iprot.readListBegin();
+                struct.values = new ArrayList<FormaValue>(_list40.size);
+                for (int _i41 = 0; _i41 < _list40.size; ++_i41)
                 {
-                  FormaValue _elem26; // required
-                  _elem26 = new FormaValue();
-                  _elem26.read(iprot);
-                  struct.values.add(_elem26);
+                  FormaValue _elem42; // required
+                  _elem42 = new FormaValue();
+                  _elem42.read(iprot);
+                  struct.values.add(_elem42);
                 }
                 iprot.readListEnd();
               }
@@ -378,9 +378,9 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
         oprot.writeFieldBegin(VALUES_FIELD_DESC);
         {
           oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.values.size()));
-          for (FormaValue _iter27 : struct.values)
+          for (FormaValue _iter43 : struct.values)
           {
-            _iter27.write(oprot);
+            _iter43.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -411,9 +411,9 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
       if (struct.isSetValues()) {
         {
           oprot.writeI32(struct.values.size());
-          for (FormaValue _iter28 : struct.values)
+          for (FormaValue _iter44 : struct.values)
           {
-            _iter28.write(oprot);
+            _iter44.write(oprot);
           }
         }
       }
@@ -425,14 +425,14 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
       BitSet incoming = iprot.readBitSet(1);
       if (incoming.get(0)) {
         {
-          org.apache.thrift.protocol.TList _list29 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-          struct.values = new ArrayList<FormaValue>(_list29.size);
-          for (int _i30 = 0; _i30 < _list29.size; ++_i30)
+          org.apache.thrift.protocol.TList _list45 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+          struct.values = new ArrayList<FormaValue>(_list45.size);
+          for (int _i46 = 0; _i46 < _list45.size; ++_i46)
           {
-            FormaValue _elem31; // required
-            _elem31 = new FormaValue();
-            _elem31.read(iprot);
-            struct.values.add(_elem31);
+            FormaValue _elem47; // required
+            _elem47 = new FormaValue();
+            _elem47.read(iprot);
+            struct.values.add(_elem47);
           }
         }
         struct.setValuesIsSet(true);
