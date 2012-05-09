@@ -93,7 +93,8 @@
              :ridge-const 1e-8
              :convergence-thresh 1e-6
              :max-iterations 500
-             :data-name "ndvi"}})
+             :data-name "ndvi"
+             :reli-thresh 0.1}})
 
 (defn paths-for-dataset
   [dataset s-res t-res tile-seq]
@@ -246,24 +247,28 @@
                                and filters out timeseries below the proper VCF value."
                  (with-job-conf {"mapred.min.split.size" 805306368
                                  "cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
-                   (?- (hfs-lzo-textline adjusted-series-path)
+                   (?- (hfs-seqfile adjusted-series-path)
                        (forma/dynamic-filter (hfs-seqfile ndvi-path)
                                              (hfs-seqfile reli-path)
                                              (hfs-seqfile rain-path)))))
 
-              cleanseries ([:tmp-dirs clean-series]
-                        "Runs the trends processing."
+              cleanseries ([:tmp-dirs clean-series-path
+                            :deps [adjustseries]]
+                        "Runs the timeseries cleaning"
                         (with-job-conf {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
-                          (?- (hfs-lzo-textline clean-series)
-                              (forma/dynamic-clean
-                               est-map (hfs-lzo-textline adjusted-series-path)))))
+                          (?- (hfs-lzo-thrift clean-series-path forma.schema.DataChunk)
+                              (forma/dynamic-clean-thrift
+                               est-map (hfs-seqfile adjusted-series-path)))))
 
-              trends ([:tmp-dirs trends-path]
+              trends ([:tmp-dirs trends-path
+                       :deps [adjustseries]]
                         "Runs the trends processing."
                         (with-job-conf {"cascading.kryo.serializations" "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"}
                           (?- (hfs-seqfile trends-path)
-                              (forma/analyze-trends
-                               est-map (hfs-lzo-textline clean-series)))))
+                              (forma/analyze-trends-thrift
+                               est-map
+                               (hfs-lzo-thrift clean-series-path forma.schema.DataChunk)
+                               (hfs-seqfile adjusted-series-path)))))
 
               mid-forma ([:tmp-dirs forma-mid-path
                           :deps [trends adjustfires]]
@@ -322,5 +327,3 @@
                       "s3n://formaresults/finaloutput"
                       "s3n://formaresults/trapped"
                       827))
-
-
