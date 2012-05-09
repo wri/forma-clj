@@ -28,18 +28,21 @@
   only the trend component and the idiosyncratic disturbance of the
   original time series.
 
+  Precondition avoids singular matrix when `ts` is shorter than `freq`.
+
   Example:
     (deseasonalize 23 (s/sample-uniform 200))"
   [freq ts]
-  (cond
-      (nil? ts) nil
-      :else (let [x (dummy-mat freq (i/nrow ts))
-                  xt (i/trans x)
-                  xtx (i/mmult xt x)
-                  coefs (i/mmult (i/solve xtx) xt ts)
-                  fitted (i/mmult x coefs)]
-              (i/to-vect (i/plus (i/minus ts fitted)
-                                 (s/mean ts))))))
+  {:pre [(>= (count ts) freq)]}
+  (if (nil? ts)
+    nil
+    (let [x (dummy-mat freq (i/nrow ts))
+          xt (i/trans x)
+          xtx (i/mmult xt x)
+          coefs (i/mmult (i/solve xtx) xt ts)
+          fitted (i/mmult x coefs)]
+      (i/to-vect (i/plus (i/minus ts fitted)
+                         (s/mean ts))))))
 
 ;; Remove seasonal component by harmonic decomposition
 
@@ -218,8 +221,11 @@
 
 (defn tele-ts
   "create a telescoping sequence of sequences, where each incremental sequence
-  is one element longer than the last, pinned to the same starting element."
+  is one element longer than the last, pinned to the same starting element.
+
+  Avoid empty telescoped ts by providing `start-index` > 0"
   [start-index end-index base-seq]
+  {:pre [(> start-index 0)]}
   (let [base-vec (vec base-seq)]
     (for [x (range start-index (inc end-index))]
       (subvec base-vec 0 x))))
@@ -228,7 +234,8 @@
   "Interpolate over bad values and remove seasonal component using reliability."
   [freq good-set bad-set spectral-ts reli-ts]
   (->> (make-reliable good-set bad-set spectral-ts reli-ts)
-       (deseasonalize freq)))
+       (deseasonalize freq)
+       (map #(Math/round %)))
 
 (defn reliable?
   "Checks whether the share of reliable pixels exceeds a supplied minimum.
