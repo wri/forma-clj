@@ -32,7 +32,6 @@
     (deseasonalize 23 (s/sample-uniform 200))"
   [freq ts]
   {:pre [(>= (count ts) freq)
-         (when nil? ts)
          (< 1 freq)]}
   (let [x (dummy-mat freq (i/nrow ts))
           xt (i/trans x)
@@ -138,15 +137,15 @@
                  (- right left))))
 
 (defn mask
-  "Apply `pred` to `coll1` to create a mask over `coll2`, returning a vector of
-   valid values and nils. If a value in `coll1` passes `pred`, the value in the
-   corresponding location in `coll2` will be included in the output vector.
+  "Apply `pred` to `coll-a` to create a mask over `coll-b`, returning a vector of
+   valid values and nils. If a value in `coll-a` passes `pred`, the value in the
+   corresponding location in `coll-b` will be included in the output vector.
    Otherwise, that location will be set to `nil`."
-  [pred coll1 coll2]
-  {:pre [(= (count coll1) (count coll2))]}
+  [pred coll-a coll-b]
+  {:pre [(= (count coll-a) (count coll-b))]}
   (map #(when-not (pred %2) %1)
-       coll2
-       coll1))
+       coll-b
+       coll-a))
 
 (defn replace-index-set
   "replace values in `coll` with `new-val` for all indices in
