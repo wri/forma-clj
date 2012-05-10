@@ -55,3 +55,36 @@
   (let [pix-loc (-> (chunk-location "1000" 10 10 59 24000)
                     (chunkloc->pixloc 23999))]
     pix-loc => (pixel-location "1000" 10 10 1199 1199)))
+
+
+;; tests of thrift schema
+
+(def test-obj
+  "Create a basic thrift object"
+  (mk-short-data-chunk "ndvi" "500" "16" 28 8 0 0 "2000-01-01" [1 2 3]))
+
+(tabular
+ (fact
+   "Test whether thrift object was created correctly"
+   (?method test-obj) => ?result)
+ ?method ?result
+ .date "2000-01-01"
+ .temporalRes "16"
+ .dataset "ndvi")
+
+(tabular
+ (fact
+  "Test getting short vector out of thrift object. Also checks that the vector is actually filled with shorts"
+  (?func test-obj) => ?result)
+ ?func ?result
+  get-short-vec [1 2 3]
+  (comp type first get-short-vec) java.lang.Short)
+
+(fact
+  "Test extracting location info from thrift object"
+  (get-location-properties test-obj) => ["500" 28 8 0 0])
+
+(fact
+  "Test full unpacking of DataChunk object into our standard location
+   + series format"
+  (unpack-short-data-chunk test-obj) => ["500" 28 8 0 0 690 [1 2 3]])
