@@ -36,11 +36,17 @@
   (vector (vec series)))
 
 (defn backward-looking-mavg
-  "Moving average calculated up to a given element (i.e. looking backwards), rather than starting with a given element. Ensures that only information up to and including given element is incorporated in the moving average.
+  "Moving average calculated up to a given element (i.e. looking backwards),
+   rather than starting with a given element. Ensures that only information up
+   to and including given element is incorporated in the moving average.
 
-Expanded timeseries includes pre-pended nils. So moving average is actually forward looking, but starting with non-existing (and filtered out) 'prior' nil values.
+   Expanded timeseries includes pre-pended nils. So moving average is actually
+   forward looking, but starting with non-existing (and filtered out) 'prior'
+   nil values.
 
-Ex. (backward-looking-mavg 3 [1 2 3 4]) expands to [nil nil 1 2 3 4]. Nils are filtered out, so the output is effectively [(average [1]) (average [1 2]) (average [1 2 3]) (average 2 3 4)]"
+   Ex. (backward-looking-mavg 3 [1 2 3 4]) expands to [nil nil 1 2 3 4]. Nils are
+   filtered out, so the output is effectively:
+    [(average [1]) (average [1 2]) (average [1 2 3]) (average 2 3 4)]"
   [window series]
   (let [expanded-ts (concat (repeat (dec window) nil) (flatten series))]
     (map (comp float average (partial filter not-nil?))
