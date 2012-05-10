@@ -1,79 +1,113 @@
 (ns forma.gfw.cdm
-  (use [clojure.math.numeric-tower :only (expt)]))
+  "This namespace defines functions for transforming coordinate-based FORMA data
+  alerts into Google map tile coordinates:
 
-(def tile-size 256)
-(def radius 6378137)
+  https://developers.google.com/maps/documentation/javascript/maptypes#TileCoordinates
+
+  Many of the functions here were ported from the following Python script:
+
+  http://www.maptiler.org/google-maps-coordinates-tile-bounds-projection/globalmaptiles.py
+  "
+  (:use [clojure.math.numeric-tower :only (expt, round)]
+        [forma.reproject :only (rho) :as rho]))
+
+;; Round rho for MODIS (6371007.181) down to 6371007 for use in tile projections.
+(def radius (round rho))
+
+;; The dimension of a Google Map tile is 256x256 pixels.
+(def map-tile-dim 256)
+
+;; Circumference of the Earth in meters.
 (def circumf (* (* 2 Math/PI) radius))
-(def initial-res (/ circumf tile-size))
+
+;; Initial pixel resolution in meters.
+(def initial-res (/ circumf map-tile-dim))
+
+;; The origin shift in meters.
 (def origin-shift (/ circumf 2))
 
-(defn lat->y
-  [lat]
-  (-> (+ 90 lat)
-               (* Math/PI)
-               (/ 360)
-               (Math/tan)
-               (Math/log)
-               (/ (/ Math/PI 180))
-               (* (/ origin-shift 180))))
+(defprotocol GlobalMercator
+  "Protocol for generating map tile coordinates in Spherical Mercator
+  projection EPSG:900913, from latitude and longitude coordinates in
+  WGS84 Datum."
+  (get-maptile [this])
+  (latlon->meters [this])
+  (resolution [this])
+  (meters->pixels [this])
+  (pixels->tile [this]))
 
-(defn lon->x
-  [lon]
-  (/ (* lon origin-shift) 180))
+;; Data structure for an x/y coordinate.
+(defrecord Coordinate [y x])
 
-(defn res-at-zoom
-  [z]
-  (/ initial-res (expt 2 z)))
+;; Data structure for a map tile which has a coordinate and a map zoom level.
+(defrecord MapTile [coordinate zoom])
 
-(defn px-coord
-  "Calculate pixel"
-  [ms res]
-  (-> (+ ms origin-shift)
-      (/ res)))
+;; Data structure for a FORMA alert.
+(defrecord Alert [lat lon zoom]
 
-(defn px->tile
-  [coord]
-  (-> (/ coord tile-size)
-      (Math/ceil)
-      (- 1)
-      (int)))
+  GlobalMercator
 
-(defn ty->google-ty
-  [ty z]
-  (-> (- (expt 2 z) 1)
-      (- ty)))
+  (get-maptile
+    [this]
+    "Returns this alert represented as a MapTile."
+    (let [{:keys [x y]} (pixels->tile this)
+          zoom (:zoom this)
+          ;; Moves coordinate origin from bottom-left to top-left corner of tile
+          ty-top-left (-> (- (expt 2 zoom) 1)
+                          (- y))]
+      (MapTile. (Coordinate. ty-top-left x) zoom)))
+  
+  (latlon->meters
+    [this]
+    "Returns this alert coordinates as meters."
+    (let [{:keys [lat lon zoom]} this
+          mx (/ (* lon origin-shift) 180)
+          my (-> (+ 90 lat)
+                 (* Math/PI)
+                 (/ 360)
+                 (Math/tan)
+                 (Math/log)
+                 (/ (/ Math/PI 180))
+                 (* (/ origin-shift 180)))]
+      (Coordinate. my mx)))
 
-(defn latlon->merc-xy
-  "http://www.maptiler.org/google-maps-coordinates-tile-bounds-projection/globalmaptiles.py"
-  [lat lon]
-  [(lon->x lon) (lat->y lat)])
+  (meters->pixels
+    [this]
+     "Returns this alert coordinates as pixels."
+    (let [{:keys [x y]} (latlon->meters this)
+          res (resolution this)
+          px (-> (+ x origin-shift)
+                 (/ res))
+          py (-> (+ y origin-shift)
+                 (/ res))]
+      (Coordinate. py px)))
 
-(defn meters->pixels
-  "Converts EPSG:900913 to pyramid pixel coordinates in given zoom level"
-  [mx my z]
-  (let [res (res-at-zoom z)]
-    [(px-coord mx res) (px-coord my res)]))
+  (pixels->tile
+    [this]
+    "Returns this alert coordinates as map tile coordinates."
+    (let [{:keys [x y]} (meters->pixels this)
+          res (resolution this)
+          tx (-> (/ x map-tile-dim)
+                 (Math/ceil)
+                 (- 1)
+                 (int))
+          ty (-> (/ y map-tile-dim)
+                 (Math/ceil)
+                 (- 1)
+                 (int))]
+      (Coordinate. ty tx)))   
 
-(defn pixels->tile
-  "Returns a tile covering region in given pixel coordinates"
-  [px py]
-  [(px->tile px) (px->tile py)])
-
-(defn meters->tile
-  [mx my z]
-  (->> (meters->pixels mx my z)
-       (apply pixels->tile)))
+  (resolution
+    [this]
+    "Returns this alert map resolution in meters per pixel."
+    (let [zoom (:zoom this)]
+      (/ initial-res (expt 2 zoom)))))
 
 (defn latlon->tile
-  [lat lon z]
-  (let [[mx my] (latlon->merc-xy lat lon)]
-    (meters->tile mx my z )))
-
-(defn tile->google-tile
-  [tx ty z]
-  [tx (ty->google-ty ty z)])
-
-(defn latlon->google-tile
-  [lat lon z]
-  (let [[tx ty] (latlon->tile lat lon z)]
-    (tile->google-tile tx ty z)))
+  [lat lon zoom]
+  "Returns tile [x y zoom] corresponding to a lat/lon at the given zoom."
+  (let [alert (Alert. lat lon zoom)
+        tile (get-maptile alert)
+        {:keys [coordinate zoom]} tile
+        {:keys [x y]} coordinate]   
+    [x y zoom]))

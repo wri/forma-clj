@@ -1,30 +1,15 @@
 (ns forma.gfw.cdm-test
+  "This namespace defines Midge tests for the forma.gfw.cdm namespace."
   (:use forma.gfw.cdm
-        [midje sweet]
-        ))
+        forma.hadoop.jobs.cdm
+        [midje sweet]))
 
 (fact
-  (lat->y 10) => (roughly 1118889.9748579583))
+  "A coordinate at (41.850033, -87.65005229999997) at zoom level 3 has map tile
+  coordinates x = 2, y = 2." 
+  (let [[x y] (latlon->tile 41.850033 -87.65005229999997 3)]    
+    x => 2
+    y => 2))
 
-(fact
-  (lon->x 10) => (roughly 1113194.9079327357))
 
-(fact
-  (res-at-zoom 2) => (roughly 39135.75848201024))
 
-(fact
-  (let [z 2
-        res (res-at-zoom z)]
-    (px-coord 10 res)) => (roughly 512.0002555207919))
-
-(fact
-  (px->tile 1000) => 3)
-
-(fact
-  (meters->tile 10 10 2) => [2 2])
-
-(fact
-  (tile->google-tile 10 10 2) => [10 -7])
-
-(fact
-  (latlon->google-tile 10 10 1) => [1 0])
