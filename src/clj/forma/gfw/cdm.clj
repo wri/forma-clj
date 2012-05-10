@@ -8,11 +8,10 @@
 
   http://www.maptiler.org/google-maps-coordinates-tile-bounds-projection/globalmaptiles.py
   "
-  (:use [clojure.math.numeric-tower :only (expt, round)]
-        [forma.reproject :only (rho) :as rho]))
+  (:use [clojure.math.numeric-tower :only (expt, round)]))
 
-;; Round rho for MODIS (6371007.181) down to 6371007 for use in tile projections.
-(def radius (round rho))
+;; Exact radius of the Earth in meters for the WGS84 datum.
+(def radius 6378137)
 
 ;; The dimension of a Google Map tile is 256x256 pixels.
 (def map-tile-dim 256)
