@@ -54,19 +54,15 @@ Ex. (backward-looking-mavg 3 [1 2 3 4]) expands to [nil nil 1 2 3 4]. Nils are f
   [series]
   (cons (first series) (rest (reductions max series))))
 
-(defn dec->int100
-  [coll]
-  (map (comp int round (partial * 100)) coll))
-
 (defn clean-probs
-  "smooth the probabilities with a backward-looking moving average, make the 
+  "Smooth the probabilities with a backward-looking moving average, make the 
   series monotonically increasing, and finally make each probability 0->1 an 
   integer 0->100"
   [coll]
   (let [window 3]
-    [(vec (-> (backward-looking-mavg window coll)
-              (mono-inc)
-              (dec->int100)))]))
+    [(vec (->> (backward-looking-mavg window coll)
+               (mono-inc)
+               (map #(round (* % 100)))))]))
 
 (defn date-no-sep
   [date-str]
