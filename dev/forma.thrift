@@ -30,20 +30,20 @@ struct NeighborValue {
 
 # Collection Wrappers
 
-struct DoubleArray {
-  1: list<double> doubles
-}
-
-struct LongArray {
-  1: list<i64> longs
-}
-
 struct ShortArray {
   1: list<i16> shorts
 }
 
 struct IntArray {
   1: list<i32> ints
+}
+
+struct LongArray {
+  1: list<i64> longs
+}
+
+struct DoubleArray {
+  1: list<double> doubles
 }
 
 struct FireSeries {
