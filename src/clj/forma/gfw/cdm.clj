@@ -105,7 +105,9 @@
 (defn latlon->tile
   [lat lon zoom]
   "Returns tile [x y zoom] corresponding to a lat/lon at the given zoom."
-  (let [alert (Alert. lat lon zoom)
+  (let [lat (Double/parseDouble lat)
+        lon (Double/parseDouble lon)
+        alert (Alert. lat lon zoom)
         tile (get-maptile alert)
         {:keys [coordinate zoom]} tile
         {:keys [x y]} coordinate]   
