@@ -30,15 +30,21 @@
   [thresh series]
   (first (positions (partial <= thresh) series)))
 
+(defn str->double [x]
+  "Return x converted to a double value."
+  (Double/parseDouble x))
+
 (defn hansen->cdm
   "Returns a Cascalog query for converting Hansen data to the common data format."
   [hansen-source out-t-res map-zoom]
   (let [epoch-period (date/datetime->period out-t-res "2000-01-01")
         hansen-end-period (date/datetime->period out-t-res "2010-12-31")]
     (<- [?x ?y ?z ?p]
+        (str->double ?lat :> ?latd)
+        (str->double ?lon :> ?lond)
         (hansen-source ?lat ?lon _)
         (- hansen-end-period epoch-period :> ?p)
-        (latlon->tile ?lat ?lon map-zoom :> ?x ?y ?z))))
+        (latlon->tile ?latd ?lond map-zoom :> ?x ?y ?z))))
 
 (defn forma->cdm
   "Output x,y,z and period of first detection greater than threshold, per
