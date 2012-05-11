@@ -18,28 +18,28 @@
   [freq n]
   (i/matrix (take n (cycle (i/identity-matrix freq)))))
 
-(defn dummy-deseasonalize
-  [ts freq]
-  ts)
-
 (defn deseasonalize
   "accepts a timeseries `ts` with frequency `freq` and returns a
   vector with the seasonal component removed; the returned vector is
   only the trend component and the idiosyncratic disturbance of the
   original time series.
 
+  Precondition avoids singular matrix by throwing exception
+  when `ts` is shorter than `freq`. Throws an exception - due to meaningless
+  results - if `freq` equals 1 or in case we see `nil` as the `ts`.
+
   Example:
     (deseasonalize 23 (s/sample-uniform 200))"
   [freq ts]
-  (cond
-      (nil? ts) nil
-      :else (let [x (dummy-mat freq (i/nrow ts))
-                  xt (i/trans x)
-                  xtx (i/mmult xt x)
-                  coefs (i/mmult (i/solve xtx) xt ts)
-                  fitted (i/mmult x coefs)]
-              (i/to-vect (i/plus (i/minus ts fitted)
-                                 (s/mean ts))))))
+  {:pre [(>= (count ts) freq)
+         (< 1 freq)]}
+  (let [x (dummy-mat freq (i/nrow ts))
+          xt (i/trans x)
+          xtx (i/mmult xt x)
+          coefs (i/mmult (i/solve xtx) xt ts)
+          fitted (i/mmult x coefs)]
+      (i/to-vect (i/plus (i/minus ts fitted)
+                         (s/mean ts)))))
 
 ;; Remove seasonal component by harmonic decomposition
 
@@ -137,14 +137,15 @@
                  (- right left))))
 
 (defn mask
-  "create a new vector where values from `coll1` are only passed through
-  if they satisfy the predicate `pred` for `coll2`.  All other values are
-  set to nil."
-  [pred coll1 coll2]
-  {:pre [(= (count coll1) (count coll2))]}
+  "Apply `pred` to `coll-a` to create a mask over `coll-b`, returning a vector of
+   valid values and nils. If a value in `coll-a` passes `pred`, the value in the
+   corresponding location in `coll-b` will be included in the output vector.
+   Otherwise, that location will be set to `nil`."
+  [pred coll-a coll-b]
+  {:pre [(= (count coll-a) (count coll-b))]}
   (map #(when-not (pred %2) %1)
-       coll2
-       coll1))
+       coll-b
+       coll-a))
 
 (defn replace-index-set
   "replace values in `coll` with `new-val` for all indices in
@@ -173,14 +174,14 @@
   (f (filter (complement nil?) coll)))
 
 (defn neutralize-ends
-  "replace the ends of a value-collection (like NDVI) if the ends are unreliable,
-  according to an associated reliability index, manifest in `reli-test`. if there
-  are no bad values (as indicated by `bad-set` values in `reli-coll`) then
-  `neutralize-ends` will return the original time-series. `bad-set` is a set of
-  `reli-coll` values that indicate unreliable pixels."
+  "replace the ends of a value-collection (like NDVI) with the mean of valid values
+  if the ends are unreliable, according to an associated reliability index, manifest
+  in `reli-coll`. If there are no bad values (as indicated by `bad-set` values in
+  `reli-coll`) then `neutralize-ends` will return the original time-series.
+  `bad-set` is a set of `reli-coll` values that indicate unreliable pixels."
   [bad-set reli-coll val-coll]
   (let [avg (apply-to-valid u/coll-avg
-                         (mask bad-set reli-coll val-coll))]
+                            (mask bad-set reli-coll val-coll))]
     (replace-index-set (bad-ends bad-set reli-coll)
                        avg
                        val-coll)))
@@ -189,7 +190,11 @@
 ;; pre- and post-conditions.
 
 (defn make-reliable
-  "This function has two parts: (1) replace bad values at the ends
+  "Cleans up a timeseries by replacing or interpolating over low-quality
+   or unreliable values, such as those with cloud contamination. `good-set`
+   and `bad-set` are Clojure sets used to identify good and bad values.
+
+  This function has two parts: (1) replace bad values at the ends
   with the average of the reliable values in the target coll,
   `value-coll`. (2) smooth over *bad* values, given by `bad-set`,
   which are determined based on the reliability (or quality)
@@ -218,22 +223,35 @@
 
 (defn tele-ts
   "create a telescoping sequence of sequences, where each incremental sequence
-  is one element longer than the last, pinned to the same starting element."
+  is one element longer than the last, pinned to the same initial subsequence.
+
+  `start-index` is interpreted such that the first output sequence
+  includes all values up to but not including the value at `start-index`.
+  `end-index` is interpreted similarly for the final output sequence.
+
+  `start-index` <= 0 will throw an exception to avoid returning empty vector"
   [start-index end-index base-seq]
+  {:pre [(> start-index 0)]}
   (let [base-vec (vec base-seq)]
     (for [x (range start-index (inc end-index))]
       (subvec base-vec 0 x))))
 
 (defn make-clean
-  "Interpolate over bad values and remove seasonal component using reliability."
+  "Wrapper for `make-reliable`, `deseasonalize` and any future data cleaning
+   functions we decide to include. See `make-reliable` and `deseasonalize` for
+   further documentation. We use round to remove unwarranted numerical precision
+   from cleaned timeseries values."
   [freq good-set bad-set spectral-ts reli-ts]
   (->> (make-reliable good-set bad-set spectral-ts reli-ts)
-       (deseasonalize freq)))
+       (deseasonalize freq)
+       (map #(Math/round %))))
 
 (defn reliable?
   "Checks whether the share of reliable pixels exceeds a supplied minimum.
 
-  This should be used to filter out pixels that are too unreliable for analysis, given that we linearly interpolate to replace unreliable periods. We have not hardcoded a specific threshold, but the papers below provide guidence:
+  This should be used to filter out pixels that are too unreliable for analysis, given
+   that we use linear interpolation to replace unreliable periods. We have not hardcoded
+   a specific threshold, but the papers below provide guidance:
 
   0.8 reliable in de Beurs (2009) http://dx.doi.org/10.1088/1748-9326/4/4/045012
   0.9 reliable in Verbesselt 2010 http://dx.doi.org/10.1016/j.rse.2010.08.003
