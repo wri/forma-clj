@@ -1,15 +1,14 @@
 (ns forma.hadoop.jobs.cdm
-  "This namespace defines a Cascalog query to convert FORMA data in MODIS
-  coordinates into map tile coordinates for use in Global Forest Watch
-  visualizations."
+  "Functions and Cascalog queries for converting data into map tile coordinates."
   (:use [cascalog.api]
-        [forma.gfw.cdm :only (latlon->tile)]
+        [forma.gfw.cdm :only (latlon->tile, read-latlon, latlon-valid?)]
         [forma.utils :only (positions)])
   (:require [forma.postprocess.output :as o]
             [forma.reproject :as r]
             [forma.date-time :as date]
             [cascalog.ops :as c]))
 
+;; TODO: https://github.com/reddmetrics/forma-clj/pull/16#r782582
 (defbufferop min-period
   "Returns the minimum value in tuples."
   [tuples]
@@ -30,43 +29,45 @@
   [thresh series]
   (first (positions (partial <= thresh) series)))
 
-(defn str->double [x]
-  "Return x converted to a double value."
-  (Double/parseDouble x))
-
 (defn hansen->cdm
-  "Returns a Cascalog query for converting Hansen data to the common data format."
-  [hansen-source out-t-res map-zoom]
-  (let [epoch-period (date/datetime->period out-t-res "2000-01-01")
-        hansen-end-period (date/datetime->period out-t-res "2010-12-31")]
-    (<- [?x ?y ?z ?p]
-        (str->double ?lat :> ?latd)
-        (str->double ?lon :> ?lond)
-        (hansen-source ?lat ?lon _)
-        (- hansen-end-period epoch-period :> ?p)
-        (latlon->tile ?latd ?lond map-zoom :> ?x ?y ?z))))
-
-(defn forma->cdm
-  "Output x,y,z and period of first detection greater than threshold, per
-   specification of common data model with Vizzuality.
+  "Returns a Cascalog query that transforms Hansen data into map tile coordinates.
 
   Arguments:
-    est-map - A mapping that contains :est-start key with a datestring value
-    forma-src - The FORMA source data tap
-    thresh - The threshold number
-    t-res - The temporal resolution as a string
-    out-t-res - The output temporal resolution as a string
-    map-zoom - The map zoom level"
-  [est-map forma-src thresh t-res out-t-res map-zoom]
-  (let [epoch-period (date/datetime->period out-t-res "2000-01-01")
-        ts-start-period (date/datetime->period t-res (:est-start est-map))]
+    src - The source tap.
+    zoom - The map zoom level.
+    tres - The temporal resolution."
+  [src zoom tres]
+  (let [epoch (date/datetime->period tres "2000-01-01")
+        hansen (date/datetime->period tres "2010-12-31")
+        period (- hansen epoch)]
     (<- [?x ?y ?z ?p]
-        (forma-src ?s-res ?mod-h ?mod-v ?s ?l ?prob-series)
+        (src ?longitude ?latitude _)
+        (read-latlon ?latitude ?longitude :> ?lat ?lon)
+        (latlon-valid? ?lat ?lon) ;; Skip if lat/lon invalid.
+        (identity period :> ?p)
+        (latlon->tile ?lat ?lon zoom :> ?x ?y ?z))))
+
+(defn forma->cdm
+  "Returns a Cascalog query that transforms FORMA data into map tile coordinates.
+
+  Arguments:
+    start - Start period date string.
+    src - The source tap for FORMA data.
+    thresh - The threshold number for valid detections.
+    tres - The temporal resolution as a string.
+    tres-out - The output temporal resolution as a string.
+    zoom - The map zoom level."
+  [src zoom tres tres-out start thresh]
+  (let [epoch (date/datetime->period tres-out "2000-01-01")
+        start-period (date/datetime->period tres start)]
+    (<- [?x ?y ?z ?p]
+        (src ?sres ?modh ?modv ?s ?l ?prob-series)
         (o/clean-probs ?prob-series :> ?clean-series)
         (first-hit thresh ?clean-series :> ?first-hit-idx)
-        (+ ts-start-period ?first-hit-idx :> ?period)
-        (date/convert-period-res t-res out-t-res ?period :> ?period-new-res)
-        (- ?period-new-res epoch-period :> ?rp)
+        (+ start-period ?first-hit-idx :> ?period)
+        (date/convert-period-res tres tres-out ?period :> ?period-new-res)
+        (- ?period-new-res epoch :> ?rp)
         (min-period ?rp :> ?p)
-        (r/modis->latlon ?s-res ?mod-h ?mod-v ?s ?l :> ?lat ?lon)
-        (latlon->tile ?lat ?lon map-zoom :> ?x ?y ?z))))
+        (r/modis->latlon ?sres ?modh ?modv ?s ?l :> ?lat ?lon)
+        (latlon-valid? ?lat ?lon) ;; Skip if lat/lon invalid.
+        (latlon->tile ?lat ?lon zoom :> ?x ?y ?z))))
