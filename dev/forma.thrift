@@ -69,47 +69,41 @@ struct TimeSeries {
   3: ArrayValue series;
 }
 
-union DataValue {
-  1: i64 longVal;
-  2: LongArray longs;
-  3: double doubleVal;
-  4: DoubleArray doubles;
-  5: FireTuple fireVal;
-  6: TimeSeries timeSeries;
-  7: FireSeries fireSeries;
-  8: ShortArray shorts;
-  9: IntArray ints;
+union Data {
+  1: DoubleArray doubles;
+  2: IntArray ints;
+  3: LongArray longs;
+  4: ShortArray shorts;
+  5: double doubleVal;
+  6: FireSeries fireSeries;
+  7: FireTuple fireVal;
+  8: i32 intVal;
+  9: i64 longVal;
+  10: i16 shortVal;
+  11: TimeSeries timeSeries;
+  12: ArrayValue vals;
 }
 
-struct ModisPixelLocation {
-  1: string resolution;
-  2: i32 tileH;
-  3: i32 tileV;
-  4: i32 sample;
-  5: i32 line;
-}
-
-struct ModisChunkLocation {
-  1: string resolution;
-  2: i32 tileH;
-  3: i32 tileV;
-  4: i32 chunkID;
-  5: i32 chunkSize;
-}
-
-union LocationPropertyValue {
-  1: ModisPixelLocation pixelLocation;
-  2: ModisChunkLocation chunkLocation;
-}
-
-struct LocationProperty {
-  1: LocationPropertyValue property;
-}
-
-struct DataChunk {
+struct Chunk {
   1: string dataset;
-  2: LocationProperty locationProperty;
-  3: DataValue chunkValue;
-  4: string temporalRes;
-  5: optional string date;
+  2: string tres;
+  3: string sres;
+  4: i32 h;
+  5: i32 v;
+  6: i32 id;
+  7: i32 size;
+  8: Data data;
+  9: optional string date;
+}
+
+struct Pixel {
+  1: string dataset;
+  2: string tres;
+  3: string sres;
+  4: i32 h;
+  5: i32 v;
+  6: i32 sample;
+  7: i32 line;
+  8: Data data;
+  9: optional string date;
 }

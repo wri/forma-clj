@@ -31,7 +31,8 @@ import org.slf4j.LoggerFactory;
 public class LocationProperty implements org.apache.thrift.TBase<LocationProperty, LocationProperty._Fields>, java.io.Serializable, Cloneable {
   private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("LocationProperty");
 
-  private static final org.apache.thrift.protocol.TField PROPERTY_FIELD_DESC = new org.apache.thrift.protocol.TField("property", org.apache.thrift.protocol.TType.STRUCT, (short)1);
+  private static final org.apache.thrift.protocol.TField PIXEL_LOCATION_FIELD_DESC = new org.apache.thrift.protocol.TField("pixelLocation", org.apache.thrift.protocol.TType.STRUCT, (short)1);
+  private static final org.apache.thrift.protocol.TField CHUNK_LOCATION_FIELD_DESC = new org.apache.thrift.protocol.TField("chunkLocation", org.apache.thrift.protocol.TType.STRUCT, (short)2);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -39,11 +40,13 @@ public class LocationProperty implements org.apache.thrift.TBase<LocationPropert
     schemes.put(TupleScheme.class, new LocationPropertyTupleSchemeFactory());
   }
 
-  public LocationPropertyValue property; // required
+  public ModisPixelLocation pixelLocation; // required
+  public ModisChunkLocation chunkLocation; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
-    PROPERTY((short)1, "property");
+    PIXEL_LOCATION((short)1, "pixelLocation"),
+    CHUNK_LOCATION((short)2, "chunkLocation");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -58,8 +61,10 @@ public class LocationProperty implements org.apache.thrift.TBase<LocationPropert
      */
     public static _Fields findByThriftId(int fieldId) {
       switch(fieldId) {
-        case 1: // PROPERTY
-          return PROPERTY;
+        case 1: // PIXEL_LOCATION
+          return PIXEL_LOCATION;
+        case 2: // CHUNK_LOCATION
+          return CHUNK_LOCATION;
         default:
           return null;
       }
@@ -103,8 +108,10 @@ public class LocationProperty implements org.apache.thrift.TBase<LocationPropert
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.PROPERTY, new org.apache.thrift.meta_data.FieldMetaData("property", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-        new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, LocationPropertyValue.class)));
+    tmpMap.put(_Fields.PIXEL_LOCATION, new org.apache.thrift.meta_data.FieldMetaData("pixelLocation", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+        new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, ModisPixelLocation.class)));
+    tmpMap.put(_Fields.CHUNK_LOCATION, new org.apache.thrift.meta_data.FieldMetaData("chunkLocation", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+        new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, ModisChunkLocation.class)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(LocationProperty.class, metaDataMap);
   }
@@ -113,18 +120,23 @@ public class LocationProperty implements org.apache.thrift.TBase<LocationPropert
   }
 
   public LocationProperty(
-    LocationPropertyValue property)
+    ModisPixelLocation pixelLocation,
+    ModisChunkLocation chunkLocation)
   {
     this();
-    this.property = property;
+    this.pixelLocation = pixelLocation;
+    this.chunkLocation = chunkLocation;
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
   public LocationProperty(LocationProperty other) {
-    if (other.isSetProperty()) {
-      this.property = new LocationPropertyValue(other.property);
+    if (other.isSetPixelLocation()) {
+      this.pixelLocation = new ModisPixelLocation(other.pixelLocation);
+    }
+    if (other.isSetChunkLocation()) {
+      this.chunkLocation = new ModisChunkLocation(other.chunkLocation);
     }
   }
 
@@ -134,40 +146,73 @@ public class LocationProperty implements org.apache.thrift.TBase<LocationPropert
 
   @Override
   public void clear() {
-    this.property = null;
+    this.pixelLocation = null;
+    this.chunkLocation = null;
   }
 
-  public LocationPropertyValue getProperty() {
-    return this.property;
+  public ModisPixelLocation getPixelLocation() {
+    return this.pixelLocation;
   }
 
-  public LocationProperty setProperty(LocationPropertyValue property) {
-    this.property = property;
+  public LocationProperty setPixelLocation(ModisPixelLocation pixelLocation) {
+    this.pixelLocation = pixelLocation;
     return this;
   }
 
-  public void unsetProperty() {
-    this.property = null;
+  public void unsetPixelLocation() {
+    this.pixelLocation = null;
   }
 
-  /** Returns true if field property is set (has been assigned a value) and false otherwise */
-  public boolean isSetProperty() {
-    return this.property != null;
+  /** Returns true if field pixelLocation is set (has been assigned a value) and false otherwise */
+  public boolean isSetPixelLocation() {
+    return this.pixelLocation != null;
   }
 
-  public void setPropertyIsSet(boolean value) {
+  public void setPixelLocationIsSet(boolean value) {
     if (!value) {
-      this.property = null;
+      this.pixelLocation = null;
+    }
+  }
+
+  public ModisChunkLocation getChunkLocation() {
+    return this.chunkLocation;
+  }
+
+  public LocationProperty setChunkLocation(ModisChunkLocation chunkLocation) {
+    this.chunkLocation = chunkLocation;
+    return this;
+  }
+
+  public void unsetChunkLocation() {
+    this.chunkLocation = null;
+  }
+
+  /** Returns true if field chunkLocation is set (has been assigned a value) and false otherwise */
+  public boolean isSetChunkLocation() {
+    return this.chunkLocation != null;
+  }
+
+  public void setChunkLocationIsSet(boolean value) {
+    if (!value) {
+      this.chunkLocation = null;
     }
   }
 
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
-    case PROPERTY:
+    case PIXEL_LOCATION:
       if (value == null) {
-        unsetProperty();
+        unsetPixelLocation();
       } else {
-        setProperty((LocationPropertyValue)value);
+        setPixelLocation((ModisPixelLocation)value);
+      }
+      break;
+
+    case CHUNK_LOCATION:
+      if (value == null) {
+        unsetChunkLocation();
+      } else {
+        setChunkLocation((ModisChunkLocation)value);
       }
       break;
 
@@ -176,8 +221,11 @@ public class LocationProperty implements org.apache.thrift.TBase<LocationPropert
 
   public Object getFieldValue(_Fields field) {
     switch (field) {
-    case PROPERTY:
-      return getProperty();
+    case PIXEL_LOCATION:
+      return getPixelLocation();
+
+    case CHUNK_LOCATION:
+      return getChunkLocation();
 
     }
     throw new IllegalStateException();
@@ -190,8 +238,10 @@ public class LocationProperty implements org.apache.thrift.TBase<LocationPropert
     }
 
     switch (field) {
-    case PROPERTY:
-      return isSetProperty();
+    case PIXEL_LOCATION:
+      return isSetPixelLocation();
+    case CHUNK_LOCATION:
+      return isSetChunkLocation();
     }
     throw new IllegalStateException();
   }
@@ -209,12 +259,21 @@ public class LocationProperty implements org.apache.thrift.TBase<LocationPropert
     if (that == null)
       return false;
 
-    boolean this_present_property = true && this.isSetProperty();
-    boolean that_present_property = true && that.isSetProperty();
-    if (this_present_property || that_present_property) {
-      if (!(this_present_property && that_present_property))
+    boolean this_present_pixelLocation = true && this.isSetPixelLocation();
+    boolean that_present_pixelLocation = true && that.isSetPixelLocation();
+    if (this_present_pixelLocation || that_present_pixelLocation) {
+      if (!(this_present_pixelLocation && that_present_pixelLocation))
         return false;
-      if (!this.property.equals(that.property))
+      if (!this.pixelLocation.equals(that.pixelLocation))
+        return false;
+    }
+
+    boolean this_present_chunkLocation = true && this.isSetChunkLocation();
+    boolean that_present_chunkLocation = true && that.isSetChunkLocation();
+    if (this_present_chunkLocation || that_present_chunkLocation) {
+      if (!(this_present_chunkLocation && that_present_chunkLocation))
+        return false;
+      if (!this.chunkLocation.equals(that.chunkLocation))
         return false;
     }
 
@@ -225,10 +284,15 @@ public class LocationProperty implements org.apache.thrift.TBase<LocationPropert
   public int hashCode() {
     HashCodeBuilder builder = new HashCodeBuilder();
 
-    boolean present_property = true && (isSetProperty());
-    builder.append(present_property);
-    if (present_property)
-      builder.append(property);
+    boolean present_pixelLocation = true && (isSetPixelLocation());
+    builder.append(present_pixelLocation);
+    if (present_pixelLocation)
+      builder.append(pixelLocation);
+
+    boolean present_chunkLocation = true && (isSetChunkLocation());
+    builder.append(present_chunkLocation);
+    if (present_chunkLocation)
+      builder.append(chunkLocation);
 
     return builder.toHashCode();
   }
@@ -241,12 +305,22 @@ public class LocationProperty implements org.apache.thrift.TBase<LocationPropert
     int lastComparison = 0;
     LocationProperty typedOther = (LocationProperty)other;
 
-    lastComparison = Boolean.valueOf(isSetProperty()).compareTo(typedOther.isSetProperty());
+    lastComparison = Boolean.valueOf(isSetPixelLocation()).compareTo(typedOther.isSetPixelLocation());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetProperty()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.property, typedOther.property);
+    if (isSetPixelLocation()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.pixelLocation, typedOther.pixelLocation);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetChunkLocation()).compareTo(typedOther.isSetChunkLocation());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetChunkLocation()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.chunkLocation, typedOther.chunkLocation);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -271,11 +345,19 @@ public class LocationProperty implements org.apache.thrift.TBase<LocationPropert
     StringBuilder sb = new StringBuilder("LocationProperty(");
     boolean first = true;
 
-    sb.append("property:");
-    if (this.property == null) {
+    sb.append("pixelLocation:");
+    if (this.pixelLocation == null) {
       sb.append("null");
     } else {
-      sb.append(this.property);
+      sb.append(this.pixelLocation);
+    }
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("chunkLocation:");
+    if (this.chunkLocation == null) {
+      sb.append("null");
+    } else {
+      sb.append(this.chunkLocation);
     }
     first = false;
     sb.append(")");
@@ -320,11 +402,20 @@ public class LocationProperty implements org.apache.thrift.TBase<LocationPropert
           break;
         }
         switch (schemeField.id) {
-          case 1: // PROPERTY
+          case 1: // PIXEL_LOCATION
             if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
-              struct.property = new LocationPropertyValue();
-              struct.property.read(iprot);
-              struct.setPropertyIsSet(true);
+              struct.pixelLocation = new ModisPixelLocation();
+              struct.pixelLocation.read(iprot);
+              struct.setPixelLocationIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
+          case 2: // CHUNK_LOCATION
+            if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
+              struct.chunkLocation = new ModisChunkLocation();
+              struct.chunkLocation.read(iprot);
+              struct.setChunkLocationIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -344,9 +435,14 @@ public class LocationProperty implements org.apache.thrift.TBase<LocationPropert
       struct.validate();
 
       oprot.writeStructBegin(STRUCT_DESC);
-      if (struct.property != null) {
-        oprot.writeFieldBegin(PROPERTY_FIELD_DESC);
-        struct.property.write(oprot);
+      if (struct.pixelLocation != null) {
+        oprot.writeFieldBegin(PIXEL_LOCATION_FIELD_DESC);
+        struct.pixelLocation.write(oprot);
+        oprot.writeFieldEnd();
+      }
+      if (struct.chunkLocation != null) {
+        oprot.writeFieldBegin(CHUNK_LOCATION_FIELD_DESC);
+        struct.chunkLocation.write(oprot);
         oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
@@ -367,23 +463,34 @@ public class LocationProperty implements org.apache.thrift.TBase<LocationPropert
     public void write(org.apache.thrift.protocol.TProtocol prot, LocationProperty struct) throws org.apache.thrift.TException {
       TTupleProtocol oprot = (TTupleProtocol) prot;
       BitSet optionals = new BitSet();
-      if (struct.isSetProperty()) {
+      if (struct.isSetPixelLocation()) {
         optionals.set(0);
       }
-      oprot.writeBitSet(optionals, 1);
-      if (struct.isSetProperty()) {
-        struct.property.write(oprot);
+      if (struct.isSetChunkLocation()) {
+        optionals.set(1);
+      }
+      oprot.writeBitSet(optionals, 2);
+      if (struct.isSetPixelLocation()) {
+        struct.pixelLocation.write(oprot);
+      }
+      if (struct.isSetChunkLocation()) {
+        struct.chunkLocation.write(oprot);
       }
     }
 
     @Override
     public void read(org.apache.thrift.protocol.TProtocol prot, LocationProperty struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
-      BitSet incoming = iprot.readBitSet(1);
+      BitSet incoming = iprot.readBitSet(2);
       if (incoming.get(0)) {
-        struct.property = new LocationPropertyValue();
-        struct.property.read(iprot);
-        struct.setPropertyIsSet(true);
+        struct.pixelLocation = new ModisPixelLocation();
+        struct.pixelLocation.read(iprot);
+        struct.setPixelLocationIsSet(true);
+      }
+      if (incoming.get(1)) {
+        struct.chunkLocation = new ModisChunkLocation();
+        struct.chunkLocation.read(iprot);
+        struct.setChunkLocationIsSet(true);
       }
     }
   }
