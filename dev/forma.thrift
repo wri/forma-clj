@@ -36,6 +36,7 @@ struct ShortArray {
 
 struct IntArray {
   1: list<i32> ints
+}
 
 struct LongArray {
   1: list<i64> longs

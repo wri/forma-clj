@@ -19,6 +19,7 @@
                  [incanter/incanter-core "1.3.0-SNAPSHOT"]
                  [clj-time "0.3.4"]
                  [forma/gdal "1.8.0"]
+                 [forma/jblas "1.2.1"]
                  [cascalog "1.9.0-wip10"]
                  [cascalog-lzo "0.1.0-wip12"]
                  [cascalog-checkpoint "0.1.1"]
