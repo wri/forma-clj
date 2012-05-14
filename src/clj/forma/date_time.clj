@@ -267,3 +267,11 @@ in which `string` lies (according to the supplied resolution, `res`)."
            "16" [ordinal 16]
            "8" [ordinal 8]
            "1" [ordinal 1])))
+
+(defn convert-period-res
+  "Convert a period from in-res to corresponding period at out-res.
+
+   By converting a period to a date, we get the first date within a period. Converting date to period, we get the period in which that first date falls, at the new resolution."
+  [res-in res-out period]
+  (->> (period->datetime res-in period)
+       (datetime->period res-out)))

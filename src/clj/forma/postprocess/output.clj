@@ -3,8 +3,8 @@
         [forma.reproject :only (modis->latlon)]
         [forma.date-time :only (period->datetime datetime->period)]
         [clojure.string :only (split join)]
-        [forma.utils :only (moving-average average)])
-  (:require [cascalog.ops :as c]))
+        [forma.utils :only (moving-average average)]
+        [clojure.math.numeric-tower :only (round)]))
 
 (defn get-val
   [out-m & k]
@@ -36,15 +36,21 @@
   (vector (vec series)))
 
 (defn backward-looking-mavg
-  "Moving average calculated up to a given element (i.e. looking backwards), rather than starting with a given element. Ensures that only information up to and including given element is incorporated in the moving average.
+  "Moving average calculated up to a given element (i.e. looking backwards),
+   rather than starting with a given element. Ensures that only information up
+   to and including given element is incorporated in the moving average.
 
-Expanded timeseries includes pre-pended nils. So moving average is actually forward looking, but starting with non-existing (and filtered out) 'prior' nil values.
+   Expanded timeseries includes pre-pended nils. So moving average is actually
+   forward looking, but starting with non-existing (and filtered out) 'prior'
+   nil values.
 
-Ex. (backward-looking-mavg 3 [1 2 3 4]) expands to [nil nil 1 2 3 4]. Nils are filtered out, so the output is effectively [(average [1]) (average [1 2]) (average [1 2 3]) (average 2 3 4)]"
+   Ex. (backward-looking-mavg 3 [1 2 3 4]) expands to [nil nil 1 2 3 4]. Nils are
+   filtered out, so the output is effectively:
+    [(average [1]) (average [1 2]) (average [1 2 3]) (average 2 3 4)]"
   [window series]
   (let [expanded-ts (concat (repeat (dec window) nil) (flatten series))]
-    (vec-ify (map (comp float average (partial filter not-nil?))
-                  (partition window 1 expanded-ts)))))
+    (map (comp float average (partial filter not-nil?))
+                  (partition window 1 expanded-ts))))
 
 (defn mono-inc
   "Make a series of numbers monotonically increasing. Useful for retaining the maximum probability for a pixel over time.
@@ -52,13 +58,26 @@ Ex. (backward-looking-mavg 3 [1 2 3 4]) expands to [nil nil 1 2 3 4]. Nils are f
 (mono-inc [3 4 34 34 23 1 34 13 35 35 ])
 ==> (3 4 34 34 34 34 34 34 35 35)"
   [series]
-  (vec-ify (cons (first series) (rest (reductions max series)))))
+  (cons (first series) (rest (reductions max series))))
+
+(defn clean-probs
+  "Smooth the probabilities with a backward-looking moving average, make the 
+  series monotonically increasing, and finally make each probability 0->1 an 
+  integer 0->100"
+  [coll]
+  (let [window 3]
+    [(vec (->> (backward-looking-mavg window coll)
+               (mono-inc)
+               (map #(round (* % 100)))))]))
 
 (defn date-no-sep
   [date-str]
   (reduce str (split date-str #"-")))
 
 (defn mk-date-header
+  "(mk-date-header \"16\" \"p\" (s/timeseries-value 827 (range 141)))
+    63	
+   => (\"p20051219\" \"p20060101\" \"p20060117\" ... \"p20120117\")"
   [tres prefix ts]
   (map (comp (partial str prefix)
              date-no-sep
@@ -70,16 +89,3 @@ Ex. (backward-looking-mavg 3 [1 2 3 4]) expands to [nil nil 1 2 3 4]. Nils are f
   (let [dates (mk-date-header tres date-prefix ts)
         header (csv-ify args)]
     (csv-ify header dates)))
-
-(defn make-csv
-  [output-map window]
-  (<- [?out-str]
-      (output-map ?m)
-      (get-series ?m :> ?series)
-      (get-val ?m :modh :modv :sample :line :> ?modh ?modv ?sample ?line)
-      (convert-to-latlon ?m :> ?lat ?lon)
-      (float->str-10 ?lat :> ?str-lat)
-      (float->str-10 ?lon :> ?str-lon)
-      (backward-looking-mavg window ?series :> ?mavg-series)
-      (mono-inc ?mavg-series :> ?inc-series)
-      (csv-ify ?modh ?modv ?sample ?line ?str-lat ?str-lon ?inc-series :> ?out-str)))
