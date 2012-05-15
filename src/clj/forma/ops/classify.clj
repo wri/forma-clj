@@ -67,7 +67,7 @@
   "create dictionary of beta vectors"
   [beta-src]
   (let [src (name-vars beta-src ["?s-res" "?eco" "?beta"])
-        beta-vec (first (??- (c/first-n src 500)))]
+        beta-vec (first (??- (c/first-n src 25000)))]
     (apply merge-with identity
            (map make-dict beta-vec))))
 
