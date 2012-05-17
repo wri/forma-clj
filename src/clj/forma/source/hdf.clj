@@ -15,6 +15,7 @@
         [forma.reproject :only (spatial-res temporal-res tilestring->hv)])
   (:require [clojure.set :as set]
             [forma.utils :as u]
+            [forma.schema :as schema]
             [forma.hadoop.predicate :as p]
             [cascalog.ops :as c]
             [cascalog.io :as io]
@@ -183,7 +184,7 @@ as a 1-tuple."
         ret (int-array (* width height))]
     (.ReadRaster band 0 0 width height ret)
     (map-indexed (fn [idx xs]
-                   [idx (vec xs)])
+                   [idx (schema/to-struct xs)])
                  (partition chunk-size ret))))
 
 ;; ### Metadata Parsing
@@ -252,11 +253,11 @@ as a 1-tuple."
         chunkifier (p/chunkify chunk-size)]
     (<- [?datachunk]
         (source _ ?hdf)
-        (unpack-modis  [datasets] ?hdf :> ?dataset ?freetile)
+        (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
         (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk)
         (meta-values [keys] ?freetile :> ?productname ?tileid ?date)
         (split-id ?tileid :> ?mod-h ?mod-v)
         ((c/juxt #'spatial-res #'temporal-res) ?productname :> ?s-res ?t-res)
-        (chunkifier ?dataset ?date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk
-                    :> ?datachunk)
+        (schema/mk-array-value ?chunk :> ?array)
+        (chunkifier ?dataset ?date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?array :> ?datachunk)
         (:distinct false))))

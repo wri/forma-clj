@@ -24,12 +24,8 @@
   (boundaries [ 0 [1 2 3 4] [2 3 4 5]]) => (throws AssertionError))
 
 (tabular
- (fact "adjust and adjust-timeseries testing, combined!"
-   (adjust ?a0 ?a-vec ?b0 ?b-vec) => [?start ?a ?b]
-   (adjust-timeseries (ts-record ?a0 ?a-vec)
-                      (ts-record ?b0 ?b-vec))
-   => [(ts-record ?start ?a)
-       (ts-record ?start ?b)])
+ (fact "sequence adjustment testing."
+   (adjust ?a0 ?a-vec ?b0 ?b-vec) => [?start ?a ?b])
  ?a0 ?a-vec    ?b0 ?b-vec    ?start ?a      ?b
  0   [1 2 3 4] 1   [2 3 4 5] 1      [2 3 4] [2 3 4]
  2   [9 8 7]   0   [1 2 3 4] 2      [9 8]   [3 4]

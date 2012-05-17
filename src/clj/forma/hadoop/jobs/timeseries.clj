@@ -10,8 +10,6 @@
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]))
 
-;; TODO: Check that w're still good here.
-
 (defbufferop [timeseries [missing-val]]
   "Takes in a number of `<t-period, modis-chunk>` tuples,
   sorted by time period, and transposes these into (n = chunk-size)
@@ -22,13 +20,14 @@
   order. `modis-chunk` tuple fields must be vectors."
   [tuples]
   (let [[periods [val]] (apply map vector tuples)
-        [fp lp] ((juxt first peek) periods)
-        missing-vec (into [] (repeat (count val) missing-val))
-        chunks (sparse-expander missing-vec tuples :start fp)
-        tupleize (comp (partial vector fp lp)
-                       (partial into [])
-                       vector)]
+        [fp lp]        ((juxt first peek) periods)
+        missing-struct (schema/to-struct (repeat (schema/count-vals val) missing-val))
+        chunks         (sparse-expander missing-struct tuples :start fp)
+        tupleize       (comp (partial vector fp lp)
+                             schema/to-struct
+                             vector)]
     (->> chunks
+         (map schema/get-vals)
          (apply map tupleize)
          (map-indexed cons))))
 
@@ -56,12 +55,14 @@
         series-src (<- [?name ?t-res ?s-res ?mod-h ?mod-v ?chunk-idx ?size ?pix-idx ?timeseries]
                        (data-src ?name ?t-res ?date ?s-res ?mod-h ?mod-v ?chunk-idx ?size ?datachunk)
                        (mk-tseries ?t-res ?date ?datachunk :> ?pix-idx ?start ?end ?tseries)
-                       (schema/timeseries-value ?start ?end ?tseries :> ?timeseries))]
+                       (schema/mk-array-value ?tseries :> ?array-val)
+                       (schema/timeseries-value ?start ?end ?array-val :> ?timeseries))]
     (<- [?chunk]
         (series-src ?name ?t-res ?s-res ?mod-h ?mod-v ?chunk-idx ?size ?pix-idx ?timeseries)
         (r/tile-position ?s-res ?size ?chunk-idx ?pix-idx :> ?sample ?line)
         (schema/pixel-location ?s-res ?mod-h ?mod-v ?sample ?line :> ?pix-location)
-        (schema/chunk-value ?name ?t-res nil ?pix-location ?timeseries :> ?chunk)
+        (schema/mk-data-value ?timeseries :> ?data-val)
+        (schema/chunk-value ?name ?t-res nil ?pix-location ?data-val :> ?chunk)
         (:distinct false))))
 
 (def ^:dynamic *missing-val*
@@ -86,9 +87,9 @@
 
 ;; #### Fire Time Series Processing
 
-(defparallelagg merge-firetuples
-  "Aggregates a number of firetuples by adding up the values of each
-  `FireTuple` property."
+(defparallelagg merge-firevals
+  "Aggregates a number of fire values by adding up the values of each
+  `FireValue` property."
   :init-var    #'identity
   :combine-var #'schema/add-fires)
 
@@ -106,8 +107,8 @@
   [src t-res]
   (<- [?name ?datestring ?s-res ?mod-h ?mod-v ?s ?l ?tuple]
       (src _ ?chunk)
-      (map ?chunk [:dataset :location :date :value] :> ?name ?location ?date ?val)
-      (merge-firetuples ?val :> ?tuple)
+      (schema/unpack-chunk-val ?chunk :> ?name _ ?date ?location ?val)
+      (merge-firevals ?val :> ?tuple)
       (date/beginning t-res ?date :> ?datestring)
       (schema/unpack-pixel-location ?location :> ?s-res ?mod-h ?mod-v ?s ?l)
       (:distinct false)))
@@ -127,14 +128,13 @@
     (<- [?chunk]
         (query ?name ?s-res ?mod-h ?mod-v ?s ?l ?fire-series)
         (schema/pixel-location ?s-res ?mod-h ?mod-v ?s ?l :> ?location)
-        (schema/chunk-value ?name t-res nil ?location ?fire-series :> ?chunk)
+        (schema/mk-data-value ?fire-series :> ?data-val)
+        (schema/chunk-value ?name t-res nil ?location ?data-val :> ?chunk)
         (:distinct false))))
 
 (defn fire-query
   "Returns a source of fire timeseries data chunk objects."
-  [source-pail-path t-res start end tile-seq]
-  (let [tap (apply pail/split-chunk-tap
-                   source-pail-path
-                   (for [tile (apply tile-set tile-seq)]
-                     ["fire" "1000-01" (apply r/hv->tilestring tile)]))]
-    (create-fire-series tap t-res start end)))
+  [source-pail-path t-res start end]
+  (-> source-pail-path
+      (pail/split-chunk-tap ["fire" "1000-01"])
+      (create-fire-series t-res start end)))

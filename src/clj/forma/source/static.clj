@@ -119,8 +119,8 @@
         (p/flatten-window ?window :> ?chunk)
         (count ?chunk :> ?count)
         (= ?count chunk-size)
-        (chunkifier ?dataset !date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk
-                    :> ?datachunk)
+        (chunkifier
+         ?dataset !date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk)
         (:distinct false))))
 
 (defn static-chunks

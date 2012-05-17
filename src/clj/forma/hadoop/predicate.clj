@@ -128,7 +128,8 @@
 (defn chunkify [chunk-size]
   (<- [?dataset !date ?s-res ?t-res ?mh ?mv ?chunkid ?chunk :> ?datachunk]
       (schema/chunk-location ?s-res ?mh ?mv ?chunkid chunk-size :> ?location)
-      (schema/chunk-value ?dataset ?t-res !date ?location ?chunk :> ?datachunk)))
+      (schema/mk-data-value ?chunk :> ?data-val)
+      (schema/chunk-value ?dataset ?t-res !date ?location ?data-val :> ?datachunk)))
 
 (def break
   "Takes a source of textlines representing rows of a gridded
