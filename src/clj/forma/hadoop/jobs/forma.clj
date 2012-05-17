@@ -15,7 +15,8 @@
 
 (def get-loc
   (<- [?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val]
-      (map ?chunk [:location :value] :> ?loc ?val)
+      (schema/extract-location ?chunk :> ?loc)
+      (schema/extract-chunk-value ?chunk :> ?val)
       (schema/unpack-pixel-location ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
 
 (defn fire-tap
@@ -27,15 +28,19 @@
       (get-loc ?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?f-series)
       (schema/adjust-fires est-map ?f-series :> ?fire-series)))
 
-(defn filter-query [vcf-src vcf-limit chunk-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?ts]
+(defn filter-query
+  "Note that the ?ts here is an ArrayList of one of the items inside
+  of ArrayValue."
+  [vcf-src vcf-limit chunk-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?vals]
       (chunk-src _ ?ts-chunk)
       (vcf-src _ ?vcf-chunk)
       (get-loc ?ts-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?series)
-      (:distinct false)
-      (map ?series [:start-idx :series] :> ?start ?ts)
+      (schema/unpack-timeseries ?series :> ?start _ ?ts)
+      (schema/get-vals ?ts :> ?vals)
       (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
-      (>= ?vcf vcf-limit)))
+      (>= ?vcf vcf-limit)
+      (:distinct false)))
 
 (defn dynamic-filter
   "Returns a new generator of ndvi and rain timeseries obtained by
@@ -170,8 +175,6 @@ value, and the aggregate of the neighbors."
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)
         (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
         (log/mk-timeseries ?pd ?prob :> ?prob-series)
-        (:distinct false)
-        ;;(= ?pd period)
         (:distinct false)
         (:trap trap-tap))))
 

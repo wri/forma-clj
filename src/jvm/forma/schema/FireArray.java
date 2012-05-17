@@ -28,22 +28,22 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSeries._Fields>, java.io.Serializable, Cloneable {
-  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("FormaSeries");
+public class FireArray implements org.apache.thrift.TBase<FireArray, FireArray._Fields>, java.io.Serializable, Cloneable {
+  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("FireArray");
 
-  private static final org.apache.thrift.protocol.TField VALUES_FIELD_DESC = new org.apache.thrift.protocol.TField("values", org.apache.thrift.protocol.TType.LIST, (short)1);
+  private static final org.apache.thrift.protocol.TField FIRES_FIELD_DESC = new org.apache.thrift.protocol.TField("fires", org.apache.thrift.protocol.TType.LIST, (short)1);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
-    schemes.put(StandardScheme.class, new FormaSeriesStandardSchemeFactory());
-    schemes.put(TupleScheme.class, new FormaSeriesTupleSchemeFactory());
+    schemes.put(StandardScheme.class, new FireArrayStandardSchemeFactory());
+    schemes.put(TupleScheme.class, new FireArrayTupleSchemeFactory());
   }
 
-  public List<FormaValue> values; // required
+  public List<FireValue> fires; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
-    VALUES((short)1, "values");
+    FIRES((short)1, "fires");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -58,8 +58,8 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
      */
     public static _Fields findByThriftId(int fieldId) {
       switch(fieldId) {
-        case 1: // VALUES
-          return VALUES;
+        case 1: // FIRES
+          return FIRES;
         default:
           return null;
       }
@@ -103,91 +103,91 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.VALUES, new org.apache.thrift.meta_data.FieldMetaData("values", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+    tmpMap.put(_Fields.FIRES, new org.apache.thrift.meta_data.FieldMetaData("fires", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.ListMetaData(org.apache.thrift.protocol.TType.LIST, 
-            new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, FormaValue.class))));
+            new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, FireValue.class))));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
-    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(FormaSeries.class, metaDataMap);
+    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(FireArray.class, metaDataMap);
   }
 
-  public FormaSeries() {
+  public FireArray() {
   }
 
-  public FormaSeries(
-    List<FormaValue> values)
+  public FireArray(
+    List<FireValue> fires)
   {
     this();
-    this.values = values;
+    this.fires = fires;
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
-  public FormaSeries(FormaSeries other) {
-    if (other.isSetValues()) {
-      List<FormaValue> __this__values = new ArrayList<FormaValue>();
-      for (FormaValue other_element : other.values) {
-        __this__values.add(new FormaValue(other_element));
+  public FireArray(FireArray other) {
+    if (other.isSetFires()) {
+      List<FireValue> __this__fires = new ArrayList<FireValue>();
+      for (FireValue other_element : other.fires) {
+        __this__fires.add(new FireValue(other_element));
       }
-      this.values = __this__values;
+      this.fires = __this__fires;
     }
   }
 
-  public FormaSeries deepCopy() {
-    return new FormaSeries(this);
+  public FireArray deepCopy() {
+    return new FireArray(this);
   }
 
   @Override
   public void clear() {
-    this.values = null;
+    this.fires = null;
   }
 
-  public int getValuesSize() {
-    return (this.values == null) ? 0 : this.values.size();
+  public int getFiresSize() {
+    return (this.fires == null) ? 0 : this.fires.size();
   }
 
-  public java.util.Iterator<FormaValue> getValuesIterator() {
-    return (this.values == null) ? null : this.values.iterator();
+  public java.util.Iterator<FireValue> getFiresIterator() {
+    return (this.fires == null) ? null : this.fires.iterator();
   }
 
-  public void addToValues(FormaValue elem) {
-    if (this.values == null) {
-      this.values = new ArrayList<FormaValue>();
+  public void addToFires(FireValue elem) {
+    if (this.fires == null) {
+      this.fires = new ArrayList<FireValue>();
     }
-    this.values.add(elem);
+    this.fires.add(elem);
   }
 
-  public List<FormaValue> getValues() {
-    return this.values;
+  public List<FireValue> getFires() {
+    return this.fires;
   }
 
-  public FormaSeries setValues(List<FormaValue> values) {
-    this.values = values;
+  public FireArray setFires(List<FireValue> fires) {
+    this.fires = fires;
     return this;
   }
 
-  public void unsetValues() {
-    this.values = null;
+  public void unsetFires() {
+    this.fires = null;
   }
 
-  /** Returns true if field values is set (has been assigned a value) and false otherwise */
-  public boolean isSetValues() {
-    return this.values != null;
+  /** Returns true if field fires is set (has been assigned a value) and false otherwise */
+  public boolean isSetFires() {
+    return this.fires != null;
   }
 
-  public void setValuesIsSet(boolean value) {
+  public void setFiresIsSet(boolean value) {
     if (!value) {
-      this.values = null;
+      this.fires = null;
     }
   }
 
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
-    case VALUES:
+    case FIRES:
       if (value == null) {
-        unsetValues();
+        unsetFires();
       } else {
-        setValues((List<FormaValue>)value);
+        setFires((List<FireValue>)value);
       }
       break;
 
@@ -196,8 +196,8 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
 
   public Object getFieldValue(_Fields field) {
     switch (field) {
-    case VALUES:
-      return getValues();
+    case FIRES:
+      return getFires();
 
     }
     throw new IllegalStateException();
@@ -210,8 +210,8 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
     }
 
     switch (field) {
-    case VALUES:
-      return isSetValues();
+    case FIRES:
+      return isSetFires();
     }
     throw new IllegalStateException();
   }
@@ -220,21 +220,21 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
   public boolean equals(Object that) {
     if (that == null)
       return false;
-    if (that instanceof FormaSeries)
-      return this.equals((FormaSeries)that);
+    if (that instanceof FireArray)
+      return this.equals((FireArray)that);
     return false;
   }
 
-  public boolean equals(FormaSeries that) {
+  public boolean equals(FireArray that) {
     if (that == null)
       return false;
 
-    boolean this_present_values = true && this.isSetValues();
-    boolean that_present_values = true && that.isSetValues();
-    if (this_present_values || that_present_values) {
-      if (!(this_present_values && that_present_values))
+    boolean this_present_fires = true && this.isSetFires();
+    boolean that_present_fires = true && that.isSetFires();
+    if (this_present_fires || that_present_fires) {
+      if (!(this_present_fires && that_present_fires))
         return false;
-      if (!this.values.equals(that.values))
+      if (!this.fires.equals(that.fires))
         return false;
     }
 
@@ -245,28 +245,28 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
   public int hashCode() {
     HashCodeBuilder builder = new HashCodeBuilder();
 
-    boolean present_values = true && (isSetValues());
-    builder.append(present_values);
-    if (present_values)
-      builder.append(values);
+    boolean present_fires = true && (isSetFires());
+    builder.append(present_fires);
+    if (present_fires)
+      builder.append(fires);
 
     return builder.toHashCode();
   }
 
-  public int compareTo(FormaSeries other) {
+  public int compareTo(FireArray other) {
     if (!getClass().equals(other.getClass())) {
       return getClass().getName().compareTo(other.getClass().getName());
     }
 
     int lastComparison = 0;
-    FormaSeries typedOther = (FormaSeries)other;
+    FireArray typedOther = (FireArray)other;
 
-    lastComparison = Boolean.valueOf(isSetValues()).compareTo(typedOther.isSetValues());
+    lastComparison = Boolean.valueOf(isSetFires()).compareTo(typedOther.isSetFires());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetValues()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.values, typedOther.values);
+    if (isSetFires()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.fires, typedOther.fires);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -288,14 +288,14 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("FormaSeries(");
+    StringBuilder sb = new StringBuilder("FireArray(");
     boolean first = true;
 
-    sb.append("values:");
-    if (this.values == null) {
+    sb.append("fires:");
+    if (this.fires == null) {
       sb.append("null");
     } else {
-      sb.append(this.values);
+      sb.append(this.fires);
     }
     first = false;
     sb.append(")");
@@ -322,15 +322,15 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
     }
   }
 
-  private static class FormaSeriesStandardSchemeFactory implements SchemeFactory {
-    public FormaSeriesStandardScheme getScheme() {
-      return new FormaSeriesStandardScheme();
+  private static class FireArrayStandardSchemeFactory implements SchemeFactory {
+    public FireArrayStandardScheme getScheme() {
+      return new FireArrayStandardScheme();
     }
   }
 
-  private static class FormaSeriesStandardScheme extends StandardScheme<FormaSeries> {
+  private static class FireArrayStandardScheme extends StandardScheme<FireArray> {
 
-    public void read(org.apache.thrift.protocol.TProtocol iprot, FormaSeries struct) throws org.apache.thrift.TException {
+    public void read(org.apache.thrift.protocol.TProtocol iprot, FireArray struct) throws org.apache.thrift.TException {
       org.apache.thrift.protocol.TField schemeField;
       iprot.readStructBegin();
       while (true)
@@ -340,21 +340,21 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
           break;
         }
         switch (schemeField.id) {
-          case 1: // VALUES
+          case 1: // FIRES
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
-                org.apache.thrift.protocol.TList _list40 = iprot.readListBegin();
-                struct.values = new ArrayList<FormaValue>(_list40.size);
-                for (int _i41 = 0; _i41 < _list40.size; ++_i41)
+                org.apache.thrift.protocol.TList _list32 = iprot.readListBegin();
+                struct.fires = new ArrayList<FireValue>(_list32.size);
+                for (int _i33 = 0; _i33 < _list32.size; ++_i33)
                 {
-                  FormaValue _elem42; // required
-                  _elem42 = new FormaValue();
-                  _elem42.read(iprot);
-                  struct.values.add(_elem42);
+                  FireValue _elem34; // required
+                  _elem34 = new FireValue();
+                  _elem34.read(iprot);
+                  struct.fires.add(_elem34);
                 }
                 iprot.readListEnd();
               }
-              struct.setValuesIsSet(true);
+              struct.setFiresIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -370,17 +370,17 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
       struct.validate();
     }
 
-    public void write(org.apache.thrift.protocol.TProtocol oprot, FormaSeries struct) throws org.apache.thrift.TException {
+    public void write(org.apache.thrift.protocol.TProtocol oprot, FireArray struct) throws org.apache.thrift.TException {
       struct.validate();
 
       oprot.writeStructBegin(STRUCT_DESC);
-      if (struct.values != null) {
-        oprot.writeFieldBegin(VALUES_FIELD_DESC);
+      if (struct.fires != null) {
+        oprot.writeFieldBegin(FIRES_FIELD_DESC);
         {
-          oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.values.size()));
-          for (FormaValue _iter43 : struct.values)
+          oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.fires.size()));
+          for (FireValue _iter35 : struct.fires)
           {
-            _iter43.write(oprot);
+            _iter35.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -392,50 +392,50 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
 
   }
 
-  private static class FormaSeriesTupleSchemeFactory implements SchemeFactory {
-    public FormaSeriesTupleScheme getScheme() {
-      return new FormaSeriesTupleScheme();
+  private static class FireArrayTupleSchemeFactory implements SchemeFactory {
+    public FireArrayTupleScheme getScheme() {
+      return new FireArrayTupleScheme();
     }
   }
 
-  private static class FormaSeriesTupleScheme extends TupleScheme<FormaSeries> {
+  private static class FireArrayTupleScheme extends TupleScheme<FireArray> {
 
     @Override
-    public void write(org.apache.thrift.protocol.TProtocol prot, FormaSeries struct) throws org.apache.thrift.TException {
+    public void write(org.apache.thrift.protocol.TProtocol prot, FireArray struct) throws org.apache.thrift.TException {
       TTupleProtocol oprot = (TTupleProtocol) prot;
       BitSet optionals = new BitSet();
-      if (struct.isSetValues()) {
+      if (struct.isSetFires()) {
         optionals.set(0);
       }
       oprot.writeBitSet(optionals, 1);
-      if (struct.isSetValues()) {
+      if (struct.isSetFires()) {
         {
-          oprot.writeI32(struct.values.size());
-          for (FormaValue _iter44 : struct.values)
+          oprot.writeI32(struct.fires.size());
+          for (FireValue _iter36 : struct.fires)
           {
-            _iter44.write(oprot);
+            _iter36.write(oprot);
           }
         }
       }
     }
 
     @Override
-    public void read(org.apache.thrift.protocol.TProtocol prot, FormaSeries struct) throws org.apache.thrift.TException {
+    public void read(org.apache.thrift.protocol.TProtocol prot, FireArray struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
       BitSet incoming = iprot.readBitSet(1);
       if (incoming.get(0)) {
         {
-          org.apache.thrift.protocol.TList _list45 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-          struct.values = new ArrayList<FormaValue>(_list45.size);
-          for (int _i46 = 0; _i46 < _list45.size; ++_i46)
+          org.apache.thrift.protocol.TList _list37 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+          struct.fires = new ArrayList<FireValue>(_list37.size);
+          for (int _i38 = 0; _i38 < _list37.size; ++_i38)
           {
-            FormaValue _elem47; // required
-            _elem47 = new FormaValue();
-            _elem47.read(iprot);
-            struct.values.add(_elem47);
+            FireValue _elem39; // required
+            _elem39 = new FireValue();
+            _elem39.read(iprot);
+            struct.fires.add(_elem39);
           }
         }
-        struct.setValuesIsSet(true);
+        struct.setFiresIsSet(true);
       }
     }
   }

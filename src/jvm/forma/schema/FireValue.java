@@ -28,8 +28,8 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class FireTuple implements org.apache.thrift.TBase<FireTuple, FireTuple._Fields>, java.io.Serializable, Cloneable {
-  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("FireTuple");
+public class FireValue implements org.apache.thrift.TBase<FireValue, FireValue._Fields>, java.io.Serializable, Cloneable {
+  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("FireValue");
 
   private static final org.apache.thrift.protocol.TField TEMP330_FIELD_DESC = new org.apache.thrift.protocol.TField("temp330", org.apache.thrift.protocol.TType.I32, (short)1);
   private static final org.apache.thrift.protocol.TField CONF50_FIELD_DESC = new org.apache.thrift.protocol.TField("conf50", org.apache.thrift.protocol.TType.I32, (short)2);
@@ -38,8 +38,8 @@ public class FireTuple implements org.apache.thrift.TBase<FireTuple, FireTuple._
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
-    schemes.put(StandardScheme.class, new FireTupleStandardSchemeFactory());
-    schemes.put(TupleScheme.class, new FireTupleTupleSchemeFactory());
+    schemes.put(StandardScheme.class, new FireValueStandardSchemeFactory());
+    schemes.put(TupleScheme.class, new FireValueTupleSchemeFactory());
   }
 
   public int temp330; // required
@@ -132,13 +132,13 @@ public class FireTuple implements org.apache.thrift.TBase<FireTuple, FireTuple._
     tmpMap.put(_Fields.COUNT, new org.apache.thrift.meta_data.FieldMetaData("count", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
-    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(FireTuple.class, metaDataMap);
+    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(FireValue.class, metaDataMap);
   }
 
-  public FireTuple() {
+  public FireValue() {
   }
 
-  public FireTuple(
+  public FireValue(
     int temp330,
     int conf50,
     int bothPreds,
@@ -158,7 +158,7 @@ public class FireTuple implements org.apache.thrift.TBase<FireTuple, FireTuple._
   /**
    * Performs a deep copy on <i>other</i>.
    */
-  public FireTuple(FireTuple other) {
+  public FireValue(FireValue other) {
     __isset_bit_vector.clear();
     __isset_bit_vector.or(other.__isset_bit_vector);
     this.temp330 = other.temp330;
@@ -167,8 +167,8 @@ public class FireTuple implements org.apache.thrift.TBase<FireTuple, FireTuple._
     this.count = other.count;
   }
 
-  public FireTuple deepCopy() {
-    return new FireTuple(this);
+  public FireValue deepCopy() {
+    return new FireValue(this);
   }
 
   @Override
@@ -187,7 +187,7 @@ public class FireTuple implements org.apache.thrift.TBase<FireTuple, FireTuple._
     return this.temp330;
   }
 
-  public FireTuple setTemp330(int temp330) {
+  public FireValue setTemp330(int temp330) {
     this.temp330 = temp330;
     setTemp330IsSet(true);
     return this;
@@ -210,7 +210,7 @@ public class FireTuple implements org.apache.thrift.TBase<FireTuple, FireTuple._
     return this.conf50;
   }
 
-  public FireTuple setConf50(int conf50) {
+  public FireValue setConf50(int conf50) {
     this.conf50 = conf50;
     setConf50IsSet(true);
     return this;
@@ -233,7 +233,7 @@ public class FireTuple implements org.apache.thrift.TBase<FireTuple, FireTuple._
     return this.bothPreds;
   }
 
-  public FireTuple setBothPreds(int bothPreds) {
+  public FireValue setBothPreds(int bothPreds) {
     this.bothPreds = bothPreds;
     setBothPredsIsSet(true);
     return this;
@@ -256,7 +256,7 @@ public class FireTuple implements org.apache.thrift.TBase<FireTuple, FireTuple._
     return this.count;
   }
 
-  public FireTuple setCount(int count) {
+  public FireValue setCount(int count) {
     this.count = count;
     setCountIsSet(true);
     return this;
@@ -353,12 +353,12 @@ public class FireTuple implements org.apache.thrift.TBase<FireTuple, FireTuple._
   public boolean equals(Object that) {
     if (that == null)
       return false;
-    if (that instanceof FireTuple)
-      return this.equals((FireTuple)that);
+    if (that instanceof FireValue)
+      return this.equals((FireValue)that);
     return false;
   }
 
-  public boolean equals(FireTuple that) {
+  public boolean equals(FireValue that) {
     if (that == null)
       return false;
 
@@ -428,13 +428,13 @@ public class FireTuple implements org.apache.thrift.TBase<FireTuple, FireTuple._
     return builder.toHashCode();
   }
 
-  public int compareTo(FireTuple other) {
+  public int compareTo(FireValue other) {
     if (!getClass().equals(other.getClass())) {
       return getClass().getName().compareTo(other.getClass().getName());
     }
 
     int lastComparison = 0;
-    FireTuple typedOther = (FireTuple)other;
+    FireValue typedOther = (FireValue)other;
 
     lastComparison = Boolean.valueOf(isSetTemp330()).compareTo(typedOther.isSetTemp330());
     if (lastComparison != 0) {
@@ -493,7 +493,7 @@ public class FireTuple implements org.apache.thrift.TBase<FireTuple, FireTuple._
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("FireTuple(");
+    StringBuilder sb = new StringBuilder("FireValue(");
     boolean first = true;
 
     sb.append("temp330:");
@@ -537,15 +537,15 @@ public class FireTuple implements org.apache.thrift.TBase<FireTuple, FireTuple._
     }
   }
 
-  private static class FireTupleStandardSchemeFactory implements SchemeFactory {
-    public FireTupleStandardScheme getScheme() {
-      return new FireTupleStandardScheme();
+  private static class FireValueStandardSchemeFactory implements SchemeFactory {
+    public FireValueStandardScheme getScheme() {
+      return new FireValueStandardScheme();
     }
   }
 
-  private static class FireTupleStandardScheme extends StandardScheme<FireTuple> {
+  private static class FireValueStandardScheme extends StandardScheme<FireValue> {
 
-    public void read(org.apache.thrift.protocol.TProtocol iprot, FireTuple struct) throws org.apache.thrift.TException {
+    public void read(org.apache.thrift.protocol.TProtocol iprot, FireValue struct) throws org.apache.thrift.TException {
       org.apache.thrift.protocol.TField schemeField;
       iprot.readStructBegin();
       while (true)
@@ -598,7 +598,7 @@ public class FireTuple implements org.apache.thrift.TBase<FireTuple, FireTuple._
       struct.validate();
     }
 
-    public void write(org.apache.thrift.protocol.TProtocol oprot, FireTuple struct) throws org.apache.thrift.TException {
+    public void write(org.apache.thrift.protocol.TProtocol oprot, FireValue struct) throws org.apache.thrift.TException {
       struct.validate();
 
       oprot.writeStructBegin(STRUCT_DESC);
@@ -620,16 +620,16 @@ public class FireTuple implements org.apache.thrift.TBase<FireTuple, FireTuple._
 
   }
 
-  private static class FireTupleTupleSchemeFactory implements SchemeFactory {
-    public FireTupleTupleScheme getScheme() {
-      return new FireTupleTupleScheme();
+  private static class FireValueTupleSchemeFactory implements SchemeFactory {
+    public FireValueTupleScheme getScheme() {
+      return new FireValueTupleScheme();
     }
   }
 
-  private static class FireTupleTupleScheme extends TupleScheme<FireTuple> {
+  private static class FireValueTupleScheme extends TupleScheme<FireValue> {
 
     @Override
-    public void write(org.apache.thrift.protocol.TProtocol prot, FireTuple struct) throws org.apache.thrift.TException {
+    public void write(org.apache.thrift.protocol.TProtocol prot, FireValue struct) throws org.apache.thrift.TException {
       TTupleProtocol oprot = (TTupleProtocol) prot;
       BitSet optionals = new BitSet();
       if (struct.isSetTemp330()) {
@@ -660,7 +660,7 @@ public class FireTuple implements org.apache.thrift.TBase<FireTuple, FireTuple._
     }
 
     @Override
-    public void read(org.apache.thrift.protocol.TProtocol prot, FireTuple struct) throws org.apache.thrift.TException {
+    public void read(org.apache.thrift.protocol.TProtocol prot, FireValue struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
       BitSet incoming = iprot.readBitSet(4);
       if (incoming.get(0)) {

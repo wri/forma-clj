@@ -1,6 +1,6 @@
 package forma;
 
-import cascading.flow.hadoop.HadoopFlowProcess;
+import cascading.flow.FlowProcess;
 import cascading.scheme.Scheme;
 import cascading.scheme.SinkCall;
 import cascading.scheme.SourceCall;
@@ -14,28 +14,41 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.RecordReader;
 
 import java.io.IOException;
+import java.lang.Override;
 
-public class WholeFile extends Scheme<HadoopFlowProcess, JobConf, RecordReader, OutputCollector, Object[], Object[]> {
+public class WholeFile extends
+    Scheme<JobConf, RecordReader<Text, BytesWritable>, OutputCollector, Object[], Object[]> {
+
     public WholeFile( Fields fields ) {
         super(fields);
     }
 
     @Override
-    public void sourceConfInit(HadoopFlowProcess hadoopFlowProcess, Tap tap, JobConf conf) {
+    public void sourceConfInit(FlowProcess<JobConf> flowProcess,
+        Tap<JobConf, RecordReader<Text, BytesWritable>, OutputCollector> tap,
+        JobConf conf) {
         conf.setInputFormat( WholeFileInputFormat.class );
     }
 
-    @Override public void sourcePrepare(HadoopFlowProcess flowProcess,
-        SourceCall<Object[], RecordReader> sourceCall) {
+    @Override
+    public void sinkConfInit(FlowProcess<JobConf> flowProcess,
+        Tap<JobConf, RecordReader<Text, BytesWritable>, OutputCollector> tap,
+        JobConf conf) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 
+    @Override
+    public void sourcePrepare(FlowProcess<JobConf> flowProcess,
+        SourceCall<Object[], RecordReader<Text, BytesWritable>> sourceCall) {
         sourceCall.setContext(new Object[2]);
 
         sourceCall.getContext()[0] = sourceCall.getInput().createKey();
         sourceCall.getContext()[1] = sourceCall.getInput().createValue();
     }
 
-    @Override public boolean source(HadoopFlowProcess hadoopFlowProcess,
-        SourceCall<Object[], RecordReader> sourceCall) throws IOException {
+    @Override
+    public boolean source(FlowProcess<JobConf> flowProcess,
+        SourceCall<Object[], RecordReader<Text, BytesWritable>> sourceCall) throws IOException {
 
 
         Text key = (Text) sourceCall.getContext()[0];
@@ -51,21 +64,8 @@ public class WholeFile extends Scheme<HadoopFlowProcess, JobConf, RecordReader, 
     }
 
     @Override
-    public void sinkConfInit(HadoopFlowProcess hadoopFlowProcess, Tap tap, JobConf conf) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override public void sink(HadoopFlowProcess hadoopFlowProcess,
+    public void sink(FlowProcess<JobConf>  flowProcess,
         SinkCall<Object[], OutputCollector> outputCollectorSinkCall) throws IOException {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-    
-    // @Override
-    // public Tuple source( Object key, Object value )
-    // {
-    //     Tuple tuple = new Tuple();
-    //     tuple.add(key.toString());
-    //     tuple.add(value);
-    //     return tuple;
-    // }
 } 

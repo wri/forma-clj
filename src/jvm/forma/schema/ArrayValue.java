@@ -34,13 +34,17 @@ public class ArrayValue extends org.apache.thrift.TUnion<ArrayValue, ArrayValue.
   private static final org.apache.thrift.protocol.TField DOUBLES_FIELD_DESC = new org.apache.thrift.protocol.TField("doubles", org.apache.thrift.protocol.TType.STRUCT, (short)2);
   private static final org.apache.thrift.protocol.TField SHORTS_FIELD_DESC = new org.apache.thrift.protocol.TField("shorts", org.apache.thrift.protocol.TType.STRUCT, (short)3);
   private static final org.apache.thrift.protocol.TField INTS_FIELD_DESC = new org.apache.thrift.protocol.TField("ints", org.apache.thrift.protocol.TType.STRUCT, (short)4);
+  private static final org.apache.thrift.protocol.TField FIRES_FIELD_DESC = new org.apache.thrift.protocol.TField("fires", org.apache.thrift.protocol.TType.STRUCT, (short)5);
+  private static final org.apache.thrift.protocol.TField FORMAS_FIELD_DESC = new org.apache.thrift.protocol.TField("formas", org.apache.thrift.protocol.TType.STRUCT, (short)6);
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
     LONGS((short)1, "longs"),
     DOUBLES((short)2, "doubles"),
     SHORTS((short)3, "shorts"),
-    INTS((short)4, "ints");
+    INTS((short)4, "ints"),
+    FIRES((short)5, "fires"),
+    FORMAS((short)6, "formas");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -63,6 +67,10 @@ public class ArrayValue extends org.apache.thrift.TUnion<ArrayValue, ArrayValue.
           return SHORTS;
         case 4: // INTS
           return INTS;
+        case 5: // FIRES
+          return FIRES;
+        case 6: // FORMAS
+          return FORMAS;
         default:
           return null;
       }
@@ -113,6 +121,10 @@ public class ArrayValue extends org.apache.thrift.TUnion<ArrayValue, ArrayValue.
         new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, ShortArray.class)));
     tmpMap.put(_Fields.INTS, new org.apache.thrift.meta_data.FieldMetaData("ints", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, IntArray.class)));
+    tmpMap.put(_Fields.FIRES, new org.apache.thrift.meta_data.FieldMetaData("fires", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+        new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, FireArray.class)));
+    tmpMap.put(_Fields.FORMAS, new org.apache.thrift.meta_data.FieldMetaData("formas", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+        new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, FormaArray.class)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(ArrayValue.class, metaDataMap);
   }
@@ -156,6 +168,18 @@ public class ArrayValue extends org.apache.thrift.TUnion<ArrayValue, ArrayValue.
     return x;
   }
 
+  public static ArrayValue fires(FireArray value) {
+    ArrayValue x = new ArrayValue();
+    x.setFires(value);
+    return x;
+  }
+
+  public static ArrayValue formas(FormaArray value) {
+    ArrayValue x = new ArrayValue();
+    x.setFormas(value);
+    return x;
+  }
+
 
   @Override
   protected void checkType(_Fields setField, Object value) throws ClassCastException {
@@ -180,6 +204,16 @@ public class ArrayValue extends org.apache.thrift.TUnion<ArrayValue, ArrayValue.
           break;
         }
         throw new ClassCastException("Was expecting value of type IntArray for field 'ints', but got " + value.getClass().getSimpleName());
+      case FIRES:
+        if (value instanceof FireArray) {
+          break;
+        }
+        throw new ClassCastException("Was expecting value of type FireArray for field 'fires', but got " + value.getClass().getSimpleName());
+      case FORMAS:
+        if (value instanceof FormaArray) {
+          break;
+        }
+        throw new ClassCastException("Was expecting value of type FormaArray for field 'formas', but got " + value.getClass().getSimpleName());
       default:
         throw new IllegalArgumentException("Unknown field id " + setField);
     }
@@ -230,6 +264,26 @@ public class ArrayValue extends org.apache.thrift.TUnion<ArrayValue, ArrayValue.
             org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
             return null;
           }
+        case FIRES:
+          if (field.type == FIRES_FIELD_DESC.type) {
+            FireArray fires;
+            fires = new FireArray();
+            fires.read(iprot);
+            return fires;
+          } else {
+            org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
+            return null;
+          }
+        case FORMAS:
+          if (field.type == FORMAS_FIELD_DESC.type) {
+            FormaArray formas;
+            formas = new FormaArray();
+            formas.read(iprot);
+            return formas;
+          } else {
+            org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
+            return null;
+          }
         default:
           throw new IllegalStateException("setField wasn't null, but didn't match any of the case statements!");
       }
@@ -256,6 +310,14 @@ public class ArrayValue extends org.apache.thrift.TUnion<ArrayValue, ArrayValue.
       case INTS:
         IntArray ints = (IntArray)value_;
         ints.write(oprot);
+        return;
+      case FIRES:
+        FireArray fires = (FireArray)value_;
+        fires.write(oprot);
+        return;
+      case FORMAS:
+        FormaArray formas = (FormaArray)value_;
+        formas.write(oprot);
         return;
       default:
         throw new IllegalStateException("Cannot write union with unknown field " + setField_);
@@ -287,6 +349,16 @@ public class ArrayValue extends org.apache.thrift.TUnion<ArrayValue, ArrayValue.
           ints = new IntArray();
           ints.read(iprot);
           return ints;
+        case FIRES:
+          FireArray fires;
+          fires = new FireArray();
+          fires.read(iprot);
+          return fires;
+        case FORMAS:
+          FormaArray formas;
+          formas = new FormaArray();
+          formas.read(iprot);
+          return formas;
         default:
           throw new IllegalStateException("setField wasn't null, but didn't match any of the case statements!");
       }
@@ -314,6 +386,14 @@ public class ArrayValue extends org.apache.thrift.TUnion<ArrayValue, ArrayValue.
         IntArray ints = (IntArray)value_;
         ints.write(oprot);
         return;
+      case FIRES:
+        FireArray fires = (FireArray)value_;
+        fires.write(oprot);
+        return;
+      case FORMAS:
+        FormaArray formas = (FormaArray)value_;
+        formas.write(oprot);
+        return;
       default:
         throw new IllegalStateException("Cannot write union with unknown field " + setField_);
     }
@@ -330,6 +410,10 @@ public class ArrayValue extends org.apache.thrift.TUnion<ArrayValue, ArrayValue.
         return SHORTS_FIELD_DESC;
       case INTS:
         return INTS_FIELD_DESC;
+      case FIRES:
+        return FIRES_FIELD_DESC;
+      case FORMAS:
+        return FORMAS_FIELD_DESC;
       default:
         throw new IllegalArgumentException("Unknown field id " + setField);
     }
@@ -406,6 +490,34 @@ public class ArrayValue extends org.apache.thrift.TUnion<ArrayValue, ArrayValue.
     value_ = value;
   }
 
+  public FireArray getFires() {
+    if (getSetField() == _Fields.FIRES) {
+      return (FireArray)getFieldValue();
+    } else {
+      throw new RuntimeException("Cannot get field 'fires' because union is currently set to " + getFieldDesc(getSetField()).name);
+    }
+  }
+
+  public void setFires(FireArray value) {
+    if (value == null) throw new NullPointerException();
+    setField_ = _Fields.FIRES;
+    value_ = value;
+  }
+
+  public FormaArray getFormas() {
+    if (getSetField() == _Fields.FORMAS) {
+      return (FormaArray)getFieldValue();
+    } else {
+      throw new RuntimeException("Cannot get field 'formas' because union is currently set to " + getFieldDesc(getSetField()).name);
+    }
+  }
+
+  public void setFormas(FormaArray value) {
+    if (value == null) throw new NullPointerException();
+    setField_ = _Fields.FORMAS;
+    value_ = value;
+  }
+
   public boolean isSetLongs() {
     return setField_ == _Fields.LONGS;
   }
@@ -423,6 +535,16 @@ public class ArrayValue extends org.apache.thrift.TUnion<ArrayValue, ArrayValue.
 
   public boolean isSetInts() {
     return setField_ == _Fields.INTS;
+  }
+
+
+  public boolean isSetFires() {
+    return setField_ == _Fields.FIRES;
+  }
+
+
+  public boolean isSetFormas() {
+    return setField_ == _Fields.FORMAS;
   }
 
 
