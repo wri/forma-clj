@@ -1,57 +1,70 @@
 (ns forma.schema-test
+  "This namespace provides unit testing coverage for the forma.schema namespace."
   (:use forma.schema
         [midje sweet cascalog])
-  (:require [forma.date-time :as date]))
-
-;; ## Various schema tests
-
-(def neighbors
-  [(forma-value nil 1 1 1 1)
-   (forma-value (fire-value 1 1 1 1) 2 2 2 2)])
-
-(fact
-  "Checks that neighbors are being combined properly."
-  (let [test-seq [(forma-value nil 1 1 1 1) (forma-value nil 2 2 2 2)]]
-    (combine-neighbors test-seq) => (neighbor-value (fire-value 0 0 0 0)
-                                                    2
-                                                    1.5 1
-                                                    1.5 1
-                                                    1.5 1
-                                                    1.5 1)))
-
-(fact "boundaries testing."
-  (boundaries [ 0 [1 2 3 4] 1 [2 3 4 5]]) => [1 4]
-  (boundaries [ 0 [1 2 3 4] [2 3 4 5]]) => (throws AssertionError))
+  (:require [forma.date-time :as date])
+  (:import [forma.schema
+            ArrayValue
+            DataChunk
+            DataValue
+            DoubleArray
+            FireSeries
+            FireTuple
+            FormaSeries
+            FormaValue
+            IntArray
+            LocationProperty
+            LongArray
+            ModisChunkLocation
+            ModisPixelLocation
+            NeighborValue
+            NeighborValue
+            ShortArray]))
 
 (tabular
- (fact "adjust and adjust-timeseries testing, combined!"
-   (adjust ?a0 ?a-vec ?b0 ?b-vec) => [?start ?a ?b]
-   (adjust-timeseries (ts-record ?a0 ?a-vec)
-                      (ts-record ?b0 ?b-vec))
-   => [(ts-record ?start ?a)
-       (ts-record ?start ?b)])
- ?a0 ?a-vec    ?b0 ?b-vec    ?start ?a      ?b
- 0   [1 2 3 4] 1   [2 3 4 5] 1      [2 3 4] [2 3 4]
- 2   [9 8 7]   0   [1 2 3 4] 2      [9 8]   [3 4]
- 10  [2 3 4]   1   [1 2 3]   10     []      [])
+ (fact
+   "Test the unpacker multimethod."
+   (unpacker ?t-value) => ?value)
+ ?t-value ?value
+ (ShortArray. [1 2 3]) [1 2 3]
+ (ShortArray. []) []
+ (IntArray. [1 2 3]) [1 2 3]
+ (IntArray. []) []
+ (LongArray. [1 2 3]) [1 2 3]
+ (LongArray. []) []
+ (DoubleArray. [1 2 3]) [1 2 3]
+ (DoubleArray. []) [])
 
 (tabular
- (facts "adjust-fires testing."
-   (let [est-map {:est-start "2005-01-01"
-                  :est-end "2005-02-01"
-                  :t-res "32"}
-         f-start (date/datetime->period "32" "2005-01-01")
-         mk-f-series (fn [offset]
-                       (timeseries-value (+ f-start offset)
-                                         [(fire-value 0 0 0 1)
-                                          (fire-value 1 1 1 1)]))]
-     (adjust-fires est-map (mk-f-series ?offset)) => [?series]))
- ?offset ?series
- 0       (timeseries-value  f-start [(fire-value 0 0 0 1) (fire-value 1 1 1 1)])
- 1       (timeseries-value f-start [(fire-value 0 0 0 1)])
- 2       nil)
+ (fact
+   "Test thrifter multimethod."
+   (thrifter ?type ?args) => ?obj)
+ ?type ?args ?obj
+ Short -32768 (DataValue/shortVal -32768)
+ Short 32767 (DataValue/shortVal 32767)
+ Short -32769 (throws Exception)
+ Short 32768 (throws Exception)
+ Integer -2147483648 (DataValue/intVal -2147483648)
+ Integer 2147483647 (DataValue/intVal 2147483647)
+ Integer -2147483649 (throws Exception)
+ Integer 2147483648 (throws Exception)
+ Long -9223372036854775808 (DataValue/longVal -9223372036854775808)
+ Long 9223372036854775807 (DataValue/longVal 9223372036854775807)
+ Long -9223372036854775809 (throws Exception)
+ Long -9223372036854775808 (throws Exception)
+ Double 1 (DataValue/doubleVal 1))
 
-(fact "chunk to pixel location conversions."
-  (let [pix-loc (-> (chunk-location "1000" 10 10 59 24000)
-                    (chunkloc->pixloc 23999))]
-    pix-loc => (pixel-location "1000" 10 10 1199 1199)))
+;; (tabular
+;;  (fact
+;;    "Test unpack method: (unpack (FireTuple. 1 2 3 4)) => [1 2 3 4]"
+;;    (unpack ?thrift-obj ?keys) => ?vals)
+;;  ?thrift-obj ?keys ?vals
+;;  (FireTuple. 11 22 33 44) [] [11 22 33 44]
+;;  (FireTuple. 11 22 33 44) [:temp330] [11]
+;;  (FireTuple. 11 22 33 44) [:conf50] [22]
+;;  (FireTuple. 11 22 33 44) [:bothPreds] [33]
+;;  (FireTuple. 11 22 33 44) [:count] [44]
+;;  (FireTuple. 11 22 33 44) [:temp330 :conf50 :bothPreds :count] [11 22 33 44]
+;;  (FireTuple. 11 22 33 44) [:count :bothPreds :conf50 :temp330] [44 33 22 11])
+
+
