@@ -1,4 +1,56 @@
 (ns forma.source.fire
+  "This namespace has functions and Cascalog queries for processing fire data.
+
+  Fires are recorded daily by the Fire Information For Resource Management
+  System (http://maps.geog.umd.edu) using the NASA Terra and Aqua satellites.
+  They are described using the following attributes which are stored in a CSV
+  file:
+
+    http://firefly.geog.umd.edu/firms/faq.htm#attributes
+
+  Here's an example CSV file:
+
+     latitude,longitude,brightness,scan,track,acq_date,acq_time,satellite,confidence,version,bright_t31,frp
+    -21.774,-48.371,328.8,2.6,1.6,05/11/2012,0125,T,100,5.0,280.7,164.3
+    -21.770,-48.378,327.4,2.6,1.6,05/11/2012,0125,T,100,5.0,280.3,157.4
+    -16.615,-43.483,307.5,1.1,1.0,05/11/2012,0125,T,55,5.0,285.7,15.8
+
+  The FORMA algorithm depends on latitude, longitude, brightness, confidence
+  and acq_date. Before these fires can be used, they have to fist get converted
+  from latitude and longitude into MODIS pixel coordinates at 500 meter resolution.
+
+  Once converted, we store each fire in a DataChunk Thrift object and store it
+  into a Pail. Pails are cool because you can append to them. This allows us to
+  incrementally process fire data. To see the Thrift object definitions, check
+  out the dev/forma.thirft IDL.
+
+  After getting converted, here's what a fire DataChunk looks like for a
+  single fire.
+
+    DataChunk
+      dataset - The name of the dataset which is just 'fire'
+      locationProperty - The ModisPixelLocation Thrift object.
+      chunkValue - The FireTuple Thrift object.
+      temporalRes - The temporal resolution of fires which is one day.
+      date - The acq_date field for the fire.
+
+  The FireTuple Thrift object defines properties of a single fire or multiple
+  fires. In this step, it represents a single fire. The 'temp330' is set to 1
+  if the fire is greater than 330 degrees Kelvin. The 'conf50' is set to 1 if
+  the fire confidence is greater than 50. If 'temp330' and 'conf50' are both 1,
+  the 'bothPreds' is set to 1. For a single fire, the 'count' is set to 1. 
+
+  At the end of this step, we have a single Pail full of DataChunk objects, one
+  per fire, each which represents the fire in MODIS pixel coordinates.
+
+  Note: We received fire data organized into files by month through February
+  2010 from the University of Maryland. These are stored on S3 in the
+  s3://modisfiles/MonthlyFires directory. More recent fire data are organized
+  into daily files. The difference between them is the date formatting and
+  we have functions here to convert between them.
+
+    Daily:  MM/DD/YYYY
+    Monthly: YYYYMMDD"
   (:use cascalog.api
         [forma.date-time :only (convert)])
   (:require [clojure.string :as s]
