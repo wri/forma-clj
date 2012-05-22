@@ -23,9 +23,9 @@
 
 (defmain PreprocessRain
   "See project wiki for example usage."
-  [path pail-path & countries]
+  [path pail-path s-res & countries]
   (let [countries (map read-string countries)]
-    (rain-chunker "1000"
+    (rain-chunker s-res
                   static/chunk-size
                   (apply tile-set countries)
                   path
@@ -41,8 +41,8 @@
 
 (defmain PreprocessStatic
   "See project wiki for example usage."
-  [dataset ascii-path output-path & countries]
-  (static-chunker "500"
+  [dataset ascii-path output-path s-res & countries]
+  (static-chunker s-res
                   static/chunk-size
                   (->> countries
                        (map read-string)
