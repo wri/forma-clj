@@ -1,6 +1,6 @@
 namespace java forma.schema
 
-struct FireTuple {
+struct FireValue {
   1: i32 temp330;
   2: i32 conf50;
   3: i32 bothPreds;
@@ -8,7 +8,7 @@ struct FireTuple {
 }
 
 struct FormaValue {
-  1: FireTuple fireValue;
+  1: FireValue fireValue;
   2: double shortDrop;
   3: double longDrop;
   4: double tStat;
@@ -16,7 +16,7 @@ struct FormaValue {
 }
 
 struct NeighborValue {
-  1: FireTuple fireValue;
+  1: FireValue fireValue;
   2: i32 numNeighbors;
   3: double avgShortDrop;
   4: double minShortDrop;
@@ -46,13 +46,11 @@ struct DoubleArray {
   1: list<double> doubles
 }
 
-struct FireSeries {
-  1: i32 startIdx;
-  2: i32 endIdx;
-  3: list<FireTuple> values;
+struct FireArray {
+  1: list<FireValue> fires;
 }
 
-struct FormaSeries {
+struct FormaArray {
   1: list<FormaValue> values;
 }
 
@@ -61,6 +59,8 @@ union ArrayValue {
   2: DoubleArray doubles;
   3: ShortArray shorts;
   4: IntArray ints;
+  5: FireArray fires;
+  6: FormaArray formas;
 }
 
 struct TimeSeries {
@@ -70,15 +70,14 @@ struct TimeSeries {
 }
 
 union DataValue {
-  1: i64 longVal;
-  2: LongArray longs;
-  3: double doubleVal;
-  4: DoubleArray doubles;
-  5: FireTuple fireVal;
+  1: double doubleVal;
+  2: i32 intVal;
+  3: i64 longVal;
+  4: i16 shortVal;
+  5: FireValue fireVal;
   6: TimeSeries timeSeries;
-  7: FireSeries fireSeries;
-  8: ShortArray shorts;
-  9: IntArray ints;
+  7: ArrayValue vals;
+  8: FormaValue forma;
 }
 
 struct ModisPixelLocation {

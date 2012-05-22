@@ -9,9 +9,9 @@
   :jvm-opts ["-XX:MaxPermSize=128M"
              "-XX:+UseConcMarkSweepGC"
              "-Xms1024M" "-Xmx1048M" "-server"]
-  :plugins [[lein-midje "2.0.0-SNAPSHOT"]
-            [lein-swank "1.4.3"]]
-  :dependencies [[org.clojure/clojure "1.3.0"]
+  :plugins [[lein-midje "1.0.8"]
+            [swank-clojure "1.4.0-SNAPSHOT"]]
+  :dependencies [[org.clojure/clojure "1.4.0"]
                  [org.clojure/tools.cli "0.1.0"]
                  [org.clojure/tools.logging "0.2.3"]
                  [clojure-csv/clojure-csv "1.3.2"]
@@ -20,12 +20,13 @@
                  [clj-time "0.3.4"]
                  [forma/gdal "1.8.0"]
                  [forma/jblas "1.2.1"]
-                 [cascalog "1.9.0-wip10"]
+                 [cascalog "1.9.0-wip12"]
                  [cascalog-lzo "0.1.0-wip12"]
                  [cascalog-checkpoint "0.1.1"]
                  [backtype/dfs-datastores "1.1.3-SNAPSHOT"]
                  [backtype/dfs-datastores-cascading "1.1.4"]
-                 [org.apache.thrift/libthrift "0.8.0" :exclusions [org.slf4j/slf4j-api]]
+                 [org.apache.thrift/libthrift "0.8.0"
+                  :exclusions [org.slf4j/slf4j-api]]
                  [com.google.protobuf/protobuf-java "2.4.0a"]]
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
                      [midje-cascalog "0.4.0"]]

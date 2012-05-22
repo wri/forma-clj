@@ -43,7 +43,7 @@ public class FormaValue implements org.apache.thrift.TBase<FormaValue, FormaValu
     schemes.put(TupleScheme.class, new FormaValueTupleSchemeFactory());
   }
 
-  public FireTuple fireValue; // required
+  public FireValue fireValue; // required
   public double shortDrop; // required
   public double longDrop; // required
   public double tStat; // required
@@ -130,7 +130,7 @@ public class FormaValue implements org.apache.thrift.TBase<FormaValue, FormaValu
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
     tmpMap.put(_Fields.FIRE_VALUE, new org.apache.thrift.meta_data.FieldMetaData("fireValue", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-        new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, FireTuple.class)));
+        new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, FireValue.class)));
     tmpMap.put(_Fields.SHORT_DROP, new org.apache.thrift.meta_data.FieldMetaData("shortDrop", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.DOUBLE)));
     tmpMap.put(_Fields.LONG_DROP, new org.apache.thrift.meta_data.FieldMetaData("longDrop", org.apache.thrift.TFieldRequirementType.DEFAULT, 
@@ -147,7 +147,7 @@ public class FormaValue implements org.apache.thrift.TBase<FormaValue, FormaValu
   }
 
   public FormaValue(
-    FireTuple fireValue,
+    FireValue fireValue,
     double shortDrop,
     double longDrop,
     double tStat)
@@ -169,7 +169,7 @@ public class FormaValue implements org.apache.thrift.TBase<FormaValue, FormaValu
     __isset_bit_vector.clear();
     __isset_bit_vector.or(other.__isset_bit_vector);
     if (other.isSetFireValue()) {
-      this.fireValue = new FireTuple(other.fireValue);
+      this.fireValue = new FireValue(other.fireValue);
     }
     this.shortDrop = other.shortDrop;
     this.longDrop = other.longDrop;
@@ -194,11 +194,11 @@ public class FormaValue implements org.apache.thrift.TBase<FormaValue, FormaValu
     this.paramBreak = 0.0;
   }
 
-  public FireTuple getFireValue() {
+  public FireValue getFireValue() {
     return this.fireValue;
   }
 
-  public FormaValue setFireValue(FireTuple fireValue) {
+  public FormaValue setFireValue(FireValue fireValue) {
     this.fireValue = fireValue;
     return this;
   }
@@ -316,7 +316,7 @@ public class FormaValue implements org.apache.thrift.TBase<FormaValue, FormaValu
       if (value == null) {
         unsetFireValue();
       } else {
-        setFireValue((FireTuple)value);
+        setFireValue((FireValue)value);
       }
       break;
 
@@ -639,7 +639,7 @@ public class FormaValue implements org.apache.thrift.TBase<FormaValue, FormaValu
         switch (schemeField.id) {
           case 1: // FIRE_VALUE
             if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
-              struct.fireValue = new FireTuple();
+              struct.fireValue = new FireValue();
               struct.fireValue.read(iprot);
               struct.setFireValueIsSet(true);
             } else { 
@@ -768,7 +768,7 @@ public class FormaValue implements org.apache.thrift.TBase<FormaValue, FormaValu
       TTupleProtocol iprot = (TTupleProtocol) prot;
       BitSet incoming = iprot.readBitSet(5);
       if (incoming.get(0)) {
-        struct.fireValue = new FireTuple();
+        struct.fireValue = new FireValue();
         struct.fireValue.read(iprot);
         struct.setFireValueIsSet(true);
       }
