@@ -138,21 +138,6 @@
           :temporal-res t-res :> ?final-chunk)
         (:distinct false))))
 
-(comment
-  (??<- [?a ?b]
-        ((constrained-tap
-          "/Users/sritchie/Desktop/mypail" "vcf" "500" "00" [[8 6]]) ?a ?b)
-        (:distinct false))
-
-  "This command runs FORMA."
-  (use 'forma.hadoop.jobs.scatter)
-  (in-ns 'forma.hadoop.jobs.scatter)
-  (formarunner "/user/hadoop/checkpoints"
-               "s3n://pailbucket/master"
-               "s3n://pailbucket/series"
-               "s3n://formaresults/forma2012"
-               "500-16"))
-
 (defn first-half-query
   "Poorly named! Returns a query that generates a number of position
   and dataset identifier"
@@ -172,10 +157,6 @@
                                "2000-11-01"
                                est-end))))))
 
-(def kryo-conf
-  {"cascading.kryo.serializations"   "forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer:forma.schema.FireValue,carbonite.PrintDupSerializer:forma.schema.FormaValue,carbonite.PrintDupSerializer:forma.schema.NeighborValue,carbonite.PrintDupSerializer"
-   "fs.s3n.multipart.uploads.enabled" true})
-
 (defmain formarunner
   [tmp-root pail-path ts-pail-path out-path run-key]
   (let [{:keys [s-res t-res est-end] :as est-map} (forma-run-parameters run-key)
@@ -188,17 +169,16 @@
               vcf-step
               ([:tmp-dirs vcf-path]
                  (?- (hfs-seqfile vcf-path)
-                     (<- [?a ?b]
-                         ((constrained-tap pail-path "vcf" s-res "00") ?a ?b)
+                     (<- [?subpail ?chunk]
+                         ((constrained-tap pail-path "vcf" s-res "00") ?subpail ?chunk)
                          (:distinct false))))
 
               ndvi-step
               ([:tmp-dirs ndvi-path]
-                 (with-job-conf kryo-conf
-                   (?- (hfs-seqfile ndvi-path)
-                       (mk-filter vcf-path
-                                  (constrained-tap
-                                   ts-pail-path "ndvi" s-res t-res)))))
+                 (?- (hfs-seqfile ndvi-path)
+                     (mk-filter vcf-path
+                                (constrained-tap
+                                 ts-pail-path "ndvi" s-res t-res))))
 
               fire-step ([:tmp-dirs fire-path]
                            (?- (hfs-seqfile fire-path)
@@ -209,65 +189,58 @@
 
               adjustfires
               ([:tmp-dirs adjusted-fire-path]
-                 (with-job-conf kryo-conf
-                   (?- (hfs-seqfile adjusted-fire-path)
-                       (forma/fire-tap est-map (hfs-seqfile fire-path)))))
+                 (?- (hfs-seqfile adjusted-fire-path)
+                     (forma/fire-tap est-map (hfs-seqfile fire-path))))
 
               rain-step
               ([:tmp-dirs rain-path]
-                 (with-job-conf kryo-conf
-                   (?- (hfs-seqfile rain-path)
-                       (mk-filter vcf-path
-                                  (new-adjusted-precl-tap
-                                   ts-pail-path "1000" "32" t-res)))))
+                 (?- (hfs-seqfile rain-path)
+                     (mk-filter vcf-path
+                                (new-adjusted-precl-tap
+                                 ts-pail-path "1000" "32" t-res))))
 
               reli-step
               ([:tmp-dirs reli-path]
-                 (with-job-conf kryo-conf
-                   (?- (hfs-seqfile reli-path)
-                       (mk-filter vcf-path
-                                  (constrained-tap
-                                   ts-pail-path "reli" s-res t-res)))))
+                 (?- (hfs-seqfile reli-path)
+                     (mk-filter vcf-path
+                                (constrained-tap
+                                 ts-pail-path "reli" s-res t-res))))
               
               adjustseries
               ([:tmp-dirs adjusted-series-path]
                  "Adjusts the lengths of all timeseries
                                and filters out timeseries below the proper VCF value."
-                 (with-job-conf (merge kryo-conf {"mapred.min.split.size" 805306368})
+                 (with-job-conf {"mapred.min.split.size" 805306368}
                    (?- (hfs-lzo-textline adjusted-series-path)
                        (forma/dynamic-filter (hfs-seqfile ndvi-path)
                                              (hfs-seqfile reli-path)
                                              (hfs-seqfile rain-path)))))
 
               cleanseries ([:tmp-dirs clean-series]
-                        "Runs the trends processing."
-                        (with-job-conf kryo-conf
-                          (?- (hfs-lzo-textline clean-series)
-                              (forma/dynamic-clean
-                               est-map (hfs-lzo-textline adjusted-series-path)))))
+                             "Runs the trends processing."
+                             (?- (hfs-lzo-textline clean-series)
+                                 (forma/dynamic-clean
+                                  est-map (hfs-lzo-textline adjusted-series-path))))
 
               trends ([:tmp-dirs trends-path]
                         "Runs the trends processing."
-                        (with-job-conf kryo-conf
-                          (?- (hfs-seqfile trends-path)
-                              (forma/analyze-trends
-                               est-map (hfs-lzo-textline clean-series)))))
+                        (?- (hfs-seqfile trends-path)
+                            (forma/analyze-trends
+                             est-map (hfs-lzo-textline clean-series))))
 
               mid-forma ([:tmp-dirs forma-mid-path
                           :deps [trends adjustfires]]
-                           (with-job-conf kryo-conf
-                             (?- (hfs-seqfile forma-mid-path)
-                                 (forma/forma-tap (hfs-seqfile trends-path)
-                                                  (hfs-seqfile adjusted-fire-path)))))
+                           (?- (hfs-seqfile forma-mid-path)
+                               (forma/forma-tap (hfs-seqfile trends-path)
+                                                (hfs-seqfile adjusted-fire-path))))
               
               final-forma
               ([] (let [names ["?s-res" "?period" "?mod-h" "?mod-v"
                                "?sample" "?line" "?forma-val"]
                         mid-src (-> (hfs-seqfile forma-mid-path)
                                     (name-vars names))]
-                    (with-job-conf kryo-conf
-                      (?- (hfs-seqfile out-path)
-                          (forma/forma-query est-map mid-src))))))))
+                    (?- (hfs-seqfile out-path)
+                        (forma/forma-query est-map mid-src)))))))
 
 (defmain ultrarunner
   [tmp-root eco-beta-path full-beta-path static-path dynamic-path out-path country-or-eco pre-beta-out-path]
