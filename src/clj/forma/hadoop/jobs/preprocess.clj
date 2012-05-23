@@ -55,14 +55,14 @@
 (defmain PreprocessAscii
   "TODO: This is only good for hansen datasets looking to be combined
   Tidy up. This needs to be combined with PreprocessStatic."
-  [dataset ascii-path pail-path & countries]
+  [dataset ascii-path pail-path s-res & countries]
   {:pre [(#{"hansen" "vcf"} dataset)]}
   (with-fs-tmp [_ tmp-dir]
     (let [line-tap (hfs-textline ascii-path)
           pix-tap  (->> countries
                         (map read-string)
                         (apply tile-set)
-                        (p/pixel-generator tmp-dir "1000"))]
+                        (p/pixel-generator tmp-dir s-res))]
       (->> (s/static-modis-chunks static/chunk-size
                                   dataset
                                   ({"vcf" c/min "hansen" c/sum} dataset c/max)
