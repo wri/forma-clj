@@ -3,6 +3,7 @@
         [forma.static :only (static-datasets)])
   (:require [cascalog.ops :as c]
             [forma.reproject :as r]
+            [forma.schema :as schema]
             [forma.hadoop.io :as io]
             [clojure.java.io :as java.io]
             [forma.hadoop.predicate :as p]))
@@ -117,10 +118,12 @@
     (<- [?datachunk]
         (src ?dataset ?s-res ?t-res !date ?mod-h ?mod-v  _ ?chunkid ?window)
         (p/flatten-window ?window :> ?chunk)
+        (schema/to-struct ?chunk :> ?struct)
+        (schema/mk-array-value ?struct :> ?arr)
         (count ?chunk :> ?count)
         (= ?count chunk-size)
-        (chunkifier ?dataset !date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk
-                    :> ?datachunk)
+        (chunkifier
+         ?dataset !date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?arr :> ?datachunk)
         (:distinct false))))
 
 (defn static-chunks

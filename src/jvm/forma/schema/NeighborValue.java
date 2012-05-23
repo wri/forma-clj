@@ -48,7 +48,7 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
     schemes.put(TupleScheme.class, new NeighborValueTupleSchemeFactory());
   }
 
-  public FireTuple fireValue; // required
+  public FireValue fireValue; // required
   public int numNeighbors; // required
   public double avgShortDrop; // required
   public double minShortDrop; // required
@@ -160,7 +160,7 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
     tmpMap.put(_Fields.FIRE_VALUE, new org.apache.thrift.meta_data.FieldMetaData("fireValue", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-        new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, FireTuple.class)));
+        new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, FireValue.class)));
     tmpMap.put(_Fields.NUM_NEIGHBORS, new org.apache.thrift.meta_data.FieldMetaData("numNeighbors", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
     tmpMap.put(_Fields.AVG_SHORT_DROP, new org.apache.thrift.meta_data.FieldMetaData("avgShortDrop", org.apache.thrift.TFieldRequirementType.DEFAULT, 
@@ -187,7 +187,7 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
   }
 
   public NeighborValue(
-    FireTuple fireValue,
+    FireValue fireValue,
     int numNeighbors,
     double avgShortDrop,
     double minShortDrop,
@@ -221,7 +221,7 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
     __isset_bit_vector.clear();
     __isset_bit_vector.or(other.__isset_bit_vector);
     if (other.isSetFireValue()) {
-      this.fireValue = new FireTuple(other.fireValue);
+      this.fireValue = new FireValue(other.fireValue);
     }
     this.numNeighbors = other.numNeighbors;
     this.avgShortDrop = other.avgShortDrop;
@@ -261,11 +261,11 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
     this.minParamBreak = 0.0;
   }
 
-  public FireTuple getFireValue() {
+  public FireValue getFireValue() {
     return this.fireValue;
   }
 
-  public NeighborValue setFireValue(FireTuple fireValue) {
+  public NeighborValue setFireValue(FireValue fireValue) {
     this.fireValue = fireValue;
     return this;
   }
@@ -498,7 +498,7 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
       if (value == null) {
         unsetFireValue();
       } else {
-        setFireValue((FireTuple)value);
+        setFireValue((FireValue)value);
       }
       break;
 
@@ -1028,7 +1028,7 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
         switch (schemeField.id) {
           case 1: // FIRE_VALUE
             if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
-              struct.fireValue = new FireTuple();
+              struct.fireValue = new FireValue();
               struct.fireValue.read(iprot);
               struct.setFireValueIsSet(true);
             } else { 
@@ -1244,7 +1244,7 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
       TTupleProtocol iprot = (TTupleProtocol) prot;
       BitSet incoming = iprot.readBitSet(10);
       if (incoming.get(0)) {
-        struct.fireValue = new FireTuple();
+        struct.fireValue = new FireValue();
         struct.fireValue.read(iprot);
         struct.setFireValueIsSet(true);
       }

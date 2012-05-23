@@ -28,22 +28,22 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._Fields>, java.io.Serializable, Cloneable {
-  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("LongArray");
+public class FireArray implements org.apache.thrift.TBase<FireArray, FireArray._Fields>, java.io.Serializable, Cloneable {
+  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("FireArray");
 
-  private static final org.apache.thrift.protocol.TField LONGS_FIELD_DESC = new org.apache.thrift.protocol.TField("longs", org.apache.thrift.protocol.TType.LIST, (short)1);
+  private static final org.apache.thrift.protocol.TField FIRES_FIELD_DESC = new org.apache.thrift.protocol.TField("fires", org.apache.thrift.protocol.TType.LIST, (short)1);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
-    schemes.put(StandardScheme.class, new LongArrayStandardSchemeFactory());
-    schemes.put(TupleScheme.class, new LongArrayTupleSchemeFactory());
+    schemes.put(StandardScheme.class, new FireArrayStandardSchemeFactory());
+    schemes.put(TupleScheme.class, new FireArrayTupleSchemeFactory());
   }
 
-  public List<Long> longs; // required
+  public List<FireValue> fires; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
-    LONGS((short)1, "longs");
+    FIRES((short)1, "fires");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -58,8 +58,8 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
      */
     public static _Fields findByThriftId(int fieldId) {
       switch(fieldId) {
-        case 1: // LONGS
-          return LONGS;
+        case 1: // FIRES
+          return FIRES;
         default:
           return null;
       }
@@ -103,91 +103,91 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.LONGS, new org.apache.thrift.meta_data.FieldMetaData("longs", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+    tmpMap.put(_Fields.FIRES, new org.apache.thrift.meta_data.FieldMetaData("fires", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.ListMetaData(org.apache.thrift.protocol.TType.LIST, 
-            new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64))));
+            new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, FireValue.class))));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
-    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(LongArray.class, metaDataMap);
+    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(FireArray.class, metaDataMap);
   }
 
-  public LongArray() {
+  public FireArray() {
   }
 
-  public LongArray(
-    List<Long> longs)
+  public FireArray(
+    List<FireValue> fires)
   {
     this();
-    this.longs = longs;
+    this.fires = fires;
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
-  public LongArray(LongArray other) {
-    if (other.isSetLongs()) {
-      List<Long> __this__longs = new ArrayList<Long>();
-      for (Long other_element : other.longs) {
-        __this__longs.add(other_element);
+  public FireArray(FireArray other) {
+    if (other.isSetFires()) {
+      List<FireValue> __this__fires = new ArrayList<FireValue>();
+      for (FireValue other_element : other.fires) {
+        __this__fires.add(new FireValue(other_element));
       }
-      this.longs = __this__longs;
+      this.fires = __this__fires;
     }
   }
 
-  public LongArray deepCopy() {
-    return new LongArray(this);
+  public FireArray deepCopy() {
+    return new FireArray(this);
   }
 
   @Override
   public void clear() {
-    this.longs = null;
+    this.fires = null;
   }
 
-  public int getLongsSize() {
-    return (this.longs == null) ? 0 : this.longs.size();
+  public int getFiresSize() {
+    return (this.fires == null) ? 0 : this.fires.size();
   }
 
-  public java.util.Iterator<Long> getLongsIterator() {
-    return (this.longs == null) ? null : this.longs.iterator();
+  public java.util.Iterator<FireValue> getFiresIterator() {
+    return (this.fires == null) ? null : this.fires.iterator();
   }
 
-  public void addToLongs(long elem) {
-    if (this.longs == null) {
-      this.longs = new ArrayList<Long>();
+  public void addToFires(FireValue elem) {
+    if (this.fires == null) {
+      this.fires = new ArrayList<FireValue>();
     }
-    this.longs.add(elem);
+    this.fires.add(elem);
   }
 
-  public List<Long> getLongs() {
-    return this.longs;
+  public List<FireValue> getFires() {
+    return this.fires;
   }
 
-  public LongArray setLongs(List<Long> longs) {
-    this.longs = longs;
+  public FireArray setFires(List<FireValue> fires) {
+    this.fires = fires;
     return this;
   }
 
-  public void unsetLongs() {
-    this.longs = null;
+  public void unsetFires() {
+    this.fires = null;
   }
 
-  /** Returns true if field longs is set (has been assigned a value) and false otherwise */
-  public boolean isSetLongs() {
-    return this.longs != null;
+  /** Returns true if field fires is set (has been assigned a value) and false otherwise */
+  public boolean isSetFires() {
+    return this.fires != null;
   }
 
-  public void setLongsIsSet(boolean value) {
+  public void setFiresIsSet(boolean value) {
     if (!value) {
-      this.longs = null;
+      this.fires = null;
     }
   }
 
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
-    case LONGS:
+    case FIRES:
       if (value == null) {
-        unsetLongs();
+        unsetFires();
       } else {
-        setLongs((List<Long>)value);
+        setFires((List<FireValue>)value);
       }
       break;
 
@@ -196,8 +196,8 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
 
   public Object getFieldValue(_Fields field) {
     switch (field) {
-    case LONGS:
-      return getLongs();
+    case FIRES:
+      return getFires();
 
     }
     throw new IllegalStateException();
@@ -210,8 +210,8 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
     }
 
     switch (field) {
-    case LONGS:
-      return isSetLongs();
+    case FIRES:
+      return isSetFires();
     }
     throw new IllegalStateException();
   }
@@ -220,21 +220,21 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
   public boolean equals(Object that) {
     if (that == null)
       return false;
-    if (that instanceof LongArray)
-      return this.equals((LongArray)that);
+    if (that instanceof FireArray)
+      return this.equals((FireArray)that);
     return false;
   }
 
-  public boolean equals(LongArray that) {
+  public boolean equals(FireArray that) {
     if (that == null)
       return false;
 
-    boolean this_present_longs = true && this.isSetLongs();
-    boolean that_present_longs = true && that.isSetLongs();
-    if (this_present_longs || that_present_longs) {
-      if (!(this_present_longs && that_present_longs))
+    boolean this_present_fires = true && this.isSetFires();
+    boolean that_present_fires = true && that.isSetFires();
+    if (this_present_fires || that_present_fires) {
+      if (!(this_present_fires && that_present_fires))
         return false;
-      if (!this.longs.equals(that.longs))
+      if (!this.fires.equals(that.fires))
         return false;
     }
 
@@ -245,28 +245,28 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
   public int hashCode() {
     HashCodeBuilder builder = new HashCodeBuilder();
 
-    boolean present_longs = true && (isSetLongs());
-    builder.append(present_longs);
-    if (present_longs)
-      builder.append(longs);
+    boolean present_fires = true && (isSetFires());
+    builder.append(present_fires);
+    if (present_fires)
+      builder.append(fires);
 
     return builder.toHashCode();
   }
 
-  public int compareTo(LongArray other) {
+  public int compareTo(FireArray other) {
     if (!getClass().equals(other.getClass())) {
       return getClass().getName().compareTo(other.getClass().getName());
     }
 
     int lastComparison = 0;
-    LongArray typedOther = (LongArray)other;
+    FireArray typedOther = (FireArray)other;
 
-    lastComparison = Boolean.valueOf(isSetLongs()).compareTo(typedOther.isSetLongs());
+    lastComparison = Boolean.valueOf(isSetFires()).compareTo(typedOther.isSetFires());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetLongs()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.longs, typedOther.longs);
+    if (isSetFires()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.fires, typedOther.fires);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -288,14 +288,14 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("LongArray(");
+    StringBuilder sb = new StringBuilder("FireArray(");
     boolean first = true;
 
-    sb.append("longs:");
-    if (this.longs == null) {
+    sb.append("fires:");
+    if (this.fires == null) {
       sb.append("null");
     } else {
-      sb.append(this.longs);
+      sb.append(this.fires);
     }
     first = false;
     sb.append(")");
@@ -322,15 +322,15 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
     }
   }
 
-  private static class LongArrayStandardSchemeFactory implements SchemeFactory {
-    public LongArrayStandardScheme getScheme() {
-      return new LongArrayStandardScheme();
+  private static class FireArrayStandardSchemeFactory implements SchemeFactory {
+    public FireArrayStandardScheme getScheme() {
+      return new FireArrayStandardScheme();
     }
   }
 
-  private static class LongArrayStandardScheme extends StandardScheme<LongArray> {
+  private static class FireArrayStandardScheme extends StandardScheme<FireArray> {
 
-    public void read(org.apache.thrift.protocol.TProtocol iprot, LongArray struct) throws org.apache.thrift.TException {
+    public void read(org.apache.thrift.protocol.TProtocol iprot, FireArray struct) throws org.apache.thrift.TException {
       org.apache.thrift.protocol.TField schemeField;
       iprot.readStructBegin();
       while (true)
@@ -340,20 +340,21 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
           break;
         }
         switch (schemeField.id) {
-          case 1: // LONGS
+          case 1: // FIRES
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
-                org.apache.thrift.protocol.TList _list16 = iprot.readListBegin();
-                struct.longs = new ArrayList<Long>(_list16.size);
-                for (int _i17 = 0; _i17 < _list16.size; ++_i17)
+                org.apache.thrift.protocol.TList _list32 = iprot.readListBegin();
+                struct.fires = new ArrayList<FireValue>(_list32.size);
+                for (int _i33 = 0; _i33 < _list32.size; ++_i33)
                 {
-                  long _elem18; // required
-                  _elem18 = iprot.readI64();
-                  struct.longs.add(_elem18);
+                  FireValue _elem34; // required
+                  _elem34 = new FireValue();
+                  _elem34.read(iprot);
+                  struct.fires.add(_elem34);
                 }
                 iprot.readListEnd();
               }
-              struct.setLongsIsSet(true);
+              struct.setFiresIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -369,17 +370,17 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
       struct.validate();
     }
 
-    public void write(org.apache.thrift.protocol.TProtocol oprot, LongArray struct) throws org.apache.thrift.TException {
+    public void write(org.apache.thrift.protocol.TProtocol oprot, FireArray struct) throws org.apache.thrift.TException {
       struct.validate();
 
       oprot.writeStructBegin(STRUCT_DESC);
-      if (struct.longs != null) {
-        oprot.writeFieldBegin(LONGS_FIELD_DESC);
+      if (struct.fires != null) {
+        oprot.writeFieldBegin(FIRES_FIELD_DESC);
         {
-          oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.I64, struct.longs.size()));
-          for (long _iter19 : struct.longs)
+          oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.fires.size()));
+          for (FireValue _iter35 : struct.fires)
           {
-            oprot.writeI64(_iter19);
+            _iter35.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -391,49 +392,50 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
 
   }
 
-  private static class LongArrayTupleSchemeFactory implements SchemeFactory {
-    public LongArrayTupleScheme getScheme() {
-      return new LongArrayTupleScheme();
+  private static class FireArrayTupleSchemeFactory implements SchemeFactory {
+    public FireArrayTupleScheme getScheme() {
+      return new FireArrayTupleScheme();
     }
   }
 
-  private static class LongArrayTupleScheme extends TupleScheme<LongArray> {
+  private static class FireArrayTupleScheme extends TupleScheme<FireArray> {
 
     @Override
-    public void write(org.apache.thrift.protocol.TProtocol prot, LongArray struct) throws org.apache.thrift.TException {
+    public void write(org.apache.thrift.protocol.TProtocol prot, FireArray struct) throws org.apache.thrift.TException {
       TTupleProtocol oprot = (TTupleProtocol) prot;
       BitSet optionals = new BitSet();
-      if (struct.isSetLongs()) {
+      if (struct.isSetFires()) {
         optionals.set(0);
       }
       oprot.writeBitSet(optionals, 1);
-      if (struct.isSetLongs()) {
+      if (struct.isSetFires()) {
         {
-          oprot.writeI32(struct.longs.size());
-          for (long _iter20 : struct.longs)
+          oprot.writeI32(struct.fires.size());
+          for (FireValue _iter36 : struct.fires)
           {
-            oprot.writeI64(_iter20);
+            _iter36.write(oprot);
           }
         }
       }
     }
 
     @Override
-    public void read(org.apache.thrift.protocol.TProtocol prot, LongArray struct) throws org.apache.thrift.TException {
+    public void read(org.apache.thrift.protocol.TProtocol prot, FireArray struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
       BitSet incoming = iprot.readBitSet(1);
       if (incoming.get(0)) {
         {
-          org.apache.thrift.protocol.TList _list21 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.I64, iprot.readI32());
-          struct.longs = new ArrayList<Long>(_list21.size);
-          for (int _i22 = 0; _i22 < _list21.size; ++_i22)
+          org.apache.thrift.protocol.TList _list37 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+          struct.fires = new ArrayList<FireValue>(_list37.size);
+          for (int _i38 = 0; _i38 < _list37.size; ++_i38)
           {
-            long _elem23; // required
-            _elem23 = iprot.readI64();
-            struct.longs.add(_elem23);
+            FireValue _elem39; // required
+            _elem39 = new FireValue();
+            _elem39.read(iprot);
+            struct.fires.add(_elem39);
           }
         }
-        struct.setLongsIsSet(true);
+        struct.setFiresIsSet(true);
       }
     }
   }

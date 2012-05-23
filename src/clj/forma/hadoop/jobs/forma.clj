@@ -15,7 +15,8 @@
 
 (def get-loc
   (<- [?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val]
-      (map ?chunk [:location :value] :> ?loc ?val)
+      (schema/extract-location ?chunk :> ?loc)
+      (schema/extract-chunk-value ?chunk :> ?val)
       (schema/unpack-pixel-location ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
 
 (defn fire-tap
@@ -27,15 +28,19 @@
       (get-loc ?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?f-series)
       (schema/adjust-fires est-map ?f-series :> ?fire-series)))
 
-(defn filter-query [vcf-src vcf-limit chunk-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?ts]
+(defn filter-query
+  "Note that the ?ts here is an ArrayList of one of the items inside
+  of ArrayValue."
+  [vcf-src vcf-limit chunk-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?vals]
       (chunk-src _ ?ts-chunk)
       (vcf-src _ ?vcf-chunk)
       (get-loc ?ts-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?series)
-      (:distinct false)
-      (map ?series [:start-idx :series] :> ?start ?ts)
+      (schema/unpack-timeseries ?series :> ?start _ ?ts)
+      (schema/get-vals ?ts :> ?vals)
       (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
-      (>= ?vcf vcf-limit)))
+      (>= ?vcf vcf-limit)
+      (:distinct false)))
 
 (defn dynamic-filter
   "Returns a new generator of ndvi and rain timeseries obtained by
@@ -58,14 +63,14 @@
         freq (date/res->period-count t-res)
         [start-idx end-idx] (date/relative-period t-res start-period
                                                   [est-start est-end])
-        training-reli (take start-idx reli-ts)
+        training-reli     (take start-idx reli-ts)
         training-reli-set (set training-reli)
         clean-fn (comp vector (partial f/make-clean freq good-set bad-set))]
-    (cond (f/reliable?
-           good-set reli-thresh training-reli) (map clean-fn
-                                                (f/tele-ts start-idx end-idx val-ts)
-                                                (f/tele-ts start-idx end-idx reli-ts))
-          :else [[nil]])))
+    (if (f/reliable? good-set reli-thresh training-reli)
+      (map clean-fn
+           (f/tele-ts start-idx end-idx val-ts)
+           (f/tele-ts start-idx end-idx reli-ts))
+      [[nil]])))
 
 (defn dynamic-clean
   "Accepts an est-map, and sources for ndvi and rain timeseries and
@@ -90,8 +95,8 @@
   occur before the analysis. Note that all variable names within this
   query are TIMESERIES, not individual values."
   [est-map clean-src rain-src]
-  (let [long-block (est-map :long-block)
-        short-block (est-map :window)]
+  (let [long-block (:long-block est-map)
+        short-block (:window est-map)]
     (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?short ?long ?t-stat ?break]
         (rain-src ?s-res ?mod-h ?mod-v ?sample ?line ?start _ ?precl _)
         (f/shorten-ts ?ndvi ?precl :> ?short-precl)
@@ -117,7 +122,6 @@
 (defmapcatop [process-neighbors [num-neighbors]]
   "Processes all neighbors... Returns the index within the chunk, the
 value, and the aggregate of the neighbors."
-
   [window]
   (for [[idx [val neighbors]] (->> (w/neighbor-scan num-neighbors window)
                                    (map-indexed vector))
@@ -171,8 +175,6 @@ value, and the aggregate of the neighbors."
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)
         (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
         (log/mk-timeseries ?pd ?prob :> ?prob-series)
-        (:distinct false)
-        ;;(= ?pd period)
         (:distinct false)
         (:trap trap-tap))))
 

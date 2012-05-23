@@ -128,7 +128,8 @@
 (defn chunkify [chunk-size]
   (<- [?dataset !date ?s-res ?t-res ?mh ?mv ?chunkid ?chunk :> ?datachunk]
       (schema/chunk-location ?s-res ?mh ?mv ?chunkid chunk-size :> ?location)
-      (schema/chunk-value ?dataset ?t-res !date ?location ?chunk :> ?datachunk)))
+      (schema/mk-data-value ?chunk :> ?data-val)
+      (schema/chunk-value ?dataset ?t-res !date ?location ?data-val :> ?datachunk)))
 
 (def break
   "Takes a source of textlines representing rows of a gridded
@@ -158,11 +159,14 @@
 ;; ### Generators
 
 (defn pixel-generator
-  "Returns a cascalog generator that produces every pixel combination
-  for the supplied sequence of tiles, given the supplied
-  resolution. `pixel-generator` stages each tuple into a sequence file
-  located at `tmp-dir`. See `cascalog.ops/lazy-generator`
-  for usage advice."
+  "Returns a Cascalog generator that emits MODIS pixel tuples
+  [?mod-h ?mod-v ?sample ?line] for a set of MODIS tiles at a given spatial
+  resolution.
+
+  Arguments:
+    tmp-path - A staging directory for writing tuples to a sequence file.
+    res - The spatial resolution.
+    tileseq - Map of country ISO keywords to MODIS tiles (see: forma.source.tilesets)"
   [tmp-path res tileseq]
   (let [tap (:sink (hfs-seqfile tmp-path))]
     (with-open [^TupleEntryCollector collector
@@ -173,7 +177,8 @@
                          sample (range (pixels-at-res res))
                          line   (range (pixels-at-res res))]
                      [h v sample line])]
-        (.add collector (Util/coerceToTuple item))))))
+        (.add collector (Util/coerceToTuple item))))
+    (name-vars tap ["?mod-h" "?mod-v" "?sample" "?line"])))
 
 ;; ### Special Functions
 

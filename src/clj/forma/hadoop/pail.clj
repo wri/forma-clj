@@ -3,7 +3,7 @@
         [cascalog.io :only (with-fs-tmp)]
         [forma.reproject :only (hv->tilestring)])
   (:import [java.util List]
-           [forma.schema DataChunk FireTuple FormaValue
+           [forma.schema DataChunk FormaValue
             LocationProperty LocationPropertyValue
             ModisPixelLocation DataValue]
            [backtype.cascading.tap PailTap PailTap$PailTapOptions]

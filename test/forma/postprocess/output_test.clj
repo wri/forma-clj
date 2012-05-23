@@ -81,7 +81,7 @@
     (mk-date-header "16" "p" ts)) => ["p19700101" "p19700117" "p19700202"])
 
 (fact
-  (backward-looking-mavg 3 [1 2 3 4]) => [[1.0 1.5 2.0 3.0]])
+  (backward-looking-mavg 3 [1 2 3 4]) => [1.0 1.5 2.0 3.0])
 
 (fact
   (let [ts (schema/timeseries-value 0 [1 2 3])
@@ -124,5 +124,3 @@
       (output-map ?out-m)
       (get-val ?out-m :modh :modv :> ?modh ?modv)) => (produces-some [[28 7]]))
 
-(fact
-  (make-csv output-map 3) => (produces-some [["28,7,10,4,19.9812500000,106.4516613766,0.1,0.25,0.25,0.43333334,0.6"]]))

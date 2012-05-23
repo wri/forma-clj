@@ -28,22 +28,22 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSeries._Fields>, java.io.Serializable, Cloneable {
-  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("FormaSeries");
+public class IntArray implements org.apache.thrift.TBase<IntArray, IntArray._Fields>, java.io.Serializable, Cloneable {
+  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("IntArray");
 
-  private static final org.apache.thrift.protocol.TField VALUES_FIELD_DESC = new org.apache.thrift.protocol.TField("values", org.apache.thrift.protocol.TType.LIST, (short)1);
+  private static final org.apache.thrift.protocol.TField INTS_FIELD_DESC = new org.apache.thrift.protocol.TField("ints", org.apache.thrift.protocol.TType.LIST, (short)1);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
-    schemes.put(StandardScheme.class, new FormaSeriesStandardSchemeFactory());
-    schemes.put(TupleScheme.class, new FormaSeriesTupleSchemeFactory());
+    schemes.put(StandardScheme.class, new IntArrayStandardSchemeFactory());
+    schemes.put(TupleScheme.class, new IntArrayTupleSchemeFactory());
   }
 
-  public List<FormaValue> values; // required
+  public List<Integer> ints; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
-    VALUES((short)1, "values");
+    INTS((short)1, "ints");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -58,8 +58,8 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
      */
     public static _Fields findByThriftId(int fieldId) {
       switch(fieldId) {
-        case 1: // VALUES
-          return VALUES;
+        case 1: // INTS
+          return INTS;
         default:
           return null;
       }
@@ -103,91 +103,91 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.VALUES, new org.apache.thrift.meta_data.FieldMetaData("values", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+    tmpMap.put(_Fields.INTS, new org.apache.thrift.meta_data.FieldMetaData("ints", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.ListMetaData(org.apache.thrift.protocol.TType.LIST, 
-            new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, FormaValue.class))));
+            new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32))));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
-    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(FormaSeries.class, metaDataMap);
+    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(IntArray.class, metaDataMap);
   }
 
-  public FormaSeries() {
+  public IntArray() {
   }
 
-  public FormaSeries(
-    List<FormaValue> values)
+  public IntArray(
+    List<Integer> ints)
   {
     this();
-    this.values = values;
+    this.ints = ints;
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
-  public FormaSeries(FormaSeries other) {
-    if (other.isSetValues()) {
-      List<FormaValue> __this__values = new ArrayList<FormaValue>();
-      for (FormaValue other_element : other.values) {
-        __this__values.add(new FormaValue(other_element));
+  public IntArray(IntArray other) {
+    if (other.isSetInts()) {
+      List<Integer> __this__ints = new ArrayList<Integer>();
+      for (Integer other_element : other.ints) {
+        __this__ints.add(other_element);
       }
-      this.values = __this__values;
+      this.ints = __this__ints;
     }
   }
 
-  public FormaSeries deepCopy() {
-    return new FormaSeries(this);
+  public IntArray deepCopy() {
+    return new IntArray(this);
   }
 
   @Override
   public void clear() {
-    this.values = null;
+    this.ints = null;
   }
 
-  public int getValuesSize() {
-    return (this.values == null) ? 0 : this.values.size();
+  public int getIntsSize() {
+    return (this.ints == null) ? 0 : this.ints.size();
   }
 
-  public java.util.Iterator<FormaValue> getValuesIterator() {
-    return (this.values == null) ? null : this.values.iterator();
+  public java.util.Iterator<Integer> getIntsIterator() {
+    return (this.ints == null) ? null : this.ints.iterator();
   }
 
-  public void addToValues(FormaValue elem) {
-    if (this.values == null) {
-      this.values = new ArrayList<FormaValue>();
+  public void addToInts(int elem) {
+    if (this.ints == null) {
+      this.ints = new ArrayList<Integer>();
     }
-    this.values.add(elem);
+    this.ints.add(elem);
   }
 
-  public List<FormaValue> getValues() {
-    return this.values;
+  public List<Integer> getInts() {
+    return this.ints;
   }
 
-  public FormaSeries setValues(List<FormaValue> values) {
-    this.values = values;
+  public IntArray setInts(List<Integer> ints) {
+    this.ints = ints;
     return this;
   }
 
-  public void unsetValues() {
-    this.values = null;
+  public void unsetInts() {
+    this.ints = null;
   }
 
-  /** Returns true if field values is set (has been assigned a value) and false otherwise */
-  public boolean isSetValues() {
-    return this.values != null;
+  /** Returns true if field ints is set (has been assigned a value) and false otherwise */
+  public boolean isSetInts() {
+    return this.ints != null;
   }
 
-  public void setValuesIsSet(boolean value) {
+  public void setIntsIsSet(boolean value) {
     if (!value) {
-      this.values = null;
+      this.ints = null;
     }
   }
 
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
-    case VALUES:
+    case INTS:
       if (value == null) {
-        unsetValues();
+        unsetInts();
       } else {
-        setValues((List<FormaValue>)value);
+        setInts((List<Integer>)value);
       }
       break;
 
@@ -196,8 +196,8 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
 
   public Object getFieldValue(_Fields field) {
     switch (field) {
-    case VALUES:
-      return getValues();
+    case INTS:
+      return getInts();
 
     }
     throw new IllegalStateException();
@@ -210,8 +210,8 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
     }
 
     switch (field) {
-    case VALUES:
-      return isSetValues();
+    case INTS:
+      return isSetInts();
     }
     throw new IllegalStateException();
   }
@@ -220,21 +220,21 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
   public boolean equals(Object that) {
     if (that == null)
       return false;
-    if (that instanceof FormaSeries)
-      return this.equals((FormaSeries)that);
+    if (that instanceof IntArray)
+      return this.equals((IntArray)that);
     return false;
   }
 
-  public boolean equals(FormaSeries that) {
+  public boolean equals(IntArray that) {
     if (that == null)
       return false;
 
-    boolean this_present_values = true && this.isSetValues();
-    boolean that_present_values = true && that.isSetValues();
-    if (this_present_values || that_present_values) {
-      if (!(this_present_values && that_present_values))
+    boolean this_present_ints = true && this.isSetInts();
+    boolean that_present_ints = true && that.isSetInts();
+    if (this_present_ints || that_present_ints) {
+      if (!(this_present_ints && that_present_ints))
         return false;
-      if (!this.values.equals(that.values))
+      if (!this.ints.equals(that.ints))
         return false;
     }
 
@@ -245,28 +245,28 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
   public int hashCode() {
     HashCodeBuilder builder = new HashCodeBuilder();
 
-    boolean present_values = true && (isSetValues());
-    builder.append(present_values);
-    if (present_values)
-      builder.append(values);
+    boolean present_ints = true && (isSetInts());
+    builder.append(present_ints);
+    if (present_ints)
+      builder.append(ints);
 
     return builder.toHashCode();
   }
 
-  public int compareTo(FormaSeries other) {
+  public int compareTo(IntArray other) {
     if (!getClass().equals(other.getClass())) {
       return getClass().getName().compareTo(other.getClass().getName());
     }
 
     int lastComparison = 0;
-    FormaSeries typedOther = (FormaSeries)other;
+    IntArray typedOther = (IntArray)other;
 
-    lastComparison = Boolean.valueOf(isSetValues()).compareTo(typedOther.isSetValues());
+    lastComparison = Boolean.valueOf(isSetInts()).compareTo(typedOther.isSetInts());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetValues()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.values, typedOther.values);
+    if (isSetInts()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.ints, typedOther.ints);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -288,14 +288,14 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("FormaSeries(");
+    StringBuilder sb = new StringBuilder("IntArray(");
     boolean first = true;
 
-    sb.append("values:");
-    if (this.values == null) {
+    sb.append("ints:");
+    if (this.ints == null) {
       sb.append("null");
     } else {
-      sb.append(this.values);
+      sb.append(this.ints);
     }
     first = false;
     sb.append(")");
@@ -322,15 +322,15 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
     }
   }
 
-  private static class FormaSeriesStandardSchemeFactory implements SchemeFactory {
-    public FormaSeriesStandardScheme getScheme() {
-      return new FormaSeriesStandardScheme();
+  private static class IntArrayStandardSchemeFactory implements SchemeFactory {
+    public IntArrayStandardScheme getScheme() {
+      return new IntArrayStandardScheme();
     }
   }
 
-  private static class FormaSeriesStandardScheme extends StandardScheme<FormaSeries> {
+  private static class IntArrayStandardScheme extends StandardScheme<IntArray> {
 
-    public void read(org.apache.thrift.protocol.TProtocol iprot, FormaSeries struct) throws org.apache.thrift.TException {
+    public void read(org.apache.thrift.protocol.TProtocol iprot, IntArray struct) throws org.apache.thrift.TException {
       org.apache.thrift.protocol.TField schemeField;
       iprot.readStructBegin();
       while (true)
@@ -340,21 +340,20 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
           break;
         }
         switch (schemeField.id) {
-          case 1: // VALUES
+          case 1: // INTS
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
-                org.apache.thrift.protocol.TList _list24 = iprot.readListBegin();
-                struct.values = new ArrayList<FormaValue>(_list24.size);
-                for (int _i25 = 0; _i25 < _list24.size; ++_i25)
+                org.apache.thrift.protocol.TList _list8 = iprot.readListBegin();
+                struct.ints = new ArrayList<Integer>(_list8.size);
+                for (int _i9 = 0; _i9 < _list8.size; ++_i9)
                 {
-                  FormaValue _elem26; // required
-                  _elem26 = new FormaValue();
-                  _elem26.read(iprot);
-                  struct.values.add(_elem26);
+                  int _elem10; // required
+                  _elem10 = iprot.readI32();
+                  struct.ints.add(_elem10);
                 }
                 iprot.readListEnd();
               }
-              struct.setValuesIsSet(true);
+              struct.setIntsIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -370,17 +369,17 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
       struct.validate();
     }
 
-    public void write(org.apache.thrift.protocol.TProtocol oprot, FormaSeries struct) throws org.apache.thrift.TException {
+    public void write(org.apache.thrift.protocol.TProtocol oprot, IntArray struct) throws org.apache.thrift.TException {
       struct.validate();
 
       oprot.writeStructBegin(STRUCT_DESC);
-      if (struct.values != null) {
-        oprot.writeFieldBegin(VALUES_FIELD_DESC);
+      if (struct.ints != null) {
+        oprot.writeFieldBegin(INTS_FIELD_DESC);
         {
-          oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.values.size()));
-          for (FormaValue _iter27 : struct.values)
+          oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.I32, struct.ints.size()));
+          for (int _iter11 : struct.ints)
           {
-            _iter27.write(oprot);
+            oprot.writeI32(_iter11);
           }
           oprot.writeListEnd();
         }
@@ -392,50 +391,49 @@ public class FormaSeries implements org.apache.thrift.TBase<FormaSeries, FormaSe
 
   }
 
-  private static class FormaSeriesTupleSchemeFactory implements SchemeFactory {
-    public FormaSeriesTupleScheme getScheme() {
-      return new FormaSeriesTupleScheme();
+  private static class IntArrayTupleSchemeFactory implements SchemeFactory {
+    public IntArrayTupleScheme getScheme() {
+      return new IntArrayTupleScheme();
     }
   }
 
-  private static class FormaSeriesTupleScheme extends TupleScheme<FormaSeries> {
+  private static class IntArrayTupleScheme extends TupleScheme<IntArray> {
 
     @Override
-    public void write(org.apache.thrift.protocol.TProtocol prot, FormaSeries struct) throws org.apache.thrift.TException {
+    public void write(org.apache.thrift.protocol.TProtocol prot, IntArray struct) throws org.apache.thrift.TException {
       TTupleProtocol oprot = (TTupleProtocol) prot;
       BitSet optionals = new BitSet();
-      if (struct.isSetValues()) {
+      if (struct.isSetInts()) {
         optionals.set(0);
       }
       oprot.writeBitSet(optionals, 1);
-      if (struct.isSetValues()) {
+      if (struct.isSetInts()) {
         {
-          oprot.writeI32(struct.values.size());
-          for (FormaValue _iter28 : struct.values)
+          oprot.writeI32(struct.ints.size());
+          for (int _iter12 : struct.ints)
           {
-            _iter28.write(oprot);
+            oprot.writeI32(_iter12);
           }
         }
       }
     }
 
     @Override
-    public void read(org.apache.thrift.protocol.TProtocol prot, FormaSeries struct) throws org.apache.thrift.TException {
+    public void read(org.apache.thrift.protocol.TProtocol prot, IntArray struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
       BitSet incoming = iprot.readBitSet(1);
       if (incoming.get(0)) {
         {
-          org.apache.thrift.protocol.TList _list29 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-          struct.values = new ArrayList<FormaValue>(_list29.size);
-          for (int _i30 = 0; _i30 < _list29.size; ++_i30)
+          org.apache.thrift.protocol.TList _list13 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.I32, iprot.readI32());
+          struct.ints = new ArrayList<Integer>(_list13.size);
+          for (int _i14 = 0; _i14 < _list13.size; ++_i14)
           {
-            FormaValue _elem31; // required
-            _elem31 = new FormaValue();
-            _elem31.read(iprot);
-            struct.values.add(_elem31);
+            int _elem15; // required
+            _elem15 = iprot.readI32();
+            struct.ints.add(_elem15);
           }
         }
-        struct.setValuesIsSet(true);
+        struct.setIntsIsSet(true);
       }
     }
   }

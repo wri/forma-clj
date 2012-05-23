@@ -28,22 +28,22 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._Fields>, java.io.Serializable, Cloneable {
-  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("LongArray");
+public class FormaArray implements org.apache.thrift.TBase<FormaArray, FormaArray._Fields>, java.io.Serializable, Cloneable {
+  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("FormaArray");
 
-  private static final org.apache.thrift.protocol.TField LONGS_FIELD_DESC = new org.apache.thrift.protocol.TField("longs", org.apache.thrift.protocol.TType.LIST, (short)1);
+  private static final org.apache.thrift.protocol.TField VALUES_FIELD_DESC = new org.apache.thrift.protocol.TField("values", org.apache.thrift.protocol.TType.LIST, (short)1);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
-    schemes.put(StandardScheme.class, new LongArrayStandardSchemeFactory());
-    schemes.put(TupleScheme.class, new LongArrayTupleSchemeFactory());
+    schemes.put(StandardScheme.class, new FormaArrayStandardSchemeFactory());
+    schemes.put(TupleScheme.class, new FormaArrayTupleSchemeFactory());
   }
 
-  public List<Long> longs; // required
+  public List<FormaValue> values; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
-    LONGS((short)1, "longs");
+    VALUES((short)1, "values");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -58,8 +58,8 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
      */
     public static _Fields findByThriftId(int fieldId) {
       switch(fieldId) {
-        case 1: // LONGS
-          return LONGS;
+        case 1: // VALUES
+          return VALUES;
         default:
           return null;
       }
@@ -103,91 +103,91 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.LONGS, new org.apache.thrift.meta_data.FieldMetaData("longs", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+    tmpMap.put(_Fields.VALUES, new org.apache.thrift.meta_data.FieldMetaData("values", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.ListMetaData(org.apache.thrift.protocol.TType.LIST, 
-            new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64))));
+            new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, FormaValue.class))));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
-    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(LongArray.class, metaDataMap);
+    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(FormaArray.class, metaDataMap);
   }
 
-  public LongArray() {
+  public FormaArray() {
   }
 
-  public LongArray(
-    List<Long> longs)
+  public FormaArray(
+    List<FormaValue> values)
   {
     this();
-    this.longs = longs;
+    this.values = values;
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
-  public LongArray(LongArray other) {
-    if (other.isSetLongs()) {
-      List<Long> __this__longs = new ArrayList<Long>();
-      for (Long other_element : other.longs) {
-        __this__longs.add(other_element);
+  public FormaArray(FormaArray other) {
+    if (other.isSetValues()) {
+      List<FormaValue> __this__values = new ArrayList<FormaValue>();
+      for (FormaValue other_element : other.values) {
+        __this__values.add(new FormaValue(other_element));
       }
-      this.longs = __this__longs;
+      this.values = __this__values;
     }
   }
 
-  public LongArray deepCopy() {
-    return new LongArray(this);
+  public FormaArray deepCopy() {
+    return new FormaArray(this);
   }
 
   @Override
   public void clear() {
-    this.longs = null;
+    this.values = null;
   }
 
-  public int getLongsSize() {
-    return (this.longs == null) ? 0 : this.longs.size();
+  public int getValuesSize() {
+    return (this.values == null) ? 0 : this.values.size();
   }
 
-  public java.util.Iterator<Long> getLongsIterator() {
-    return (this.longs == null) ? null : this.longs.iterator();
+  public java.util.Iterator<FormaValue> getValuesIterator() {
+    return (this.values == null) ? null : this.values.iterator();
   }
 
-  public void addToLongs(long elem) {
-    if (this.longs == null) {
-      this.longs = new ArrayList<Long>();
+  public void addToValues(FormaValue elem) {
+    if (this.values == null) {
+      this.values = new ArrayList<FormaValue>();
     }
-    this.longs.add(elem);
+    this.values.add(elem);
   }
 
-  public List<Long> getLongs() {
-    return this.longs;
+  public List<FormaValue> getValues() {
+    return this.values;
   }
 
-  public LongArray setLongs(List<Long> longs) {
-    this.longs = longs;
+  public FormaArray setValues(List<FormaValue> values) {
+    this.values = values;
     return this;
   }
 
-  public void unsetLongs() {
-    this.longs = null;
+  public void unsetValues() {
+    this.values = null;
   }
 
-  /** Returns true if field longs is set (has been assigned a value) and false otherwise */
-  public boolean isSetLongs() {
-    return this.longs != null;
+  /** Returns true if field values is set (has been assigned a value) and false otherwise */
+  public boolean isSetValues() {
+    return this.values != null;
   }
 
-  public void setLongsIsSet(boolean value) {
+  public void setValuesIsSet(boolean value) {
     if (!value) {
-      this.longs = null;
+      this.values = null;
     }
   }
 
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
-    case LONGS:
+    case VALUES:
       if (value == null) {
-        unsetLongs();
+        unsetValues();
       } else {
-        setLongs((List<Long>)value);
+        setValues((List<FormaValue>)value);
       }
       break;
 
@@ -196,8 +196,8 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
 
   public Object getFieldValue(_Fields field) {
     switch (field) {
-    case LONGS:
-      return getLongs();
+    case VALUES:
+      return getValues();
 
     }
     throw new IllegalStateException();
@@ -210,8 +210,8 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
     }
 
     switch (field) {
-    case LONGS:
-      return isSetLongs();
+    case VALUES:
+      return isSetValues();
     }
     throw new IllegalStateException();
   }
@@ -220,21 +220,21 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
   public boolean equals(Object that) {
     if (that == null)
       return false;
-    if (that instanceof LongArray)
-      return this.equals((LongArray)that);
+    if (that instanceof FormaArray)
+      return this.equals((FormaArray)that);
     return false;
   }
 
-  public boolean equals(LongArray that) {
+  public boolean equals(FormaArray that) {
     if (that == null)
       return false;
 
-    boolean this_present_longs = true && this.isSetLongs();
-    boolean that_present_longs = true && that.isSetLongs();
-    if (this_present_longs || that_present_longs) {
-      if (!(this_present_longs && that_present_longs))
+    boolean this_present_values = true && this.isSetValues();
+    boolean that_present_values = true && that.isSetValues();
+    if (this_present_values || that_present_values) {
+      if (!(this_present_values && that_present_values))
         return false;
-      if (!this.longs.equals(that.longs))
+      if (!this.values.equals(that.values))
         return false;
     }
 
@@ -245,28 +245,28 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
   public int hashCode() {
     HashCodeBuilder builder = new HashCodeBuilder();
 
-    boolean present_longs = true && (isSetLongs());
-    builder.append(present_longs);
-    if (present_longs)
-      builder.append(longs);
+    boolean present_values = true && (isSetValues());
+    builder.append(present_values);
+    if (present_values)
+      builder.append(values);
 
     return builder.toHashCode();
   }
 
-  public int compareTo(LongArray other) {
+  public int compareTo(FormaArray other) {
     if (!getClass().equals(other.getClass())) {
       return getClass().getName().compareTo(other.getClass().getName());
     }
 
     int lastComparison = 0;
-    LongArray typedOther = (LongArray)other;
+    FormaArray typedOther = (FormaArray)other;
 
-    lastComparison = Boolean.valueOf(isSetLongs()).compareTo(typedOther.isSetLongs());
+    lastComparison = Boolean.valueOf(isSetValues()).compareTo(typedOther.isSetValues());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetLongs()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.longs, typedOther.longs);
+    if (isSetValues()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.values, typedOther.values);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -288,14 +288,14 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("LongArray(");
+    StringBuilder sb = new StringBuilder("FormaArray(");
     boolean first = true;
 
-    sb.append("longs:");
-    if (this.longs == null) {
+    sb.append("values:");
+    if (this.values == null) {
       sb.append("null");
     } else {
-      sb.append(this.longs);
+      sb.append(this.values);
     }
     first = false;
     sb.append(")");
@@ -322,15 +322,15 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
     }
   }
 
-  private static class LongArrayStandardSchemeFactory implements SchemeFactory {
-    public LongArrayStandardScheme getScheme() {
-      return new LongArrayStandardScheme();
+  private static class FormaArrayStandardSchemeFactory implements SchemeFactory {
+    public FormaArrayStandardScheme getScheme() {
+      return new FormaArrayStandardScheme();
     }
   }
 
-  private static class LongArrayStandardScheme extends StandardScheme<LongArray> {
+  private static class FormaArrayStandardScheme extends StandardScheme<FormaArray> {
 
-    public void read(org.apache.thrift.protocol.TProtocol iprot, LongArray struct) throws org.apache.thrift.TException {
+    public void read(org.apache.thrift.protocol.TProtocol iprot, FormaArray struct) throws org.apache.thrift.TException {
       org.apache.thrift.protocol.TField schemeField;
       iprot.readStructBegin();
       while (true)
@@ -340,20 +340,21 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
           break;
         }
         switch (schemeField.id) {
-          case 1: // LONGS
+          case 1: // VALUES
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
-                org.apache.thrift.protocol.TList _list16 = iprot.readListBegin();
-                struct.longs = new ArrayList<Long>(_list16.size);
-                for (int _i17 = 0; _i17 < _list16.size; ++_i17)
+                org.apache.thrift.protocol.TList _list40 = iprot.readListBegin();
+                struct.values = new ArrayList<FormaValue>(_list40.size);
+                for (int _i41 = 0; _i41 < _list40.size; ++_i41)
                 {
-                  long _elem18; // required
-                  _elem18 = iprot.readI64();
-                  struct.longs.add(_elem18);
+                  FormaValue _elem42; // required
+                  _elem42 = new FormaValue();
+                  _elem42.read(iprot);
+                  struct.values.add(_elem42);
                 }
                 iprot.readListEnd();
               }
-              struct.setLongsIsSet(true);
+              struct.setValuesIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -369,17 +370,17 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
       struct.validate();
     }
 
-    public void write(org.apache.thrift.protocol.TProtocol oprot, LongArray struct) throws org.apache.thrift.TException {
+    public void write(org.apache.thrift.protocol.TProtocol oprot, FormaArray struct) throws org.apache.thrift.TException {
       struct.validate();
 
       oprot.writeStructBegin(STRUCT_DESC);
-      if (struct.longs != null) {
-        oprot.writeFieldBegin(LONGS_FIELD_DESC);
+      if (struct.values != null) {
+        oprot.writeFieldBegin(VALUES_FIELD_DESC);
         {
-          oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.I64, struct.longs.size()));
-          for (long _iter19 : struct.longs)
+          oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.values.size()));
+          for (FormaValue _iter43 : struct.values)
           {
-            oprot.writeI64(_iter19);
+            _iter43.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -391,49 +392,50 @@ public class LongArray implements org.apache.thrift.TBase<LongArray, LongArray._
 
   }
 
-  private static class LongArrayTupleSchemeFactory implements SchemeFactory {
-    public LongArrayTupleScheme getScheme() {
-      return new LongArrayTupleScheme();
+  private static class FormaArrayTupleSchemeFactory implements SchemeFactory {
+    public FormaArrayTupleScheme getScheme() {
+      return new FormaArrayTupleScheme();
     }
   }
 
-  private static class LongArrayTupleScheme extends TupleScheme<LongArray> {
+  private static class FormaArrayTupleScheme extends TupleScheme<FormaArray> {
 
     @Override
-    public void write(org.apache.thrift.protocol.TProtocol prot, LongArray struct) throws org.apache.thrift.TException {
+    public void write(org.apache.thrift.protocol.TProtocol prot, FormaArray struct) throws org.apache.thrift.TException {
       TTupleProtocol oprot = (TTupleProtocol) prot;
       BitSet optionals = new BitSet();
-      if (struct.isSetLongs()) {
+      if (struct.isSetValues()) {
         optionals.set(0);
       }
       oprot.writeBitSet(optionals, 1);
-      if (struct.isSetLongs()) {
+      if (struct.isSetValues()) {
         {
-          oprot.writeI32(struct.longs.size());
-          for (long _iter20 : struct.longs)
+          oprot.writeI32(struct.values.size());
+          for (FormaValue _iter44 : struct.values)
           {
-            oprot.writeI64(_iter20);
+            _iter44.write(oprot);
           }
         }
       }
     }
 
     @Override
-    public void read(org.apache.thrift.protocol.TProtocol prot, LongArray struct) throws org.apache.thrift.TException {
+    public void read(org.apache.thrift.protocol.TProtocol prot, FormaArray struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
       BitSet incoming = iprot.readBitSet(1);
       if (incoming.get(0)) {
         {
-          org.apache.thrift.protocol.TList _list21 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.I64, iprot.readI32());
-          struct.longs = new ArrayList<Long>(_list21.size);
-          for (int _i22 = 0; _i22 < _list21.size; ++_i22)
+          org.apache.thrift.protocol.TList _list45 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+          struct.values = new ArrayList<FormaValue>(_list45.size);
+          for (int _i46 = 0; _i46 < _list45.size; ++_i46)
           {
-            long _elem23; // required
-            _elem23 = iprot.readI64();
-            struct.longs.add(_elem23);
+            FormaValue _elem47; // required
+            _elem47 = new FormaValue();
+            _elem47.read(iprot);
+            struct.values.add(_elem47);
           }
         }
-        struct.setLongsIsSet(true);
+        struct.setValuesIsSet(true);
       }
     }
   }
