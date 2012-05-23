@@ -166,7 +166,7 @@
   Arguments:
     tmp-path - A staging directory for writing tuples to a sequence file.
     res - The spatial resolution.
-    tileseq - Map of country ISO keywords to MODIS tiles (see: forma.source.tilesets.clj)"
+    tileseq - Map of country ISO keywords to MODIS tiles (see: forma.source.tilesets)"
   [tmp-path res tileseq]
   (let [tap (:sink (hfs-seqfile tmp-path))]
     (with-open [^TupleEntryCollector collector
