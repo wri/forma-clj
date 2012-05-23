@@ -158,11 +158,14 @@
 ;; ### Generators
 
 (defn pixel-generator
-  "Returns a cascalog generator that produces every pixel combination
-  for the supplied sequence of tiles, given the supplied
-  resolution. `pixel-generator` stages each tuple into a sequence file
-  located at `tmp-dir`. See `cascalog.ops/lazy-generator`
-  for usage advice."
+  "Returns a Cascalog generator that emits MODIS pixel tuples
+  [?mod-h ?mod-v ?sample ?line] for a set of MODIS tiles at a given spatial
+  resolution.
+
+  Arguments:
+    tmp-path - A staging directory for writing tuples to a sequence file.
+    res - The spatial resolution.
+    tileseq - Map of country ISO keywords to MODIS tiles (see: forma.source.tilesets.clj)"
   [tmp-path res tileseq]
   (let [tap (:sink (hfs-seqfile tmp-path))]
     (with-open [^TupleEntryCollector collector
@@ -173,7 +176,8 @@
                          sample (range (pixels-at-res res))
                          line   (range (pixels-at-res res))]
                      [h v sample line])]
-        (.add collector (Util/coerceToTuple item))))))
+        (.add collector (Util/coerceToTuple item))))
+    (name-vars tap ["?mod-h" "?mod-v" "?sample" "?line"])))
 
 ;; ### Special Functions
 
