@@ -197,7 +197,7 @@
                  (?- (hfs-seqfile rain-path)
                      (mk-filter vcf-path
                                 (new-adjusted-precl-tap
-                                 ts-pail-path "1000" "32" t-res))))
+                                 ts-pail-path s-res "32" t-res))))
 
               reli-step
               ([:tmp-dirs reli-path]
