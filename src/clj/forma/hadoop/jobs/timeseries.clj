@@ -75,13 +75,10 @@
 
 (defmain DynamicTimeseries
   "TODO: Process a pattern, here"
-  [source-pail-path ts-pail-path s-res t-res datasets & countries]
+  [source-pail-path ts-pail-path s-res t-res datasets]
   {:pre [(vector? (read-string datasets))]}
-  (->> (for [dset  (read-string datasets)
-             [h v] (->> countries
-                        (map read-string)
-                        (apply tile-set))]
-         [dset (format "%s-%s" s-res t-res) (r/hv->tilestring h v)])
+  (->> (for [dset  (read-string datasets)]
+         [dset (format "%s-%s" s-res t-res)])
        (tseries-query source-pail-path)
        (pail/to-pail ts-pail-path)))
 
