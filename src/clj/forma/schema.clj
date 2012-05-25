@@ -113,7 +113,7 @@
   FireArray
   (get-vals [x] (.getFires x))
 
-   ArrayValue
+  ArrayValue
    (get-vals [x] (get-vals (.getFieldValue x))))
 
 (defn count-vals [x]
@@ -359,7 +359,7 @@
   "Returns the ModisPixelLocation from a LocationProperty Thrift object.
 
   Arguments:
-    llocation-prop - The LocationProperty Thrift object."  
+    location-prop - The LocationProperty Thrift object."  
   [location-prop]
   (-> location-prop .getProperty .getPixelLocation))
 
