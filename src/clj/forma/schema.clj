@@ -113,8 +113,8 @@
   FireArray
   (get-vals [x] (.getFires x))
 
-  ArrayValue
-  (get-vals [x] (get-vals (.getFieldValue x))))
+   ArrayValue
+   (get-vals [x] (get-vals (.getFieldValue x))))
 
 (defn count-vals [x]
   (count (get-vals x)))
@@ -345,6 +345,24 @@
    (.getChunkID loc)
    (.getChunkSize loc)])
 
+(defn chunk-locval
+  "Returns the LocationProperty and DataValue value from a DataChunk Thrift object.
+
+  Arguments:
+    chunk - The DataChunk Thrift object."
+  [chunk]
+  (let [loc (.getLocationProperty chunk)
+        val (get-vals (-> chunk .getChunkValue .getFieldValue))]
+    [loc val]))
+
+(defn pixel-prop-location
+  "Returns the ModisPixelLocation from a LocationProperty Thrift object.
+
+  Arguments:
+    llocation-prop - The LocationProperty Thrift object."  
+  [location-prop]
+  (-> location-prop .getProperty .getPixelLocation))
+
 (defn chunkloc->pixloc
   "Accepts a chunk location and a pixel index within that location and
    returns a pixel location.
@@ -355,7 +373,8 @@
 
     ;=> {:spatial-res \"1000\", :mod-h 28, :mod-v 9, :sample 1199, :line 1199}"
   [chunk-loc pix-idx]
-  (let [[spatial-res mod-h mod-v index size] (unpack-chunk-location chunk-loc)]
+  (let [modis-chunk-location (-> chunk-loc .getProperty .getChunkLocation)
+        [spatial-res mod-h mod-v index size] (unpack-chunk-location modis-chunk-location)]
     (apply pixel-location spatial-res mod-h mod-v
            (r/tile-position spatial-res size index pix-idx))))
 
