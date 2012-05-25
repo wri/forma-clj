@@ -119,11 +119,37 @@
       (u/strings->floats ?admin-s :> ?admin)))
 
 (def blossom-chunk
+  "Returns a Cascalog predicate macro that emits MODIS pixel values for each
+  element in a DataChunk array.
+
+  A DataChunk Thrift object is composed with a DataValue Thrift object which is
+  an array of pixel values representing values at different periods. This query
+  emits a tuple for each element in that array.
+
+  Input variables:
+    ?chunk - A DataChunk Thrift object.
+
+  Output variables:
+    ?s-res - The spatial resolution in meters as a string.
+    ?mod-h - The MODIS tile coordinate column.
+    ?mod-v - The MODIS tile coordinate row.
+    ?sample - The MODIS tile pixel row.
+    ?line - The MODIS tile pixel column.
+    ?val - The pixel value
+
+  Example usage:
+
+    (let [src [[dc]]] ;; dc is a DataChunk Thrift object
+         (??<-
+           [?s-res ?mod-h ?mod-v ?sample ?line ?val]
+           (src ?chunk)
+           (blossom-chunk ?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val)))"
   (<- [?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val]
-      (map ?chunk [:location :value] :> ?loc ?static-chunk)
-      (index ?static-chunk :> ?pix-idx ?val)
+      (index ?static-chunk :> ?pix-idx ?val)      
+      (schema/chunk-locval ?chunk :> ?loc ?static-chunk)
       (schema/chunkloc->pixloc ?loc ?pix-idx :> ?pixloc)
-      (schema/unpack-pixel-location ?pixloc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
+      (schema/pixel-prop-location ?pixloc :> ?pixlocval)
+      (schema/unpack-pixel-location ?pixlocval :> ?s-res ?mod-h ?mod-v ?sample ?line)))
 
 (defn chunkify [chunk-size]
   (<- [?dataset !date ?s-res ?t-res ?mh ?mv ?chunkid ?chunk :> ?datachunk]
