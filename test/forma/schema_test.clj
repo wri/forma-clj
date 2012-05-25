@@ -1,7 +1,13 @@
 (ns forma.schema-test
   (:use forma.schema
         [midje sweet cascalog])
-  (:require [forma.date-time :as date]))
+  (:require [forma.date-time :as date])
+  (:import [forma.schema
+            ArrayValue DataChunk DataValue DoubleArray FireArray
+            FireValue FormaValue IntArray LocationProperty
+            LocationPropertyValue LongArray ModisChunkLocation
+            ModisPixelLocation ShortArray TimeSeries FormaArray
+            NeighborValue]))
 
 ;; ## Various schema tests
 
@@ -51,3 +57,16 @@
   (let [pix-loc (-> (chunk-location "1000" 10 10 59 24000)
                     (chunkloc->pixloc 23999))]
     pix-loc => (pixel-location "1000" 10 10 1199 1199)))
+
+(tabular
+ (fact "Test Thriftable protocol"
+   (get-vals ?x) => ?vals)
+ ?x ?vals
+ (TimeSeries. 0 1 (mk-array-value (DoubleArray. [1 2 3]))) [1 2 3]
+ (FormaArray. [(FormaValue. (FireValue. 1 1 1 1) 0 0 0)]) [(FormaValue. (FireValue. 1 1 1 1) 0 0 0)]
+ (ShortArray. [1 2 3]) [1 2 3]
+ (IntArray. [1 2 3]) [1 2 3]
+ (LongArray. [1 2 3]) [1 2 3]
+ (DoubleArray. [1 2 3]) [1 2 3]
+ (FireArray. [1 2 3]) [1 2 3]
+ (mk-array-value (DoubleArray. [1 2 3])) [1 2 3])

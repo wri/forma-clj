@@ -113,8 +113,8 @@
   FireArray
   (get-vals [x] (.getFires x))
 
-  FormaArray
-  (get-vals [x] (.getValues x)))
+  ArrayValue
+  (get-vals [x] (get-vals (.getFieldValue x))))
 
 (defn count-vals [x]
   (count (get-vals x)))
