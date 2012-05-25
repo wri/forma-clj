@@ -24,6 +24,7 @@
 (defmain PreprocessRain
   "See project wiki for example usage."
   [path pail-path s-res & countries]
+  {:pre [(string? s-res)]}
   (let [countries (map read-string countries)]
     (rain-chunker s-res
                   static/chunk-size
@@ -42,6 +43,7 @@
 (defmain PreprocessStatic
   "See project wiki for example usage."
   [dataset ascii-path output-path s-res & countries]
+  {:pre [(string? s-res)]}
   (static-chunker s-res
                   static/chunk-size
                   (->> countries
@@ -56,7 +58,8 @@
   "TODO: This is only good for hansen datasets looking to be combined
   Tidy up. This needs to be combined with PreprocessStatic."
   [dataset ascii-path pail-path s-res & countries]
-  {:pre [(#{"hansen" "vcf"} dataset)]}
+  {:pre [(#{"hansen" "vcf"} dataset)
+         (string? s-res)]}
   (with-fs-tmp [_ tmp-dir]
     (let [line-tap (hfs-textline ascii-path)
           pix-tap  (->> countries
