@@ -15,7 +15,9 @@
   (for [period (range periods)
         :let [date     (d/period->datetime "32" period)
               location (schema/chunk-location "1000" 8 6 0 chunk-size)
-              chunk    (into [] (range chunk-size))]]
+              chunk    (schema/mk-data-value
+                        (schema/mk-array-value
+                         (schema/to-struct (range chunk-size))))]]
     ["path" (schema/chunk-value dataset "32" date location chunk)]))
 
 (defn test-fires
@@ -27,8 +29,8 @@
   (for [period (range periods)
         :let [date     (d/period->datetime "1" period)
               location (schema/pixel-location "1000" sample 6 10 10)
-              tuple    (schema/fire-value 1 1 1 1)]]
-    ["path" (schema/chunk-value "fire" "32" date location tuple)]))
+              data-val (schema/mk-data-value (schema/fire-value 1 1 1 1))]]
+    ["path" (schema/chunk-value "fire" "32" date location data-val)]))
 
 (future-fact?-
  "Add in test for results, here! Add another test for the usual
@@ -51,3 +53,14 @@ this query don't contain -9999."
                    (??-)
                    (first))]
    (second results) =not=> "something about not containing -9999."))
+
+(fact
+  "Test running-fire-sum"
+  (let [fires-src [[[(schema/fire-value 0 0 0 10)
+                     (schema/fire-value 1 0 0 33)]]]
+        result [(schema/fire-series 0 [(schema/fire-value 0 0 0 10)
+                                      (schema/fire-value 1 0 0 43)])]]
+    (??<- [?vals]
+        (fires-src ?fire-vals)
+        (:distinct false)
+        (running-fire-sum 0 ?fire-vals :> ?vals)) => [result]))
