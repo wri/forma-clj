@@ -4,6 +4,7 @@
         [midje sweet cascalog])
   (:require [forma.hadoop.io :as io]
             [forma.schema :as schema]
+            [forma.thrift :as thrift]            
             [forma.date-time :as d]))
 
 (defn test-chunks
@@ -13,12 +14,10 @@
   tuples equal to the supplied value for `periods`."
   [dataset periods chunk-size]
   (for [period (range periods)
-        :let [date     (d/period->datetime "32" period)
-              location (schema/chunk-location "1000" 8 6 0 chunk-size)
-              chunk    (schema/mk-data-value
-                        (schema/mk-array-value
-                         (schema/to-struct (range chunk-size))))]]
-    ["path" (schema/chunk-value dataset "32" date location chunk)]))
+        :let [date (d/period->datetime "32" period)
+              location (thrift/ModisChunkLocation* "1000" 8 6 0 chunk-size)
+              chunk (into [] (range chunk-size))]]
+    ["path" (thrift/DataChunk* dataset location chunk "32" date)]))
 
 (defn test-fires
   "Returns a sample input to the timeseries creation buffer, or a
@@ -27,10 +26,10 @@
   tuples equal to the supplied value for `periods`."
   [sample periods]
   (for [period (range periods)
-        :let [date     (d/period->datetime "1" period)
-              location (schema/pixel-location "1000" sample 6 10 10)
-              data-val (schema/mk-data-value (schema/fire-value 1 1 1 1))]]
-    ["path" (schema/chunk-value "fire" "32" date location data-val)]))
+        :let [date (d/period->datetime "1" period)
+              location (thrift/ModisPixelLocation* "1000" sample 6 10 10)
+              tuple (thrift/FireValue* 1 1 1 1)]]
+    ["path" (thrift/DataChunk* "fire" location tuple "32" date)]))
 
 (future-fact?-
  "Add in test for results, here! Add another test for the usual

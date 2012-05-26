@@ -1,7 +1,8 @@
 (ns forma.trends.stretch
   (:use [forma.matrix.utils :only (coll-avg)])
   (:require [forma.date-time :as date]
-            [forma.schema :as schema]))
+            [forma.schema :as schema]
+            [forma.thrift :as thrift]))
 
 (defn shift-periods-target-res
   "Shift original ts start/end periods to appropriate values for target res"
@@ -18,20 +19,24 @@
        (drop offset)))
 
 (defn ts-expander
-  "Expand a timeseries from lower resolution to higher resolution, by
- expanding the original timeseries to a daily timeseries, then
- consuming it at the new resolution.
+  "timeseries is a TimeSeries.
 
-  The final argument must be a timeseries-value as defined in
-  forma.schema."
-  [base-res target-res {:keys [start-idx end-idx series]}]
-  (let [[beg end] (shift-periods-target-res base-res target-res start-idx end-idx)
-        offset    (date/date-offset target-res beg base-res start-idx)]
+  Expand a timeseries from lower resolution to higher resolution, by
+   expanding the original timeseries to a daily timeseries, then
+   consuming it at the new resolution.
+
+   The final argument must be a timeseries-value as defined in
+   forma.schema."
+  [base-res target-res timeseries]
+  (let [[start-idx end-idx series-value] (thrift/unpack timeseries)
+        series (thrift/unpack series-value)
+        [beg end] (shift-periods-target-res base-res target-res start-idx end-idx)
+        offset (date/date-offset target-res beg base-res start-idx)]
     (loop [[pd & more :as periods] (range beg end)
            day-seq (expand-to-days start-idx series pd val base-res offset)
-           result  (transient [])]
+           result (transient [])]
       (if (empty? periods)
-        (schema/timeseries-value beg (persistent! result))
+        (schema/create-timeseries beg (persistent! result))
         (let [num-days (date/period-span target-res pd)]
           (recur more
                  (drop num-days day-seq)

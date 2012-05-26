@@ -18,12 +18,10 @@
 (def rain-raw [0.0 0.0 0.0 0.2 0.2 2.1 5.3 3.4 2.2 0.6 0.0 0.0 0.0 0.0 0.0 0.0 0.4 2.2 4.3 4.2 2.4 0.2 0.0 0.0 0.0 0.0 0.0 0.3 0.5 2.9 3.4 4.5 1.9 1.5 0.0 0.0 0.0 0.0 0.0 0.2 1.3 2.8 4.3 6.7 2.5 1.0 0.0 0.0 0.4 0.0 0.0 0.4 0.5 1.4 4.0 3.9 2.0 0.2 0.0 0.0 0.0 0.0 0.0 0.1 1.7 3.8 4.3 5.1 2.7 0.4 0.0 0.0 0.0 0.0 0.0 0.0 0.3 1.6 3.7 5.3 1.9 0.5 0.0 0.0 0.0 0.0 0.0 0.3 0.9 1.5 4.7 5.8 2.4 0.1 0.0 0.0 0.0 0.0 0.1 0.1 0.7 3.2 3.8 5.4 1.6 0.4 0.0 0.0 0.0 0.0 0.0 0.0 0.4 2.4 3.3 5.6 2.4 0.8 0.0 0.0 0.0 0.0 0.0 0.2 0.3 2.2 4.3 4.6 2.6 1.1 0.0 0.0 0.0 0.0 0.0 0.0 0.4 2.4 3.3 5.6 2.4 0.8 0.0 0.0 0.0 0.0 0.0 0.2 0.3 2.2 4.3 4.6 2.6 1.1 0.0 0.0])
 
 (def rain-ts
-  (schema/timeseries-value 360 rain-raw))
+  (schema/create-timeseries 360 rain-raw))
 
 (def rain-ts-expanded
   (ts-expander "32" "16" rain-ts))
-
-        
 
 (def rain (take (count ndvi) (:series rain-ts-expanded)))
 
@@ -38,7 +36,7 @@
     :modv 7
     :line 5
     :sample 10
-    :prob-series (schema/timeseries-value
+    :prob-series (schema/create-timeseries
                   (end-training "16")
                   [0.1 0.2 0.4 0.7 0.9])
     :tres        "16"
@@ -50,7 +48,7 @@
     :modv 7
     :line 5
     :sample 9
-    :prob-series (schema/timeseries-value
+    :prob-series (schema/create-timeseries
                   (end-training "16")
                   [0.1 0.1 0.1 0.1 0.1])
     :tres        "16"
@@ -62,7 +60,7 @@
     :modv 7
     :line 4
     :sample 10
-    :prob-series (schema/timeseries-value
+    :prob-series (schema/create-timeseries
                   (end-training "16")
                   [0.1 0.2 0.4 0.7 0.9])
     :tres        "16"
@@ -74,7 +72,7 @@
     :modv 7
     :line 5
     :sample 11
-    :prob-series (schema/timeseries-value
+    :prob-series (schema/create-timeseries
                   (end-training "16")
                   [0.1 0.6 0.6 0.65 0.9])
     :tres         "16"
@@ -86,7 +84,7 @@
     :modv 7
     :line 4
     :sample 9
-    :prob-series (schema/timeseries-value
+    :prob-series (schema/create-timeseries
                   (end-training "16")
                   [0.1 0.2 0.4 0.7 0.9])
     :tres        "16"
