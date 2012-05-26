@@ -3,6 +3,7 @@
         [midje sweet cascalog]
         [clojure.string :only (join)] forma.hadoop.jobs.forma)
   (:require [forma.schema :as schema]
+            [forma.thrift :as thrift]
             [forma.date-time :as date]
             [forma.trends.filter :as f]
             [forma.hadoop.io :as io]
@@ -23,7 +24,7 @@
 ;; timeseries, to test the business with the neighbors.
 
 (def dynamic-tuples
-  (let [ts (schema/timeseries-value 370 [3 2 1])]
+  (let [ts (schema/create-timeseries 370 [3 2 1])]
     (into [["1000" 13 9 610 611 ts ts ts]]
           (for [sample (range 4)
                 line   (range 4)]
@@ -31,9 +32,9 @@
 
 (def fire-values
   (let [keep? (complement #{[0 1] [0 2] [1 2] [3 2] [1 3] [2 3]})
-        series (schema/timeseries-value 370 [(schema/fire-value 1 1 1 1)
-                                             (schema/fire-value 0 1 1 1)
-                                             (schema/fire-value 3 2 1 1)])]
+        series (schema/create-timeseries 370 [(thrift/FireValue* 1 1 1 1)
+                                             (thrift/FireValue* 0 1 1 1)
+                                             (thrift/FireValue* 3 2 1 1)])]
     (into [["1000" 13 9 610 611 series]]
           (for [sample (range 4)
                 line (range 4)
@@ -41,12 +42,13 @@
             ["1000" 13 9 sample line series]))))
 
 (def outer-src
-  (let [no-fire-3 (schema/forma-value nil 3 3 3 3)
-        no-fire-2 (schema/forma-value nil 2 2 2 2)
-        no-fire-1 (schema/forma-value nil 1 1 1 1)
-        forma-3 (schema/forma-value (schema/fire-value 1 1 1 1) 3 3 3 3)
-        forma-2 (schema/forma-value (schema/fire-value 0 1 1 1) 2 2 2 2)
-        forma-1 (schema/forma-value (schema/fire-value 3 2 1 1) 1 1 1 1)]
+  (let [;; TODO: FireValue is required in the forma.thrift IDL.
+        ;;no-fire-3 (thrift/FormaValue* nil 3 3 3 3)
+        ;;no-fire-2 (thrift/FormaValue* nil 2 2 2 2)
+        ;;no-fire-1 (thrift/FormaValue* nil 1 1 1 1)
+        forma-3 (thrift/FormaValue* (thrift/FireValue* 1 1 1 1) 3 3 3 3)
+        forma-2 (thrift/FormaValue* (thrift/FireValue* 0 1 1 1) 2 2 2 2)
+        forma-1 (thrift/FormaValue* (thrift/FireValue* 3 2 1 1) 1 1 1 1)]
     [["1000" 370 13 9 0 0 forma-3]
      ["1000" 371 13 9 0 0 forma-2]
      ["1000" 372 13 9 0 0 forma-1]
@@ -59,9 +61,9 @@
      ["1000" 370 13 9 3 0 forma-3]
      ["1000" 371 13 9 3 0 forma-2]
      ["1000" 372 13 9 3 0 forma-1]
-     ["1000" 370 13 9 0 1 no-fire-3]
-     ["1000" 371 13 9 0 1 no-fire-2]
-     ["1000" 372 13 9 0 1 no-fire-1]
+     ;;["1000" 370 13 9 0 1 no-fire-3]
+     ;;["1000" 371 13 9 0 1 no-fire-2]
+     ;;["1000" 372 13 9 0 1 no-fire-1]
      ["1000" 370 13 9 1 1 forma-3]
      ["1000" 371 13 9 1 1 forma-2]
      ["1000" 372 13 9 1 1 forma-1]
@@ -71,27 +73,27 @@
      ["1000" 370 13 9 3 1 forma-3]
      ["1000" 371 13 9 3 1 forma-2]
      ["1000" 372 13 9 3 1 forma-1]
-     ["1000" 370 13 9 0 2 no-fire-3]
-     ["1000" 371 13 9 0 2 no-fire-2]
-     ["1000" 372 13 9 0 2 no-fire-1]
-     ["1000" 370 13 9 1 2 no-fire-3]
-     ["1000" 371 13 9 1 2 no-fire-2]
-     ["1000" 372 13 9 1 2 no-fire-1]
+     ;;["1000" 370 13 9 0 2 no-fire-3]
+     ;;["1000" 371 13 9 0 2 no-fire-2]
+     ;;["1000" 372 13 9 0 2 no-fire-1]
+     ;;["1000" 370 13 9 1 2 no-fire-3]
+     ;;["1000" 371 13 9 1 2 no-fire-2]
+     ;;["1000" 372 13 9 1 2 no-fire-1]
      ["1000" 370 13 9 2 2 forma-3]
      ["1000" 371 13 9 2 2 forma-2]
      ["1000" 372 13 9 2 2 forma-1]
-     ["1000" 370 13 9 3 2 no-fire-3]
-     ["1000" 371 13 9 3 2 no-fire-2]
-     ["1000" 372 13 9 3 2 no-fire-1]
+     ;; ["1000" 370 13 9 3 2 no-fire-3]
+     ;; ["1000" 371 13 9 3 2 no-fire-2]
+     ;; ["1000" 372 13 9 3 2 no-fire-1]
      ["1000" 370 13 9 0 3 forma-3]
      ["1000" 371 13 9 0 3 forma-2]
      ["1000" 372 13 9 0 3 forma-1]
-     ["1000" 370 13 9 1 3 no-fire-3]
-     ["1000" 371 13 9 1 3 no-fire-2]
-     ["1000" 372 13 9 1 3 no-fire-1]
-     ["1000" 370 13 9 2 3 no-fire-3]
-     ["1000" 371 13 9 2 3 no-fire-2]
-     ["1000" 372 13 9 2 3 no-fire-1]
+     ;; ["1000" 370 13 9 1 3 no-fire-3]
+     ;; ["1000" 371 13 9 1 3 no-fire-2]
+     ;; ["1000" 372 13 9 1 3 no-fire-1]
+     ;; ["1000" 370 13 9 2 3 no-fire-3]
+     ;; ["1000" 371 13 9 2 3 no-fire-2]
+     ;; ["1000" 372 13 9 2 3 no-fire-1]
      ["1000" 370 13 9 3 3 forma-3]
      ["1000" 371 13 9 3 3 forma-2]
      ["1000" 372 13 9 3 3 forma-1]

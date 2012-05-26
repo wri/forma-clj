@@ -1,6 +1,5 @@
 (ns forma.classify.logistic
   (:use [forma.utils]
-        [forma.schema :only (unpack-neighbor-val)]
         [clojure.math.numeric-tower :only (abs)]
         [forma.matrix.utils]
         [cascalog.api])

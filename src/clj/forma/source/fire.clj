@@ -55,7 +55,7 @@
         [forma.date-time :only (convert)])
   (:require [clojure.string :as s]
             [forma.utils :as utils]
-            [forma.schema :as schema]
+            [forma.thrift :as thrift]
             [forma.reproject :as r]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]))
@@ -107,7 +107,7 @@
       (p/filtered-count [330] ?kelvin :> ?temp-330)
       (p/filtered-count [50] ?conf :> ?conf-50)
       (p/bi-filtered-count [50 330] ?conf ?kelvin :> ?both-preds)
-      (schema/fire-value ?temp-330 ?conf-50 ?both-preds ?count :> ?tuple)))
+      (thrift/FireValue* ?temp-330 ?conf-50 ?both-preds ?count :> ?tuple)))
 
 (def fire-pred
  "Returns a Cascalog predicate macro that creates a FireTuple Thrift object.
@@ -184,11 +184,11 @@
 (defn reproject-fires
   "Returns a Cascalog query that creates DataChunk Thrift objects for fires."
   [m-res src]
-  (<- [?datachunk]
+  (<- [?pixel-chunk]
       (p/add-fields m-res :> ?m-res)
       (src ?dataset ?date ?t-res ?lat ?lon ?tuple)
-      (schema/mk-data-value ?tuple :> ?tuple-val)
-      (r/latlon->modis ?m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
-      (schema/pixel-location ?m-res ?mod-h ?mod-v ?sample ?line :> ?location)
-      (schema/chunk-value ?dataset ?t-res ?date ?location ?tuple-val :> ?datachunk)
+      (thrift/pack ?tuple :> ?tuple-val)
+      (r/latlon->modis ?m-res ?lat ?lon :> ?h ?v ?sample ?line)
+      (thrift/ModisPixelLocation* ?m-res ?h ?v ?sample ?line :> ?pixel-loc)
+      (thrift/DataChunk* ?dataset ?pixel-loc ?tuple-val ?t-res ?date  :> ?pixel-chunk)
       (:distinct false)))

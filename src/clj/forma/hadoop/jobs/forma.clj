@@ -5,6 +5,7 @@
             [forma.reproject :as r]
             [forma.date-time :as date]
             [forma.schema :as schema]
+            [forma.thrift :as thrift]
             [forma.hadoop.predicate :as p]
             [forma.trends.analysis :as a]
             [forma.ops.classify :as log]
@@ -13,31 +14,31 @@
 ;; We're mapping across two sequences at the end, there; the
 ;; long-series and the t-stat-series.
 
-(def get-loc
-  (<- [?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val]
-      (schema/extract-location ?chunk :> ?loc)
-      (schema/extract-chunk-value ?chunk :> ?val)
-      (schema/unpack-pixel-location ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
+(def get-pixel-loc
+  "Takes a DataChunk Thrift object that represents a pixel."
+  (<- [?pixel-chunk :> ?s-res ?h ?v ?sample ?line ?start ?ts]
+      (thrift/unpack ?pixel-chunk :> ?name ?pixel-loc ?data ?t-res _)
+      (thrift/unpack ?data :> ?ts)
+      (thrift/unpack ?ts :> ?start _ _)
+      (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)))
 
 (defn fire-tap
   "Accepts an est-map and a query source of fire timeseries. Note that
   this won't work, pulling directly from the pail!"
   [est-map fire-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?fire-series]
-      (fire-src ?chunk)
-      (get-loc ?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?f-series)
-      (schema/adjust-fires est-map ?f-series :> ?fire-series)))
+  (<- [?s-res ?h ?v ?sample ?line ?adjusted-ts]
+      (fire-src ?pixel-chunk)
+      (thrift/unpack ?pixel-chunk :> _ ?pixel-loc ?data _)
+      (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)
+      (thrift/unpack ?data :> ?ts)
+      (schema/adjust-fires est-map ?ts :> ?adjusted-ts)))
 
 (defn filter-query
-  "Note that the ?ts here is an ArrayList of one of the items inside
-  of ArrayValue."
   [vcf-src vcf-limit chunk-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?vals]
       (chunk-src _ ?ts-chunk)
       (vcf-src _ ?vcf-chunk)
-      (get-loc ?ts-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?series)
-      (schema/unpack-timeseries ?series :> ?start _ ?ts)
-      (schema/get-vals ?ts :> ?vals)
+      (get-pixel-loc ?ts-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?start ?vals)
       (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
       (>= ?vcf vcf-limit)
       (:distinct false)))
@@ -115,7 +116,7 @@
   (<- [?s-res ?period ?mh ?mv ?s ?l ?forma-val]
       (fire-src ?s-res ?mh ?mv ?s ?l !!fire)
       (dynamic-src ?s-res ?mh ?mv ?s ?l ?start ?short ?break ?long ?t-stat)
-      (schema/forma-seq !!fire ?short ?break ?long ?t-stat :> ?forma-seq)
+      (thrift/FormaValue* !!fire ?short ?long ?t-stat ?break :> ?forma-seq)
       (p/index ?forma-seq :zero-index ?start :> ?period ?forma-val)
       (:distinct false)))
 
