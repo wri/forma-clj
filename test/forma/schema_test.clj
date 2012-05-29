@@ -89,3 +89,8 @@
         val (LocationPropertyValue/pixelLocation modis-pixel)
         locprop (LocationProperty. val)]
     (pixel-prop-location locprop) => modis-pixel))
+
+(fact
+  "Test vector wrapping of get-vals"
+  (let [arr (mk-array-value (DoubleArray. [1 2 3]))]
+    (get-vals-wrap arr)) => [[1 2 3]])

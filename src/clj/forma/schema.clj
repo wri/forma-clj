@@ -119,6 +119,12 @@
 (defn count-vals [x]
   (count (get-vals x)))
 
+(defn get-vals-wrap
+  "Wrap get-vals so that returned vector is sufficiently nested for use in a
+   Cascalog query"
+  [array-obj]
+  [(get-vals array-obj)])
+
 (defn boundaries
   "Accepts a sequence of pairs of <initial time period, collection>
   and returns the maximum start period and the minimum end period. For
