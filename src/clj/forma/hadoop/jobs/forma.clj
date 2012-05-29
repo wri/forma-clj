@@ -37,7 +37,7 @@
       (vcf-src _ ?vcf-chunk)
       (get-loc ?ts-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?series)
       (schema/unpack-timeseries ?series :> ?start _ ?ts)
-      (schema/get-vals ?ts :> ?vals)
+      (schema/get-vals-wrap ?ts :> ?vals)
       (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
       (>= ?vcf vcf-limit)
       (:distinct false)))
