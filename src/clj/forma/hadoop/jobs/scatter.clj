@@ -197,7 +197,7 @@
                  (?- (hfs-seqfile rain-path)
                      (mk-filter vcf-path
                                 (new-adjusted-precl-tap
-                                 ts-pail-path "1000" "32" t-res))))
+                                 ts-pail-path s-res "32" t-res))))
 
               reli-step
               ([:tmp-dirs reli-path]
@@ -208,25 +208,25 @@
               
               adjustseries
               ([:tmp-dirs adjusted-series-path]
-                 "Adjusts the lengths of all timeseries
-                               and filters out timeseries below the proper VCF value."
+                 "Adjusts lengths of all timeseries so they all cover the same
+                  time spans."
                  (with-job-conf {"mapred.min.split.size" 805306368}
-                   (?- (hfs-lzo-textline adjusted-series-path)
+                   (?- (hfs-seqfile adjusted-series-path)
                        (forma/dynamic-filter (hfs-seqfile ndvi-path)
                                              (hfs-seqfile reli-path)
                                              (hfs-seqfile rain-path)))))
 
               cleanseries ([:tmp-dirs clean-series]
                              "Runs the trends processing."
-                             (?- (hfs-lzo-textline clean-series)
+                             (?- (hfs-seqfile clean-series)
                                  (forma/dynamic-clean
-                                  est-map (hfs-lzo-textline adjusted-series-path))))
+                                  est-map (hfs-seqfile adjusted-series-path))))
 
               trends ([:tmp-dirs trends-path]
                         "Runs the trends processing."
                         (?- (hfs-seqfile trends-path)
                             (forma/analyze-trends
-                             est-map (hfs-lzo-textline clean-series))))
+                             est-map (hfs-seqfile clean-series))))
 
               mid-forma ([:tmp-dirs forma-mid-path
                           :deps [trends adjustfires]]
@@ -279,5 +279,4 @@
                       "s3n://formaresults/finaloutput"
                       "s3n://formaresults/trapped"
                       827))
-
 

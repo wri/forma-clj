@@ -1,7 +1,14 @@
 (ns forma.schema-test
   (:use forma.schema
         [midje sweet cascalog])
-  (:require [forma.date-time :as date]))
+  (:require [forma.date-time :as date])
+  (:import [forma.schema
+            ArrayValue DataChunk DataValue DoubleArray FireArray
+            FireValue FormaValue IntArray LocationProperty
+            LocationPropertyValue LongArray ModisChunkLocation
+            ModisPixelLocation ShortArray TimeSeries FormaArray
+            NeighborValue]
+           [org.apache.thrift TBase TUnion]))
 
 ;; ## Various schema tests
 
@@ -39,15 +46,51 @@
          f-start (date/datetime->period "32" "2005-01-01")
          mk-f-series (fn [offset]
                        (timeseries-value (+ f-start offset)
-                                         [(fire-value 0 0 0 1)
-                                          (fire-value 1 1 1 1)]))]
+                                         (mk-array-value (FireArray.
+                                                          [(fire-value 0 0 0 1)
+                                                           (fire-value 1 1 1 1)]))))]
      (adjust-fires est-map (mk-f-series ?offset)) => [?series]))
  ?offset ?series
- 0       (timeseries-value  f-start [(fire-value 0 0 0 1) (fire-value 1 1 1 1)])
- 1       (timeseries-value f-start [(fire-value 0 0 0 1)])
+ 0       (timeseries-value  f-start (mk-array-value (FireArray.
+                                                     [(fire-value 0 0 0 1)
+                                                      (fire-value 1 1 1 1)])))
+ 1       (timeseries-value f-start (mk-array-value (FireArray.
+                                                    [(fire-value 0 0 0 1)])))
  2       nil)
 
 (fact "chunk to pixel location conversions."
   (let [pix-loc (-> (chunk-location "1000" 10 10 59 24000)
                     (chunkloc->pixloc 23999))]
     pix-loc => (pixel-location "1000" 10 10 1199 1199)))
+
+(tabular
+ (fact "Test Thriftable protocol"
+   (get-vals ?x) => ?vals)
+ ?x ?vals
+ (TimeSeries. 0 1 (mk-array-value (DoubleArray. [1 2 3]))) [1 2 3]
+ (FormaArray. [(FormaValue. (FireValue. 1 1 1 1) 0 0 0)]) [(FormaValue. (FireValue. 1 1 1 1) 0 0 0)]
+ (ShortArray. [1 2 3]) [1 2 3]
+ (IntArray. [1 2 3]) [1 2 3]
+ (LongArray. [1 2 3]) [1 2 3]
+ (DoubleArray. [1 2 3]) [1 2 3]
+ (FireArray. [1 2 3]) [1 2 3]
+ (mk-array-value (DoubleArray. [1 2 3])) [1 2 3])
+
+(fact "Test chunk-locval method."
+  (let [loc (LocationProperty. 
+             (LocationPropertyValue/chunkLocation
+              (ModisChunkLocation. "500" 28 8 1 24000)))
+        val (DataValue/vals (ArrayValue/ints (IntArray. [1 1 1 1])))
+        dc (DataChunk. "vcf" loc val "16")]
+    (chunk-locval dc) => [loc [1 1 1 1]]))
+
+(fact "Test pixel-prop-location method."
+  (let [modis-pixel (ModisPixelLocation. "500" 28 8 1 10)
+        val (LocationPropertyValue/pixelLocation modis-pixel)
+        locprop (LocationProperty. val)]
+    (pixel-prop-location locprop) => modis-pixel))
+
+(fact
+  "Test vector wrapping of get-vals"
+  (let [arr (mk-array-value (DoubleArray. [1 2 3]))]
+    (get-vals-wrap arr)) => [[1 2 3]])
