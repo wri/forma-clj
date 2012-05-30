@@ -45,21 +45,6 @@
    (last beta)    => (roughly -15.1054)
    (first beta)   => (roughly -2.4156)))
 
-(fact
-"TODO: (robin) what is this test supposed to do?  More docs. Make
-sure mult-fn is working for tiny matrix"
-  (let [mat
-        (let [init-mat (.transpose (DoubleMatrix/zeros 4)) 
-              to-insert (double 2)]
-          (.put init-mat 0 to-insert)
-          (.put init-mat 3 to-insert))
-        out-mat
-        (let [init-mat (.transpose (DoubleMatrix/zeros 4)) 
-              to-insert (double -2)]
-          (.put init-mat 0 to-insert)
-          (.put init-mat 3 to-insert))]
-    (mult-fn mat) => out-mat))
-
 ;; USEFUL FOR BENCHMARK
 
 (defn multiplier
