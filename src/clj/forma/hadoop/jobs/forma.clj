@@ -27,7 +27,7 @@
 
 (defn filter-query
   [vcf-src vcf-limit chunk-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?series] 
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?series]
       (chunk-src _ ?ts-chunk)
       (vcf-src _ ?vcf-chunk)      
 
@@ -38,12 +38,14 @@
       (p/index ?vcf-vals :> ?pixel-idx ?vcf)
       (thrift/unpack ?vcf-loc :> ?s-res ?mod-h ?mod-v ?id ?size)
       (r/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line)
-
-      ;; actual filter-query
+      
+      ;; unpack ts object
       (thrift/unpack ?ts-chunk :> _ ?ts-loc ?ts-data _ _)
       (thrift/unpack ?ts-data :> ?start-idx _ ?ts-array)
       (thrift/unpack* ?ts-array :> ?series)
       (thrift/unpack ?ts-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
+
+      ;; filter on vcf-limit
       (>= ?vcf vcf-limit)
       (:distinct false)))
 
