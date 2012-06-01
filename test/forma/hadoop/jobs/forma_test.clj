@@ -1,14 +1,18 @@
 (ns forma.hadoop.jobs.forma-test
+  (:use [forma.hadoop.jobs.forma] :reload)
   (:use cascalog.api
         [midje sweet cascalog]
-        [clojure.string :only (join)] forma.hadoop.jobs.forma)
+        [clojure.string :only (join)]
+        [forma.playground])
   (:require [forma.schema :as schema]
             [forma.thrift :as thrift]
             [forma.date-time :as date]
             [forma.trends.filter :as f]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
-            [cascalog.ops :as c]))
+            [forma.reproject :as r]
+            [cascalog.ops :as c])
+  (:import [backtype.hadoop.pail Pail]))
 
 (def some-map
   {:est-start "2005-12-01"
@@ -46,9 +50,9 @@
         ;;no-fire-3 (thrift/FormaValue* nil 3 3 3 3)
         ;;no-fire-2 (thrift/FormaValue* nil 2 2 2 2)
         ;;no-fire-1 (thrift/FormaValue* nil 1 1 1 1)
-        forma-3 (thrift/FormaValue* (thrift/FireValue* 1 1 1 1) 3 3 3 3)
-        forma-2 (thrift/FormaValue* (thrift/FireValue* 0 1 1 1) 2 2 2 2)
-        forma-1 (thrift/FormaValue* (thrift/FireValue* 3 2 1 1) 1 1 1 1)]
+        forma-3 (thrift/FormaValue* (thrift/FireValue* 1 1 1 1) 3.0 3.0 3.0 3.0)
+        forma-2 (thrift/FormaValue* (thrift/FireValue* 0 1 1 1) 2.0 2.0 2.0 2.0)
+        forma-1 (thrift/FormaValue* (thrift/FireValue* 3 2 1 1) 1.0 1.0 1.0 1.0)]
     [["1000" 370 13 9 0 0 forma-3]
      ["1000" 371 13 9 0 0 forma-2]
      ["1000" 372 13 9 0 0 forma-1]
@@ -237,7 +241,8 @@
           (provided
             (forma-tap est-map :n-src :reli-src :r-src :v-src :f-src) => outer-tap)))
 
-(fact
+(comment
+  (fact
   "Uses simple timeseries to test cleaning query"
   (let [t-res "16"
         ts-length 10
@@ -267,3 +272,4 @@
         clean-src [["500" 28 8 0 0 0 ndvi]]
         rain-src [["500" 28 8 0 0 0 -1 precl -1]]]
     (analyze-trends est-map clean-src rain-src)) => (produces-some [["500" 28 8 0 0 0 -0.46384872080089 -4.198030811863873E-16 -2.86153967746369 4.3841345603546955]]))
+)
