@@ -176,7 +176,7 @@
 (defn DataValue?
   "Return true if x is a supported DataValue type, otherwise nil."
   [x]
-  (let [types [forma.schema.DoubleArray forma.schema.FireArray
+  (let [types [forma.schema.DoubleArray forma.schema.FireArray forma.schema.ArrayValue
                forma.schema.FireValue forma.schema.FormaArray
                forma.schema.FormaValue forma.schema.IntArray
                forma.schema.LongArray forma.schema.TimeSeries
