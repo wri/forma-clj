@@ -3,13 +3,13 @@
         midje.sweet)
   (:require [forma.date-time :as date]
             [forma.schema :as schema]
-            [forma.thrift :as t]
+            [forma.thrift :as thrift]
             [forma.trends.data :as data]))
 
 (fact
-  (let [ts (schema/create-timeseries 384 [1 2 3])
-        start-idx (t/get-start-idx ts)
-        end-idx (t/get-end-idx ts)]
+  (let [ts (thrift/TimeSeries* 384 386 [1 2 3])
+        start-idx (thrift/get-start-idx ts)
+        end-idx (thrift/get-end-idx ts)]
     (shift-periods-target-res "32" "16" start-idx end-idx) => [736 741]))
 
 (fact
@@ -40,7 +40,7 @@ monthly dataset (e.g. 31 for January, 28 for non-leap year February."
   April. Since we only have through March, that second period in March
   is not generated."
   (let [ts (schema/create-timeseries 384 [1 2 3])
-        output (t/TimeSeries* 736 740 [1.0 1.0625 2.0 2.3125 3.0])]
+        output (thrift/TimeSeries* 736 740 [1.0 1.0625 2.0 2.3125 3.0])]
     (ts-expander "32" "16" ts) => output))
 
 (defn get-periods-per-year
@@ -52,7 +52,8 @@ monthly dataset (e.g. 31 for January, 28 for non-leap year February."
   "Create a timeseries based on the number of periods in a year, the number of periods to consume, and the starting index. Values are repeated based on `periods-per-year`, and increment with the year index `(range years)."
   [periods-per-year amount start-idx]
   (let [years 10]
-    (schema/create-timeseries start-idx
+    (thrift/TimeSeries* start-idx
+                        (dec (+ start-idx amount))
                              (map float (take amount
                                               (reduce concat
                                                       (map

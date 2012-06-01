@@ -12,7 +12,7 @@
 
 (defn expand-to-days
   "Expand timeseries to daily timeseries"
-  [start-idx series pd val base-res offset]
+  [start-idx series pd base-res offset]
   (->> (map-indexed #(vector (+ % start-idx) %2) series)
        (mapcat (fn [[pd val]]
                  (repeat (date/period-span base-res pd) val)) )
@@ -25,18 +25,19 @@
    expanding the original timeseries to a daily timeseries, then
    consuming it at the new resolution.
 
-   The final argument must be a timeseries-value as defined in
-   forma.schema."
+   The final argument must be a TimeSeries object as defined in
+   forma.thrift."
   [base-res target-res timeseries]
   (let [[start-idx end-idx series-value] (thrift/unpack timeseries)
         series (thrift/unpack series-value)
         [beg end] (shift-periods-target-res base-res target-res start-idx end-idx)
         offset (date/date-offset target-res beg base-res start-idx)]
     (loop [[pd & more :as periods] (range beg end)
-           day-seq (expand-to-days start-idx series pd val base-res offset)
+           day-seq (expand-to-days start-idx series pd base-res offset)
            result (transient [])]
-      (if (empty? periods)
-        (schema/create-timeseries beg (persistent! result))
+      (if (or (empty? periods) (empty? day-seq))
+        (let [res (persistent! result)]
+          (thrift/TimeSeries* (long beg) (long (dec (+ beg (count res)))) res))
         (let [num-days (date/period-span target-res pd)]
           (recur more
                  (drop num-days day-seq)
