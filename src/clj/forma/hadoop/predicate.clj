@@ -120,7 +120,8 @@
       (mangle #"," ?textline :> ?country ?admin-s)
       (u/strings->floats ?admin-s :> ?admin)))
 
-(def blossom-chunk
+(defn blossom-chunk
+  [tile-chunk-src]
   "Return a Cascalog predicate macro that takes a MODIS tile chunk and emits
   all MODIS pixel coordinates.
 
@@ -131,7 +132,8 @@
           [?res ?h ?v ?sample ?line ?val]
           (src ?tile-chunk)
           (blossom-chunk ?tile-chunk :> ?res ?h ?v ?sample ?line ?val)))"
-  (<- [?tile-chunk :> ?s-res ?h ?v ?sample ?line ?val]
+  (<- [?s-res ?h ?v ?sample ?line ?val]
+      (tile-chunk-src ?tile-chunk)
       (thrift/unpack ?tile-chunk :> _ ?tile-loc ?data _ _)
       (thrift/unpack* ?data :> ?data-value)
       (index ?data-value :> ?pixel-idx ?val)

@@ -14,14 +14,6 @@
 ;; We're mapping across two sequences at the end, there; the
 ;; long-series and the t-stat-series.
 
-(def get-pixel-loc
-  "Takes a DataChunk Thrift object that represents a pixel."
-  (<- [?pixel-chunk :> ?s-res ?h ?v ?sample ?line ?start ?ts]
-      (thrift/unpack ?pixel-chunk :> ?name ?pixel-loc ?data ?t-res _)
-      (thrift/unpack ?data :> ?ts)
-      (thrift/unpack ?ts :> ?start _ _)
-      (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)))
-
 (defn fire-tap
   "Accepts an est-map and a query source of fire timeseries. Note that
   this won't work, pulling directly from the pail!"
@@ -35,11 +27,23 @@
 
 (defn filter-query
   [vcf-src vcf-limit chunk-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?vals]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?series] 
       (chunk-src _ ?ts-chunk)
-      (vcf-src _ ?vcf-chunk)
-      (get-pixel-loc ?ts-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?start ?vals)
-      (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
+      (vcf-src _ ?vcf-chunk)      
+
+      ;; mirrors p/blossom-chunk, but doesn't have "invalid predicate" error
+      ;; (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
+      (thrift/unpack ?vcf-chunk :> _ ?vcf-loc ?vcf-data _ _)
+      (thrift/unpack* ?vcf-data :> ?vcf-vals)
+      (p/index ?vcf-vals :> ?pixel-idx ?vcf)
+      (thrift/unpack ?vcf-loc :> ?s-res ?mod-h ?mod-v ?id ?size)
+      (r/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line)
+
+      ;; actual filter-query
+      (thrift/unpack ?ts-chunk :> _ ?ts-loc ?ts-data _ _)
+      (thrift/unpack ?ts-data :> ?start-idx _ ?ts-array)
+      (thrift/unpack* ?ts-array :> ?series)
+      (thrift/unpack ?ts-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
       (>= ?vcf vcf-limit)
       (:distinct false)))
 
