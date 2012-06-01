@@ -103,7 +103,7 @@
 (defn adjusted-precl-tap
   "Document... returns a tap that adjusts for the incoming
   resolution."
-  [src ts-pail-path s-res base-t-res t-res]
+  [ts-pail-path s-res base-t-res t-res]
   (let [precl-tap (constrained-tap ts-pail-path "precl" s-res base-t-res)]
     (if (= t-res base-t-res)
       precl-tap
