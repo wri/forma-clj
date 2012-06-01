@@ -25,6 +25,16 @@
       (thrift/unpack ?data :> ?ts)
       (schema/adjust-fires est-map ?ts :> ?adjusted-ts)))
 
+(defn ts-unpacking
+  [ts-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?series]
+      (ts-src _ ?ts-chunk)
+      ;; unpack ts object
+      (thrift/unpack ?ts-chunk :> _ ?ts-loc ?ts-data _ _)
+      (thrift/unpack ?ts-data :> ?start-idx _ ?ts-array)
+      (thrift/unpack* ?ts-array :> ?series)
+      (thrift/unpack ?ts-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
+
 (defn filter-query
   [vcf-src vcf-limit chunk-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?series]
