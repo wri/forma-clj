@@ -105,12 +105,14 @@
   (let [precl-tap (constrained-tap ts-pail-path "precl" s-res base-t-res)]
     (if (= t-res base-t-res)
       precl-tap
+      precl-tap
       (<- [?path ?adjusted-pixel-chunk]
-        (precl-tap ?path ?pixel-chunk)
-        (thrift/unpack ?pixel-chunk :> ?name ?pixel-loc ?ts ?t-res ?date)      
-        (stretch/ts-expander base-t-res t-res ?ts :> ?expanded-ts)
-        (thrift/DataChunk* ?name ?pixel-loc ?expanded-ts ?t-res :> ?adjusted-pixel-chunk)
-        (:distinct false)))))
+        ;; (precl-tap ?path ?pixel-chunk)
+        ;; (thrift/unpack ?pixel-chunk :> ?name ?pixel-loc ?ts ?t-res ?date)      
+        ;; (stretch/ts-expander base-t-res t-res ?ts :> ?expanded-ts)
+        ;; (thrift/DataChunk* ?name ?pixel-loc ?expanded-ts ?t-res :> ?adjusted-pixel-chunk)
+        ;; (:distinct false))
+      )))
 
 (defmapcatop expand-rain-pixel
   [sample line]
