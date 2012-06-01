@@ -241,7 +241,8 @@
   "Create a ModisPixelLocation."
   [s-res h v sample line]
   {:pre [(instance? java.lang.String s-res)
-         (every? #(instance? java.lang.Long %) [h v sample line])]}
+         ;;(every? #(instance? java.lang.Long %) [h v sample line])
+         ]}
   (ModisPixelLocation. s-res h v sample line))
 
 (defn TimeSeries*
@@ -271,7 +272,8 @@
   {:pre  [(every? #(instance? java.lang.String %) [name res])
           (LocationPropertyValue? loc)
           (DataValue? val)
-          (or (not date) (instance? java.lang.String (first date)))]}
+;;          (or (not date) (instance? java.lang.String (first date)))
+          ]}
   (let [loc (mk-location-prop loc)
         val (if (coll? val)
               (->> val pack mk-array-value mk-data-value)

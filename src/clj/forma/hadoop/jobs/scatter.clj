@@ -16,7 +16,9 @@
             [forma.hadoop.jobs.forma :as forma]
             [forma.hadoop.jobs.timeseries :as tseries]
             [forma.date-time :as date]
-            [forma.classify.logistic :as log]))
+            [forma.classify.logistic :as log])
+  ;;(:import [backtype.Hadoop.pail Pail])
+  )
 
 (def convert-line-src
   (hfs-textline "s3n://modisfiles/ascii/admin-map.csv"))
@@ -101,18 +103,18 @@
 (defn adjusted-precl-tap
   "Document... returns a tap that adjusts for the incoming
   resolution."
-  [ts-pail-path s-res base-t-res t-res]
+  [src ts-pail-path s-res base-t-res t-res]
   (let [precl-tap (constrained-tap ts-pail-path "precl" s-res base-t-res)]
     (if (= t-res base-t-res)
       precl-tap
-      precl-tap
-      ;; (<- [?path ?adjusted-pixel-chunk]
-          ;; (precl-tap ?path ?pixel-chunk)
-          ;; (thrift/unpack ?pixel-chunk :> ?name ?pixel-loc ?ts ?t-res ?date)      
-          ;; (stretch/ts-expander base-t-res t-res ?ts :> ?expanded-ts)
-          ;; (thrift/DataChunk* ?name ?pixel-loc ?expanded-ts ?t-res :> ?adjusted-pixel-chunk)
-          ;; (:distinct false))
-          )))
+      (<- [?path ?adjusted-pixel-chunk]
+          (precl-tap ?path ?pixel-chunk)
+          (thrift/unpack ?pixel-chunk :> ?name ?in-pix-loc ?ts ?t-res !date)
+          (thrift/unpack ?in-pix-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
+          (stretch/ts-expander base-t-res t-res ?ts :> ?expanded-ts)
+          (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?out-pix-loc)
+          (thrift/DataChunk* ?name ?out-pix-loc ?expanded-ts ?t-res !date :> ?adjusted-pixel-chunk)
+          (:distinct false)))))
 
 (defmapcatop expand-rain-pixel
   [sample line]
