@@ -256,9 +256,10 @@
 (defn FormaValue*
   "Create a FormaValue."
   [fire short long tstat & break]
-  {:pre [(instance? forma.schema.FireValue fire)
-         (every? #(instance? java.lang.Double %) [short long tstat])
-         (or (not break) (instance? java.lang.Double (first break)))]}
+  {:pre [(or (not fire) (instance? forma.schema.FireValue fire))
+         ;;(every? #(instance? java.lang.Double %) [short long tstat])
+         ;;(or (not break) (instance? java.lang.Double (first break)))
+         ]}
   (let [[break] break
         forma-value (FormaValue. fire short long tstat)]
     (if break

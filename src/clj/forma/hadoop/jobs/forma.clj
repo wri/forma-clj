@@ -127,7 +127,10 @@
   "Accepts an est-map and sources for ndvi, rain, and fire timeseries,
   plus a source of static vcf pixels.
 
-  Note that all values internally discuss timeseries."
+  Note that all values internally discuss timeseries.
+
+  Also note that !!fire is an ungrounding variable, and triggers a left join
+  with the trend result variables."
   [dynamic-src fire-src]
   (<- [?s-res ?period ?mh ?mv ?s ?l ?forma-val]
       (fire-src ?s-res ?mh ?mv ?s ?l !!fire)
