@@ -64,11 +64,12 @@
   (let [[vcf hansen ecoid gadm border]
         (map (comp static-tap (partial split-chunk-tap pail-path))
              [["vcf"] ["hansen"] ["ecoid"] ["gadm"] ["border"]])]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?gadm ?vcf ?ecoid ?hansen]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?gadm ?vcf ?ecoid ?hansen ?border]
         (vcf    ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
         (hansen ?s-res ?mod-h ?mod-v ?sample ?line ?hansen)
         (ecoid  ?s-res ?mod-h ?mod-v ?sample ?line ?ecoid)
         (gadm   ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
+        (border ?s-res ?mod-h ?mod-v ?sample ?line ?border)
         (>= ?vcf vcf-limit))))
 
 ;; ## Forma
