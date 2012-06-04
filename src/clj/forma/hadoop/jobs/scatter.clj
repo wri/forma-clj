@@ -61,11 +61,12 @@
   (let [[vcf hansen ecoid gadm border]
         (map (comp static-tap (partial split-chunk-tap pail-path))
              [["vcf"] ["hansen"] ["ecoid"] ["gadm"] ["border"]])]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?gadm ?vcf ?ecoid ?hansen]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?gadm ?vcf ?ecoid ?hansen ?coast-dist]
         (vcf    ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
         (hansen ?s-res ?mod-h ?mod-v ?sample ?line ?hansen)
         (ecoid  ?s-res ?mod-h ?mod-v ?sample ?line ?ecoid)
         (gadm   ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
+        (border ?s-res ?mod-h ?mod-v ?sample ?line ?coast-dist)
         (>= ?vcf vcf-limit))))
 
 ;; ## Forma
@@ -91,7 +92,8 @@
              :window 10
              :ridge-const 1e-8
              :convergence-thresh 1e-6
-             :max-iterations 500}})
+             :max-iterations 500
+             :min-coast-dist 3}})
 
 (defn constrained-tap
   [ts-pail-path dataset s-res t-res]
