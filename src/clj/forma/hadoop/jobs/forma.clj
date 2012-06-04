@@ -172,7 +172,7 @@ value, and the aggregate of the neighbors."
   (let [first-idx (date/datetime->period t-res est-start)]
     (<- [?s-res ?eco ?beta]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen)
+        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen ?border)
         (= ?pd first-idx)
         (log/logistic-beta-wrap [ridge-const convergence-thresh max-iterations]
                                 ?hansen ?val ?neighbor-val :> ?beta)

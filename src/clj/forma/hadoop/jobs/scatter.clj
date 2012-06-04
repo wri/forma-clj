@@ -30,7 +30,15 @@
   [chunk-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?val]
       (chunk-src _ ?chunk)
-      (p/blossom-chunk ?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val)))
+      (thrift/unpack ?chunk :> _ ?loc ?data _ _)
+      (thrift/unpack* ?data :> ?vals)
+      (p/index ?vals :> ?pixel-idx ?val)
+      (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?id ?size)
+      (r/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line)
+
+      ;;(p/blossom-chunk ?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line
+      ;;?val)
+      ))
 
 (defn country-tap
   [gadm-src convert-src]
@@ -61,6 +69,8 @@
          (>= ?vcf 25))))
 
 (defn static-src [{:keys [vcf-limit]} pail-path]
+  ;; screen out border pixels later - doing it here will remove non-
+  ;; but nearly water pixels before they can be included as neighbors
   (let [[vcf hansen ecoid gadm border]
         (map (comp static-tap (partial split-chunk-tap pail-path))
              [["vcf"] ["hansen"] ["ecoid"] ["gadm"] ["border"]])]
@@ -95,7 +105,8 @@
              :window 10
              :ridge-const 1e-8
              :convergence-thresh 1e-6
-             :max-iterations 500}})
+             :max-iterations 500
+             :border-idx 2}})
 
 (defn constrained-tap
   [ts-pail-path dataset s-res t-res]
