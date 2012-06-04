@@ -124,8 +124,7 @@
         (:distinct false))))
 
 (defn forma-tap
-  "Accepts an est-map and sources for ndvi, rain, and fire timeseries,
-  plus a source of static vcf pixels.
+  "Accepts an est-map and sources for 
 
   Note that all values internally discuss timeseries.
 
@@ -134,9 +133,8 @@
   [dynamic-src fire-src]
   (<- [?s-res ?period ?mh ?mv ?s ?l ?forma-val]
       (fire-src ?s-res ?mh ?mv ?s ?l !!fire)
-      (dynamic-src ?s-res ?mh ?mv ?s ?l ?start ?short ?break ?long ?t-stat)
-      (thrift/FormaValue* !!fire ?short ?long ?t-stat ?break :> ?forma-seq)
-      (p/index ?forma-seq :zero-index ?start :> ?period ?forma-val)
+      (dynamic-src ?s-res ?mh ?mv ?s ?l ?period ?short ?break ?long ?t-stat)
+      (thrift/FormaValue* !!fire ?short ?long ?t-stat ?break :> ?forma-val)
       (:distinct false)))
 
 (defmapcatop [process-neighbors [num-neighbors]]
