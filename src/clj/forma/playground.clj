@@ -15,3 +15,17 @@
 (def tile-chunk-tap [[tile-chunk]])
 
 (def ts (thrift/TimeSeries* 0 1 (repeat 10 100)))
+
+;; FireValue
+
+(def fv (thrift/FireValue* 1 1 1 1))
+
+;; Fire TS
+
+(def fs (thrift/TimeSeries* 360 [fv fv]))
+
+;; est-map
+
+(def est-map {:est-start "1970-01-01"
+              :est-end "2012-01-01"
+              :t-res "16"})

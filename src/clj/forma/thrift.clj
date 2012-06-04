@@ -206,14 +206,16 @@
   "Create a NeighborValue."
   [fire ncount avg-short min-short avg-long min-long avg-stat min-stat
    & [avg-break min-break]]
-  {:pre [(instance? forma.schema.FireValue fire)
-         (or (not avg-break) (instance? java.lang.Double avg-break))
-         (or (not min-break) (instance? java.lang.Double min-break))
-         (instance? java.lang.Long ncount)
-         (every? #(instance? java.lang.Double %)
-                 [avg-short min-short avg-long min-long avg-stat min-stat])]}
+  {:pre [(or (not fire) (instance? forma.schema.FireValue fire))
+         ;;(or (not avg-break) (instance? java.lang.Double avg-break))
+         ;;(or (not min-break) (instance? java.lang.Double min-break))
+         ;;(instance? java.lang.Long ncount)
+         ;;         (every? #(instance? java.lang.Double %)
+         ;;        [avg-short min-short avg-long min-long avg-stat
+         ;;        min-stat])
+         ]}
   (let [n-value (NeighborValue. fire ncount avg-short min-short avg-long min-long
-                                avg-stat min-stat)]
+                                 avg-stat min-stat)]
     (if avg-break
       (doto n-value
         (.setAvgParamBreak avg-break)))
@@ -247,11 +249,18 @@
 
 (defn TimeSeries*
   "Create a TimeSeries."
-  [start end val]
-    {:pre [(every? #(instance? java.lang.Long %) [start end])
+  ([start vals]
+    {:pre [;;(every? #(instance? java.lang.Long %) [start end])
+           (coll? vals)]}
+    (let [elems (count vals)]
+      (TimeSeries* start
+                   (dec (+ start (count vals)))
+                   vals)))
+  ([start end val]
+    {:pre [;;(every? #(instance? java.lang.Long %) [start end])
            (coll? val)]}
     (let [series (if (coll? val) (pack val) val)]
-      (TimeSeries. start end (mk-array-value series))))
+      (TimeSeries. start end (mk-array-value series)))))
 
 (defn FormaValue*
   "Create a FormaValue."
