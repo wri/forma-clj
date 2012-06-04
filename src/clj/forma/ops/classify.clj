@@ -17,11 +17,12 @@
        [:temp-330 :conf-50 :both-preds :count]))
 
 (defn unpack-feature-vec [val neighbor-val]
-  (let [[fire short _ long t-stat] val
+  (let [intercept [1]
+        [fire short _ long t-stat] val
         fire-seq (unpack-fire fire)
         [fire-neighbors & more] (unpack-neighbors neighbor-val)
         fire-neighbor (unpack-fire fire-neighbors)]
-    (into [] (concat fire-seq [short long t-stat] fire-neighbor more))))
+    (into [] (concat intercept fire-seq [short long t-stat] fire-neighbor more))))
 
 (defbufferop [logistic-beta-wrap [r c m]]
   "returns a vector of parameter coefficients.  note that this is
