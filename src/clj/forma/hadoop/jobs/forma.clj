@@ -99,8 +99,8 @@
   [est-map dynamic-src]
   (let [good-set #{0 1}
         bad-set #{2 3 255}]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?clean-ndvi]
-        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi _ ?reli)
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?clean-ndvi ?precl]
+        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl ?reli)
         (tele-clean est-map good-set bad-set ?start ?ndvi ?reli :> ?clean-ndvi)
         (:distinct false))))
 
@@ -115,9 +115,8 @@
   (let [long-block (:long-block est-map)
         short-block (:window est-map)]
     (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?short ?long ?t-stat ?break]
-        (rain-src ?s-res ?mod-h ?mod-v ?sample ?line ?start _ ?precl _)
+        (clean-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl)
         (f/shorten-ts ?ndvi ?precl :> ?short-precl)
-        (clean-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi)
         (a/short-stat long-block short-block ?ndvi :> ?short)
         (a/long-stats ?ndvi ?short-precl :> ?long ?t-stat)
         (a/hansen-stat ?ndvi :> ?break)
