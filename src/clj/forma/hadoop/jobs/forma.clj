@@ -111,7 +111,7 @@
   We break this apart from dynamic-filter to force the filtering to
   occur before the analysis. Note that all variable names within this
   query are TIMESERIES, not individual values."
-  [est-map clean-src rain-src]
+  [est-map clean-src]
   (let [long-block (:long-block est-map)
         short-block (:window est-map)]
     (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?short ?long ?t-stat ?break]
