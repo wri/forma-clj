@@ -210,7 +210,22 @@
    ["1000" 1 "2001-01-01" 13 9 610 611
     (join \tab [3 2 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0])]])
 
-(let [est-map {:est-start "2005-12-01"
+(comment
+  (fact
+  "Uses simple timeseries to test cleaning query"
+  (let [t-res "16"
+        ts-length 10
+        est-map {:est-start (date/period->datetime t-res (- ts-length 5))
+                 :est-end (date/period->datetime t-res ts-length)
+                 :t-res t-res}
+        ndvi [1 2 3 4 5 6 7 8 9 10] ;;(vec (range 8000 (+ 8000 ts-length)))
+        precl (vec (range ts-length))
+        reli [0 2 3 0 1 0 3 1 1 0]
+        dynamic-src [["500" 28 8 0 0 0 ndvi precl reli]]]
+    (dynamic-clean est-map dynamic-src) => (produces-some
+                                            [["500" 28 8 0 0 0 [1.0 2.0 3.0 4 5]] ["500" 28 8 0 0 0 [1.0 2.0 3.0 4 5 6]]])))
+
+  (let [est-map {:est-start "2005-12-01"
                :est-end "2011-04-01"
                :t-res "32"
                :neighbors 1
@@ -240,21 +255,7 @@
           (forma-query est-map :n-src :reli-src :r-src :v-src country-src :f-src)  
           (provided
             (forma-tap est-map :n-src :reli-src :r-src :v-src :f-src) => outer-tap)))
-
-(comment
-  (fact
-  "Uses simple timeseries to test cleaning query"
-  (let [t-res "16"
-        ts-length 10
-        est-map {:est-start (date/period->datetime t-res (- ts-length 5))
-                 :est-end (date/period->datetime t-res ts-length)
-                 :t-res t-res}
-        ndvi [1 2 3 4 5 6 7 8 9 10] ;;(vec (range 8000 (+ 8000 ts-length)))
-        precl (vec (range ts-length))
-        reli [0 2 3 0 1 0 3 1 1 0]
-        dynamic-src [["500" 28 8 0 0 0 ndvi precl reli]]]
-    (dynamic-clean est-map dynamic-src) => (produces-some
-                                            [["500" 28 8 0 0 0 [1.0 2.0 3.0 4 5]] ["500" 28 8 0 0 0 [1.0 2.0 3.0 4 5 6]]])))
+)
 
 (fact
   (let [model-ts [[1 [1 2 3]]]
@@ -264,12 +265,11 @@
         (ts ?id ?ts)
         (f/shorten-ts ?model-ts ?ts :> ?shorter))) => (produces [[1 [1 2 3]]]))
 
+
 (fact
   (let [ts-length 50
         est-map {:window 10 :long-block 30}
         ndvi (flatten [(range 25) (range 25 0 -1)])
         precl (flatten [(range 25 0 -1) (range 25)])
-        clean-src [["500" 28 8 0 0 0 ndvi]]
-        rain-src [["500" 28 8 0 0 0 -1 precl -1]]]
-    (analyze-trends est-map clean-src rain-src)) => (produces-some [["500" 28 8 0 0 0 -0.46384872080089 -4.198030811863873E-16 -2.86153967746369 4.3841345603546955]]))
-)
+        clean-src [["500" 28 8 0 0 0 ndvi precl]]]
+    (analyze-trends est-map clean-src)) => (produces-some [["500" 28 8 0 0 0 49 -0.46384872080089 -4.198030811863873E-16 -2.86153967746369 4.3841345603546955]]))

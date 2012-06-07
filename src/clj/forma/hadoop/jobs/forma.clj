@@ -104,6 +104,11 @@
         (tele-clean est-map good-set bad-set ?start ?ndvi ?reli :> ?clean-ndvi)
         (:distinct false))))
 
+(defmapop series-end
+  [series start]
+  (let [length (count series)]
+    (dec (+ start length))))
+
 (defn analyze-trends
   "Accepts an est-map, and sources for ndvi and rain timeseries and
   vcf values split up by pixel.
@@ -114,12 +119,13 @@
   [est-map clean-src]
   (let [long-block (:long-block est-map)
         short-block (:window est-map)]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?short ?long ?t-stat ?break]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break]
         (clean-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl)
         (f/shorten-ts ?ndvi ?precl :> ?short-precl)
         (a/short-stat long-block short-block ?ndvi :> ?short)
         (a/long-stats ?ndvi ?short-precl :> ?long ?t-stat)
         (a/hansen-stat ?ndvi :> ?break)
+        (series-end ?ndvi ?start :> ?end)
         (:distinct false))))
 
 (defn forma-tap
