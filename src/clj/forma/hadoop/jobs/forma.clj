@@ -144,7 +144,7 @@
 (defn consolidate-trends
   [trends-src]
   (<- [?s-res ?mod-h ?mod-v ?s ?l ?start ?short-series ?long-series ?t-stat-series ?break-series]
-      (trends-src ?s-res ?mod-h ?mod-v ?s ?l ?start ?short ?long ?t-stat ?break)
+      (trends-src ?s-res ?mod-h ?mod-v ?s ?l ?start ?short ?long ?t-stat ?break _)
       (consolidator ?start ?short ?long ?t-stat ?break :> _ ?short-series ?long-series ?t-stat-series ?break-series)))
 
 (defn forma-tap
