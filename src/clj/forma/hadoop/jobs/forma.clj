@@ -119,14 +119,33 @@
   [est-map clean-src]
   (let [long-block (:long-block est-map)
         short-block (:window est-map)]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break ?count]
         (clean-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl)
         (f/shorten-ts ?ndvi ?precl :> ?short-precl)
         (a/short-stat long-block short-block ?ndvi :> ?short)
         (a/long-stats ?ndvi ?short-precl :> ?long ?t-stat)
         (a/hansen-stat ?ndvi :> ?break)
         (series-end ?ndvi ?start :> ?end)
+        (c/count ?count) ;; force a reduce
         (:distinct false))))
+
+(defbufferop consolidator
+  [tuples]
+  [[[(vec (map first tuples))]
+    [(vec (map #(nth % 1) (sort-by first tuples)))]
+    [(vec (map #(nth % 2) (sort-by first tuples)))]
+    [(vec (map #(nth % 3) (sort-by first tuples)))]
+    [(vec (map #(nth % 4) (sort-by first tuples)))]]])
+
+(defn get-max-period
+  [series]
+  (max (first series)))
+
+(defn consolidate-trends
+  [trends-src]
+  (<- [?s-res ?mod-h ?mod-v ?s ?l ?start ?ends ?short-series ?long-series ?t-stat-series ?break-series]
+      (trends-src ?s-res ?mod-h ?mod-v ?s ?l ?start ?end ?short ?long ?t-stat ?break)
+      (consolidator ?end ?short ?long ?t-stat ?break :> ?ends ?short-series ?long-series ?t-stat-series ?break-series)))
 
 (defn forma-tap
   "Accepts an est-map and sources for 

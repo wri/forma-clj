@@ -265,7 +265,6 @@
         (ts ?id ?ts)
         (f/shorten-ts ?model-ts ?ts :> ?shorter))) => (produces [[1 [1 2 3]]]))
 
-
 (fact
   (let [ts-length 50
         est-map {:window 10 :long-block 30}
@@ -273,3 +272,10 @@
         precl (flatten [(range 25 0 -1) (range 25)])
         clean-src [["500" 28 8 0 0 0 ndvi precl]]]
     (analyze-trends est-map clean-src)) => (produces-some [["500" 28 8 0 0 0 49 -0.46384872080089 -4.198030811863873E-16 -2.86153967746369 4.3841345603546955]]))
+
+(fact
+  (let [src [["500" 28 8 0 0 693 693 0.1 0.2 0.3 0.4 1]
+             ["500" 28 8 0 0 693 694 0.11 0.12 0.13 0.14 1]
+             ["500" 28 8 0 1 693 693 0.1 0.2 0.3 0.4 1]
+             ["500" 28 8 0 1 693 694 0.11 0.12 0.13 0.14 1]]]
+    (consolidate-trends src)) => (produces-some [["500" 28 8 0 0 693 [[693 694]] [[0.1 0.11]] [[0.2 0.12]] [[0.3 0.13]] [[0.4 0.14]]]]))
