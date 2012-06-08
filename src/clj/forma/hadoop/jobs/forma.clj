@@ -146,9 +146,9 @@
 
 (defn consolidate-trends
   [trends-src]
-  (<- [?s-res ?mod-h ?mod-v ?s ?l ?start ?short-series ?long-series ?t-stat-series ?break-series]
-      (trends-src ?s-res ?mod-h ?mod-v ?s ?l ?start ?short ?long ?t-stat ?break)
-      (consolidator ?start ?short ?long ?t-stat ?break :> _ ?short-series ?long-series ?t-stat-series ?break-series)))
+  (<- [?s-res ?mod-h ?mod-v ?s ?l ?start ?end-series ?short-series ?long-series ?t-stat-series ?break-series]
+      (trends-src ?s-res ?mod-h ?mod-v ?s ?l ?start ?end ?short ?long ?t-stat ?break)
+      (consolidator ?end ?short ?long ?t-stat ?break :> ?end-series ?short-series ?long-series ?t-stat-series ?break-series)))
 
 (defn forma-tap
   "Accepts an est-map and sources for 
