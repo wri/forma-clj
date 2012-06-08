@@ -126,7 +126,6 @@
         (a/long-stats ?ndvi ?short-precl :> ?long ?t-stat)
         (a/hansen-stat ?ndvi :> ?break)
         (series-end ?ndvi ?start :> ?end)
-        (c/count ?count) ;; force a reduce
         (:distinct false))))
 
 (defbufferop consolidator
@@ -139,13 +138,20 @@
 
 (defn get-max-period
   [series]
-  (max (first series)))
+  (reduce max (first series)))
 
 (defn consolidate-trends
   [trends-src]
-  (<- [?s-res ?mod-h ?mod-v ?s ?l ?start ?ends ?short-series ?long-series ?t-stat-series ?break-series]
-      (trends-src ?s-res ?mod-h ?mod-v ?s ?l ?start ?end ?short ?long ?t-stat ?break)
-      (consolidator ?end ?short ?long ?t-stat ?break :> ?ends ?short-series ?long-series ?t-stat-series ?break-series)))
+  (<- [?s-res ?mh ?mv ?s ?l ?start ?end-seq ?short-ts ?long-ts ?t-stat-ts ?break-ts]
+      (trends-src ?s-res ?mh ?mv ?s ?l ?start ?end ?short ?long ?t-stat ?break)
+      (consolidator ?end ?short ?long ?t-stat ?break :> ?end-seq ?short-ts ?long-ts ?t-stat-ts ?break-ts)))
+
+(defn trends-cleanup
+  [trends-src]
+  (let [consolidated-tap (consolidate-trends trends-src)]
+    (<- [?s-res ?mh ?mv ?s ?l ?start ?end ?short-ts ?long-ts ?t-stat-ts ?break-ts]
+        (consolidated-tap ?s-res ?mh ?mv ?s ?l ?start ?end-seq ?short-ts ?long-ts ?t-stat-ts ?break-ts)
+      (get-max-period ?end-seq :> ?end))))
 
 (defn forma-tap
   "Accepts an est-map and sources for 
