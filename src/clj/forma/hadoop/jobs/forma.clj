@@ -119,14 +119,13 @@
   [est-map clean-src]
   (let [long-block (:long-block est-map)
         short-block (:window est-map)]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break ?count]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break]
         (clean-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl)
         (f/shorten-ts ?ndvi ?precl :> ?short-precl)
         (a/short-stat long-block short-block ?ndvi :> ?short)
         (a/long-stats ?ndvi ?short-precl :> ?long ?t-stat)
         (a/hansen-stat ?ndvi :> ?break)
         (series-end ?ndvi ?start :> ?end)
-        (c/count ?count) ;; force a reduce
         (:distinct false))))
 
 (defn count-series
@@ -148,7 +147,7 @@
 (defn consolidate-trends
   [trends-src]
   (<- [?s-res ?mod-h ?mod-v ?s ?l ?start ?short-series ?long-series ?t-stat-series ?break-series]
-      (trends-src ?s-res ?mod-h ?mod-v ?s ?l ?start ?short ?long ?t-stat ?break _)
+      (trends-src ?s-res ?mod-h ?mod-v ?s ?l ?start ?short ?long ?t-stat ?break)
       (consolidator ?start ?short ?long ?t-stat ?break :> _ ?short-series ?long-series ?t-stat-series ?break-series)))
 
 (defn forma-tap
