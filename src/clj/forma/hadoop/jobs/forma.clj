@@ -119,7 +119,7 @@
   [est-map clean-src]
   (let [long-block (:long-block est-map)
         short-block (:window est-map)]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break ?count]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break]
         (clean-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl)
         (f/shorten-ts ?ndvi ?precl :> ?short-precl)
         (a/short-stat long-block short-block ?ndvi :> ?short)
@@ -127,6 +127,10 @@
         (a/hansen-stat ?ndvi :> ?break)
         (series-end ?ndvi ?start :> ?end)
         (:distinct false))))
+
+(defn count-series
+  [series]
+  (count (first series)))
 
 (defbufferop consolidator
   [tuples]
