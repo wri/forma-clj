@@ -2,7 +2,8 @@
   (:require [forma.date-time :as date]
             [forma.reproject :as r]
             [forma.thrift :as thrift]            
-            [forma.utils :as u]          
+            [forma.utils :as u]
+            [forma.thrift :as thrift]
             [clojure.string :as s]))
 
 (defn create-timeseries
@@ -114,3 +115,33 @@
   (if x
     (reduce merge-neighbors (neighbor-value x) more)
     (thrift/NeighborValue* (thrift/FireValue* 0 0 0 0) 0 0 0 0 0 0 0 0 0)))
+
+(defn forma-value
+  "Returns a vector containing a FireValue, short-term drop,
+  parametrized break, long-term drop and t-stat of the short-term
+  drop."
+  [fire short param-break long t-stat]
+  (let [fire (or fire (thrift/FireValue* 0 0 0 0))]
+    [fire short param-break long t-stat]))
+
+(defn forma-seq
+  "Accepts a number of timeseries of equal length and starting
+  position, and uses the first entry in each timeseries to create a forma
+  value, for all first values and on up the sequence. Series must be
+  supplied as specified by the arguments for `forma-value`. For
+  example:
+
+    (forma-seq fire-series short-series long-series t-stat-series)
+
+  `fire-series` gets special treatment because it could come into `forma-seq` as
+   nil (i.e. no fires for a given pixel) per the forma-tap query in forma.clj."
+  [fire-series short long t-stat break]
+  (let [unpack-series (comp thrift/unpack thrift/get-series)
+        length (count short)
+        fire-series (if fire-series
+                      (unpack-series fire-series)
+                      (vec (repeat length (thrift/FireValue* 0 0 0 0))))]
+    [(->> (concat (vector fire-series) [short long t-stat break])
+         (map #(or % (repeat %)))
+         (apply map forma-value)
+         (vec))]))

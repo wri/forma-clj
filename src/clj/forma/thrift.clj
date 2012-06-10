@@ -273,8 +273,8 @@
         forma-value (FormaValue. fire short long tstat)]
     (if break
       (doto forma-value
-        (.setParamBreak break)))
-    forma-value))
+        (.setParamBreak break))
+      forma-value)))
 
 (defn DataChunk*
   "Create a DataChunk."

@@ -157,6 +157,17 @@
         (consolidated-tap ?s-res ?mh ?mv ?s ?l ?start ?end-seq ?short-ts ?long-ts ?t-stat-ts ?break-ts)
       (get-max-period ?end-seq :> ?end))))
 
+(defn unnest-series
+  "Remove extraneous vectors from around a series"
+  [series]
+  (vec (flatten series)))
+
+(defn unnest-all
+  "Unnest series coming out of trends-cleanup of form
+   [[\"500\" 28 8 0 0 693 694 [[0.1 0.1]] [[0.2 0.2]] [[0.3 0.3]] [[0.4 0.4]]]]"
+  [& series]
+  (map unnest-series series))
+
 (defn forma-tap
   "Accepts an est-map and sources for 
 
@@ -167,8 +178,10 @@
   [dynamic-src fire-src]
   (<- [?s-res ?period ?mh ?mv ?s ?l ?forma-val]
       (fire-src ?s-res ?mh ?mv ?s ?l !!fire)
-      (dynamic-src ?s-res ?mh ?mv ?s ?l ?period ?short ?break ?long ?t-stat)
-      (thrift/FormaValue* !!fire ?short ?long ?t-stat ?break :> ?forma-val)
+      (dynamic-src ?s-res ?mh ?mv ?s ?l ?start ?end ?short ?long ?t-stat ?break)
+      (unnest-all ?short ?long ?t-stat ?break :> ?short-v ?long-v ?t-stat-v ?break-v)
+      (schema/forma-seq !!fire ?short-v ?long-v ?t-stat-v ?break-v :> ?forma-seq)
+      (p/index ?forma-seq :zero-index ?start :> ?period ?forma-val)
       (:distinct false)))
 
 (defmapcatop [process-neighbors [num-neighbors]]
