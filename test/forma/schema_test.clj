@@ -56,8 +56,7 @@
  0       (thrift/TimeSeries*  f-start [(thrift/FireValue* 0 0 0 1)
                                         (thrift/FireValue* 1 1 1 1)])
  1       (thrift/TimeSeries* f-start [[(thrift/FireValue* 0 0 0 1)]])
- 2       nil
- )
+ 2       nil)
 
 (let [fires (thrift/TimeSeries* 0 [(thrift/FireValue* 0 5 0 0)
                                    (thrift/FireValue* 0 0 0 0)])
