@@ -145,3 +145,19 @@
          (map #(or % (repeat %)))
          (apply map forma-value)
          (vec))]))
+
+(defn forma-seq-non-thrift
+  "Accepts a number of timeseries of equal length and starting
+  position, and uses the first entry in each timeseries to create a forma
+  value, for all first values and on up the sequence. Series must be
+  supplied as specified by the arguments for `forma-value`. For
+  example:
+
+    (forma-seq fire-series short-series long-series t-stat-series)
+
+  This works as written because we are not currently using FormaValue objects
+  here. Instead, the `forma-value` function merely creates a vector of values"
+  [& in-series]
+  [(->> in-series
+        (map #(or % (repeat %)))
+        (apply map forma-value))])
