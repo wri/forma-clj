@@ -156,8 +156,16 @@
     (forma-seq fire-series short-series long-series t-stat-series)
 
   This works as written because we are not currently using FormaValue objects
-  here. Instead, the `forma-value` function merely creates a vector of values"
+  here. Instead, the `forma-value` function merely creates a vector of values.
+
+  `fire-series` gets special treatment because it could come into `forma-seq` as
+   nil (i.e. no fires for a given pixel) per the forma-tap query in forma.clj."
   [& in-series]
-  [(->> in-series
-        (map #(or % (repeat %)))
-        (apply map forma-value))])
+  (let [fire-series (first in-series)
+        fires (if (nil? (first in-series))
+                fire-series
+                (thrift/unpack (thrift/get-series fire-series)))]
+    [(->> (concat [fires] (rest in-series))
+          (map #(or % (repeat %)))
+          (apply map forma-value)
+          (vec))]))

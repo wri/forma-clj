@@ -297,22 +297,13 @@
   (let [fires [(thrift/FireValue* 1 1 1 1)
                (thrift/FireValue* 0 0 0 0)]
         fires-ts (thrift/TimeSeries* 693 fires)]
-    [["500" 28 8 0 0 nil]])) ;;fires-ts
+    [["500" 28 8 0 0 fires-ts]])) 
 
-(let [result
-      [["500" 693 28 8 0 0 (thrift/FormaValue* (thrift/FireValue* 1 1 1 1) 0.1 0.5 0.8 0.11)]
-       ["500" 694 28 8 0 0 (thrift/FormaValue* (thrift/FireValue* 0 0 0 0) 0.2 0.6 0.9 0.12)]
-       ["500" 693 28 8 0 1 (thrift/FormaValue* (thrift/FireValue* 0 0 0 0) 0.2 0.5 0.8 0.11)]
-       ["500" 694 28 8 0 1 (thrift/FormaValue* (thrift/FireValue* 0 0 0 0) 0.3 0.6 0.9 0.12)]]]
-  (fact
-    (forma-tap dynamic-src fire-src) => (produces result)))
-
-(comment
-  (let [dynamic-src [["500" 28 8 0 0 693 694
-                    [0.1 0.2] [0.5 0.6] [0.8 0.9] [0.11 0.12]]
-                   ["500" 28 8 0 1 693 694
-                    [0.2 0.3] [0.5 0.6] [0.8 0.9] [0.11 0.12]]]]
-  (??<- [?s-res ?mh ?mv ?s ?l ?forma-seq]
-       (dynamic-src ?s-res ?mh ?mv ?s ?l ?start ?end ?short ?long ?t-stat ?break)
-       (fire-src ?s-res ?mh ?mv ?s ?l ?fire)
-       (schema/forma-seq ?fire ?short ?long ?t-stat ?break :> ?forma-seq))))
+(tabular
+ (fact
+   (forma-tap dynamic-src fire-src) => (produces ?result))
+ ?result
+ [["500" 693 28 8 0 0 [(thrift/FireValue* 1 1 1 1) 0.1 0.5 0.8 0.11]]
+  ["500" 694 28 8 0 0 [(thrift/FireValue* 0 0 0 0) 0.2 0.6 0.9 0.12]]
+  ["500" 693 28 8 0 1 [(thrift/FireValue* 0 0 0 0) 0.2 0.5 0.8 0.11]]
+  ["500" 694 28 8 0 1 [(thrift/FireValue* 0 0 0 0) 0.3 0.6 0.9 0.12]]])

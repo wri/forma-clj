@@ -180,7 +180,7 @@
       (fire-src ?s-res ?mh ?mv ?s ?l !!fire)
       (dynamic-src ?s-res ?mh ?mv ?s ?l ?start ?end ?short ?long ?t-stat ?break)
       (unnest-all ?short ?long ?t-stat ?break :> ?short-v ?long-v ?t-stat-v ?break-v)
-      (schema/forma-seq !!fire ?short-v ?long-v ?t-stat-v ?break-v :> ?forma-seq)
+      (schema/forma-seq-non-thrift !!fire ?short-v ?long-v ?t-stat-v ?break-v :> ?forma-seq)
       (p/index ?forma-seq :zero-index ?start :> ?period ?forma-val)
       (:distinct false)))
 
