@@ -212,6 +212,17 @@ value, and the aggregate of the neighbors."
         (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)
         (:distinct false))))
 
+(defn beta-data-prep
+  [{:keys [t-res est-start border-idx]}
+   dynamic-src static-src]
+  (let [first-idx (date/datetime->period t-res est-start)]
+    (<- [?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?eco ?hansen]
+        (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
+        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen ?border)
+        (= ?pd first-idx)
+        (>= ?border border-idx)
+        (:distinct false))))
+
 (defn beta-generator
   "query to return the beta vector associated with each ecoregion"
   [{:keys [t-res est-start ridge-const convergence-thresh max-iterations border-idx]}
