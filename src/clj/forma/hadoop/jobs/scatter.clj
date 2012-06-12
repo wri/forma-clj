@@ -106,7 +106,7 @@
              :ridge-const 1e-8
              :convergence-thresh 1e-6
              :max-iterations 500
-             :border-idx 2}})
+             :min-coast-dist 3}})
 
 (defn constrained-tap
   [ts-pail-path dataset s-res t-res]
@@ -293,3 +293,6 @@
                       827))
 
 
+
+              
+              
