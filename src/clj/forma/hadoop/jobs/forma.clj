@@ -224,11 +224,10 @@ value, and the aggregate of the neighbors."
 
 (defn beta-gen
   "query to return the beta vector associated with each ecoregion"
-  [{:keys [t-res est-start ridge-const convergence-thresh max-iterations min-coast-dist]}
-   src]
+  [{:keys [t-res est-start ridge-const convergence-thresh max-iterations min-coast-dist]} src]
   (let [first-idx (date/datetime->period t-res est-start)]
     (<- [?s-res ?eco ?beta]
-        (src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
+        (src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?eco ?hansen)
         (log/logistic-beta-wrap [ridge-const convergence-thresh max-iterations]
                                 ?hansen ?val ?neighbor-val :> ?beta)
         (:distinct false))))
