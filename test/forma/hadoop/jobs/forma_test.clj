@@ -307,3 +307,26 @@
   ["500" 694 28 8 0 0 [(thrift/FireValue* 0 0 0 0) 0.2 0.6 0.9 0.12]]
   ["500" 693 28 8 0 1 [(thrift/FireValue* 0 0 0 0) 0.2 0.5 0.8 0.11]]
   ["500" 694 28 8 0 1 [(thrift/FireValue* 0 0 0 0) 0.3 0.6 0.9 0.12]]])
+
+(tabular
+ (fact
+  (let [est-map {:est-start "2005-12-31"
+               :est-end "2012-04-22"
+               :s-res "500"
+               :t-res "16"
+               :neighbors 1
+               :window-dims [600 600]
+               :vcf-limit 25
+               :long-block 30
+               :window 10
+               :ridge-const 1e-8
+               :convergence-thresh 1e-6
+               :max-iterations 500
+               :border-idx 2}
+      neighbor-val (thrift/NeighborValue* (thrift/FireValue* 1 1 0 2)
+                                          1 1 1 1 1 1 1 1 1)
+      dynamic-src [["500" 827 28 8 0 0 [(thrift/FireValue* 1 1 1 1) 0.1 0.5 0.8 0.11] neighbor-val]]
+      static-src [["500" 28 8 0 0 0 0 20 1 3]]]
+    (beta-generator est-map dynamic-src static-src)) => (produces ?result))
+ ?result
+ [["500" 20 [1.3198604873070732 1.3198597780973624 1.319859892111878 1.3198598198327303 1.3198598313920957 0.13198598484041146 0.6599299207046119 1.0558879051269205 0.1451845793640933 1.319859809559916 1.3198598177683474 0.0 2.639719651470132 1.3198599150601593 1.3198598139702982 1.319859936960821 1.319859865224203 1.3198598449368701 1.3198598523914609 1.319859846129606 1.3198598133198294]]])
