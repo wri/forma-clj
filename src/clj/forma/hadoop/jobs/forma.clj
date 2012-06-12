@@ -213,8 +213,7 @@ value, and the aggregate of the neighbors."
         (:distinct false))))
 
 (defn beta-data-prep
-  [{:keys [t-res est-start border-idx]}
-   dynamic-src static-src]
+  [{:keys [t-res est-start min-coast-dist]} dynamic-src static-src]
   (let [first-idx (date/datetime->period t-res est-start)]
     (<- [?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?eco ?hansen]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
