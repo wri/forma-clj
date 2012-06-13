@@ -17,7 +17,7 @@
 
 (defn wrap-unpack-feature-vec
   [forma-vec neighbor-obj]
-  [(vec (log/unpack-feature-vec forma-vec neighbor-obj))])
+  [(vec (unpack-feature-vec forma-vec neighbor-obj))])
 
 (defbufferop [logistic-beta-wrap [r c m]]
   "returns a vector of parameter coefficients.  note that this is
