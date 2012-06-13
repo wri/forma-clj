@@ -291,8 +291,3 @@
                       "s3n://formaresults/finaloutput"
                       "s3n://formaresults/trapped"
                       827))
-
-
-
-              
-              
