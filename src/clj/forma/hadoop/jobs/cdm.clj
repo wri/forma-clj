@@ -82,7 +82,8 @@
   [series]
   [(map (comp int (partial * 100)) series)])
 
-(defn forma->latlon-cdm
+(comment
+  (defn forma->latlon-cdm
   "Returns a Cascalog query that transforms FORMA data into map tile coordinates.
 
   Arguments:
@@ -141,3 +142,4 @@
 ;;          (min-period ?p :> ?min-p))))
 
 
+)
