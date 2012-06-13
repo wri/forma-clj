@@ -15,6 +15,10 @@
     (into [] (concat intercept fire-seq [short long t-stat break]
                      fire-neighbor more))))
 
+(defn wrap-unpack-feature-vec
+  [forma-vec neighbor-obj]
+  [(vec (log/unpack-feature-vec forma-vec neighbor-obj))])
+
 (defbufferop [logistic-beta-wrap [r c m]]
   "returns a vector of parameter coefficients.  note that this is
   where the intercept is added (to the front of each stacked vector in
