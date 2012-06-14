@@ -146,6 +146,14 @@
          (apply map forma-value)
          (vec))]))
 
+(defn fires-cleanup
+  "If the fire-series is nil, leave it be - it'll be handled in
+   `forma-seq-non-thrift`. Else, unpack it"
+  [fire-series]
+  (if (nil? fire-series)
+    fire-series
+    (thrift/unpack (thrift/get-series fire-series))))
+
 (defn forma-seq-non-thrift
   "Accepts a number of timeseries of equal length and starting
   position, and uses the first entry in each timeseries to create a forma
@@ -153,19 +161,18 @@
   supplied as specified by the arguments for `forma-value`. For
   example:
 
-    (forma-seq fire-series short-series long-series t-stat-series)
+    (forma-seq fire-series short-series long-series t-stat-series break)
 
   This works as written because we are not currently using FormaValue objects
   here. Instead, the `forma-value` function merely creates a vector of values.
 
   `fire-series` gets special treatment because it could come into `forma-seq` as
    nil (i.e. no fires for a given pixel) per the forma-tap query in forma.clj."
-  [& in-series]
-  (let [fire-series (first in-series)
-        fires (if (nil? (first in-series))
-                fire-series
-                (thrift/unpack (thrift/get-series fire-series)))]
-    [(->> (concat [fires] (rest in-series))
+  [fire-series short-series long-series t-stat-series break-series]
+  (let [fires (fires-cleanup fire-series)
+        shorts (vec (reductions min short-series))
+        breaks (vec (reductions max break-series))]
+    [(->> (concat [fire-series] [shorts] [long-series] [t-stat-series] [breaks])
           (map #(or % (repeat %)))
           (apply map forma-value)
           (vec))]))

@@ -70,3 +70,27 @@
    ?fires ?short ?long ?t-stat ?break ?result
    fires [1 2] [4 5] [7 8] [1 1] [forma-val-1]
    nil [1 2] [4 5] [7 8] [1 1] [forma-val-2]))
+
+
+(let [fires (thrift/TimeSeries* 0 [(thrift/FireValue* 0 5 0 0)
+                                   (thrift/FireValue* 0 0 0 0)])
+      forma-val-1 [[(thrift/FireValue* 0 5 0 0) 1 4 7 1]
+                   [(thrift/FireValue* 0 0 0 0) 2 5 8 1]]
+      forma-val-2 [[(thrift/FireValue* 0 0 0 0) 1 4 7 1]
+                   [(thrift/FireValue* 0 0 0 0) 2 5 8 1]]]
+  (tabular
+   (fact
+     (forma-seq ?fires ?short ?long ?t-stat ?break)  => ?result)
+   ?fires ?short ?long ?t-stat ?break ?result
+   fires [1 2] [4 5] [7 8] [1 1] [forma-val-1]
+   nil [1 2] [4 5] [7 8] [1 1] [forma-val-2]))
+
+
+(let [forma-val-1 [[(thrift/FireValue* 0 0 0 0) 1 4 7 1]
+                   [(thrift/FireValue* 0 0 0 0) -1 5 8 3]
+                   [(thrift/FireValue* 0 0 0 0) -1 5 8 3]]]
+  (tabular
+   (fact
+     (forma-seq-non-thrift ?fires ?short ?long ?t-stat ?break)  => ?result)
+   ?fires ?short ?long ?t-stat ?break ?result
+   nil [1 -1 2] [4 5 5] [7 8 8] [1 3 2] [forma-val-1]))
