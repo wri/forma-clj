@@ -50,20 +50,19 @@
         data-src   (<- [?name ?t-res ?date ?s-res ?mod-h ?mod-v ?chunk-idx ?size ?datachunk]
                        (chunk-source _ ?chunk)
                        (schema/unpack-chunk-val ?chunk :> ?name ?t-res ?date ?location ?datachunk)
-                       (schema/unpack-chunk-location ?location :> ?s-res ?mod-h ?mod-v ?chunk-idx ?size)
-                       (:distinct false))
+                       (schema/unpack-chunk-location ?location :> ?s-res ?mod-h ?mod-v ?chunk-idx ?size))
         series-src (<- [?name ?t-res ?s-res ?mod-h ?mod-v ?chunk-idx ?size ?pix-idx ?timeseries]
                        (data-src ?name ?t-res ?date ?s-res ?mod-h ?mod-v ?chunk-idx ?size ?datachunk)
                        (mk-tseries ?t-res ?date ?datachunk :> ?pix-idx ?start ?end ?tseries)
                        (schema/mk-array-value ?tseries :> ?array-val)
-                       (schema/timeseries-value ?start ?end ?array-val :> ?timeseries))]
+                       (schema/timeseries-value ?start ?end ?array-val :> ?timeseries)
+                       (:distinct true))]
     (<- [?chunk]
         (series-src ?name ?t-res ?s-res ?mod-h ?mod-v ?chunk-idx ?size ?pix-idx ?timeseries)
         (r/tile-position ?s-res ?size ?chunk-idx ?pix-idx :> ?sample ?line)
         (schema/pixel-location ?s-res ?mod-h ?mod-v ?sample ?line :> ?pix-location)
         (schema/mk-data-value ?timeseries :> ?data-val)
-        (schema/chunk-value ?name ?t-res nil ?pix-location ?data-val :> ?chunk)
-        (:distinct false))))
+        (schema/chunk-value ?name ?t-res nil ?pix-location ?data-val :> ?chunk))))
 
 (def ^:dynamic *missing-val*
   -9999)
@@ -107,8 +106,7 @@
       (schema/unpack-chunk-val ?chunk :> ?name _ ?date ?location ?val)
       (merge-firevals ?val :> ?tuple)
       (date/beginning t-res ?date :> ?datestring)
-      (schema/unpack-pixel-location ?location :> ?s-res ?mod-h ?mod-v ?s ?l)
-      (:distinct false)))
+      (schema/unpack-pixel-location ?location :> ?s-res ?mod-h ?mod-v ?s ?l)))
 
 (defn create-fire-series
   "Aggregates fires into timeseries."
@@ -126,8 +124,7 @@
         (query ?name ?s-res ?mod-h ?mod-v ?s ?l ?fire-series)
         (schema/pixel-location ?s-res ?mod-h ?mod-v ?s ?l :> ?location)
         (schema/mk-data-value ?fire-series :> ?data-val)
-        (schema/chunk-value ?name t-res nil ?location ?data-val :> ?chunk)
-        (:distinct false))))
+        (schema/chunk-value ?name t-res nil ?location ?data-val :> ?chunk))))
 
 (defn fire-query
   "Returns a source of fire timeseries data chunk objects."

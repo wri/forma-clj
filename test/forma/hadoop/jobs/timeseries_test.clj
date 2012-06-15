@@ -59,8 +59,7 @@ this query don't contain -9999."
   (let [fires-src [[[(schema/fire-value 0 0 0 10)
                      (schema/fire-value 1 0 0 33)]]]
         result [(schema/fire-series 0 [(schema/fire-value 0 0 0 10)
-                                      (schema/fire-value 1 0 0 43)])]]
+                                       (schema/fire-value 1 0 0 43)])]]
     (??<- [?vals]
-        (fires-src ?fire-vals)
-        (:distinct false)
-        (running-fire-sum 0 ?fire-vals :> ?vals)) => [result]))
+          (fires-src ?fire-vals)
+          (running-fire-sum 0 ?fire-vals :> ?vals)) => [result]))
