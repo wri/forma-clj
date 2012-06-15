@@ -59,8 +59,7 @@ error."
          subquery  (<- [?dataset ?chunkid ?chunk]
                        (src ?filename ?hdf)
                        (unpack-modis [[:ndvi]] ?hdf :> ?dataset ?freetile)
-                       (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk)
-                       (:distinct false))]
+                       (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk))]
      (fact?<- [[?num-chunks]]
               [?count]
               (subquery ?dataset ?chunkid ?chunk)

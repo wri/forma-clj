@@ -26,7 +26,8 @@
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?fire-series]
       (fire-src ?chunk)
       (get-loc ?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?f-series)
-      (schema/adjust-fires est-map ?f-series :> ?fire-series)))
+      (schema/adjust-fires est-map ?f-series :> ?fire-series)
+      (:distinct true)))
 
 (defn filter-query
   "Note that the ?ts here is an ArrayList of one of the items inside
@@ -39,8 +40,7 @@
       (schema/unpack-timeseries ?series :> ?start _ ?ts)
       (schema/get-vals-wrap ?ts :> ?vals)
       (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
-      (>= ?vcf vcf-limit)
-      (:distinct false)))
+      (>= ?vcf vcf-limit)))
 
 (defn dynamic-filter
   "Returns a new generator of ndvi and rain timeseries obtained by
@@ -52,8 +52,7 @@
       (reli-src ?s-res ?mod-h ?mod-v ?sample ?line ?r-start ?reli)
       (rain-src ?s-res ?mod-h ?mod-v ?sample ?line ?p-start ?precl)
       (schema/adjust ?p-start ?precl ?n-start ?ndvi ?r-start ?reli
-                     :> ?start-idx ?precl-ts ?ndvi-ts ?reli-ts)
-      (:distinct false)))
+                     :> ?start-idx ?precl-ts ?ndvi-ts ?reli-ts)))
 
 (defmapcatop tele-clean
   "Return clean timeseries with telescoping window, nil if no (or not enough) good training data"
@@ -84,8 +83,7 @@
         bad-set #{2 3 255}]
     (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?clean-ndvi]
         (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi _ ?reli)
-        (tele-clean est-map good-set bad-set ?start ?ndvi ?reli :> ?clean-ndvi)
-        (:distinct false))))
+        (tele-clean est-map good-set bad-set ?start ?ndvi ?reli :> ?clean-ndvi))))
 
 (defn analyze-trends
   "Accepts an est-map, and sources for ndvi and rain timeseries and
@@ -103,8 +101,7 @@
         (clean-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi)
         (a/short-stat long-block short-block ?ndvi :> ?short)
         (a/long-stats ?ndvi ?short-precl :> ?long ?t-stat)
-        (a/hansen-stat ?ndvi :> ?break)
-        (:distinct false))))
+        (a/hansen-stat ?ndvi :> ?break))))
 
 (defn forma-tap
   "Accepts an est-map and sources for ndvi, rain, and fire timeseries,
@@ -116,8 +113,7 @@
       (fire-src ?s-res ?mh ?mv ?s ?l !!fire)
       (dynamic-src ?s-res ?mh ?mv ?s ?l ?start ?short ?break ?long ?t-stat)
       (schema/forma-seq !!fire ?short ?break ?long ?t-stat :> ?forma-seq)
-      (p/index ?forma-seq :zero-index ?start :> ?period ?forma-val)
-      (:distinct false)))
+      (p/index ?forma-seq :zero-index ?start :> ?period ?forma-val)))
 
 (defmapcatop [process-neighbors [num-neighbors]]
   "Processes all neighbors... Returns the index within the chunk, the
@@ -144,8 +140,7 @@ value, and the aggregate of the neighbors."
     (<- [?s-res ?period ?mod-h ?mod-v ?sample ?line ?val ?neighbor-val]
         (src ?s-res ?period ?mod-h ?mod-v ?win-col ?win-row ?window)
         (process-neighbors [neighbors] ?window :> ?win-idx ?val ?neighbor-val)
-        (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)
-        (:distinct false))))
+        (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line))))
 
 (defn beta-generator
   "query to return the beta vector associated with each ecoregion"
@@ -157,8 +152,7 @@ value, and the aggregate of the neighbors."
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen)
         (= ?pd first-idx)
         (log/logistic-beta-wrap [ridge-const convergence-thresh max-iterations]
-                                ?hansen ?val ?neighbor-val :> ?beta)
-        (:distinct false))))
+                                ?hansen ?val ?neighbor-val :> ?beta))))
 
 (defmapop [apply-betas [betas]]
   [eco val neighbor-val]
@@ -175,7 +169,6 @@ value, and the aggregate of the neighbors."
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)
         (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
         (log/mk-timeseries ?pd ?prob :> ?prob-series)
-        (:distinct false)
         (:trap trap-tap))))
 
 (comment

@@ -111,8 +111,7 @@
         (stretch/ts-expander base-t-res t-res ?series :> ?new-series)
         (assoc ?chunk
           :value ?new-series
-          :temporal-res t-res :> ?final-chunk)
-        (:distinct false)))))
+          :temporal-res t-res :> ?final-chunk)))))
 
 (defmapcatop expand-rain-pixel
   [sample line]
@@ -135,8 +134,7 @@
         (assoc ?chunk
           :value ?new-series
           :location ?location
-          :temporal-res t-res :> ?final-chunk)
-        (:distinct false))))
+          :temporal-res t-res :> ?final-chunk))))
 
 (defn first-half-query
   "Poorly named! Returns a query that generates a number of position
@@ -170,8 +168,7 @@
               ([:tmp-dirs vcf-path]
                  (?- (hfs-seqfile vcf-path)
                      (<- [?subpail ?chunk]
-                         ((constrained-tap pail-path "vcf" s-res "00") ?subpail ?chunk)
-                         (:distinct false))))
+                         ((constrained-tap pail-path "vcf" s-res "00") ?subpail ?chunk))))
 
               ndvi-step
               ([:tmp-dirs ndvi-path]

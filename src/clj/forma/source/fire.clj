@@ -156,8 +156,7 @@
                 :> ?datestring _ _ ?s-lat ?s-lon ?s-kelvin _ _ _ ?s-conf)
       (not= "YYYYMMDD" ?datestring)
       (monthly-datestring ?datestring :> ?date)
-      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
-      (:distinct false)))
+      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)))
 
 (defn fire-source-daily
   "Returns a Cascalog query that creates tuples for daily fires.
@@ -178,8 +177,7 @@
       (p/mangle [#","] ?line
                 :> ?s-lat ?s-lon ?s-kelvin _ _ ?datestring _ _ ?s-conf _ _ _)
       (daily-datestring ?datestring :> ?date)
-      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
-      (:distinct false)))
+      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)))
 
 (defn reproject-fires
   "Returns a Cascalog query that creates DataChunk Thrift objects for fires."
@@ -190,5 +188,4 @@
       (schema/mk-data-value ?tuple :> ?tuple-val)
       (r/latlon->modis ?m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
       (schema/pixel-location ?m-res ?mod-h ?mod-v ?sample ?line :> ?location)
-      (schema/chunk-value ?dataset ?t-res ?date ?location ?tuple-val :> ?datachunk)
-      (:distinct false)))
+      (schema/chunk-value ?dataset ?t-res ?date ?location ?tuple-val :> ?datachunk)))
