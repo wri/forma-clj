@@ -149,13 +149,14 @@ value, and the aggregate of the neighbors."
 
 (defn beta-generator
   "query to return the beta vector associated with each ecoregion"
-  [{:keys [t-res est-start ridge-const convergence-thresh max-iterations]}
+  [{:keys [t-res est-start ridge-const convergence-thresh max-iterations min-coast-dist]}
    dynamic-src static-src]
   (let [first-idx (date/datetime->period t-res est-start)]
     (<- [?s-res ?eco ?beta]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen)
+        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen ?coast-dist)
         (= ?pd first-idx)
+        (>= ?coast-dist min-coast-dist)
         (log/logistic-beta-wrap [ridge-const convergence-thresh max-iterations]
                                 ?hansen ?val ?neighbor-val :> ?beta)
         (:distinct false))))
@@ -172,7 +173,7 @@ value, and the aggregate of the neighbors."
   (let [betas (log/beta-dict beta-src)]
     (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _)
+        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _ _)
         (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
         (log/mk-timeseries ?pd ?prob :> ?prob-series)
         (:distinct false)
