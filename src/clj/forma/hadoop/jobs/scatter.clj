@@ -10,6 +10,7 @@
             [forma.utils :only (throw-illegal)]
             [forma.reproject :as r]
             [forma.schema :as schema]
+            [forma.thrift :as thrift]
             [forma.trends.stretch :as stretch]
             [forma.hadoop.predicate :as p]
             [forma.hadoop.jobs.forma :as forma]
@@ -106,14 +107,11 @@
   (let [precl-tap (constrained-tap ts-pail-path "precl" s-res base-t-res)]
     (if (= t-res base-t-res)
       precl-tap
-      (<- [?path ?final-chunk]
-        (precl-tap ?path ?chunk)
-        (map ?chunk [:location :value] :> ?location ?series)
-        (schema/unpack-pixel-location ?locat)
-        (stretch/ts-expander base-t-res t-res ?series :> ?new-series)
-        (assoc ?chunk
-          :value ?new-series
-          :temporal-res t-res :> ?final-chunk)
+      (<- [?path ?adjusted-pixel-chunk]
+        (precl-tap ?path ?pixel-chunk)
+        (thrift/unpack ?pixel-chunk :> ?name ?pixel-loc ?ts ?t-res ?date)      
+        (stretch/ts-expander base-t-res t-res ?ts :> ?expanded-ts)
+        (thrift/DataChunk* ?name ?pixel-loc ?expanded-ts ?t-res :> ?adjusted-pixel-chunk)
         (:distinct false)))))
 
 (defmapcatop expand-rain-pixel
@@ -128,16 +126,14 @@
   "More brittle version that assumes conversion from 1000 to 500m."
   [ts-pail-path s-res base-t-res t-res]
   (let [precl-tap (constrained-tap ts-pail-path "precl" s-res base-t-res)]
-    (<- [?path ?final-chunk]
-        (precl-tap ?path ?chunk)
-        (forma/get-loc ?chunk :> ?s-res ?mod-h ?mod-v ?s ?l ?series)
-        (expand-rain-pixel ?s ?l :> ?sample ?line)
-        (schema/pixel-location "500" ?mod-h ?mod-v ?sample ?line :> ?location)
-        (stretch/ts-expander base-t-res t-res ?series :> ?new-series)
-        (assoc ?chunk
-          :value ?new-series
-          :location ?location
-          :temporal-res t-res :> ?final-chunk)
+    (<- [?path ?adjusted-pixel-chunk]
+        (precl-tap ?path ?pixel-chunk)
+        (thrift/unpack ?pixel-chunk :> ?name ?pixel-loc ?ts ?t-res ?date)
+        (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)
+        (expand-rain-pixel ?sample ?line :> ?s ?l)
+        (stretch/ts-expander base-t-res t-res ?ts :> ?expanded-ts)
+        (thrift/ModisPixelLocation* "500" ?h ?v ?s ?l :> ?new-pixel-loc)
+        (thrift/DataChunk* ?name ?new-pixel-loc ?expanded-ts t-res :> ?adjusted-pixel-chunk)
         (:distinct false))))
 
 (defn first-half-query
