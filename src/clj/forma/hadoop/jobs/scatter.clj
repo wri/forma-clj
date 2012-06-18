@@ -278,3 +278,40 @@
                       "s3n://formaresults/trapped"
                       827))
 
+
+(defn get-date
+  [data-chunk]
+  (.getDate data-chunk))
+
+(defn unpack-loc
+  [dc]
+  (let [cl (->> dc .getLocationProperty .property .getChunkLocation)]
+    [(.getTileH cl)
+     (.getTileV cl)
+     (.getChunkID cl)]))
+
+
+(defn count-vcf-chunks
+ [pail-path]
+  (let [src (split-chunk-tap pail-path ["vcf" "500-00"])]
+       (<- [?mod-h ?mod-v ?count]
+           (src _ ?dc)
+           (unpack-loc ?dc :> ?mod-h ?mod-v ?id)
+           (= 28 ?mod-h)
+           (= 8 ?mod-v)
+           (c/count ?count))))
+
+(defn count-precl-chunks
+  [pail-path]
+  (let [src (split-chunk-tap pail-path ["precl" "500-32"])]
+       (<- [?mod-h ?mod-v ?count]
+           (src _ ?dc)
+           (unpack-loc ?dc :> ?mod-h ?mod-v ?id)
+           (get-date ?dc :> ?date-str)
+           (= 28 ?mod-h)
+           (= 8 ?mod-v)
+           (= "2012-01-01" ?date-str)
+           (c/count ?count))))
+
+(defmain CountVcf [pail-path]
+  (??- (count-vcf-chunks pail-path)))
