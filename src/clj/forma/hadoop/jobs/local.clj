@@ -1,18 +1,15 @@
 (ns forma.hadoop.jobs.local
   "Namespace for arbitrary queries."
   (:use cascalog.api
-        cascalog.lzo
         [forma.reproject :only (modis->latlon)]
         [forma.hadoop.pail :only (to-pail)]
         [forma.source.tilesets :only (tile-set country-tiles)]
         [forma.hadoop.pail :only (?pail- split-chunk-tap)]
-        [forma.classify.logtest :only (logistic-beta-vector-old)]
         [cascalog.checkpoint :only (workflow)])
   (:require [cascalog.ops :as c]
             [forma.utils :only (throw-illegal)]
             [forma.reproject :as r]
             [forma.schema :as schema]
-            [forma.thrift :as thrift]
             [incanter.charts :as chart]
             [incanter.stats :as stat]
             [incanter.core :as i]
@@ -22,7 +19,6 @@
             [forma.hadoop.jobs.timeseries :as tseries]
             [forma.date-time :as date]
             [forma.trends.analysis :as analyze]
-            [forma.trends.analysisold :as analyzeold]
             [forma.classify.logistic :as log])
   (:import [org.jblas FloatMatrix MatrixFunctions Solve DoubleMatrix]))
 
@@ -147,16 +143,4 @@
     new-feat))
 
 
-(defn short-sequence [casc-out]
-  (vec (map  #(nth % 5) casc-out)))
 
-(defn short-seq [num]
-  (let [feat (short-sequence (create-feature-vectors num))]
-    feat))
-
-(defn short-term-shell [ndvi]
-  (analyzeold/telescoping-short-trend 30 10 23 135 281 ndvi))
-
-(defn long-term-shell [ndvi reli]
-  (map first
-       (analyzeold/telescoping-long-trend 23 135 281 ndvi reli)))

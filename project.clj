@@ -25,5 +25,6 @@
                  [org.apache.thrift/libthrift "0.8.0"
                   :exclusions [org.slf4j/slf4j-api]]]
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
-                     [midje-cascalog "0.4.0"]]
+                     [midje-cascalog "0.4.0"]
+                     [incanter/incanter-charts "1.3.0"]]
   :aot [forma.hadoop.pail, forma.schema, #"forma.hadoop.jobs.*"])
