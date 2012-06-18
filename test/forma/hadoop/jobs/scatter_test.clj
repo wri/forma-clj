@@ -1,13 +1,25 @@
 (ns forma.hadoop.jobs.scatter-test
   (:use cascalog.api        
         forma.hadoop.jobs.scatter
+        forma.hadoop.pail
         [midje sweet cascalog]
         [clojure.java.io :as io])
   (:import [backtype.hadoop.pail Pail]))
 
-(def pail-path (.getPath (io/resource "pail/vcf/500-00")))
+(def pail-path (.getPath (io/resource "pail")))
 
 (def pail-source (Pail. pail-path))
+
+(defn get-loc
+  [dc]
+  (.getLocationProperty dc))
+
+(defn impail
+  []
+  (let [src (split-chunk-tap pail-path ["vcf" "500-00"])]
+    (??<- [?dc ?lp]
+          (src _ ?dc)
+          (get-loc ?dc :> ?lp))))
 
 ;; Rain Testing
 
