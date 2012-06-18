@@ -241,7 +241,9 @@
   "Create a ModisPixelLocation."
   [s-res h v sample line]
   {:pre [(instance? java.lang.String s-res)
-         (every? #(instance? java.lang.Long %) [h v sample line])]}
+         (every? #(or (instance? java.lang.Long %)
+                      (instance? java.lang.Integer %))
+                 [h v sample line])]}
   (ModisPixelLocation. s-res h v sample line))
 
 (defn TimeSeries*
@@ -406,14 +408,9 @@
   FireArray
   (unpack [x] (->> x .getFires vec))
 
-   DataChunk
-  (unpack [x]
-    (let [[name loc data t-res date]
-          (map #(.getFieldValue x %) (keys (DataChunk/metaDataMap)))
-          loc (->> loc get-property get-field-value)
-          data (->> data .getFieldValue)]
-      [name loc data t-res date]))
-
+  DataChunk
+  (unpack [x] (vec (map #(.getFieldValue x %) (keys (DataChunk/metaDataMap)))))
+  
   ArrayValue
   (unpack [x] (->> x .getFieldValue unpack)))
 
