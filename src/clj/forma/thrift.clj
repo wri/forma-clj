@@ -406,9 +406,14 @@
   FireArray
   (unpack [x] (->> x .getFires vec))
 
-  DataChunk
-  (unpack [x] (vec (map #(.getFieldValue x %) (keys (DataChunk/metaDataMap)))))
-  
+   DataChunk
+  (unpack [x]
+    (let [[name loc data t-res date]
+          (map #(.getFieldValue x %) (keys (DataChunk/metaDataMap)))
+          loc (->> loc get-property get-field-value)
+          data (->> data .getFieldValue)]
+      [name loc data t-res date]))
+
   ArrayValue
   (unpack [x] (->> x .getFieldValue unpack)))
 
