@@ -9,6 +9,7 @@
   (:require [cascalog.ops :as c]
             [forma.utils :only (throw-illegal)]
             [forma.reproject :as r]
+            [forma.thrift :as thrift]
             [forma.schema :as schema]
             [incanter.charts :as chart]
             [incanter.stats :as stat]
@@ -22,38 +23,48 @@
             [forma.classify.logistic :as log])
   (:import [org.jblas FloatMatrix MatrixFunctions Solve DoubleMatrix]))
 
-(def base-path "/mnt/hgfs/Dropbox/forma-testdata-old/")
+(def base-path "dev/testdata/select/")
 (def dyn-path (str base-path "dynamic/"))
 (def stat-path (str base-path "static/"))
 (def fire-path (str base-path "fires/"))
 
-;; 693: 02/18/2000
-;; 827: end of training
-;; 973: 04/22/2012
+(defn shorten-vec
+  "returns a shortened vector by cutting off the tail of the supplied
+  collection that is prepped to return a cascalog field"
+  [len coll]
+  [(vec (take len coll))])
 
-(defn shorten-ndvi [num-pds ts]
-  [(vec (take num-pds ts))])
+(defn create-feature-vectors
+  "returns a lazy sequence of vectors, each with the pixel identifier,
+  training label, and dynamic features used for estimation; all pixels
+  with VCF < 25 are filtered out; used to replicate FORMA results.
 
-(defn create-feature-vectors [num-pds]
+  Example usage:
+  (count (create-feature-vectors 135)) => number of pixels
+  ;; where 135 is the length of the training period at 16-day res."
+  [num-pds]
   (let [dyn-src (hfs-seqfile dyn-path)
         stat-src (hfs-seqfile stat-path)]
-    (??<- [?mod-h ?mod-v ?sample ?line ?hansen ?short ?han-stat ?long ?tstat]
+    (??<- [?loc ?hansen ?forma-val]
           (dyn-src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ndvi-ts ?precl-ts ?reli-ts)
-          (stat-src ?s-res ?mod-h ?mod-v ?sample ?line ?gadm ?vcf ?ecoid ?hansen)
-          (shorten-ndvi num-pds ?ndvi-ts :> ?ndvi)
+          (stat-src ?s-res ?mod-h ?mod-v ?sample ?line ?gadm ?vcf ?ecoid ?hansen ?border)
+          (shorten-vec num-pds ?ndvi-ts :> ?ndvi)
           (analyze/hansen-stat ?ndvi :> ?han-stat)
           (analyze/long-stats  ?ndvi :> ?long ?tstat)
           (analyze/short-stat 30 10 ?ndvi :> ?short)
+          (thrift/FireValue* 0 0 0 0 :> ?fire)
+          (thrift/ModisPixelLocation* "500" ?mod-h ?mod-v ?sample ?line :> ?loc)
+          (thrift/FormaValue* ?fire ?short ?long ?tstat ?han-stat :> ?forma-val)
           (>= ?vcf 25))))
 
-(defn grab-ndvi [num-pds]
-  (let [dyn-src (hfs-seqfile dyn-path)
-        stat-src (hfs-seqfile stat-path)]
-    (??<- [?mod-h ?mod-v ?sample ?line ?hansen ?vcf ?ndvi]
-          (dyn-src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ndvi-ts ?precl-ts ?reli-ts)
-          (stat-src ?s-res ?mod-h ?mod-v ?sample ?line ?gadm ?vcf ?ecoid ?hansen)
-          (shorten-ndvi num-pds ?ndvi-ts :> ?ndvi)
-          (= ?hansen 100))))
+;; (defn grab-ndvi [num-pds]
+;;   (let [dyn-src (hfs-seqfile dyn-path)
+;;         stat-src (hfs-seqfile stat-path)]
+;;     (??<- [?mod-h ?mod-v ?sample ?line ?hansen ?vcf ?ndvi]
+;;           (dyn-src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ndvi-ts ?precl-ts ?reli-ts)
+;;           (stat-src ?s-res ?mod-h ?mod-v ?sample ?line ?gadm ?vcf ?ecoid ?hansen)
+;;           (shorten-ndvi num-pds ?ndvi-ts :> ?ndvi)
+;;           (= ?hansen 100))))
 
 
 (defn label-sequence [casc-out]
