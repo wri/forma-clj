@@ -185,8 +185,7 @@
         (not= ?val nodata)
         (pix-tap :>> mod-coords)
         (p/add-fields "precl" "32" m-res :> ?dataset ?t-res ?m-res)
-        (r/wgs84-indexer :<< (into [m-res ascii-map] mod-coords) :> ?row ?col)
-        (:distinct false))))
+        (r/wgs84-indexer :<< (into [m-res ascii-map] mod-coords) :> ?row ?col))))
 
 (defn rain-chunks
   "Cascalog subquery to fully process a WGS84 float array at the

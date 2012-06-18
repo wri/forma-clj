@@ -96,8 +96,9 @@
   "Trims a sequence with initial value indexed at x0 to fit within
   bottom (inclusive) and top (exclusive). For example:
 
-    (trim-seq 0 2 0 [1 2 3]) => [0 1 2]"
+    (trim-seq 0 2 0 [4 5 6]) => [4 5]"
   [bottom top x0 seq]
+  {:pre [(not (empty? seq))]}
   (->> seq
        (drop (- bottom x0))
        (drop-last (- (+ x0 (count seq)) top))))

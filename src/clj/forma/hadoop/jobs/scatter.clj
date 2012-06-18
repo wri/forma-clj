@@ -61,11 +61,12 @@
   (let [[vcf hansen ecoid gadm border]
         (map (comp static-tap (partial split-chunk-tap pail-path))
              [["vcf"] ["hansen"] ["ecoid"] ["gadm"] ["border"]])]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?gadm ?vcf ?ecoid ?hansen]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?gadm ?vcf ?ecoid ?hansen ?coast-dist]
         (vcf    ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
         (hansen ?s-res ?mod-h ?mod-v ?sample ?line ?hansen)
         (ecoid  ?s-res ?mod-h ?mod-v ?sample ?line ?ecoid)
         (gadm   ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
+        (border ?s-res ?mod-h ?mod-v ?sample ?line ?coast-dist)
         (>= ?vcf vcf-limit))))
 
 ;; ## Forma
@@ -91,7 +92,8 @@
              :window 10
              :ridge-const 1e-8
              :convergence-thresh 1e-6
-             :max-iterations 500}})
+             :max-iterations 500
+             :min-coast-dist 3}})
 
 (defn constrained-tap
   [ts-pail-path dataset s-res t-res]
@@ -111,8 +113,7 @@
         (stretch/ts-expander base-t-res t-res ?series :> ?new-series)
         (assoc ?chunk
           :value ?new-series
-          :temporal-res t-res :> ?final-chunk)
-        (:distinct false)))))
+          :temporal-res t-res :> ?final-chunk)))))
 
 (defmapcatop expand-rain-pixel
   [sample line]
@@ -135,8 +136,7 @@
         (assoc ?chunk
           :value ?new-series
           :location ?location
-          :temporal-res t-res :> ?final-chunk)
-        (:distinct false))))
+          :temporal-res t-res :> ?final-chunk))))
 
 (defn first-half-query
   "Poorly named! Returns a query that generates a number of position
@@ -170,8 +170,7 @@
               ([:tmp-dirs vcf-path]
                  (?- (hfs-seqfile vcf-path)
                      (<- [?subpail ?chunk]
-                         ((constrained-tap pail-path "vcf" s-res "00") ?subpail ?chunk)
-                         (:distinct false))))
+                         ((constrained-tap pail-path "vcf" s-res "00") ?subpail ?chunk))))
 
               ndvi-step
               ([:tmp-dirs ndvi-path]
