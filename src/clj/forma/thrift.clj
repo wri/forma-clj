@@ -248,11 +248,18 @@
 
 (defn TimeSeries*
   "Create a TimeSeries."
-  [start end val]
-    {:pre [(every? #(instance? java.lang.Long %) [start end])
+  ([start vals]
+    {:pre [;;(every? #(instance? java.lang.Long %) [start end])
+           (coll? vals)]}
+    (let [elems (count vals)]
+      (TimeSeries* start
+                   (dec (+ start (count vals)))
+                   vals)))
+  ([start end val]
+    {:pre [;;(every? #(instance? java.lang.Long %) [start end])
            (coll? val)]}
     (let [series (if (coll? val) (pack val) val)]
-      (TimeSeries. start end (mk-array-value series))))
+      (TimeSeries. start end (mk-array-value series)))))
 
 (defn FormaValue*
   "Create a FormaValue."
