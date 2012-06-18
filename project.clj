@@ -21,13 +21,11 @@
                  [forma/gdal "1.8.0"]
                  [forma/jblas "1.2.1"]
                  [cascalog "1.9.0"]
-                 [cascalog-lzo "0.1.1"]
                  [cascalog-checkpoint "0.1.1"]
                  [backtype/dfs-datastores "1.1.3"]
                  [backtype/dfs-datastores-cascading "1.2.0"]
                  [org.apache.thrift/libthrift "0.8.0"
-                  :exclusions [org.slf4j/slf4j-api]]
-                 [com.google.protobuf/protobuf-java "2.4.0a"]]
+                  :exclusions [org.slf4j/slf4j-api]]]
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
                      [midje-cascalog "0.4.0"]]
   :aot [forma.hadoop.pail, forma.schema, #"forma.hadoop.jobs.*"])
