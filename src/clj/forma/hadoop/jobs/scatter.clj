@@ -14,7 +14,8 @@
             [forma.hadoop.jobs.forma :as forma]
             [forma.hadoop.jobs.timeseries :as tseries]
             [forma.date-time :as date]
-            [forma.classify.logistic :as log]))
+            [forma.classify.logistic :as log]
+            [forma.thrift :as thrift]))
 
 (def convert-line-src
   (hfs-textline "s3n://modisfiles/ascii/admin-map.csv"))
@@ -278,6 +279,19 @@
                       "s3n://formaresults/trapped"
                       827))
 
+(defn within-tile?
+  [[target-h target-v] h v]
+  (let [h-target 28
+        v-target 8]
+    (and (= h h-target) (= v v-target))))
+
+(defn within-bbox?
+  [{:keys [min-lat max-lat min-lon max-lon]} s-res h v s l]
+  (let [[lat lon] (r/modis->latlon s-res h v s l)]
+    (and (< lat max-lat)
+         (> lat min-lat)
+         (< lon max-lon)
+         (> lon min-lon))))
 
 (defn get-date
   [data-chunk]
@@ -290,6 +304,30 @@
      (.getTileV cl)
      (.getChunkID cl)]))
 
+(defn blossom-static
+  [src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?pixel-val]
+      (src ?dc)
+      (thrift/unpack ?dc :> _ ?loc ?chunk-data _ !date)
+      (thrift/unpack* ?chunk-data :> ?vals)
+      (p/index ?vals :> ?pixel-idx ?pixel-val)
+      (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?id ?size)
+      (r/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line)))
+
+(defn get-static-pixels
+ [dataset pail-path]
+ (let [tile-vec [28 8]
+       bbox {:min-lat 0.71
+             :max-lat 0.91
+             :min-lon 101.75
+             :max-lon 101.95}
+        src (split-chunk-tap pail-path [dataset "500-00"])]
+       (<- [?s-res ?mod-h ?mod-v ?sample ?line ?pixel-val]
+           (src _ ?dc)
+           (unpack-loc ?dc :> ?mod-h ?mod-v ?idx)
+           (within-tile? tile-vec ?mod-h ?mod-v)
+           (blossom-static ?dc :> ?s-res ?mod-h ?mod-v ?sample ?line ?pixel-val)
+           (within-bbox? bbox ?s-res ?mod-h ?mod-v ?sample ?line))))
 
 (defn count-vcf-chunks
  [pail-path]
@@ -315,3 +353,5 @@
 
 (defmain CountVcf [pail-path]
   (??- (count-vcf-chunks pail-path)))
+
+
