@@ -293,6 +293,18 @@
          (< lon max-lon)
          (> lon min-lon))))
 
+(comment
+  (let [src (hfs-seqfile "s3n://formaexperiments/preadjusted/reli")
+      bbox {:min-lat 0.71
+            :max-lat 0.91
+            :min-lon 101.75
+            :max-lon 101.95}]
+  (??<- [?count]
+        (src ?s-res ?mod-h ?mod-v ?sample ?line ?start _)
+;;        (= 693 ?start)
+        (within-bbox? bbox ?s-res ?mod-h ?mod-v ?sample ?line)
+        (c/count ?count))))
+         
 (defn get-date
   [data-chunk]
   (.getDate data-chunk))
@@ -314,20 +326,47 @@
       (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?id ?size)
       (r/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line)))
 
-(defn get-static-pixels
- [dataset pail-path]
+(defn get-static-tile-pixels
+ [dataset pail-path s-t-res]
  (let [tile-vec [28 8]
-       bbox {:min-lat 0.71
+        src (split-chunk-tap pail-path [dataset s-t-res])]
+       (<- [?dc]
+           (src _ ?dc)
+           (unpack-loc ?dc :> ?mod-h ?mod-v _)
+           (within-tile? tile-vec ?mod-h ?mod-v))))
+
+(defn get-ts-tile-pixels
+ [dataset pail-path s-t-res]
+ (let [tile-vec [28 8]
+        src (split-chunk-tap pail-path [dataset s-t-res])]
+       (<- [?dc]
+           (src _ ?dc)
+           (unpack-loc ?dc :> ?mod-h ?mod-v _)
+           (within-tile? tile-vec ?mod-h ?mod-v)
+           (get-date ?dc :> ?date-str)
+           (= "2012-01-01" ?date-str))))
+
+(comment
+  (let [dataset "ndvi"]
+    (?- (hfs-seqfile (str "s3n://formareset/2808/" dataset) :sinkmode :replace)
+        (get-ts-tile-pixels dataset "s3n://pailbucket/masterpail" "500-16"))))
+
+(comment
+         bbox {:min-lat 0.71
              :max-lat 0.91
              :min-lon 101.75
-             :max-lon 101.95}
-        src (split-chunk-tap pail-path [dataset "500-00"])]
-       (<- [?s-res ?mod-h ?mod-v ?sample ?line ?pixel-val]
+             :max-lon 101.95})
+;;           (blossom-static ?dc :> ?s-res ?mod-h ?mod-v ?sample ?line ?pixel-val)
+;;           (within-bbox? bbox ?s-res ?mod-h ?mod-v ?sample ?line)
+
+
+(defn screen-rain-by-date
+  [dataset pail-path]
+  (let [src (split-chunk-tap pail-path ["precl" "500-32"])]
+       (<- [?dc]
            (src _ ?dc)
-           (unpack-loc ?dc :> ?mod-h ?mod-v ?idx)
-           (within-tile? tile-vec ?mod-h ?mod-v)
-           (blossom-static ?dc :> ?s-res ?mod-h ?mod-v ?sample ?line ?pixel-val)
-           (within-bbox? bbox ?s-res ?mod-h ?mod-v ?sample ?line))))
+           (get-date ?dc :> ?date-str)
+           (= "2012-01-01" ?date-str))))
 
 (defn count-vcf-chunks
  [pail-path]
@@ -355,3 +394,21 @@
   (??- (count-vcf-chunks pail-path)))
 
 
+(defn blossom
+  [vcf-src vcf-limit chunk-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?series]
+      (chunk-src _ ?ts-chunk)
+      (vcf-src _ ?vcf-chunk)      
+
+      ;; mirrors p/blossom-chunk, but doesn't have "invalid predicate" error
+      ;; (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
+      
+      ;; unpack ts object
+      (thrift/unpack ?ts-chunk :> _ ?ts-loc ?ts-data _ !date)
+      (thrift/unpack ?ts-data :> ?start-idx _ ?ts-array)
+      (thrift/unpack* ?ts-array :> ?series)
+      (thrift/unpack ?ts-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
+
+      ;; filter on vcf-limit
+      (>= ?vcf vcf-limit)
+      (:distinct false)))
