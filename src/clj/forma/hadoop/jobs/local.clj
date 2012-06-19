@@ -7,7 +7,7 @@
         [forma.hadoop.pail :only (?pail- split-chunk-tap)]
         [cascalog.checkpoint :only (workflow)])
   (:require [cascalog.ops :as c]
-            [forma.utils :only (throw-illegal)]
+            [forma.matrix.utils :as util]
             [forma.reproject :as r]
             [forma.thrift :as thrift]
             [forma.schema :as schema]
@@ -59,14 +59,19 @@
         (thrift/FormaValue* ?fire ?short ?long ?tstat ?han-stat :> ?forma-val)
         (>= ?vcf 25))))
 
+(defn global-dims [s-res]
+  (let [num-pixels (r/pixels-at-res s-res)]
+    (map (partial * num-pixels) [r/v-tiles r/h-tiles])))
+
 (defn global-indexer
   "accepts a modis pixel coordinates at the tile level and returns a unique,
   global index; origin is at top left, as seen [here](goo.gl/pCgqF)"
   [h v s l & {:keys [s-res] :or {s-res "500"}}]
   (let [num-pixels (r/pixels-at-res s-res)
-        global-col (+ (* h num-pixels) s)
-        global-row (+ (* v num-pixels) l)]
-    (+ (* global-row num-pixels) global-col)))
+        col (+ (* h num-pixels) s)
+        row (+ (* v num-pixels) l)
+        [nrows ncols] (global-dims s-res)]
+    (util/rowcol->idx nrows ncols row col)))
 
 (defn valid-neighbor?
   [s-res idx]
@@ -82,7 +87,7 @@
   [pixel-idx & {:keys [s-res] :or {s-res "500"}}]
   (let [num-pixels (r/pixels-at-res s-res)
         up-one     (- pixel-idx (* r/h-tiles num-pixels))
-        down-one   (- pixel-idx (* r/h-tiles num-pixels))
+        down-one   (+ pixel-idx (* r/h-tiles num-pixels))
         valid? (partial valid-neighbor? s-res)]
     (map valid? [pixel-idx (dec pixel-idx) (inc pixel-idx)
                  up-one    (dec up-one) (inc up-one)
@@ -97,6 +102,11 @@
                      [28 8 22 21]
                      [28 8 23 21]])
 
+(def test-modis-tap [[0 0 20 20]
+                     [0 0 21 20]
+                     [0 0 20 21]
+                     [0 0 21 21]])
+
 (defn neighbor-src [s-res]
   (<- [?neigh-id]
       (test-modis-tap ?h ?v ?s ?l)
@@ -104,20 +114,36 @@
       (neighbors ?idx :> ?neigh-id)
       (:distinct true)))
 
-(defbufferop bounds
+(defbufferop bounding-indices
   [tuples]
   (let [coll (flatten tuples)]
     [[(reduce min coll) (reduce max coll)]]))
 
 (defn buffer-test []
   (let [src (neighbor-src "500")]
-    (??<- [?idx]
+    (??<- [?first ?last]
           (src ?idx)
-          (bounds ?idx :> ?x ?y))))
+          (bounding-indices ?idx :> ?first ?last))))
 
 (defn idx->global-rowcol
   [idx & {:keys [s-res] :or {s-res "500"}}]
-  )
+  (let [[nrows ncols] (global-dims s-res)]
+    (util/idx->rowcol nrows ncols idx)))
+
+(defbufferop box-dims
+  [tuples]
+  (let [coll (flatten tuples)
+        min-idx (reduce min coll)
+        max-idx (reduce max coll)]
+    [(map (comp int inc i/abs -)
+          (idx->global-rowcol min-idx)
+          (idx->global-rowcol max-idx))]))
+
+(defn box-test []
+  (let [src (neighbor-src "500")]
+    (??<- [?y ?x]
+          (src ?idx)
+          (box-dims ?idx :> ?y ?x))))
 
 (defn gen-neighbor-features
   [num-pds]
