@@ -97,19 +97,44 @@
   [idx & {:keys [s-res] :or {s-res "500"}}]
   (neighbor-idx idx :s-res s-res))
 
-(def test-modis-tap [[28 8 20 20]
-                     [28 8 21 20]
-                     [28 8 22 21]
-                     [28 8 23 21]])
+;; (def test-modis-tap [[28 8 20 20]
+;;                      [28 8 21 20]
+;;                      [28 8 22 21]
+;;                      [28 8 23 21]])
+ 
+(def test-modis-tap [[0 0 20 20 1]
+                     [0 0 21 20 1]
+                     [0 0 20 21 1]
+                     [0 0 21 21 1]])
 
-(def test-modis-tap [[0 0 20 20]
-                     [0 0 21 20]
-                     [0 0 20 21]
-                     [0 0 21 21]])
+(def test-modis-tap-all [[0 0 19 19 1]
+                         [0 0 19 20 1]
+                         [0 0 19 21 1]
+                         [0 0 19 22 1]
+                         [0 0 20 19 1]
+                         [0 0 20 20 1]
+                         [0 0 20 21 1]
+                         [0 0 20 22 1]
+                         [0 0 21 19 1]
+                         [0 0 21 20 1]
+                         [0 0 21 21 1]
+                         [0 0 21 22 1]
+                         [0 0 22 19 1]
+                         [0 0 22 20 1]
+                         [0 0 22 21 1]
+                         [0 0 22 22 1]
+                         [0 0 23 19 1]
+                         [0 0 23 20 1]
+                         [0 0 23 21 1]
+                         [0 0 23 22 1]
+                         [0 0 24 19 1]
+                         [0 0 24 20 1]
+                         [0 0 24 21 1]
+                         [0 0 24 22 1]])
 
 (defn neighbor-src [s-res]
   (<- [?neigh-id]
-      (test-modis-tap ?h ?v ?s ?l)
+      (test-modis-tap ?h ?v ?s ?l ?val)
       (global-indexer ?h ?v ?s ?l :s-res s-res :> ?idx)
       (neighbors ?idx :> ?neigh-id)
       (:distinct true)))
@@ -139,19 +164,71 @@
           (idx->global-rowcol min-idx)
           (idx->global-rowcol max-idx))]))
 
-(defn box-test []
-  (let [src (neighbor-src "500")]
-    (??<- [?y ?x]
-          (src ?idx)
-          (box-dims ?idx :> ?y ?x))))
+(defn box-test [neigh-src]
+  (??<- [?y ?x]
+        (neigh-src ?idx)
+        (box-dims ?idx :> ?y ?x)))
 
-(defn gen-neighbor-features
-  [num-pds]
-  (let [forma-src (gen-pixel-features num-pds)]
-    (<- [?mod-h ?mod-v ?sample ?line ?short]
-          (forma-src ?loc ?forma-val ?hansen ?pd)
-          (thrift/unpack ?forma-val :> _ ?short _ _ _)
-          (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line))))
+(defn coll-rowcol->idx [nrow ncol coll]
+  (let [partial-fn (fn [rc] (util/idx->rowcol nrow ncol (first rc) (second rc)))]
+    (map partial-fn coll)))
+
+(defbufferop [build-window [wr wc]]
+  [tuples]
+  (let [rowcol (map vec tuples)
+        first-rowcol (first (sort-by second (sort-by first rowcol)))
+        window-rowcol (map (partial map (comp int i/abs -) first-rowcol) rowcol)]
+    ))
+
+(defn top-left
+  "accepts a sequence of tuples (row col) and returns the topmost,
+  leftmost tuple"
+  [coll]
+  (first (sort-by second (sort-by first coll))))
+
+(defn relative-transform
+  "accepts a top-left tuple and then a collection of tuples; returns a
+  transformed sequence where the tuples are constructed, relative to
+  the top-left pixel"
+  [top-left tuple]
+  (let [abs-diff (comp int i/abs -)]
+    (map abs-diff top-left tuple)))
+
+(defbufferop [build-window [wr wc]]
+  [tuples]
+  (let [rowcol (map vec tuples)
+        make-relative (partial relative-transform (top-left rowcol))
+        rel-rowcol (map (comp vec make-relative) rowcol)]
+   [[rel-rowcol]]))
+
+(defn idx-src []
+  (<- [?idx ?val]
+      (test-modis-tap-all ?h ?v ?s ?l ?val)
+      (global-indexer ?h ?v ?s ?l :> ?idx)))
+
+(defn get-attributes [s-res]
+  (let [n-src (neighbor-src s-res)
+        idx-src (idx-src)
+        [window-rows window-cols] (first (box-test n-src))]
+    (??<- 
+         [?neigh-id ?val]
+         (n-src ?neigh-id)
+         (idx-src ?neigh-id ?val)
+         (:distinct true))))
+
+         ;; (idx->global-rowcol ?neigh-id :s-res s-res :> ?n-row ?n-col)
+;; (build-window [window-rows window-cols] ?n-row ?n-col :> ?stand-in)
+
+
+;; (defn gen-neighbor-features
+;;   [num-pds]
+;;   (let [forma-src (gen-pixel-features num-pds)]
+;;     (<- [?mod-h ?mod-v ?sample ?line ?short]
+;;           (forma-src ?loc ?forma-val ?hansen ?pd)
+;;           (thrift/unpack ?forma-val :> _ ?short _ _ _)
+;;           (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line))))
+
+
 
 ;; (defn grab-ndvi [num-pds]
 ;;   (let [dyn-src (hfs-seqfile dyn-path)
