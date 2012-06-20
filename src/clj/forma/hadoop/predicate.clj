@@ -203,7 +203,7 @@
                     (.openTapForWrite tap))]
       (doseq [item (for [[h v]  tileseq
                          sample (range (pixels-at-res res))
-                         line   (range (pixels-at-res res))]
+                         line (range (pixels-at-res res))]
                      [h v sample line])]
         (.add collector (Util/coerceToTuple item))))
     (name-vars tap ["?mod-h" "?mod-v" "?sample" "?line"])))
