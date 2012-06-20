@@ -11,15 +11,19 @@
             [forma.hadoop.jobs.local :as local]
             [forma.hadoop.predicate :as p]))
 
-(defn global-dims [sres]
+(defn global-dims
+  "accepts a spatial resolution and returns a tuple of the form [row
+  column] with the total number of rows and columns of the entire
+  world at the supplied resolution."
+  [sres]
   (let [num-pixels (r/pixels-at-res sres)]
     (map (partial * num-pixels) [r/v-tiles r/h-tiles])))
 
 (defrecord TileRowCol [mod-h mod-v sample line])
 (defrecord GlobalRowCol [rowcol])
 (defrecord GlobalIndex [idx])
-(defrecord WindowRowCol [rowcol w-map])
-(defrecord WindowIndex [idx w-map])
+(defrecord WindowRowCol [rowcol])
+(defrecord WindowIndex [idx])
 
 (defn TileRowCol*
   ([coll]
@@ -27,84 +31,53 @@
        (TileRowCol. h v s l)))
   ([h v s l] (TileRowCol. h v s l)))
 
-(defmulti global-index (fn [t sres] (class t)))
+(defmulti global-index (fn [sres t] (class t)))
 
-(defmethod global-index TileRowCol [t sres]
+(defmethod global-index TileRowCol [sres t]
   (let [global-row (+ (* (:mod-v t) (r/pixels-at-res sres)) (:line t))
         global-col (+ (* (:mod-h t) (r/pixels-at-res sres)) (:sample t))
         [nrows ncols] (global-dims sres)]
     (util/rowcol->idx nrows ncols global-row global-col)))
 
-(defmethod global-index GlobalRowCol [t sres]
+(defmethod global-index GlobalRowCol [sres t]
   (let [[row col] (:rowcol t)
         [nrows ncols] (global-dims sres)]
     (util/rowcol->idx nrows ncols row col)))
 
-(defmulti global-rowcol (fn [t sres] (class t)))
+(defmulti global-rowcol (fn [sres t] (class t)))
 
-(defmethod global-rowcol TileRowCol [t sres]
+(defmethod global-rowcol TileRowCol [sres t]
   (let [num-pixels (r/pixels-at-res sres)]
     [(+ (:line t) (* num-pixels (:mod-v t)))
      (+ (:sample t) (* num-pixels (:mod-h t)))]))
 
-(defmethod global-rowcol GlobalIndex [t sres]
+(defmethod global-rowcol GlobalIndex [sres t]
   (let [[nrows ncols] (global-dims sres)]
     (util/idx->rowcol nrows ncols (:idx t))))
 
-(defmulti window-rowcol (fn [t sres] (class t)))
+(defmulti window-rowcol (fn [sres window-map t] (class t)))
 
-(defmethod window-rowcol WindowIndex [t sres]
-  (let [w-map (:w-map t)]
-    (util/idx->rowcol (:height w-map) (:width w-map) (:idx t))))
+(defmethod window-rowcol WindowIndex [sres window-map t]
+  (util/idx->rowcol (:height window-map) (:width window-map) (:idx t)))
 
-(defmulti window-idx (fn [t sres] (class t)))
+(defmethod window-rowcol GlobalRowCol [sres window-map t]
+  {:post [(< (first %) (+ (window-map :height) (first (window-map :topleft))))
+          (< (second %) (+ (window-map :height) (second (window-map :topleft))))
+          (every? pos? %)]}
+  (let [topleft (window-map :topleft)]
+    (vec (map - (:rowcol t) topleft))))
 
-(defmethod window-idx WindowRowCol [t sres]
+(defmethod window-rowcol GlobalIndex [sres window-map t]
+  (window-rowcol sres window-map (global-rowcol sres t)))
+
+(defmulti window-idx (fn [sres window-map t] (class t)))
+
+(defmethod window-idx WindowRowCol [sres window-map t]
   (let [[row col] (:rowcol t)]
-    (util/idx->rowcol (:height t) (:width t) row col)))
+    (util/rowcol->idx (:height window-map) (:width window-map) row col)))
 
-(defn foobar [x & {:keys [w-map] :or {w-map {:me 2}}}] (:me w-map))
+(defmethod window-idx GlobalIndex [sres window-map t]
+  (window-idx (window-rowcol sres window-map t)))
 
-;; (WindowIndex. 10 {:tl [4 4] :height 4 :width 4})
-
-;; (defprotocol get-global-position
-;;   (global-row [t sres])
-;;   (global-col [t sres]))
-
-;; (defprotocol get-global-index
-;;   (global-idx [t sres]))
-
-;; (extend-type TilePosition
-;;   get-global-position)
-
-;; (extend-type TilePosition
-;;   get-global-index
-;;   (global-idx [t sres]
-;;     (let [[nrows ncols] (local/global-dims sres)]
-;;       (util/rowcol->idx
-;;        nrows ncols                  
-;;        (global-row t sres)
-;;        (global-col t sres)))))
-
-;; (defprotocol WindowPosition
-;;   (window-row [t sres topmost-row])
-;;   (window-col [t sres leftmost-col]))
-
-;; (defprotocol WindowIndex
-;;   (window-idx [t sres topmost-row leftmost-col height width]))
-
-;; (extend-type TilePosition
-;;   WindowPosition
-;;   (window-row [t sres topmost-row] (- (global-row t sres) topmost-row))
-;;   (window-col [t sres leftmost-col] (- (global-col t sres) leftmost-col)))
-
-;; (extend-type TilePosition
-;;   WindowIndex
-;;   (window-idx [t sres topmost-row leftmost-col height width]
-;;     (util/rowcol->idx
-;;      height
-;;      width
-;;      (window-row t sres topmost-row)
-;;      (window-col t sres leftmost-col))))
-
-
+(defmethod window-idx GlobalRowCol [sres window-map t]
+  (window-idx (window-rowcol sres window-map t)))
