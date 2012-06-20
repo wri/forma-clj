@@ -11,42 +11,47 @@
             [forma.hadoop.jobs.local :as local]
             [forma.hadoop.predicate :as p]))
 
-(defn global-dims [s-res]
-  (let [num-pixels (r/pixels-at-res s-res)]
+(defn global-dims [sres]
+  (let [num-pixels (r/pixels-at-res sres)]
     (map (partial * num-pixels) [r/v-tiles r/h-tiles])))
 
-(defrecord TileRowCol [mod-h mod-v sample line sres])
-(defrecord GlobalRowCol [row col sres])
-(defrecord GlobalIndex [idx sres])
-(defrecord WindowRowCol [row col topleft-rowcol sres])
-(defrecord WindowIndex [idx topleft-idx sres])
+(defrecord TileRowCol [mod-h mod-v sample line])
+(defrecord GlobalRowCol [rowcol])
+(defrecord GlobalIndex [idx])
+(defrecord WindowRowCol [rowcol topleft-rowcol])
+(defrecord WindowIndex [idx topleft-idx])
 
-(defmulti global-index class)
+(defn TileRowCol*
+  ([coll]
+     (let [[h v s l] coll]
+       (TileRowCol. h v s l)))
+  ([h v s l] (TileRowCol. h v s l)))
 
-(defmethod global-index TileRowCol [t]
-  (let [sres (:sres t)
-        global-row (+ (* (:mod-v t) (r/pixels-at-res sres)) (:line t))
+(defmulti global-index (fn [t sres] (class t)))
+
+(defmethod global-index TileRowCol [t sres]
+  (let [global-row (+ (* (:mod-v t) (r/pixels-at-res sres)) (:line t))
         global-col (+ (* (:mod-h t) (r/pixels-at-res sres)) (:sample t))
         [nrows ncols] (global-dims sres)]
     (util/rowcol->idx nrows ncols global-row global-col)))
 
-(defmethod global-index GlobalRowCol [t]
-  (let [[nrows ncols] (global-dims (:sres t))]
-    (util/rowcol->idx nrows ncols (:row t) (:col t))))
+(defmethod global-index GlobalRowCol [t sres]
+  (let [[row col] (:rowcol t)
+        [nrows ncols] (global-dims sres)]
+    (util/rowcol->idx nrows ncols row col)))
 
-(defmulti global-rowcol class)
+(defmulti global-rowcol (fn [t sres] (class t)))
 
-(defmethod global-rowcol TileRowCol [t]
-  (let [sres (:sres t)
-        num-pixels (r/pixels-at-res sres)]
+(defmethod global-rowcol TileRowCol [t sres]
+  (let [num-pixels (r/pixels-at-res sres)]
     [(+ (:line t) (* num-pixels (:mod-v t)))
      (+ (:sample t) (* num-pixels (:mod-h t)))]))
 
-(defmethod global-rowcol GlobalIndex [t]
-  (let [[nrows ncols] (global-dims (:sres t))]
+(defmethod global-rowcol GlobalIndex [t sres]
+  (let [[nrows ncols] (global-dims sres)]
     (util/idx->rowcol nrows ncols (:idx t))))
 
-
+(defmulti window-rowcol (fn [t ]))
 
 ;; (defprotocol get-global-position
 ;;   (global-row [t sres])
