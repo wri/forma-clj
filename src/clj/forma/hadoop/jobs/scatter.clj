@@ -285,6 +285,11 @@
         v-target 8]
     (and (= h h-target) (= v v-target))))
 
+(def bbox {:min-lat 0.71
+            :max-lat 0.91
+            :min-lon 101.75
+           :max-lon 101.95})
+
 (defn within-bbox?
   [{:keys [min-lat max-lat min-lon max-lon]} s-res h v s l]
   (let [[lat lon] (r/modis->latlon s-res h v s l)]
