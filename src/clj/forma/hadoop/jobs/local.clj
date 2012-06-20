@@ -210,11 +210,10 @@
   (let [n-src (neighbor-src s-res)
         idx-src (idx-src)
         [window-rows window-cols] (first (box-test n-src))]
-    (??<- 
-         [?neigh-id ?val]
-         (n-src ?neigh-id)
-         (idx-src ?neigh-id ?val)
-         (:distinct true))))
+    (??<- [?neigh-id ?val]
+          (n-src ?neigh-id)
+          (idx-src ?neigh-id ?val)
+          (:distinct true))))
 
          ;; (idx->global-rowcol ?neigh-id :s-res s-res :> ?n-row ?n-col)
 ;; (build-window [window-rows window-cols] ?n-row ?n-col :> ?stand-in)
