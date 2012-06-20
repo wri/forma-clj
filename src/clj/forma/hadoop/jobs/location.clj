@@ -18,8 +18,8 @@
 (defrecord TileRowCol [mod-h mod-v sample line])
 (defrecord GlobalRowCol [rowcol])
 (defrecord GlobalIndex [idx])
-(defrecord WindowRowCol [rowcol topleft-rowcol])
-(defrecord WindowIndex [idx topleft-idx])
+(defrecord WindowRowCol [rowcol w-map])
+(defrecord WindowIndex [idx w-map])
 
 (defn TileRowCol*
   ([coll]
@@ -51,7 +51,21 @@
   (let [[nrows ncols] (global-dims sres)]
     (util/idx->rowcol nrows ncols (:idx t))))
 
-(defmulti window-rowcol (fn [t ]))
+(defmulti window-rowcol (fn [t sres] (class t)))
+
+(defmethod window-rowcol WindowIndex [t sres]
+  (let [w-map (:w-map t)]
+    (util/idx->rowcol (:height w-map) (:width w-map) (:idx t))))
+
+(defmulti window-idx (fn [t sres] (class t)))
+
+(defmethod window-idx WindowRowCol [t sres]
+  (let [[row col] (:rowcol t)]
+    (util/idx->rowcol (:height t) (:width t) row col)))
+
+(defn foobar [x & {:keys [w-map] :or {w-map {:me 2}}}] (:me w-map))
+
+;; (WindowIndex. 10 {:tl [4 4] :height 4 :width 4})
 
 ;; (defprotocol get-global-position
 ;;   (global-row [t sres])
