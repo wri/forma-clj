@@ -1,7 +1,6 @@
 (ns forma.hadoop.jobs.location
   (:require [forma.matrix.utils :as util]
             [forma.reproject :as r]
-            [forma.hadoop.jobs.local :as local]
             [forma.hadoop.predicate :as p]))
 
 ;; An API to access the location of MODIS pixels at three levels: (1)
