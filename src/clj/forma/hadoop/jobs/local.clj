@@ -8,6 +8,7 @@
         [cascalog.checkpoint :only (workflow)])
   (:require [cascalog.ops :as c]
             [forma.matrix.utils :as util]
+            [forma.matrix.walk :as walk]
             [forma.reproject :as r]
             [forma.thrift :as thrift]
             [forma.schema :as schema]
@@ -20,7 +21,8 @@
             [forma.hadoop.jobs.timeseries :as tseries]
             [forma.date-time :as date]
             [forma.trends.analysis :as analyze]
-            [forma.classify.logistic :as log])
+            [forma.classify.logistic :as log]
+            [forma.hadoop.jobs.location :as loc])
   (:import [org.jblas FloatMatrix MatrixFunctions Solve DoubleMatrix]))
 
 (def base-path "dev/testdata/select/")
@@ -59,49 +61,28 @@
         (thrift/FormaValue* ?fire ?short ?long ?tstat ?han-stat :> ?forma-val)
         (>= ?vcf 25))))
 
-(defn global-dims [s-res]
-  (let [num-pixels (r/pixels-at-res s-res)]
-    (map (partial * num-pixels) [r/v-tiles r/h-tiles])))
-
-(defn global-indexer
-  "accepts a modis pixel coordinates at the tile level and returns a unique,
-  global index; origin is at top left, as seen [here](goo.gl/pCgqF)"
-  [h v s l & {:keys [s-res] :or {s-res "500"}}]
-  (let [num-pixels (r/pixels-at-res s-res)
-        col (+ (* h num-pixels) s)
-        row (+ (* v num-pixels) l)
-        [nrows ncols] (global-dims s-res)]
-    (util/rowcol->idx nrows ncols row col)))
-
-(defn valid-neighbor?
-  [s-res idx]
-  (let [max-dim (dec (r/pixels-at-res s-res))
-        max-idx (global-indexer r/h-tiles r/v-tiles max-dim max-dim)]
-    (if (and (pos? (inc idx))
-             (< idx max-idx))
-      idx
-      nil)))
-
-(defn neighbor-idx
-  "returns the global indices of the 8 adjacent MODIS pixels"
-  [pixel-idx & {:keys [s-res] :or {s-res "500"}}]
-  (let [num-pixels (r/pixels-at-res s-res)
-        up-one     (- pixel-idx (* r/h-tiles num-pixels))
-        down-one   (+ pixel-idx (* r/h-tiles num-pixels))
-        valid? (partial valid-neighbor? s-res)]
-    (map valid? [pixel-idx (dec pixel-idx) (inc pixel-idx)
-                 up-one    (dec up-one) (inc up-one)
-                 down-one  (dec down-one) (inc down-one)])))
-
 (defmapcatop neighbors
-  [idx & {:keys [s-res] :or {s-res "500"}}]
-  (neighbor-idx idx :s-res s-res))
+  [idx & {:keys [sres] :or {sres "500"}}]
+  (loc/neighbor-idx sres (loc/GlobalIndex* idx)))
 
-;; (def test-modis-tap [[28 8 20 20]
-;;                      [28 8 21 20]
-;;                      [28 8 22 21]
-;;                      [28 8 23 21]])
- 
+(defn neighbor-src [sample-modis-src sres]
+  (<- [?neigh-id]
+      (sample-modis-src ?h ?v ?s ?l ?val)
+      (loc/TileRowCol* ?h ?v ?s ?l :> ?tile-pixel)
+      (loc/global-index sres ?tile-pixel :> ?idx)
+      (neighbors ?idx :> ?neigh-id)
+      (:distinct true)))
+
+(defn window-attribute-src [neighbor-src full-modis-src sres]
+  (<- [?idx ?val]
+      (neighbor-src ?idx)
+      (full-modis-src ?h ?v ?s ?l ?val)
+      (loc/TileRowCol* ?h ?v ?s ?l :> ?tile-pixel)
+      (loc/global-index sres ?tile-pixel :> ?idx)
+      (:distinct true)))
+
+
+
 (def test-modis-tap [[0 0 20 20 1]
                      [0 0 21 20 1]
                      [0 0 20 21 1]
@@ -132,88 +113,113 @@
                          [0 0 24 21 1]
                          [0 0 24 22 1]])
 
-(defn neighbor-src [s-res]
-  (<- [?neigh-id]
-      (test-modis-tap ?h ?v ?s ?l ?val)
-      (global-indexer ?h ?v ?s ?l :s-res s-res :> ?idx)
-      (neighbors ?idx :> ?neigh-id)
-      (:distinct true)))
+(defn window-map
+  "note height and width take into account the zero index."
+  [sres coll]
+  (let [rowcol (fn [x] (loc/global-rowcol sres (loc/GlobalIndex* x)))
+        [min-rc max-rc] (map rowcol [(reduce min coll) (reduce max coll)])]
+    {:topleft-rowcol min-rc
+     :height (inc (- (first max-rc) (first min-rc)))
+     :width  (inc (- (second max-rc) (second min-rc)))}))
 
-(defbufferop bounding-indices
+(defn my-sum [& args] (i/sum args))
+
+(defn create-window [sres wmap idx-val]
+  (let [sorted-coll (sort-by first idx-val)
+        idxval-new (for [i (map vec sorted-coll)]
+                     [(loc/window-idx sres wmap (loc/GlobalIndex* (first i)))
+                      (second i)])
+        h (wmap :height)
+        w (wmap :width)
+        mat (vec (map vec (partition h (util/sparse-expander nil idxval-new :length (* h w)))))]
+    (walk/windowed-function 1 my-sum mat)))
+
+
+(defbufferop [gen-window-attributes [sres]]
   [tuples]
-  (let [coll (flatten tuples)]
-    [[(reduce min coll) (reduce max coll)]]))
+  (let [idx-coll (map first tuples)
+        val-coll (map second tuples)
+        wmap (window-map sres idx-coll)]
+    [[(vec (create-window sres wmap tuples))]]))
 
-(defn buffer-test []
-  (let [src (neighbor-src "500")]
-    (??<- [?first ?last]
-          (src ?idx)
-          (bounding-indices ?idx :> ?first ?last))))
+(defn window-out [sres]
+  (let [n-src (neighbor-src test-modis-tap sres)
+        w-src (window-attribute-src n-src test-modis-tap-all sres)]
+    (??<- [?x]
+          (w-src ?idx ?val)
+          (gen-window-attributes [sres] ?idx ?val :> ?x))))
 
-(defn idx->global-rowcol
-  [idx & {:keys [s-res] :or {s-res "500"}}]
-  (let [[nrows ncols] (global-dims s-res)]
-    (util/idx->rowcol nrows ncols idx)))
 
-(defbufferop box-dims
-  [tuples]
-  (let [coll (flatten tuples)
-        min-idx (reduce min coll)
-        max-idx (reduce max coll)]
-    [(map (comp int inc i/abs -)
-          (idx->global-rowcol min-idx)
-          (idx->global-rowcol max-idx))]))
+;; (defn buffer-test []
+;;   (let [src (neighbor-src "500")]
+;;     (??<- [?first ?last]
+;;           (src ?idx)
+;;           (bounding-indices ?idx :> ?first ?last))))
 
-(defn box-test [neigh-src]
-  (??<- [?y ?x]
-        (neigh-src ?idx)
-        (box-dims ?idx :> ?y ?x)))
+;; (defn idx->global-rowcol
+;;   [idx & {:keys [s-res] :or {s-res "500"}}]
+;;   (let [[nrows ncols] (global-dims s-res)]
+;;     (util/idx->rowcol nrows ncols idx)))
 
-(defn coll-rowcol->idx [nrow ncol coll]
-  (let [partial-fn (fn [rc] (util/idx->rowcol nrow ncol (first rc) (second rc)))]
-    (map partial-fn coll)))
+;; (defbufferop box-dims
+;;   [tuples]
+;;   (let [coll (flatten tuples)
+;;         min-idx (reduce min coll)
+;;         max-idx (reduce max coll)]
+;;     [(map (comp int inc i/abs -)
+;;           (idx->global-rowcol min-idx)
+;;           (idx->global-rowcol max-idx))]))
 
-(defbufferop [build-window [wr wc]]
-  [tuples]
-  (let [rowcol (map vec tuples)
-        first-rowcol (first (sort-by second (sort-by first rowcol)))
-        window-rowcol (map (partial map (comp int i/abs -) first-rowcol) rowcol)]
-    ))
+;; (defn box-test [neigh-src]
+;;   (??<- [?y ?x]
+;;         (neigh-src ?idx)
+;;         (box-dims ?idx :> ?y ?x)))
 
-(defn top-left
-  "accepts a sequence of tuples (row col) and returns the topmost,
-  leftmost tuple"
-  [coll]
-  (first (sort-by second (sort-by first coll))))
+;; (defn coll-rowcol->idx [nrow ncol coll]
+;;   (let [partial-fn (fn [rc] (util/idx->rowcol nrow ncol (first rc) (second rc)))]
+;;     (map partial-fn coll)))
 
-(defn relative-transform
-  "accepts a top-left tuple and then a collection of tuples; returns a
-  transformed sequence where the tuples are constructed, relative to
-  the top-left pixel"
-  [top-left tuple]
-  (let [abs-diff (comp int i/abs -)]
-    (map abs-diff top-left tuple)))
+;; (defbufferop [build-window [wr wc]]
+;;   [tuples]
+;;   (let [rowcol (map vec tuples)
+;;         first-rowcol (first (sort-by second (sort-by first rowcol)))
+;;         window-rowcol (map (partial map (comp int i/abs -) first-rowcol) rowcol)]
+;;     ))
 
-(defbufferop [build-window [wr wc]]
-  [tuples]
-  (let [rowcol (map vec tuples)
-        make-relative (partial relative-transform (top-left rowcol))
-        rel-rowcol (map (comp vec make-relative) rowcol)]
-   [[rel-rowcol]]))
+;; (defn top-left
+;;   "accepts a sequence of tuples (row col) and returns the topmost,
+;;   leftmost tuple"
+;;   [coll]
+;;   (first (sort-by second (sort-by first coll))))
 
-(defn idx-src []
-  (<- [?idx ?val]
-      (test-modis-tap-all ?h ?v ?s ?l ?val)
-      (global-indexer ?h ?v ?s ?l :> ?idx)))
+;; (defn relative-transform
+;;   "accepts a top-left tuple and then a collection of tuples; returns a
+;;   transformed sequence where the tuples are constructed, relative to
+;;   the top-left pixel"
+;;   [top-left tuple]
+;;   (let [abs-diff (comp int i/abs -)]
+;;     (map abs-diff top-left tuple)))
 
-(defn get-attributes [s-res]
-  (let [n-src (neighbor-src s-res)
-        idx-src (idx-src)
-        [window-rows window-cols] (first (box-test n-src))]
-    (??<- [?neigh-id ?val]
-          (n-src ?neigh-id)
-          (idx-src ?neigh-id ?val)
-          (:distinct true))))
+;; (defbufferop [build-window [wr wc]]
+;;   [tuples]
+;;   (let [rowcol (map vec tuples)
+;;         make-relative (partial relative-transform (top-left rowcol))
+;;         rel-rowcol (map (comp vec make-relative) rowcol)]
+;;    [[rel-rowcol]]))
+
+;; (defn idx-src []
+;;   (<- [?idx ?val]
+;;       (test-modis-tap-all ?h ?v ?s ?l ?val)
+;;       (global-indexer ?h ?v ?s ?l :> ?idx)))
+
+;; (defn get-attributes [s-res]
+;;   (let [n-src (neighbor-src s-res)
+;;         idx-src (idx-src)
+;;         [window-rows window-cols] (first (box-test n-src))]
+;;     (??<- [?neigh-id ?val]
+;;           (n-src ?neigh-id)
+;;           (idx-src ?neigh-id ?val)
+;;           (:distinct true))))
 
 
 

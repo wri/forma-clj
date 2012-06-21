@@ -58,7 +58,21 @@
        (TileRowCol. h v s l)))
   ([h v s l] (TileRowCol. h v s l)))
 
-(defmulti global-index (fn [sres t] (class t)))
+(defn GlobalRowCol*
+  ([coll] (GlobalRowCol. coll))
+  ([r c]  (GlobalRowCol. [r c])))
+
+(defn WindowRowCol*
+  ([coll] (WindowRowCol. coll))
+  ([r c]  (WindowRowCol. [r c])))
+
+(defn WindowIndex*
+  ([idx] (WindowIndex. idx)))
+
+(defn GlobalIndex*
+  ([idx] (GlobalIndex. idx)))
+
+(defmulti global-index (fn [sres t & [window-map]] (class t)))
 
 (defmethod global-index TileRowCol [sres t]
   (let [global-row (+ (* (:mod-v t) (r/pixels-at-res sres)) (:line t))
@@ -70,6 +84,18 @@
   (let [[row col] (:rowcol t)
         [nrows ncols] (global-dims sres)]
     (util/rowcol->idx nrows ncols row col)))
+
+(defmethod global-index WindowRowCol [sres t & [window-map]]
+  (let [rowcol (map + (window-map :topleft-rowcol) (:rowcol t))]
+    (global-index sres (GlobalRowCol. rowcol))))
+
+(defmulti window-rowcol (fn [sres window-map t] (class t)))
+
+(defmethod window-rowcol WindowIndex [sres window-map t]
+  (util/idx->rowcol (:height window-map) (:width window-map) (:idx t)))
+
+(defmethod global-index WindowIndex [sres t & [window-map]]
+  (global-index sres (window-rowcol sres window-map t) window-map))
 
 (defmulti global-rowcol (fn [sres t] (class t)))
 
@@ -114,7 +140,16 @@
     (util/rowcol->idx (:height window-map) (:width window-map) row col)))
 
 (defmethod window-idx GlobalIndex [sres window-map t]
-  (window-idx (window-rowcol sres window-map t)))
+  (window-idx sres window-map (WindowRowCol. (window-rowcol sres window-map t))))
 
 (defmethod window-idx GlobalRowCol [sres window-map t]
-  (window-idx (window-rowcol sres window-map t)))
+  (window-idx sres window-map (WindowRowCol. (window-rowcol sres window-map t))))
+
+(defmulti neighbor-idx (fn [sres t] (class t)))
+
+(defmethod neighbor-idx GlobalIndex [sres t]
+  (let [idx (:idx t)
+        total-row (* (r/pixels-at-res sres) r/h-tiles)
+        short-row (fn [x] [(dec x) x (inc x)])]
+    (flatten
+     (map short-row [(- idx total-row) idx (+ idx total-row)]))))
