@@ -215,6 +215,8 @@
           (idx-src ?neigh-id ?val)
           (:distinct true))))
 
+
+
          ;; (idx->global-rowcol ?neigh-id :s-res s-res :> ?n-row ?n-col)
 ;; (build-window [window-rows window-cols] ?n-row ?n-col :> ?stand-in)
 
