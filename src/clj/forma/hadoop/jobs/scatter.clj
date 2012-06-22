@@ -176,83 +176,69 @@
                                              (hfs-seqfile reli-path)
                                              (hfs-seqfile rain-path)))))
 
-              fire-step ([:tmp-dirs fire-path]
-                           (?- (hfs-seqfile fire-path)
-                               (tseries/fire-query pail-path
-                                                   t-res
-                                                   "2000-11-01"
-                                                   est-end)))
+              fire-step
+              ([:tmp-dirs fire-path]
+                 (?- (hfs-seqfile fire-path)
+                     (tseries/fire-query pail-path
+                                         t-res
+                                         "2000-11-01"
+                                         est-end)))
 
               adjustfires
               ([:tmp-dirs adjusted-fire-path]
                  (?- (hfs-seqfile adjusted-fire-path)
                      (forma/fire-tap est-map (hfs-seqfile fire-path))))
 
-              cleanseries ([:tmp-dirs clean-series]
-                             "Runs the trends processing."
-                             (?- (hfs-seqfile clean-series)
-                                 (forma/dynamic-clean
-                                  est-map (hfs-seqfile adjusted-series-path))))
+              cleanseries
+              ([:tmp-dirs clean-series]
+                 "Runs the trends processing."
+                 (?- (hfs-seqfile clean-series)
+                     (forma/dynamic-clean
+                      est-map (hfs-seqfile adjusted-series-path))))
 
-              trends ([:tmp-dirs trends-path]
-                        "Runs the trends processing."
-                        (?- (hfs-seqfile trends-path)
-                            (forma/analyze-trends
-                             est-map (hfs-seqfile clean-series))))
+              trends
+              ([:tmp-dirs trends-path]
+                 "Runs the trends processing."
+                 (?- (hfs-seqfile trends-path)
+                     (forma/analyze-trends
+                      est-map (hfs-seqfile clean-series))))
 
-              trends-cleanup ([:tmp-dirs cleanup-path]
-                                "Clean up data after trends to improve join performance"
-                                (?- (hfs-seqfile cleanup-path)
-                                    (forma/trends-cleanup trends-path)))
+              trends-cleanup
+              ([:tmp-dirs cleanup-path]
+                 "Clean up data after trends to improve join performance"
+                 (?- (hfs-seqfile cleanup-path)
+                     (forma/trends-cleanup trends-path)))
 
-              mid-forma ([:tmp-dirs forma-mid-path
-                          :deps [trends adjustfires]]
-                           (?- (hfs-seqfile forma-mid-path)
-                               (forma/forma-tap (hfs-seqfile trends-path)
-                                                (hfs-seqfile adjusted-fire-path))))
+              mid-forma
+              ([:tmp-dirs forma-mid-path
+                :deps [trends adjustfires]]
+                 (?- (hfs-seqfile forma-mid-path)
+                     (forma/forma-tap (hfs-seqfile trends-path)
+                                      (hfs-seqfile adjusted-fire-path))))
               
               final-forma
-              ([] (let [names ["?s-res" "?period" "?mod-h" "?mod-v"
-                               "?sample" "?line" "?forma-val"]
-                        mid-src (-> (hfs-seqfile forma-mid-path)
-                                    (name-vars names))]
-                    (?- (hfs-seqfile out-path)
-                        (forma/forma-query est-map mid-src)))))))
+              ([:tmp-dirs final-path]
+                 (let [names ["?s-res" "?period" "?mod-h" "?mod-v"
+                              "?sample" "?line" "?forma-val"]
+                       mid-src (-> (hfs-seqfile forma-mid-path)
+                                   (name-vars names))]
+                   (?- (hfs-seqfile final-path)
+                       (forma/forma-query est-map mid-src))))
 
-(defmain ultrarunner
-  [tmp-root eco-beta-path full-beta-path static-path dynamic-path out-path country-or-eco pre-beta-out-path]
-  (let [est-map (forma-run-parameters "500-16")]
-    (workflow [tmp-root]              
-              ;; genbetas
-              ;; ([]
-              ;;    (let [beta-path (if (= "eco" country-or-eco)
-              ;;                      eco-beta-path
-              ;;                      full-beta-path)]
-              ;;      (?- (hfs-seqfile beta-path)
-              ;;          (forma/beta-generator est-map
-              ;;                                (hfs-seqfile final-path)
-              ;;                                (hfs-seqfile static-path)))))
-              applybetas
+              beta-data-prep
+              ([:tmp-dirs beta-data-path]
+                 (?- (hfs-seqfile beta-data-path)
+                     (forma/beta-data-prep est-map
+                                           (hfs-seqfile final-path)
+                                           static-src)))
+
+              gen-betas
+              ([:tmp-dirs beta-path]
+                 (?- (hfs-seqfile beta-path)
+                       (forma/beta-gen est-map (hfs-seqfile beta-data-path))))
+
+              forma-estimate
               ([] (?- (hfs-seqfile out-path :sinkmode :replace)
-                      (forma/forma-estimate (hfs-seqfile eco-beta-path)
-                                            (hfs-seqfile dynamic-path)
-                                            (hfs-seqfile
-                                            static-path)))))))
-
-(defn run-forma-estimate
-  [beta-src dynamic-src static-src out-loc trap-path period]
-  (?- (hfs-seqfile out-loc :sinkmode :replace)
-      (forma/forma-estimate 
-       (hfs-seqfile beta-src)
-       (hfs-seqfile dynamic-src)
-       (hfs-seqfile static-src)
-       (hfs-seqfile trap-path)
-       period)))
-
-(comment
-  (run-forma-estimate "s3n://formaresults/ecobetatemp"
-                      "s3n://formaresults/finalbuckettemp"
-                      "s3n://formaresults/staticbuckettemp"
-                      "s3n://formaresults/finaloutput"
-                      "s3n://formaresults/trapped"
-                      827))
+                      (forma/forma-estimate (hfs-seqfile beta-path)
+                                            (hfs-seqfile final-path)
+                                            static-src))))))
