@@ -25,18 +25,7 @@
 ;; falls outside of the specified window, then the conversion will
 ;; throw an error.
 
-;; EXAMPLE USAGE:
-
-;; (global-index "500" (TileRowCol* [28 8 0 0]))   => 1658947200
-;; (global-index "500" (TileRowCol* 28 8 0 0))     => 1658947200
-
-;; (global-rowcol "500" (GlobalIndex. 1658947200)) => [19200 67200]
-;; (global-rowcol "500" (TileRowCol* [28 8 0 0]))  => [19200 67200]
-
-;; (def window-map {:topleft-rowcol [1 1] :width 4 :height 5})
-;; (window-rowcol "500" window-map (GlobalRowCol. [5 1])) => [4 0]
-
-;; TODO: remove redundancy from multimethods; move examples to test namespace
+;; TODO: remove redundancy from multimethods
 
 (defn global-dims
   "accepts a spatial resolution and returns a tuple of the form [row
