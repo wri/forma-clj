@@ -94,3 +94,14 @@
      (forma-seq-non-thrift ?fires ?short ?long ?t-stat ?break)  => ?result)
    ?fires ?short ?long ?t-stat ?break ?result
    nil [1 -1 2] [4 5 5] [7 8 8] [1 3 2] [forma-val-1]))
+
+(fact "Test pixel-prop-location method."
+  (let [modis-pixel (ModisPixelLocation. "500" 28 8 1 10)
+        val (LocationPropertyValue/pixelLocation modis-pixel)
+        locprop (LocationProperty. val)]
+    (pixel-prop-location locprop) => modis-pixel))
+
+(fact
+  "Test vector wrapping of get-vals"
+  (let [arr (mk-array-value (DoubleArray. [1 2 3]))]
+    (get-vals-wrap arr)) => [[1 2 3]])

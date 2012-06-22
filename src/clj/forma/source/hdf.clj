@@ -260,4 +260,4 @@ as a 1-tuple."
         ((c/juxt #'spatial-res #'temporal-res) ?productname :> ?s-res ?t-res)
         (thrift/pack ?chunk :> ?array)
         (chunkifier ?dataset ?date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?array :> ?datachunk)
-        (:distinct false))))
+        )))

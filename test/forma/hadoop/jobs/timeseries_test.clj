@@ -52,3 +52,13 @@ this query don't contain -9999."
                    (??-)
                    (first))]
    (second results) =not=> "something about not containing -9999."))
+
+(fact
+  "Test running-fire-sum"
+  (let [fires-src [[[(schema/fire-value 0 0 0 10)
+                     (schema/fire-value 1 0 0 33)]]]
+        result [(schema/fire-series 0 [(schema/fire-value 0 0 0 10)
+                                       (schema/fire-value 1 0 0 43)])]]
+    (??<- [?vals]
+          (fires-src ?fire-vals)
+          (running-fire-sum 0 ?fire-vals :> ?vals)) => [result]))

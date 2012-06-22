@@ -94,6 +94,7 @@
     (->> tseries
          (reductions schema/add-fires)
          (schema/create-timeseries start))))
+         (schema/fire-series start))))
 
 (defn aggregate-fires
   "Converts the datestring into a time period based on the supplied
@@ -105,7 +106,7 @@
       (merge-firevals ?data :> ?tuple)
       (date/beginning t-res ?date :> ?datestring)
       (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)
-      (:distinct false)))
+      ))
 
 (defn create-fire-series
   "Aggregates fires into timeseries."

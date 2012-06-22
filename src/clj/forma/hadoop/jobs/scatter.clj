@@ -1,7 +1,6 @@
 (ns forma.hadoop.jobs.scatter
   "Namespace for arbitrary queries."
   (:use cascalog.api
-        cascalog.lzo
         [forma.hadoop.pail :only (to-pail)]
         [forma.source.tilesets :only (tile-set country-tiles)]
         [forma.hadoop.pail :only (?pail- split-chunk-tap)]
@@ -17,8 +16,7 @@
             [forma.hadoop.jobs.timeseries :as tseries]
             [forma.date-time :as date]
             [forma.classify.logistic :as log])
-  ;;(:import [backtype.Hadoop.pail Pail])
-  )
+            [forma.thrift :as thrift]))
 
 (def convert-line-src
   (hfs-textline "s3n://modisfiles/ascii/admin-map.csv"))
@@ -74,12 +72,12 @@
   (let [[vcf hansen ecoid gadm border]
         (map (comp static-tap (partial split-chunk-tap pail-path))
              [["vcf"] ["hansen"] ["ecoid"] ["gadm"] ["border"]])]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?gadm ?vcf ?ecoid ?hansen ?border]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?gadm ?vcf ?ecoid ?hansen ?coast-dist]
         (vcf    ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
         (hansen ?s-res ?mod-h ?mod-v ?sample ?line ?hansen)
         (ecoid  ?s-res ?mod-h ?mod-v ?sample ?line ?ecoid)
         (gadm   ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
-        (border ?s-res ?mod-h ?mod-v ?sample ?line ?border)
+        (border ?s-res ?mod-h ?mod-v ?sample ?line ?coast-dist)
         (>= ?vcf vcf-limit))))
 
 ;; ## Forma
@@ -182,8 +180,7 @@
               ([:tmp-dirs vcf-path]
                  (?- (hfs-seqfile vcf-path)
                      (<- [?subpail ?chunk]
-                         ((constrained-tap pail-path "vcf" s-res "00") ?subpail ?chunk)
-                         (:distinct false))))
+                         ((constrained-tap pail-path "vcf" s-res "00") ?subpail ?chunk))))
 
               ndvi-step
               ([:tmp-dirs ndvi-path]
@@ -220,25 +217,25 @@
               
               adjustseries
               ([:tmp-dirs adjusted-series-path]
-                 "Adjusts the lengths of all timeseries
-                               and filters out timeseries below the proper VCF value."
+                 "Adjusts lengths of all timeseries so they all cover the same
+                  time spans."
                  (with-job-conf {"mapred.min.split.size" 805306368}
-                   (?- (hfs-lzo-textline adjusted-series-path)
+                   (?- (hfs-seqfile adjusted-series-path)
                        (forma/dynamic-filter (hfs-seqfile ndvi-path)
                                              (hfs-seqfile reli-path)
                                              (hfs-seqfile rain-path)))))
 
               cleanseries ([:tmp-dirs clean-series]
                              "Runs the trends processing."
-                             (?- (hfs-lzo-textline clean-series)
+                             (?- (hfs-seqfile clean-series)
                                  (forma/dynamic-clean
-                                  est-map (hfs-lzo-textline adjusted-series-path))))
+                                  est-map (hfs-seqfile adjusted-series-path))))
 
               trends ([:tmp-dirs trends-path]
                         "Runs the trends processing."
                         (?- (hfs-seqfile trends-path)
                             (forma/analyze-trends
-                             est-map (hfs-lzo-textline clean-series))))
+                             est-map (hfs-seqfile clean-series))))
 
               mid-forma ([:tmp-dirs forma-mid-path
                           :deps [trends adjustfires]]
@@ -291,3 +288,142 @@
                       "s3n://formaresults/finaloutput"
                       "s3n://formaresults/trapped"
                       827))
+
+(defn within-tile?
+  [[target-h target-v] h v]
+  (let [h-target 28
+        v-target 8]
+    (and (= h h-target) (= v v-target))))
+
+(def bbox {:min-lat 0.71
+            :max-lat 0.91
+            :min-lon 101.75
+           :max-lon 101.95})
+
+(defn within-bbox?
+  [{:keys [min-lat max-lat min-lon max-lon]} s-res h v s l]
+  (let [[lat lon] (r/modis->latlon s-res h v s l)]
+    (and (< lat max-lat)
+         (> lat min-lat)
+         (< lon max-lon)
+         (> lon min-lon))))
+
+(comment
+  (let [src (hfs-seqfile "s3n://formaexperiments/preadjusted/reli")
+      bbox {:min-lat 0.71
+            :max-lat 0.91
+            :min-lon 101.75
+            :max-lon 101.95}]
+  (??<- [?count]
+        (src ?s-res ?mod-h ?mod-v ?sample ?line ?start _)
+;;        (= 693 ?start)
+        (within-bbox? bbox ?s-res ?mod-h ?mod-v ?sample ?line)
+        (c/count ?count))))
+         
+(defn get-date
+  [data-chunk]
+  (.getDate data-chunk))
+
+(defn unpack-loc
+  [dc]
+  (let [cl (->> dc .getLocationProperty .property .getChunkLocation)]
+    [(.getTileH cl)
+     (.getTileV cl)
+     (.getChunkID cl)]))
+
+(defn blossom-static
+  [src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?pixel-val]
+      (src ?dc)
+      (thrift/unpack ?dc :> _ ?loc ?chunk-data _ !date)
+      (thrift/unpack* ?chunk-data :> ?vals)
+      (p/index ?vals :> ?pixel-idx ?pixel-val)
+      (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?id ?size)
+      (r/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line)))
+
+(defn get-static-tile-pixels
+ [dataset pail-path s-t-res]
+ (let [tile-vec [28 8]
+        src (split-chunk-tap pail-path [dataset s-t-res])]
+       (<- [?dc]
+           (src _ ?dc)
+           (unpack-loc ?dc :> ?mod-h ?mod-v _)
+           (within-tile? tile-vec ?mod-h ?mod-v))))
+
+(defn get-ts-tile-pixels
+ [dataset pail-path s-t-res]
+ (let [tile-vec [28 8]
+        src (split-chunk-tap pail-path [dataset s-t-res])]
+       (<- [?dc]
+           (src _ ?dc)
+           (unpack-loc ?dc :> ?mod-h ?mod-v _)
+           (within-tile? tile-vec ?mod-h ?mod-v)
+           (get-date ?dc :> ?date-str)
+           (= "2012-01-01" ?date-str))))
+
+(comment
+  (let [dataset "ndvi"]
+    (?- (hfs-seqfile (str "s3n://formareset/2808/" dataset) :sinkmode :replace)
+        (get-ts-tile-pixels dataset "s3n://pailbucket/masterpail" "500-16"))))
+
+(comment
+         bbox {:min-lat 0.71
+             :max-lat 0.91
+             :min-lon 101.75
+             :max-lon 101.95})
+;;           (blossom-static ?dc :> ?s-res ?mod-h ?mod-v ?sample ?line ?pixel-val)
+;;           (within-bbox? bbox ?s-res ?mod-h ?mod-v ?sample ?line)
+
+
+(defn screen-rain-by-date
+  [dataset pail-path]
+  (let [src (split-chunk-tap pail-path ["precl" "500-32"])]
+       (<- [?dc]
+           (src _ ?dc)
+           (get-date ?dc :> ?date-str)
+           (= "2012-01-01" ?date-str))))
+
+(defn count-vcf-chunks
+ [pail-path]
+  (let [src (split-chunk-tap pail-path ["vcf" "500-00"])]
+       (<- [?mod-h ?mod-v ?count]
+           (src _ ?dc)
+           (unpack-loc ?dc :> ?mod-h ?mod-v ?id)
+           (= 28 ?mod-h)
+           (= 8 ?mod-v)
+           (c/count ?count))))
+
+(defn count-precl-chunks
+  [pail-path]
+  (let [src (split-chunk-tap pail-path ["precl" "500-32"])]
+       (<- [?mod-h ?mod-v ?count]
+           (src _ ?dc)
+           (unpack-loc ?dc :> ?mod-h ?mod-v ?id)
+           (get-date ?dc :> ?date-str)
+           (= 28 ?mod-h)
+           (= 8 ?mod-v)
+           (= "2012-01-01" ?date-str)
+           (c/count ?count))))
+
+(defmain CountVcf [pail-path]
+  (??- (count-vcf-chunks pail-path)))
+
+
+(defn blossom
+  [vcf-src vcf-limit chunk-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?series]
+      (chunk-src _ ?ts-chunk)
+      (vcf-src _ ?vcf-chunk)      
+
+      ;; mirrors p/blossom-chunk, but doesn't have "invalid predicate" error
+      ;; (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
+      
+      ;; unpack ts object
+      (thrift/unpack ?ts-chunk :> _ ?ts-loc ?ts-data _ !date)
+      (thrift/unpack ?ts-data :> ?start-idx _ ?ts-array)
+      (thrift/unpack* ?ts-array :> ?series)
+      (thrift/unpack ?ts-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
+
+      ;; filter on vcf-limit
+      (>= ?vcf vcf-limit)
+      (:distinct false)))

@@ -193,6 +193,8 @@
     res - The spatial resolution.
     tileseq - Map of country ISO keywords to MODIS tiles (see: forma.source.tilesets)"
   [tmp-path res tileseq]
+  {:pre [(coll? tileseq) 
+         (string? res)]}
   (let [tap (:sink (hfs-seqfile tmp-path))]
     (with-open [^TupleEntryCollector collector
                 (-> (hadoop/job-conf (conf/project-conf))
@@ -200,7 +202,7 @@
                     (.openTapForWrite tap))]
       (doseq [item (for [[h v]  tileseq
                          sample (range (pixels-at-res res))
-                         line   (range (pixels-at-res res))]
+                         line (range (pixels-at-res res))]
                      [h v sample line])]
         (.add collector (Util/coerceToTuple item))))
     (name-vars tap ["?mod-h" "?mod-v" "?sample" "?line"])))
@@ -241,5 +243,4 @@
               (fn [src]
                 (construct (swap-syms gen [inpos val] [outpos outval])
                            [[src :>> (get-out-fields gen)]
-                            [aggr inpos val :> outpos outval]
-                            [:distinct false]]))))))
+                            [aggr inpos val :> outpos outval]]))))))

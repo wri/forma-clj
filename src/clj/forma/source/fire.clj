@@ -156,8 +156,7 @@
                 :> ?datestring _ _ ?s-lat ?s-lon ?s-kelvin _ _ _ ?s-conf)
       (not= "YYYYMMDD" ?datestring)
       (monthly-datestring ?datestring :> ?date)
-      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
-      (:distinct false)))
+      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)))
 
 (defn fire-source-daily
   "Returns a Cascalog query that creates tuples for daily fires.
@@ -178,8 +177,7 @@
       (p/mangle [#","] ?line
                 :> ?s-lat ?s-lon ?s-kelvin _ _ ?datestring _ _ ?s-conf _ _ _)
       (daily-datestring ?datestring :> ?date)
-      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
-      (:distinct false)))
+      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)))
 
 (defn reproject-fires
   "Returns a Cascalog query that creates DataChunk Thrift objects for fires."
@@ -191,4 +189,4 @@
       (r/latlon->modis ?m-res ?lat ?lon :> ?h ?v ?sample ?line)
       (thrift/ModisPixelLocation* ?m-res ?h ?v ?sample ?line :> ?pixel-loc)
       (thrift/DataChunk* ?dataset ?pixel-loc ?tuple-val ?t-res ?date  :> ?pixel-chunk)
-      (:distinct false)))
+      ))

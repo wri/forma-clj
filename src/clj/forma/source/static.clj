@@ -95,8 +95,7 @@
         ((c/juxt #'mod #'quot) ?row span :> ?line ?mv)
         (pixel-tap ?mod-h ?mod-v ?sample ?line :> true)
         (+ 5 ?mv :> ?mod-v)
-        (p/add-fields dataset m-res "00" nil :> ?dataset ?m-res ?t-res !date)
-        (:distinct false))))
+        (p/add-fields dataset m-res "00" nil :> ?dataset ?m-res ?t-res !date))))
 
 ;; TODO: Make a note that gzipped files can't be unpacked well when
 ;; they exist on S3. They need to be moved over to HDFS for that. I
@@ -123,7 +122,7 @@
         (count ?data :> ?count)
         (= ?count chunk-size)
         (chunkifier ?dataset !date ?s-res ?t-res ?h ?v ?id ?val :> ?tile-chunk)
-        (:distinct false))))
+        )))
 
 (defn static-chunks
   "TODO: DOCS!"

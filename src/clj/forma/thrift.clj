@@ -176,7 +176,7 @@
 (defn DataValue?
   "Return true if x is a supported DataValue type, otherwise nil."
   [x]
-  (let [types [forma.schema.DoubleArray forma.schema.FireArray forma.schema.ArrayValue
+  (let [types [forma.schema.DoubleArray forma.schema.FireArray
                forma.schema.FireValue forma.schema.FormaArray
                forma.schema.FormaValue forma.schema.IntArray
                forma.schema.LongArray forma.schema.TimeSeries
@@ -206,16 +206,13 @@
   "Create a NeighborValue."
   [fire ncount avg-short min-short avg-long min-long avg-stat min-stat
    & [avg-break min-break]]
-  {:pre [(or (not fire) (instance? forma.schema.FireValue fire))
-         ;;(or (not avg-break) (instance? java.lang.Double avg-break))
-         ;;(or (not min-break) (instance? java.lang.Double min-break))
-         ;;(instance? java.lang.Long ncount)
-         ;;         (every? #(instance? java.lang.Double %)
-         ;;        [avg-short min-short avg-long min-long avg-stat
-         ;;        min-stat])
-         ]}
+         (or (not avg-break) (instance? java.lang.Double avg-break))
+         (or (not min-break) (instance? java.lang.Double min-break))
+         (instance? java.lang.Long ncount)
+         (every? #(instance? java.lang.Double %)
+                 [avg-short min-short avg-long min-long avg-stat min-stat])]}
   (let [n-value (NeighborValue. fire ncount avg-short min-short avg-long min-long
-                                 avg-stat min-stat)]
+                                avg-stat min-stat)]
     (if avg-break
       (doto n-value
         (.setAvgParamBreak avg-break)))
@@ -243,38 +240,31 @@
   "Create a ModisPixelLocation."
   [s-res h v sample line]
   {:pre [(instance? java.lang.String s-res)
-         ;;(every? #(instance? java.lang.Long %) [h v sample line])
-         ]}
+         (every? #(or (instance? java.lang.Long %)
+                      (instance? java.lang.Integer %))
+                 [h v sample line])]}
   (ModisPixelLocation. s-res h v sample line))
 
 (defn TimeSeries*
   "Create a TimeSeries."
-  ([start vals]
-    {:pre [;;(every? #(instance? java.lang.Long %) [start end])
-           (coll? vals)]}
-    (let [elems (count vals)]
-      (TimeSeries* start
-                   (dec (+ start (count vals)))
-                   vals)))
-  ([start end val]
-    {:pre [;;(every? #(instance? java.lang.Long %) [start end])
+  [start end val]
+    {:pre [(every? #(instance? java.lang.Long %) [start end])
            (coll? val)]}
     (let [series (if (coll? val) (pack val) val)]
-      (TimeSeries. start end (mk-array-value series)))))
+      (TimeSeries. start end (mk-array-value series))))
 
 (defn FormaValue*
   "Create a FormaValue."
   [fire short long tstat & break]
-  {:pre [(or (not fire) (instance? forma.schema.FireValue fire))
-         ;;(every? #(instance? java.lang.Double %) [short long tstat])
-         ;;(or (not break) (instance? java.lang.Double (first break)))
-         ]}
+  {:pre [(instance? forma.schema.FireValue fire)
+         (every? #(instance? java.lang.Double %) [short long tstat])
+         (or (not break) (instance? java.lang.Double (first break)))]}
   (let [[break] break
         forma-value (FormaValue. fire short long tstat)]
     (if break
       (doto forma-value
-        (.setParamBreak break))
-      forma-value)))
+        (.setParamBreak break)))
+    forma-value))
 
 (defn DataChunk*
   "Create a DataChunk."
@@ -282,8 +272,7 @@
   {:pre  [(every? #(instance? java.lang.String %) [name res])
           (LocationPropertyValue? loc)
           (DataValue? val)
-;;          (or (not date) (instance? java.lang.String (first date)))
-          ]}
+          (or (not date) (instance? java.lang.String (first date)))]}
   (let [loc (mk-location-prop loc)
         val (if (coll? val)
               (->> val pack mk-array-value mk-data-value)

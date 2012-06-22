@@ -1,0 +1,4 @@
+--- 
+format: SequenceFile
+structure: forma.hadoop.pail.SplitDataChunkPailStructure
+args: {}

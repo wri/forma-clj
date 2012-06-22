@@ -69,8 +69,7 @@
       (reli-src ?s-res ?mod-h ?mod-v ?sample ?line ?r-start ?reli)
       (rain-src ?s-res ?mod-h ?mod-v ?sample ?line ?p-start ?precl)
       (schema/adjust ?p-start ?precl ?n-start ?ndvi ?r-start ?reli
-                     :> ?start-idx ?precl-ts ?ndvi-ts ?reli-ts)
-      (:distinct false)))
+                     :> ?start-idx ?precl-ts ?ndvi-ts ?reli-ts)))
 
 (defmapcatop tele-clean
   "Return clean timeseries with telescoping window, nil if no (or not enough) good training data"
@@ -209,8 +208,7 @@ value, and the aggregate of the neighbors."
     (<- [?s-res ?period ?mod-h ?mod-v ?sample ?line ?val ?neighbor-val]
         (src ?s-res ?period ?mod-h ?mod-v ?win-col ?win-row ?window)
         (process-neighbors [neighbors] ?window :> ?win-idx ?val ?neighbor-val)
-        (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)
-        (:distinct false))))
+        (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line))))
 
 (defn beta-data-prep
   [{:keys [t-res est-start min-coast-dist]} dynamic-src static-src]
@@ -243,8 +241,7 @@ value, and the aggregate of the neighbors."
         (= ?pd first-idx)
         (>= ?border min-coast-dist)
         (log/logistic-beta-wrap [ridge-const convergence-thresh max-iterations]
-                                ?hansen ?val ?neighbor-val :> ?beta)
-        (:distinct false))))
+                                ?hansen ?val ?neighbor-val :> ?beta))))
 
 (defmapop [apply-betas [betas]]
   [eco val neighbor-val]
