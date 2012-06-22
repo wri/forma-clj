@@ -93,7 +93,6 @@
   (when (seq tseries)
     (->> tseries
          (reductions schema/add-fires)
-         (schema/create-timeseries start))))
          (schema/fire-series start))))
 
 (defn aggregate-fires

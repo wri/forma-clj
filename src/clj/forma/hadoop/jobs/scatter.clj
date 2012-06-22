@@ -1,21 +1,19 @@
 (ns forma.hadoop.jobs.scatter
   "Namespace for arbitrary queries."
   (:use cascalog.api
-        [forma.hadoop.pail :only (to-pail)]
         [forma.source.tilesets :only (tile-set country-tiles)]
-        [forma.hadoop.pail :only (?pail- split-chunk-tap)]
+        [forma.hadoop.pail :only (to-pail ?pail- split-chunk-tap)]
         [cascalog.checkpoint :only (workflow)])
   (:require [cascalog.ops :as c]
             [forma.utils :only (throw-illegal)]
             [forma.reproject :as r]
             [forma.schema :as schema]
-            [forma.thrift :as thrift]
             [forma.trends.stretch :as stretch]
             [forma.hadoop.predicate :as p]
             [forma.hadoop.jobs.forma :as forma]
             [forma.hadoop.jobs.timeseries :as tseries]
             [forma.date-time :as date]
-            [forma.classify.logistic :as log])
+            [forma.classify.logistic :as log]
             [forma.thrift :as thrift]))
 
 (def convert-line-src
