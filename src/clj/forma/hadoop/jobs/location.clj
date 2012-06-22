@@ -41,7 +41,10 @@
 (defn global-dims
   "accepts a spatial resolution and returns a tuple of the form [row
   column] with the total number of rows and columns of the entire
-  world at the supplied resolution."
+  world at the supplied resolution.
+
+  EXAMPLE:
+  (global-dims \"500\") => (43200 86400)"
   [sres]
   (let [num-pixels (r/pixels-at-res sres)]
     (map (partial * num-pixels) [r/v-tiles r/h-tiles])))

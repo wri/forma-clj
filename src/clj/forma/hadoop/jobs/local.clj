@@ -83,35 +83,37 @@
 
 
 
-(def test-modis-tap [[0 0 20 20 1]
-                     [0 0 21 20 1]
-                     [0 0 20 21 1]
-                     [0 0 21 21 1]])
+(def test-modis-tap [["a" 0 0 20 20 1]
+                     ["a" 0 0 21 20 1]
+                     ["a" 0 0 20 21 1]
+                     ["a" 0 0 21 21 1]])
 
-(def test-modis-tap-all [[0 0 19 19 1]
-                         [0 0 19 20 1]
-                         [0 0 19 21 1]
-                         [0 0 19 22 1]
-                         [0 0 20 19 1]
-                         [0 0 20 20 1]
-                         [0 0 20 21 1]
-                         [0 0 20 22 1]
-                         [0 0 21 19 1]
-                         [0 0 21 20 1]
-                         [0 0 21 21 1]
-                         [0 0 21 22 1]
-                         [0 0 22 19 1]
-                         [0 0 22 20 1]
-                         [0 0 22 21 1]
-                         [0 0 22 22 1]
-                         [0 0 23 19 1]
-                         [0 0 23 20 1]
-                         [0 0 23 21 1]
-                         [0 0 23 22 1]
-                         [0 0 24 19 1]
-                         [0 0 24 20 1]
-                         [0 0 24 21 1]
-                         [0 0 24 22 1]])
+(def test-modis-tap-all [["a" 0 0 19 19 1]
+                         ["a" 0 0 19 20 1]
+                         ["a" 0 0 19 21 1]
+                         ["a" 0 0 19 22 1]
+                         ["a" 0 0 20 19 1]
+                         ["a" 0 0 20 20 1]
+                         ["a" 0 0 20 21 1]
+                         ["a" 0 0 20 22 1]
+                         ["a" 0 0 21 19 1]
+                         ["a" 0 0 21 20 1]
+                         ["a" 0 0 21 21 1]
+                         ["a" 0 0 21 22 1]
+                         ["a" 0 0 22 19 1]
+                         ["a" 0 0 22 20 1]
+                         ["a" 0 0 22 21 1]
+                         ["a" 0 0 22 22 1]
+                         ["a" 0 0 23 19 1]
+                         ["a" 0 0 23 20 1]
+                         ["a" 0 0 23 21 1]
+                         ["a" 0 0 23 22 1]
+                         ["a" 0 0 24 19 1]
+                         ["a" 0 0 24 20 1]
+                         ["a" 0 0 24 21 1]
+                         ["a" 0 0 24 22 1]])
+
+
 
 (defn window-map
   "note height and width take into account the zero index."
@@ -124,108 +126,46 @@
 
 (defn my-sum [& args] (i/sum args))
 
-(defn create-window [sres wmap idx-val]
+(defn create-window [idx-coll nrows ncols]
+  (let [len (* nrows ncols)]
+    (map vec (partition nrows
+                    (util/sparse-expander nil idx-coll :length len)))))
+
+(defn window-attribute [sres idx-val]
   (let [sorted-coll (sort-by first idx-val)
-        idxval-new (for [i (map vec sorted-coll)]
-                     [(loc/window-idx sres wmap (loc/GlobalIndex* (first i)))
-                      (second i)])
-        h (wmap :height)
-        w (wmap :width)
-        mat (vec (map vec (partition h (util/sparse-expander nil idxval-new :length (* h w)))))]
-    (walk/windowed-function 1 my-sum mat)))
+        wmap (window-map sres (map first idx-val))
+        global->window (fn [idx] (loc/window-idx sres wmap (loc/GlobalIndex* idx)))
+        idxval (map vector
+                    (map (comp global->window first) sorted-coll)
+                    (map second sorted-coll))
+        mat (create-window idxval (wmap :height) (wmap :width))]
+    (map-indexed vector (walk/windowed-function 1 my-sum mat))))
 
 
 (defbufferop [gen-window-attributes [sres]]
   [tuples]
-  (let [idx-coll (map first tuples)
-        val-coll (map second tuples)
-        wmap (window-map sres idx-coll)]
-    [[(vec (create-window sres wmap tuples))]]))
+  (let [idxval (window-attribute sres tuples)]
+    [(apply map vector idxval)]))
+
+(defmapcatop assign-newvals [idx-coll val-coll]
+  [[(apply map vector (vector idx-coll val-coll))]])
 
 (defn window-out [sres]
   (let [n-src (neighbor-src test-modis-tap sres)
         w-src (window-attribute-src n-src test-modis-tap-all sres)]
-    (??<- [?x]
-          (w-src ?idx ?val)
-          (gen-window-attributes [sres] ?idx ?val :> ?x))))
+    (<- [?idx-coll ?val-coll]
+        (w-src ?idx ?val)
+        (gen-window-attributes [sres] ?idx ?val :> ?idx-coll ?val-coll))))
 
-
-;; (defn buffer-test []
-;;   (let [src (neighbor-src "500")]
-;;     (??<- [?first ?last]
-;;           (src ?idx)
-;;           (bounding-indices ?idx :> ?first ?last))))
-
-;; (defn idx->global-rowcol
-;;   [idx & {:keys [s-res] :or {s-res "500"}}]
-;;   (let [[nrows ncols] (global-dims s-res)]
-;;     (util/idx->rowcol nrows ncols idx)))
-
-;; (defbufferop box-dims
-;;   [tuples]
-;;   (let [coll (flatten tuples)
-;;         min-idx (reduce min coll)
-;;         max-idx (reduce max coll)]
-;;     [(map (comp int inc i/abs -)
-;;           (idx->global-rowcol min-idx)
-;;           (idx->global-rowcol max-idx))]))
-
-;; (defn box-test [neigh-src]
-;;   (??<- [?y ?x]
-;;         (neigh-src ?idx)
-;;         (box-dims ?idx :> ?y ?x)))
-
-;; (defn coll-rowcol->idx [nrow ncol coll]
-;;   (let [partial-fn (fn [rc] (util/idx->rowcol nrow ncol (first rc) (second rc)))]
-;;     (map partial-fn coll)))
-
-;; (defbufferop [build-window [wr wc]]
-;;   [tuples]
-;;   (let [rowcol (map vec tuples)
-;;         first-rowcol (first (sort-by second (sort-by first rowcol)))
-;;         window-rowcol (map (partial map (comp int i/abs -) first-rowcol) rowcol)]
-;;     ))
-
-;; (defn top-left
-;;   "accepts a sequence of tuples (row col) and returns the topmost,
-;;   leftmost tuple"
-;;   [coll]
-;;   (first (sort-by second (sort-by first coll))))
-
-;; (defn relative-transform
-;;   "accepts a top-left tuple and then a collection of tuples; returns a
-;;   transformed sequence where the tuples are constructed, relative to
-;;   the top-left pixel"
-;;   [top-left tuple]
-;;   (let [abs-diff (comp int i/abs -)]
-;;     (map abs-diff top-left tuple)))
-
-;; (defbufferop [build-window [wr wc]]
-;;   [tuples]
-;;   (let [rowcol (map vec tuples)
-;;         make-relative (partial relative-transform (top-left rowcol))
-;;         rel-rowcol (map (comp vec make-relative) rowcol)]
-;;    [[rel-rowcol]]))
-
-;; (defn idx-src []
-;;   (<- [?idx ?val]
-;;       (test-modis-tap-all ?h ?v ?s ?l ?val)
-;;       (global-indexer ?h ?v ?s ?l :> ?idx)))
-
-;; (defn get-attributes [s-res]
-;;   (let [n-src (neighbor-src s-res)
-;;         idx-src (idx-src)
-;;         [window-rows window-cols] (first (box-test n-src))]
-;;     (??<- [?neigh-id ?val]
-;;           (n-src ?neigh-id)
-;;           (idx-src ?neigh-id ?val)
-;;           (:distinct true))))
-
-
-
-         ;; (idx->global-rowcol ?neigh-id :s-res s-res :> ?n-row ?n-col)
-;; (build-window [window-rows window-cols] ?n-row ?n-col :> ?stand-in)
-
+(defn mine []
+  (let [n-src (neighbor-src test-modis-tap "500")
+        w-out (window-out "500")]
+    (??<- [?n]
+          (w-out ?idx-coll ?val-coll)
+          (test-modis-tap ?h ?v ?s ?l ?val)
+          (loc/TileRowCol* ?h ?v ?s ?l :> ?tile-pixel)
+          (loc/global-index "500" ?tile-pixel :> ?idx)
+          (assign-newvals ?idx-coll ?val-coll :> ?n))))
 
 ;; (defn gen-neighbor-features
 ;;   [num-pds]
@@ -335,3 +275,25 @@
 
 
 
+(def my-tap [["a" 1 10]
+             ["a" 2 100]
+             ["a" 3 1000]
+             ["b" 1 10]
+             ["b" 2 100]])
+
+(defbufferop assign-vals [tuples]
+  (let [n (count tuples)]
+    (map (fn [[idx val]]
+           [idx (+ n val)])
+         tuples)))
+
+(defn casc-tester []
+  (??<- [?group ?new-idx ?new-val]
+        (my-tap ?group ?idx ?val)
+        (assign-vals ?idx ?val :> ?new-idx ?new-val)))
+
+(def results [["a" 1 13]
+              ["a" 2 103]
+              ["a" 3 1003]
+              ["b" 1 12]
+              ["b" 2 102]])
