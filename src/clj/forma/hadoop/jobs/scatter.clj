@@ -200,6 +200,11 @@
                             (forma/analyze-trends
                              est-map (hfs-seqfile clean-series))))
 
+              trends-cleanup ([:tmp-dirs cleanup-path]
+                                "Clean up data after trends to improve join performance"
+                                (?- (hfs-seqfile cleanup-path)
+                                    (forma/trends-cleanup trends-path)))
+
               mid-forma ([:tmp-dirs forma-mid-path
                           :deps [trends adjustfires]]
                            (?- (hfs-seqfile forma-mid-path)
