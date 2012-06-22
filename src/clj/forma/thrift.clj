@@ -206,6 +206,7 @@
   "Create a NeighborValue."
   [fire ncount avg-short min-short avg-long min-long avg-stat min-stat
    & [avg-break min-break]]
+  {:pre [(instance? forma.schema.FireValue fire)
          (or (not avg-break) (instance? java.lang.Double avg-break))
          (or (not min-break) (instance? java.lang.Double min-break))
          (instance? java.lang.Long ncount)
