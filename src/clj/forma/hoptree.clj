@@ -25,6 +25,12 @@
 ;; falls outside of the specified window, then the conversion will
 ;; throw an error.
 
+;; The API operates on three levels: tile, global, window. The
+;; three-leaved hoptree is a deciduous tree that is native to North
+;; America; it's bark is smooth but gets rough with age.
+
+;; http://en.wikipedia.org/wiki/Ptelea_trifoliata
+
 ;; TODO: remove redundancy from multimethods
 
 (defn global-dims
