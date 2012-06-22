@@ -149,13 +149,6 @@
       (trends-src ?s-res ?mh ?mv ?s ?l ?start ?end ?short ?long ?t-stat ?break)
       (consolidator ?end ?short ?long ?t-stat ?break :> ?end-seq ?short-ts ?long-ts ?t-stat-ts ?break-ts)))
 
-(defn trends-cleanup
-  [trends-src]
-  (let [consolidated-tap (consolidate-trends trends-src)]
-    (<- [?s-res ?mh ?mv ?s ?l ?start ?end ?short-ts ?long-ts ?t-stat-ts ?break-ts]
-        (consolidated-tap ?s-res ?mh ?mv ?s ?l ?start ?end-seq ?short-ts ?long-ts ?t-stat-ts ?break-ts)
-      (get-max-period ?end-seq :> ?end))))
-
 (defn unnest-series
   "Remove extraneous vectors from around a series"
   [series]
@@ -166,6 +159,14 @@
    [[\"500\" 28 8 0 0 693 694 [[0.1 0.1]] [[0.2 0.2]] [[0.3 0.3]] [[0.4 0.4]]]]"
   [& series]
   (map unnest-series series))
+
+(defn trends-cleanup
+  [trends-src]
+  (let [consolidated-tap (consolidate-trends trends-src)]
+    (<- [?s-res ?mh ?mv ?s ?l ?start ?end ?short-v ?long-v ?t-stat-v ?break-v]
+        (consolidated-tap ?s-res ?mh ?mv ?s ?l ?start ?end-seq ?short ?long ?t-stat ?break)
+        (unnest-all ?short-ts ?long-ts ?t-stat ?break :> ?short-v ?long-v ?t-stat-v ?break-v)
+        (get-max-period ?end-seq :> ?end))))
 
 (defn forma-tap
   "Accepts an est-map and sources for 
@@ -178,8 +179,7 @@
   (<- [?s-res ?period ?mh ?mv ?s ?l ?forma-val]
       (fire-src ?s-res ?mh ?mv ?s ?l !!fire)
       (dynamic-src ?s-res ?mh ?mv ?s ?l ?start ?end ?short ?long ?t-stat ?break)
-      (unnest-all ?short ?long ?t-stat ?break :> ?short-v ?long-v ?t-stat-v ?break-v)
-      (schema/forma-seq-non-thrift !!fire ?short-v ?long-v ?t-stat-v ?break-v :> ?forma-seq)
+      (schema/forma-seq !!fire ?short ?long ?t-stat ?break :> ?forma-seq)
       (p/index ?forma-seq :zero-index ?start :> ?period ?forma-val)
       (:distinct false)))
 
