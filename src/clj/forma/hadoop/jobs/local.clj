@@ -65,21 +65,22 @@
   [idx & {:keys [sres] :or {sres "500"}}]
   (loc/neighbor-idx sres (loc/GlobalIndex* idx)))
 
-(defn neighbor-src [sample-modis-src sres]
+(defn neighbor-src [pixel-modis-src sres]
   (<- [?neigh-id]
-      (sample-modis-src ?h ?v ?s ?l ?val)
+      (pixel-modis-src ?gadm ?h ?v ?s ?l ?val)
       (loc/TileRowCol* ?h ?v ?s ?l :> ?tile-pixel)
       (loc/global-index sres ?tile-pixel :> ?idx)
       (neighbors ?idx :> ?neigh-id)
       (:distinct true)))
 
-(defn window-attribute-src [neighbor-src full-modis-src sres]
-  (<- [?idx ?val]
-      (neighbor-src ?idx)
-      (full-modis-src ?h ?v ?s ?l ?val)
-      (loc/TileRowCol* ?h ?v ?s ?l :> ?tile-pixel)
-      (loc/global-index sres ?tile-pixel :> ?idx)
-      (:distinct true)))
+(defn window-attribute-src [pixel-modis-src full-modis-src sres]
+  (let [n-src (neighbor-src pixel-modis-src sres)]
+    (<- [?idx ?val]
+        (n-src ?idx)
+        (full-modis-src ?gadm ?h ?v ?s ?l ?val)
+        (loc/TileRowCol* ?h ?v ?s ?l :> ?tile-pixel)
+        (loc/global-index sres ?tile-pixel :> ?idx)
+        (:distinct true))))
 
 
 
