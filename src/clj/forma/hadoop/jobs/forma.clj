@@ -41,23 +41,19 @@
       (chunk-src _ ?ts-chunk)
       (vcf-src _ ?vcf-chunk)      
 
-      ;; mirrors p/blossom-chunk, but doesn't have "invalid predicate" error
-      ;; (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
-      (thrift/unpack ?vcf-chunk :> _ ?vcf-loc ?vcf-data _ !date)
-      (thrift/unpack* ?vcf-data :> ?vcf-vals)
-      (p/index ?vcf-vals :> ?pixel-idx ?vcf)
-      (thrift/unpack ?vcf-loc :> ?s-res ?mod-h ?mod-v ?id ?size)
-      (r/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line)
+      ;; pre-blossomed vcf, so just have single values here
+      (thrift/unpack ?vcf-chunk :> _ ?vcf-loc ?vcf-data _ _)
+      (thrift/unpack ?vcf-data :> ?vcf-val)
+      (thrift/unpack ?vcf-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
       
       ;; unpack ts object
-      (thrift/unpack ?ts-chunk :> _ ?ts-loc ?ts-data _ !date)
+      (thrift/unpack ?ts-chunk :> _ ?ts-loc ?ts-data _ _)
       (thrift/unpack ?ts-data :> ?start-idx _ ?ts-array)
       (thrift/unpack* ?ts-array :> ?series)
       (thrift/unpack ?ts-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
 
       ;; filter on vcf-limit
-      (>= ?vcf vcf-limit)
-      (:distinct false)))
+      (>= ?vcf vcf-limit)))
 
 (defn dynamic-filter
   "Returns a new generator of ndvi and rain timeseries obtained by
