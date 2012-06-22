@@ -3,7 +3,8 @@
   (:use cascalog.api
         [forma.source.tilesets :only (tile-set country-tiles)]
         [forma.hadoop.pail :only (to-pail ?pail- split-chunk-tap)]
-        [cascalog.checkpoint :only (workflow)])
+        [cascalog.checkpoint :only (workflow)]
+        [clojure.math.numeric-tower :only (round)])
   (:require [cascalog.ops :as c]
             [forma.utils :only (throw-illegal)]
             [forma.reproject :as r]
@@ -108,6 +109,10 @@
   [ts-pail-path dataset s-res t-res]
   (split-chunk-tap ts-pail-path [dataset (format "%s-%s" s-res t-res)]))
 
+(defn map-round
+  [coll]
+  [(vec (map round coll))])
+
 (defn adjusted-precl-tap
   "Document... returns a tap that adjusts for the incoming
   resolution."
@@ -120,8 +125,9 @@
           (thrift/unpack ?pixel-chunk :> ?name ?in-pix-loc ?ts ?t-res !date)
           (thrift/unpack ?in-pix-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
           (stretch/ts-expander base-t-res t-res ?ts :> ?expanded-ts)
+          (map-round ?expanded-ts :> ?rounded-ts)
           (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?out-pix-loc)
-          (thrift/DataChunk* ?name ?out-pix-loc ?expanded-ts ?t-res !date :> ?adjusted-pixel-chunk)
+          (thrift/DataChunk* ?name ?out-pix-loc ?rounded-ts ?t-res !date :> ?adjusted-pixel-chunk)
           (:distinct false)))))
 
 (defmapcatop expand-rain-pixel
