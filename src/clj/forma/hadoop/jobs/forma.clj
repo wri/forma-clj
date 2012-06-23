@@ -20,9 +20,8 @@
   [est-map fire-src]
   (<- [?s-res ?h ?v ?sample ?line ?adjusted-ts]
       (fire-src ?pixel-chunk)
-      (thrift/unpack ?pixel-chunk :> _ ?pixel-loc ?data _)
+      (thrift/unpack ?pixel-chunk :> _ ?pixel-loc ?ts _ _)
       (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)
-      (thrift/unpack ?data :> ?ts)
       (schema/adjust-fires est-map ?ts :> ?adjusted-ts)))
 
 (defn ts-unpacking
@@ -39,21 +38,21 @@
   [vcf-src vcf-limit chunk-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?series]
       (chunk-src _ ?ts-chunk)
-      (vcf-src _ ?vcf-chunk)      
+      (vcf-src _ ?vcf-chunk)
 
       ;; pre-blossomed vcf, so just have single values here
       (thrift/unpack ?vcf-chunk :> _ ?vcf-loc ?vcf-data _ _)
-      (thrift/unpack ?vcf-data :> ?vcf-val)
+      (thrift/get-field-value ?vcf-data :> ?vcf-val)
       (thrift/unpack ?vcf-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
       
       ;; unpack ts object
-      (thrift/unpack ?ts-chunk :> _ ?ts-loc ?ts-data _ _)
-      (thrift/unpack ?ts-data :> ?start-idx _ ?ts-array)
-      (thrift/unpack* ?ts-array :> ?series)
-      (thrift/unpack ?ts-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
+       (thrift/unpack ?ts-chunk :> _ ?ts-loc ?ts-data _ _)
+       (thrift/unpack ?ts-data :> ?start-idx _ ?ts-array)
+       (thrift/unpack* ?ts-array :> ?series)
+       (thrift/unpack ?ts-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
 
       ;; filter on vcf-limit
-      (>= ?vcf vcf-limit)))
+      (>= ?vcf-val vcf-limit)))
 
 (defn dynamic-filter
   "Returns a new generator of ndvi and rain timeseries obtained by
@@ -79,9 +78,10 @@
         training-reli-set (set training-reli)
         clean-fn (comp vector (partial f/make-clean freq good-set bad-set))]
     (if (f/reliable? good-set reli-thresh training-reli)
-      (map identity
-           (f/tele-ts start-idx end-idx val-ts)
-           (f/tele-ts start-idx end-idx reli-ts))
+      (vec (map vector (f/tele-ts start-idx end-idx val-ts)))
+      ;;  (map clean-fn
+      ;;     (f/tele-ts start-idx end-idx val-ts)
+      ;;     (f/tele-ts start-idx end-idx reli-ts)
       [[nil]])))
 
 (defn dynamic-clean
@@ -161,7 +161,7 @@
   (let [consolidated-tap (consolidate-trends trends-src)]
     (<- [?s-res ?mh ?mv ?s ?l ?start ?end ?short-v ?long-v ?t-stat-v ?break-v]
         (consolidated-tap ?s-res ?mh ?mv ?s ?l ?start ?end-seq ?short ?long ?t-stat ?break)
-        (unnest-all ?short-ts ?long-ts ?t-stat ?break :> ?short-v ?long-v ?t-stat-v ?break-v)
+        (unnest-all ?short ?long ?t-stat ?break :> ?short-v ?long-v ?t-stat-v ?break-v)
         (get-max-period ?end-seq :> ?end))))
 
 (defn forma-tap

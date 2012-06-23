@@ -28,10 +28,10 @@
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?val]
       (chunk-src _ ?chunk)
       (thrift/unpack ?chunk :> _ ?loc ?data _ _)
-      (thrift/unpack* ?data :> ?vals)
-      (p/index ?vals :> ?pixel-idx ?val)
-      (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?id ?size)
-      (r/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line)
+      (thrift/get-field-value ?data :> ?val)
+;;      (p/index ?vals :> ?pixel-idx ?val)
+      (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
+;;      (r/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line)
 
       ;;(p/blossom-chunk ?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line
       ;;?val)
@@ -110,8 +110,9 @@
   (split-chunk-tap ts-pail-path [dataset (format "%s-%s" s-res t-res)]))
 
 (defn map-round
-  [coll]
-  [(vec (map round coll))])
+  [series-obj]
+  (let [[start end series] (thrift/unpack series-obj)]
+    (thrift/TimeSeries* (long start) (long end) (map round (thrift/unpack series)))))
 
 (defn adjusted-precl-tap
   "Document... returns a tap that adjusts for the incoming
@@ -122,12 +123,12 @@
       precl-tap
       (<- [?path ?adjusted-pixel-chunk]
           (precl-tap ?path ?pixel-chunk)
-          (thrift/unpack ?pixel-chunk :> ?name ?in-pix-loc ?ts ?t-res !date)
+          (thrift/unpack ?pixel-chunk :> ?name ?in-pix-loc ?ts ?t-res _)
           (thrift/unpack ?in-pix-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
           (stretch/ts-expander base-t-res t-res ?ts :> ?expanded-ts)
           (map-round ?expanded-ts :> ?rounded-ts)
           (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?out-pix-loc)
-          (thrift/DataChunk* ?name ?out-pix-loc ?rounded-ts ?t-res !date :> ?adjusted-pixel-chunk)
+          (thrift/DataChunk* ?name ?out-pix-loc ?rounded-ts ?t-res :> ?adjusted-pixel-chunk)
           (:distinct false)))))
 
 (defmain formarunner
@@ -202,12 +203,12 @@
                  (?- (hfs-seqfile trends-path)
                      (forma/analyze-trends
                       est-map (hfs-seqfile clean-series))))
-
+              
               trends-cleanup
               ([:tmp-dirs cleanup-path]
                  "Clean up data after trends to improve join performance"
                  (?- (hfs-seqfile cleanup-path)
-                     (forma/trends-cleanup trends-path)))
+                     (forma/trends-cleanup (hfs-seqfile trends-path))))
 
               mid-forma
               ([:tmp-dirs forma-mid-path
@@ -230,7 +231,7 @@
                  (?- (hfs-seqfile beta-data-path)
                      (forma/beta-data-prep est-map
                                            (hfs-seqfile final-path)
-                                           static-src)))
+                                           (static-src est-map pail-path))))
 
               gen-betas
               ([:tmp-dirs beta-path]
@@ -241,4 +242,5 @@
               ([] (?- (hfs-seqfile out-path :sinkmode :replace)
                       (forma/forma-estimate (hfs-seqfile beta-path)
                                             (hfs-seqfile final-path)
-                                            static-src))))))
+                                            (static-src est-map pail-path)))))))
+

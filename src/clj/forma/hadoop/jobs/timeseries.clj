@@ -104,8 +104,7 @@
       (thrift/unpack ?pixel-chunk :> ?name ?pixel-loc ?data _ ?date)
       (merge-firevals ?data :> ?tuple)
       (date/beginning t-res ?date :> ?datestring)
-      (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)
-      ))
+      (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)))
 
 (defn create-fire-series
   "Aggregates fires into timeseries."
@@ -122,7 +121,7 @@
     (<- [?pixel-chunk]
         (query ?name ?s-res ?h ?v ?sample ?line ?fire-series)
         (thrift/ModisPixelLocation* ?s-res ?h ?v ?sample ?line :> ?pixel-loc)
-        (thrift/DataChunk* ?name ?pixel-loc ?fire-series ?t-res :> ?pixel-chunk)
+        (thrift/DataChunk* ?name ?pixel-loc ?fire-series t-res :> ?pixel-chunk)
         (:distinct false))))
 
 (defn fire-query
