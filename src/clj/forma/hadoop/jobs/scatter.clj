@@ -148,6 +148,7 @@
 
               ndvi-step
               ([:tmp-dirs ndvi-path]
+                 "Filters out NDVI with VCF < 25"
                  (?- (hfs-seqfile ndvi-path)
                      (mk-filter vcf-path
                                 (constrained-tap
@@ -155,6 +156,7 @@
 
               reli-step
               ([:tmp-dirs reli-path]
+                 "Filters out reliability with VCF < 25"
                  (?- (hfs-seqfile reli-path)
                      (mk-filter vcf-path
                                 (constrained-tap
@@ -162,6 +164,7 @@
 
               rain-step
               ([:tmp-dirs rain-path]
+                 "Filter out rain with VCF < 25"
                  (?- (hfs-seqfile rain-path)
                      (mk-filter vcf-path
                                 (adjusted-precl-tap
@@ -179,6 +182,7 @@
 
               fire-step
               ([:tmp-dirs fire-path]
+                 "Create fire series"
                  (?- (hfs-seqfile fire-path)
                      (tseries/fire-query pail-path
                                          t-res
@@ -187,12 +191,15 @@
 
               adjustfires
               ([:tmp-dirs adjusted-fire-path]
+                 "Make sure fires data lines up temporally with our other
+                  timeseries."
                  (?- (hfs-seqfile adjusted-fire-path)
                      (forma/fire-tap est-map (hfs-seqfile fire-path))))
 
               cleanseries
               ([:tmp-dirs clean-series]
-                 "Runs the trends processing."
+                 "Screen out extremely cloudy pixels. Currently doesn't
+                  actually run the timeseries cleaning function"
                  (?- (hfs-seqfile clean-series)
                      (forma/dynamic-clean
                       est-map (hfs-seqfile adjusted-series-path))))
@@ -206,12 +213,15 @@
               
               trends-cleanup
               ([:tmp-dirs cleanup-path]
-                 "Clean up data after trends to improve join performance"
+                 "Clean up data after trends to improve join performance. Joins
+                  kill us with lots of observations"
                  (?- (hfs-seqfile cleanup-path)
                      (forma/trends-cleanup (hfs-seqfile trends-path))))
 
               mid-forma
               ([:tmp-dirs forma-mid-path
+                "Final step to collect all data for the feature vector -
+                 trends + fires data"
                 :deps [trends adjustfires]]
                  (?- (hfs-seqfile forma-mid-path)
                      (forma/forma-tap (hfs-seqfile trends-path)
@@ -219,6 +229,7 @@
               
               final-forma
               ([:tmp-dirs final-path]
+                 "Process neighbors"
                  (let [names ["?s-res" "?period" "?mod-h" "?mod-v"
                               "?sample" "?line" "?forma-val"]
                        mid-src (-> (hfs-seqfile forma-mid-path)
@@ -228,6 +239,8 @@
 
               beta-data-prep
               ([:tmp-dirs beta-data-path]
+                 "Pre-generate data needed for beta generation. Saves a bit of
+                  time if you have to run the next step multiple times."
                  (?- (hfs-seqfile beta-data-path)
                      (forma/beta-data-prep est-map
                                            (hfs-seqfile final-path)
@@ -235,12 +248,39 @@
 
               gen-betas
               ([:tmp-dirs beta-path]
+                 "Generate beta vector"
                  (?- (hfs-seqfile beta-path)
                        (forma/beta-gen est-map (hfs-seqfile beta-data-path))))
 
               forma-estimate
-              ([] (?- (hfs-seqfile out-path :sinkmode :replace)
+              ([]
+                 "Apply beta vector"
+                 (?- (hfs-seqfile out-path :sinkmode :replace)
                       (forma/forma-estimate (hfs-seqfile beta-path)
                                             (hfs-seqfile final-path)
                                             (static-src est-map pail-path)))))))
 
+(defmain simplerunner
+  [tmp-root pail-path ts-pail-path out-path run-key]
+  (let [{:keys [s-res t-res est-end] :as est-map} (forma-run-parameters run-key)
+        mk-filter (fn [vcf-path ts-src]
+                    (forma/filter-query (hfs-seqfile vcf-path)
+                                        (:vcf-limit est-map)
+                                        ts-src))]
+    (assert est-map (str run-key " is not a valid run key!"))
+    (workflow [tmp-root]
+              vcf-step
+              ([:tmp-dirs vcf-path]
+                 (?- (hfs-seqfile vcf-path)
+                     (<- [?subpail ?data-chunk]
+                         ((constrained-tap pail-path "vcf" s-res "00") ?subpail ?data-chunk))))
+
+              
+              ndvi-step
+              ([:tmp-dirs ndvi-path]
+                 (?- (hfs-seqfile ndvi-path)
+                     (mk-filter vcf-path
+                                (constrained-tap
+                                 ts-pail-path "ndvi" s-res t-res))))
+
+              )))
