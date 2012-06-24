@@ -75,7 +75,7 @@
 
 (defn window-attribute-src [pixel-modis-src full-modis-src sres]
   (let [n-src (neighbor-src pixel-modis-src sres)]
-    (<- [?idx ?val]
+    (<- [?gadm ?idx ?val]
         (n-src ?idx)
         (full-modis-src ?gadm ?h ?v ?s ?l ?val)
         (TileRowCol* ?h ?v ?s ?l :> ?tile-pixel)
@@ -84,129 +84,92 @@
 
 (defn window-map
   "note height and width take into account the zero index."
-  [sres coll]
+  [sres global-idx-coll]
   (let [rowcol (fn [x] (global-rowcol sres (GlobalIndex* x)))
-        [min-rc max-rc] (map rowcol [(reduce min coll) (reduce max coll)])]
-    {:topleft-rowcol min-rc
-     :height (inc (- (first max-rc) (first min-rc)))
-     :width  (inc (- (second max-rc) (second min-rc)))}))
+        [min-r min-c] (rowcol (reduce min global-idx-coll))
+        [max-r max-c] (rowcol (reduce max global-idx-coll))]
+    {:topleft-rowcol [min-r min-c]
+     :height (inc (- max-r min-r))
+     :width  (inc (- max-c min-c))}))
 
+(defn global-coll->window-coll
+  [sres wmap idx-val]
+  (map (fn [[idx val]]
+         [(window-idx sres wmap (GlobalIndex* idx)) val])
+       idx-val))
 
-(defn global->window-coll [sres idx-val]
-  (let [wmap (window-map sres (map first idx-val))]
-    (map (fn [[idx val]]
-           [(window-idx sres wmap (GlobalIndex* idx)) val])
-         idx-val)))
-
-(defn create-window [window-coll & {:keys [nrows ncols] :or {nrows 0 ncols 0}}]
+(defn create-window
+  [window-coll & {:keys [nrows ncols] :or {nrows 0 ncols 0}}]
   {:pre [(> nrows 0) (> ncols 0)]
    :post [(not-any? nil? (last %))]}
   (let [len (* nrows ncols)]
     (partition ncols
                (util/sparse-expander nil window-coll :length len))))
 
-(defn process-neighbors [sres wmap f window-mat]
-  (let [win-col (map-indexed vector (walk/windowed-function 1 f window-mat))]
+(defn process-neighbors
+  [sres wmap f window-mat]
+  (let [win-col (map-indexed vector
+                             (walk/windowed-function 1 f window-mat))]
     (map (fn [[idx val]]
            [(global-index "500" (WindowIndex* idx) wmap) val])
          win-col)))
 
 (defbufferop [assign-vals [sres]]
   [tuples]
-  (let [idxval (window-attribute sres tuples)]
-    [(apply map vector idxval)]))
+  (let [wmap (window-map sres (map first tuples))
+        window-coll (global-coll->window-coll sres wmap tuples)
+        window-mat (create-window
+                    (sort-by first window-coll)
+                    :nrows (wmap :height)
+                    :ncols (wmap :width))
+        my-sum (fn [& args] (i/sum args))]
+    (process-neighbors sres wmap my-sum window-mat)))
 
 
-(def test-modis-tap [["a" 0 0 20 20 1]
-                     ["a" 0 0 21 20 1]
-                     ["a" 0 0 20 21 1]
-                     ["a" 0 0 21 21 1]])
 
-(def test-modis-tap-all [["a" 0 0 19 19 1]
-                         ["a" 0 0 19 20 1]
-                         ["a" 0 0 19 21 1]
-                         ["a" 0 0 19 22 1]
-                         ["a" 0 0 20 19 1]
-                         ["a" 0 0 20 20 1]
-                         ["a" 0 0 20 21 1]
-                         ["a" 0 0 20 22 1]
-                         ["a" 0 0 21 19 1]
-                         ["a" 0 0 21 20 1]
-                         ["a" 0 0 21 21 1]
-                         ["a" 0 0 21 22 1]
-                         ["a" 0 0 22 19 1]
-                         ["a" 0 0 22 20 1]
-                         ["a" 0 0 22 21 1]
-                         ["a" 0 0 22 22 1]
-                         ["a" 0 0 23 19 1]
-                         ["a" 0 0 23 20 1]
-                         ["a" 0 0 23 21 1]
-                         ["a" 0 0 23 22 1]
-                         ["a" 0 0 24 19 1]
-                         ["a" 0 0 24 20 1]
-                         ["a" 0 0 24 21 1]
-                         ["a" 0 0 24 22 1]])
+(defn mine [sres]
+  (let [w-src (window-attribute-src sm-src lg-src sres)]
+    (<- [?group ?new-idx ?new-val]
+        (w-src ?group ?idx ?val)
+        (assign-vals [sres] ?idx ?val :> ?new-idx ?new-val))))
 
-;; (defn window-map
-;;   "note height and width take into account the zero index."
-;;   [sres coll]
-;;   (let [rowcol (fn [x] (global-rowcol sres (GlobalIndex* x)))
-;;         [min-rc max-rc] (map rowcol [(reduce min coll) (reduce max coll)])]
-;;     {:topleft-rowcol min-rc
-;;      :height (inc (- (first max-rc) (first min-rc)))
-;;      :width  (inc (- (second max-rc) (second min-rc)))}))
-
-;; (defn my-sum [& args] (i/sum args))
-
-;; (defn create-window [idx-coll nrows ncols]
-;;   (let [len (* nrows ncols)]
-;;     (map vec (partition nrows
-;;                     (util/sparse-expander nil idx-coll :length len)))))
-
-;; (defn window-attribute [sres idx-val]
-;;   (let [sorted-coll (sort-by first idx-val)
-;;         wmap (window-map sres (map first idx-val))
-;;         global->window (fn [idx] (window-idx sres wmap (GlobalIndex* idx)))
-;;         idxval (map vector
-;;                     (map (comp global->window first) sorted-coll)
-;;                     (map second sorted-coll))
-;;         mat (create-window idxval (wmap :height) (wmap :width))]
-    ;; (map-indexed vector (walk/windowed-function 1 my-sum mat))))
-
-
-(defbufferop [gen-window-attributes [sres]]
-  [tuples]
-  (let [idxval (window-attribute sres tuples)]
-    [(apply map vector idxval)]))
-
-(defmapcatop assign-newvals [idx-coll val-coll]
-  [[(apply map vector (vector idx-coll val-coll))]])
-
-(defn window-out [sres]
-  (let [n-src (neighbor-src test-modis-tap sres)
-        w-src (window-attribute-src n-src test-modis-tap-all sres)]
-    (<- [?idx-coll ?val-coll]
-        (w-src ?idx ?val)
-        (gen-window-attributes [sres] ?idx ?val :> ?idx-coll ?val-coll))))
-
-(defn mine []
-  (let [n-src (neighbor-src test-modis-tap "500")
-        w-out (window-out "500")]
-    (??<- [?n]
-          (w-out ?idx-coll ?val-coll)
-          (test-modis-tap ?h ?v ?s ?l ?val)
+(defn filtered-mine []
+  (let [mine-src (mine "500")]
+    (??<- [?group ?idx ?val]
+          (mine-src ?group ?idx ?val)
+          (sm-src _ ?h ?v ?s ?l _)
           (TileRowCol* ?h ?v ?s ?l :> ?tile-pixel)
-          (global-index "500" ?tile-pixel :> ?idx)
-          (assign-newvals ?idx-coll ?val-coll :> ?n))))
+          (global-index "500" ?tile-pixel :> ?idx))))
 
-;; (defn gen-neighbor-features
-;;   [num-pds]
-;;   (let [forma-src (gen-pixel-features num-pds)]
-;;     (<- [?mod-h ?mod-v ?sample ?line ?short]
-;;           (forma-src ?loc ?forma-val ?hansen ?pd)
-;;           (thrift/unpack ?forma-val :> _ ?short _ _ _)
-;;           (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line))))
+(def sm-src [["a" 0 0 20 20 1]
+             ["a" 0 0 21 20 1]
+             ["a" 0 0 20 21 1]
+             ["a" 0 0 21 21 1]])
 
+(def lg-src [["a" 0 0 19 19 1]
+             ["a" 0 0 19 20 1]
+             ["a" 0 0 19 21 1]
+             ["a" 0 0 19 22 1]
+             ["a" 0 0 20 19 1]
+             ["a" 0 0 20 20 1]
+             ["a" 0 0 20 21 1]
+             ["a" 0 0 20 22 1]
+             ["a" 0 0 21 19 1]
+             ["a" 0 0 21 20 1]
+             ["a" 0 0 21 21 1]
+             ["a" 0 0 21 22 1]
+             ["a" 0 0 22 19 1]
+             ["a" 0 0 22 20 1]
+             ["a" 0 0 22 21 1]
+             ["a" 0 0 22 22 1]
+             ["a" 0 0 23 19 1]
+             ["a" 0 0 23 20 1]
+             ["a" 0 0 23 21 1]
+             ["a" 0 0 23 22 1]
+             ["a" 0 0 24 19 1]
+             ["a" 0 0 24 20 1]
+             ["a" 0 0 24 21 1]
+             ["a" 0 0 24 22 1]])
 
 
 ;; (defn grab-ndvi [num-pds]
@@ -304,28 +267,3 @@
 ;;         feat  (feat-sequence casc-out)
 ;;         new-feat (feat-sequence (create-feature-vectors num))]
 ;;     new-feat))
-
-
-
-(def my-tap [["a" 1 10]
-             ["a" 2 100]
-             ["a" 3 1000]
-             ["b" 1 10]
-             ["b" 2 100]])
-
-;; (defbufferop assign-vals [tuples]
-;;   (let [n (count tuples)]
-;;     (map (fn [[idx val]]
-;;            [idx (+ n val)])
-;;          tuples)))
-
-(defn casc-tester []
-  (??<- [?group ?new-idx ?new-val]
-        (my-tap ?group ?idx ?val)
-        (assign-vals ?idx ?val :> ?new-idx ?new-val)))
-
-(def results [["a" 1 13]
-              ["a" 2 103]
-              ["a" 3 1003]
-              ["b" 1 12]
-              ["b" 2 102]])
