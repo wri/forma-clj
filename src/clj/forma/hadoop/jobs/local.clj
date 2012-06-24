@@ -1,6 +1,7 @@
 (ns forma.hadoop.jobs.local
   "Namespace for arbitrary queries."
   (:use cascalog.api
+        forma.hoptree
         [forma.reproject :only (modis->latlon)]
         [forma.hadoop.pail :only (to-pail)]
         [forma.source.tilesets :only (tile-set country-tiles)]
@@ -21,8 +22,7 @@
             [forma.hadoop.jobs.timeseries :as tseries]
             [forma.date-time :as date]
             [forma.trends.analysis :as analyze]
-            [forma.classify.logistic :as log]
-            [forma.hadoop.jobs.location :as loc])
+            [forma.classify.logistic :as log])
   (:import [org.jblas FloatMatrix MatrixFunctions Solve DoubleMatrix]))
 
 (def base-path "dev/testdata/select/")
@@ -63,13 +63,13 @@
 
 (defmapcatop neighbors
   [idx & {:keys [sres] :or {sres "500"}}]
-  (loc/neighbor-idx sres (loc/GlobalIndex* idx)))
+  (neighbor-idx sres (GlobalIndex* idx)))
 
 (defn neighbor-src [pixel-modis-src sres]
   (<- [?neigh-id]
       (pixel-modis-src ?gadm ?h ?v ?s ?l ?val)
-      (loc/TileRowCol* ?h ?v ?s ?l :> ?tile-pixel)
-      (loc/global-index sres ?tile-pixel :> ?idx)
+      (TileRowCol* ?h ?v ?s ?l :> ?tile-pixel)
+      (global-index sres ?tile-pixel :> ?idx)
       (neighbors ?idx :> ?neigh-id)
       (:distinct true)))
 
@@ -78,10 +78,43 @@
     (<- [?idx ?val]
         (n-src ?idx)
         (full-modis-src ?gadm ?h ?v ?s ?l ?val)
-        (loc/TileRowCol* ?h ?v ?s ?l :> ?tile-pixel)
-        (loc/global-index sres ?tile-pixel :> ?idx)
+        (TileRowCol* ?h ?v ?s ?l :> ?tile-pixel)
+        (global-index sres ?tile-pixel :> ?idx)
         (:distinct true))))
 
+(defn window-map
+  "note height and width take into account the zero index."
+  [sres coll]
+  (let [rowcol (fn [x] (global-rowcol sres (GlobalIndex* x)))
+        [min-rc max-rc] (map rowcol [(reduce min coll) (reduce max coll)])]
+    {:topleft-rowcol min-rc
+     :height (inc (- (first max-rc) (first min-rc)))
+     :width  (inc (- (second max-rc) (second min-rc)))}))
+
+
+(defn global->window-coll [sres idx-val]
+  (let [wmap (window-map sres (map first idx-val))]
+    (map (fn [[idx val]]
+           [(window-idx sres wmap (GlobalIndex* idx)) val])
+         idx-val)))
+
+(defn create-window [window-coll & {:keys [nrows ncols] :or {nrows 0 ncols 0}}]
+  {:pre [(> nrows 0) (> ncols 0)]
+   :post [(not-any? nil? (last %))]}
+  (let [len (* nrows ncols)]
+    (partition ncols
+               (util/sparse-expander nil window-coll :length len))))
+
+(defn process-neighbors [sres wmap f window-mat]
+  (let [win-col (map-indexed vector (walk/windowed-function 1 f window-mat))]
+    (map (fn [[idx val]]
+           [(global-index "500" (WindowIndex* idx) wmap) val])
+         win-col)))
+
+(defbufferop [assign-vals [sres]]
+  [tuples]
+  (let [idxval (window-attribute sres tuples)]
+    [(apply map vector idxval)]))
 
 
 (def test-modis-tap [["a" 0 0 20 20 1]
@@ -114,33 +147,31 @@
                          ["a" 0 0 24 21 1]
                          ["a" 0 0 24 22 1]])
 
+;; (defn window-map
+;;   "note height and width take into account the zero index."
+;;   [sres coll]
+;;   (let [rowcol (fn [x] (global-rowcol sres (GlobalIndex* x)))
+;;         [min-rc max-rc] (map rowcol [(reduce min coll) (reduce max coll)])]
+;;     {:topleft-rowcol min-rc
+;;      :height (inc (- (first max-rc) (first min-rc)))
+;;      :width  (inc (- (second max-rc) (second min-rc)))}))
 
+;; (defn my-sum [& args] (i/sum args))
 
-(defn window-map
-  "note height and width take into account the zero index."
-  [sres coll]
-  (let [rowcol (fn [x] (loc/global-rowcol sres (loc/GlobalIndex* x)))
-        [min-rc max-rc] (map rowcol [(reduce min coll) (reduce max coll)])]
-    {:topleft-rowcol min-rc
-     :height (inc (- (first max-rc) (first min-rc)))
-     :width  (inc (- (second max-rc) (second min-rc)))}))
+;; (defn create-window [idx-coll nrows ncols]
+;;   (let [len (* nrows ncols)]
+;;     (map vec (partition nrows
+;;                     (util/sparse-expander nil idx-coll :length len)))))
 
-(defn my-sum [& args] (i/sum args))
-
-(defn create-window [idx-coll nrows ncols]
-  (let [len (* nrows ncols)]
-    (map vec (partition nrows
-                    (util/sparse-expander nil idx-coll :length len)))))
-
-(defn window-attribute [sres idx-val]
-  (let [sorted-coll (sort-by first idx-val)
-        wmap (window-map sres (map first idx-val))
-        global->window (fn [idx] (loc/window-idx sres wmap (loc/GlobalIndex* idx)))
-        idxval (map vector
-                    (map (comp global->window first) sorted-coll)
-                    (map second sorted-coll))
-        mat (create-window idxval (wmap :height) (wmap :width))]
-    (map-indexed vector (walk/windowed-function 1 my-sum mat))))
+;; (defn window-attribute [sres idx-val]
+;;   (let [sorted-coll (sort-by first idx-val)
+;;         wmap (window-map sres (map first idx-val))
+;;         global->window (fn [idx] (window-idx sres wmap (GlobalIndex* idx)))
+;;         idxval (map vector
+;;                     (map (comp global->window first) sorted-coll)
+;;                     (map second sorted-coll))
+;;         mat (create-window idxval (wmap :height) (wmap :width))]
+    ;; (map-indexed vector (walk/windowed-function 1 my-sum mat))))
 
 
 (defbufferop [gen-window-attributes [sres]]
@@ -164,8 +195,8 @@
     (??<- [?n]
           (w-out ?idx-coll ?val-coll)
           (test-modis-tap ?h ?v ?s ?l ?val)
-          (loc/TileRowCol* ?h ?v ?s ?l :> ?tile-pixel)
-          (loc/global-index "500" ?tile-pixel :> ?idx)
+          (TileRowCol* ?h ?v ?s ?l :> ?tile-pixel)
+          (global-index "500" ?tile-pixel :> ?idx)
           (assign-newvals ?idx-coll ?val-coll :> ?n))))
 
 ;; (defn gen-neighbor-features
@@ -282,11 +313,11 @@
              ["b" 1 10]
              ["b" 2 100]])
 
-(defbufferop assign-vals [tuples]
-  (let [n (count tuples)]
-    (map (fn [[idx val]]
-           [idx (+ n val)])
-         tuples)))
+;; (defbufferop assign-vals [tuples]
+;;   (let [n (count tuples)]
+;;     (map (fn [[idx val]]
+;;            [idx (+ n val)])
+;;          tuples)))
 
 (defn casc-tester []
   (??<- [?group ?new-idx ?new-val]
