@@ -92,7 +92,9 @@
 
 (defbufferop [assign-vals [sres]]
   "Accepts a sequence of tuples within a `?group` field and returns a
-  sequence of tuples with fields for a global-index and smoothed-value"
+  sequence of tuples with fields for a global-index and
+  smoothed-value; in this case, the sum of all neighboring pixel
+  values."
   [tuples]
   (let [wmap (window-map sres (map first tuples))
         window-coll (global-coll->window-coll sres wmap tuples)

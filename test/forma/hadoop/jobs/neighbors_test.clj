@@ -64,12 +64,18 @@
              ["b" 0 0 24 21 1]
              ["b" 0 0 24 22 1]])
 
-(fact
-  (count (first (??- (neighbor-src "500" sm-src))))                => 16
-  (count (first (??- (window-attribute-src "500" sm-src lg-src)))) => 31)
+;; TODO: Convert to Midje-Cascalog tests
+
+(def n-tap (neighbor-src "500" sm-src))
+(def w-tap (window-attribute-src "500" sm-src lg-src))
+(def filtered-tap (filtered-sample-query "500" sm-src lg-src))
+
+(facts
+  (count (first (??- n-tap))) => 16
+  (count (first (??- w-tap))) => 31)
 
 (fact
-  (let [res (??- (filtered-sample-query "500" sm-src lg-src))]
+  (let [res (??- filtered-tap)]
     (first res) => '(["a" 1728020 8.0]
                      ["a" 1728021 8.0]
                      ["a" 1814420 9.0]
