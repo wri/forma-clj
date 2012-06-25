@@ -65,8 +65,8 @@
              ["b" 0 0 24 22 1]])
 
 (fact
-  (count (first (??- (neighbor-src sm-src "500"))))                => 16
-  (count (first (??- (window-attribute-src sm-src lg-src "500")))) => 31)
+  (count (first (??- (neighbor-src "500" sm-src))))                => 16
+  (count (first (??- (window-attribute-src "500" sm-src lg-src)))) => 31)
 
 (fact
   (let [res (??- (filtered-sample-query "500" sm-src lg-src))]
