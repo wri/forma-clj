@@ -64,7 +64,11 @@
              ["b" 0 0 24 21 1]
              ["b" 0 0 24 22 1]])
 
-(facts
+(fact
+  (count (first (??- (neighbor-src sm-src "500"))))                => 16
+  (count (first (??- (window-attribute-src sm-src lg-src "500")))) => 31)
+
+(fact
   (let [res (??- (filtered-sample-query "500" sm-src lg-src))]
     (first res) => '(["a" 1728020 8.0]
                      ["a" 1728021 8.0]
