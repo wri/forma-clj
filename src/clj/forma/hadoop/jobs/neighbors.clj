@@ -60,7 +60,7 @@
   the unique global index.  Returns the same form, except where the
   index has been transformed to the relative window index."
   [sres wmap idx-val]
-  {:pre [(contains?  wmap :topleft-rowcol)]}
+  {:pre [(contains? wmap :topleft-rowcol)]}
   (map (fn [[idx val]] [(window-idx sres wmap (GlobalIndex* idx)) val])
        idx-val))
 
