@@ -269,7 +269,7 @@
                    (count reli-ts)))))
 
 (defn shorten-ts
-  "Shorten timeseries to length of match timeseries"
+  "Shorten timeseries to length of model timeseries"
   [model-ts ts]
   [(vec (take (count model-ts) ts))])
 

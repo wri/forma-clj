@@ -5,6 +5,7 @@
             [forma.reproject :as r]
             [forma.date-time :as date]
             [forma.schema :as schema]
+            [forma.thrift :as thrift]
             [forma.hadoop.predicate :as p]
             [forma.trends.analysis :as a]
             [forma.ops.classify :as log]
@@ -13,34 +14,45 @@
 ;; We're mapping across two sequences at the end, there; the
 ;; long-series and the t-stat-series.
 
-(def get-loc
-  (<- [?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val]
-      (schema/extract-location ?chunk :> ?loc)
-      (schema/extract-chunk-value ?chunk :> ?val)
-      (schema/unpack-pixel-location ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
-
 (defn fire-tap
   "Accepts an est-map and a query source of fire timeseries. Note that
   this won't work, pulling directly from the pail!"
   [est-map fire-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?fire-series]
-      (fire-src ?chunk)
-      (get-loc ?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?f-series)
-      (schema/adjust-fires est-map ?f-series :> ?fire-series)
-      (:distinct true)))
+  (<- [?s-res ?h ?v ?sample ?line ?adjusted-ts]
+      (fire-src ?pixel-chunk)
+      (thrift/unpack ?pixel-chunk :> _ ?pixel-loc ?ts _ _)
+      (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)
+      (schema/adjust-fires est-map ?ts :> ?adjusted-ts)))
+
+(defn ts-unpacking
+  [ts-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?series]
+      (ts-src _ ?ts-chunk)
+      ;; unpack ts object
+      (thrift/unpack ?ts-chunk :> _ ?ts-loc ?ts-data _ _)
+      (thrift/unpack ?ts-data :> ?start-idx _ ?ts-array)
+      (thrift/unpack* ?ts-array :> ?series)
+      (thrift/unpack ?ts-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
 
 (defn filter-query
-  "Note that the ?ts here is an ArrayList of one of the items inside
-  of ArrayValue."
   [vcf-src vcf-limit chunk-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?vals]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?series]
       (chunk-src _ ?ts-chunk)
       (vcf-src _ ?vcf-chunk)
-      (get-loc ?ts-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?series)
-      (schema/unpack-timeseries ?series :> ?start _ ?ts)
-      (schema/get-vals-wrap ?ts :> ?vals)
-      (p/blossom-chunk ?vcf-chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
-      (>= ?vcf vcf-limit)))
+
+      ;; pre-blossomed vcf, so just have single values here
+      (thrift/unpack ?vcf-chunk :> _ ?vcf-loc ?vcf-data _ _)
+      (thrift/get-field-value ?vcf-data :> ?vcf-val)
+      (thrift/unpack ?vcf-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
+      
+      ;; unpack ts object
+       (thrift/unpack ?ts-chunk :> _ ?ts-loc ?ts-data _ _)
+       (thrift/unpack ?ts-data :> ?start-idx _ ?ts-array)
+       (thrift/unpack* ?ts-array :> ?series)
+       (thrift/unpack ?ts-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
+
+      ;; filter on vcf-limit
+      (>= ?vcf-val vcf-limit)))
 
 (defn dynamic-filter
   "Returns a new generator of ndvi and rain timeseries obtained by
@@ -66,9 +78,10 @@
         training-reli-set (set training-reli)
         clean-fn (comp vector (partial f/make-clean freq good-set bad-set))]
     (if (f/reliable? good-set reli-thresh training-reli)
-      (map clean-fn
-           (f/tele-ts start-idx end-idx val-ts)
-           (f/tele-ts start-idx end-idx reli-ts))
+      (vec (map vector (f/tele-ts start-idx end-idx val-ts)))
+      ;;  (map clean-fn
+      ;;     (f/tele-ts start-idx end-idx val-ts)
+      ;;     (f/tele-ts start-idx end-idx reli-ts)
       [[nil]])))
 
 (defn dynamic-clean
@@ -81,9 +94,15 @@
   [est-map dynamic-src]
   (let [good-set #{0 1}
         bad-set #{2 3 255}]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?clean-ndvi]
-        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi _ ?reli)
-        (tele-clean est-map good-set bad-set ?start ?ndvi ?reli :> ?clean-ndvi))))
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?clean-ndvi ?precl]
+        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl ?reli)
+        (tele-clean est-map good-set bad-set ?start ?ndvi ?reli :> ?clean-ndvi)
+        (:distinct false))))
+
+(defmapop series-end
+  [series start]
+  (let [length (count series)]
+    (dec (+ start length))))
 
 (defn analyze-trends
   "Accepts an est-map, and sources for ndvi and rain timeseries and
@@ -92,28 +111,73 @@
   We break this apart from dynamic-filter to force the filtering to
   occur before the analysis. Note that all variable names within this
   query are TIMESERIES, not individual values."
-  [est-map clean-src rain-src]
+  [est-map clean-src]
   (let [long-block (:long-block est-map)
         short-block (:window est-map)]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?short ?long ?t-stat ?break]
-        (rain-src ?s-res ?mod-h ?mod-v ?sample ?line ?start _ ?precl _)
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break]
+        (clean-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl)
         (f/shorten-ts ?ndvi ?precl :> ?short-precl)
-        (clean-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi)
         (a/short-stat long-block short-block ?ndvi :> ?short)
         (a/long-stats ?ndvi ?short-precl :> ?long ?t-stat)
-        (a/hansen-stat ?ndvi :> ?break))))
+        (a/hansen-stat ?ndvi :> ?break)
+        (series-end ?ndvi ?start :> ?end)
+        (:distinct false))))
+
+(defn count-series
+  [series]
+  (count (first series)))
+
+(defbufferop consolidator
+  [tuples]
+  [[[(vec (map first tuples))]
+    [(vec (map #(nth % 1) (sort-by first tuples)))]
+    [(vec (map #(nth % 2) (sort-by first tuples)))]
+    [(vec (map #(nth % 3) (sort-by first tuples)))]
+    [(vec (map #(nth % 4) (sort-by first tuples)))]]])
+
+(defn get-max-period
+  [series]
+  (reduce max (first series)))
+
+(defn consolidate-trends
+  [trends-src]
+  (<- [?s-res ?mh ?mv ?s ?l ?start ?end-seq ?short-ts ?long-ts ?t-stat-ts ?break-ts]
+      (trends-src ?s-res ?mh ?mv ?s ?l ?start ?end ?short ?long ?t-stat ?break)
+      (consolidator ?end ?short ?long ?t-stat ?break :> ?end-seq ?short-ts ?long-ts ?t-stat-ts ?break-ts)))
+
+(defn unnest-series
+  "Remove extraneous vectors from around a series"
+  [series]
+  (vec (flatten series)))
+
+(defn unnest-all
+  "Unnest series coming out of trends-cleanup of form
+   [[\"500\" 28 8 0 0 693 694 [[0.1 0.1]] [[0.2 0.2]] [[0.3 0.3]] [[0.4 0.4]]]]"
+  [& series]
+  (map unnest-series series))
+
+(defn trends-cleanup
+  [trends-src]
+  (let [consolidated-tap (consolidate-trends trends-src)]
+    (<- [?s-res ?mh ?mv ?s ?l ?start ?end ?short-v ?long-v ?t-stat-v ?break-v]
+        (consolidated-tap ?s-res ?mh ?mv ?s ?l ?start ?end-seq ?short ?long ?t-stat ?break)
+        (unnest-all ?short ?long ?t-stat ?break :> ?short-v ?long-v ?t-stat-v ?break-v)
+        (get-max-period ?end-seq :> ?end))))
 
 (defn forma-tap
-  "Accepts an est-map and sources for ndvi, rain, and fire timeseries,
-  plus a source of static vcf pixels.
+  "Accepts an est-map and sources for 
 
-  Note that all values internally discuss timeseries."
+  Note that all values internally discuss timeseries.
+
+  Also note that !!fire is an ungrounding variable, and triggers a left join
+  with the trend result variables."
   [dynamic-src fire-src]
   (<- [?s-res ?period ?mh ?mv ?s ?l ?forma-val]
       (fire-src ?s-res ?mh ?mv ?s ?l !!fire)
-      (dynamic-src ?s-res ?mh ?mv ?s ?l ?start ?short ?break ?long ?t-stat)
-      (schema/forma-seq !!fire ?short ?break ?long ?t-stat :> ?forma-seq)
-      (p/index ?forma-seq :zero-index ?start :> ?period ?forma-val)))
+      (dynamic-src ?s-res ?mh ?mv ?s ?l ?start ?end ?short ?long ?t-stat ?break)
+      (schema/forma-seq !!fire ?short ?long ?t-stat ?break :> ?forma-seq)
+      (p/index ?forma-seq :zero-index ?start :> ?period ?forma-val)
+      (:distinct false)))
 
 (defmapcatop [process-neighbors [num-neighbors]]
   "Processes all neighbors... Returns the index within the chunk, the
@@ -142,6 +206,26 @@ value, and the aggregate of the neighbors."
         (process-neighbors [neighbors] ?window :> ?win-idx ?val ?neighbor-val)
         (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line))))
 
+(defn beta-data-prep
+  [{:keys [t-res est-start min-coast-dist]} dynamic-src static-src]
+  (let [first-idx (date/datetime->period t-res est-start)]
+    (<- [?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?eco ?hansen]
+        (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
+        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen ?border)
+        (= ?pd first-idx)
+        (>= ?border min-coast-dist)
+        (:distinct false))))
+
+(defn beta-gen
+  "query to return the beta vector associated with each ecoregion"
+  [{:keys [t-res est-start ridge-const convergence-thresh max-iterations min-coast-dist]} src]
+  (let [first-idx (date/datetime->period t-res est-start)]
+    (<- [?s-res ?eco ?beta]
+        (src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?eco ?hansen)
+        (log/logistic-beta-wrap [ridge-const convergence-thresh max-iterations]
+                                ?hansen ?val ?neighbor-val :> ?beta)
+        (:distinct false))))
+
 (defn beta-generator
   "query to return the beta vector associated with each ecoregion"
   [{:keys [t-res est-start ridge-const convergence-thresh max-iterations min-coast-dist]}
@@ -149,9 +233,9 @@ value, and the aggregate of the neighbors."
   (let [first-idx (date/datetime->period t-res est-start)]
     (<- [?s-res ?eco ?beta]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen ?coast-dist)
+        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen ?border)
         (= ?pd first-idx)
-        (>= ?coast-dist min-coast-dist)
+        (>= ?border min-coast-dist)
         (log/logistic-beta-wrap [ridge-const convergence-thresh max-iterations]
                                 ?hansen ?val ?neighbor-val :> ?beta))))
 
@@ -163,14 +247,15 @@ value, and the aggregate of the neighbors."
 (defn forma-estimate
   "query to end all queries: estimate the probabilities for each
   period after the training period."
-  [beta-src dynamic-src static-src trap-tap period]
+  [beta-src dynamic-src static-src]
   (let [betas (log/beta-dict beta-src)]
     (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _ _)
+;;        (= period ?pd)
         (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
         (log/mk-timeseries ?pd ?prob :> ?prob-series)
-        (:trap trap-tap))))
+        (:distinct false))))
 
 (comment
   (let [m {:est-start "2005-12-31"

@@ -3,10 +3,10 @@
 {"cascading.kryo.hierarchy.registrations"
  "clojure.lang.IRecord,carbonite.PrintDupSerializer"
  "cascading.kryo.serializations"
- (s/join ":" ["forma.schema.TimeSeriesValue,carbonite.PrintDupSerializer"
-              "forma.schema.FireValue,carbonite.PrintDupSerializer"
-              "forma.schema.FormaValue,carbonite.PrintDupSerializer"
-              "forma.schema.NeighborValue,carbonite.PrintDupSerializer"])}
+ (s/join ":" ["forma.thrift.TimeSeriesValue,carbonite.PrintDupSerializer"
+              "forma.thrift.FireValue,carbonite.PrintDupSerializer"
+              "forma.thrift.FormaValue,carbonite.PrintDupSerializer"
+              "forma.thrift.NeighborValue,carbonite.PrintDupSerializer"])}
 
 
 

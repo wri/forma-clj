@@ -42,6 +42,7 @@ error."
              the proper subdatasets."
             ?result [?count]
             (src ?filename ?hdf)
+            
             (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
             (c/count ?count)))
  ?dataset-seq      ?result
@@ -69,6 +70,7 @@ error."
  48000   30
  96000   15)
 
+;; TODO: Failing
 (tabular
  (fact "Check on the proper unpacking of the HDF file metadata map."
    (let [src (io/hfs-wholefile hdf-path)
@@ -88,6 +90,7 @@ error."
   (split-id "52010010") => [10 10]
   (split-id "54029009") => [29 9])
 
+;; TODO: Failing
 (fact "modis-chunks test. `modis-chunks` is bound to a subquery, which
 is used as a source for the final count aggregator. We check that the
 chunk-size makes sense for the supplied dataset.

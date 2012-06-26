@@ -7,6 +7,7 @@
             [forma.date-time :as date]
             [forma.hadoop.pail :as pail]
             [forma.schema :as schema]
+            [forma.thrift :as thrift]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]))
 
@@ -20,14 +21,12 @@
   order. `modis-chunk` tuple fields must be vectors."
   [tuples]
   (let [[periods [val]] (apply map vector tuples)
-        [fp lp]        ((juxt first peek) periods)
-        missing-struct (schema/to-struct (repeat (schema/count-vals val) missing-val))
-        chunks         (sparse-expander missing-struct tuples :start fp)
-        tupleize       (comp (partial vector fp lp)
-                             schema/to-struct
-                             vector)]
+        [fp lp] ((juxt first peek) periods)
+        missing-struct (thrift/pack (repeat (thrift/count-vals val) missing-val))
+        chunks (sparse-expander missing-struct tuples :start fp)
+        tupleize (comp (partial vector fp lp) thrift/pack vector)]
     (->> chunks
-         (map schema/get-vals)
+         (map thrift/unpack)
          (apply map tupleize)
          (map-indexed cons))))
 
@@ -45,24 +44,23 @@
   "Given a source of chunks, this subquery extracts the proper
   position information and outputs new datachunks containing
   timeseries."
-  [chunk-source missing-val]
+  [tile-chunk-src missing-val]
   (let [mk-tseries (form-tseries missing-val)
-        data-src   (<- [?name ?t-res ?date ?s-res ?mod-h ?mod-v ?chunk-idx ?size ?datachunk]
-                       (chunk-source _ ?chunk)
-                       (schema/unpack-chunk-val ?chunk :> ?name ?t-res ?date ?location ?datachunk)
-                       (schema/unpack-chunk-location ?location :> ?s-res ?mod-h ?mod-v ?chunk-idx ?size))
-        series-src (<- [?name ?t-res ?s-res ?mod-h ?mod-v ?chunk-idx ?size ?pix-idx ?timeseries]
-                       (data-src ?name ?t-res ?date ?s-res ?mod-h ?mod-v ?chunk-idx ?size ?datachunk)
-                       (mk-tseries ?t-res ?date ?datachunk :> ?pix-idx ?start ?end ?tseries)
-                       (schema/mk-array-value ?tseries :> ?array-val)
-                       (schema/timeseries-value ?start ?end ?array-val :> ?timeseries)
-                       (:distinct true))]
-    (<- [?chunk]
-        (series-src ?name ?t-res ?s-res ?mod-h ?mod-v ?chunk-idx ?size ?pix-idx ?timeseries)
-        (r/tile-position ?s-res ?size ?chunk-idx ?pix-idx :> ?sample ?line)
-        (schema/pixel-location ?s-res ?mod-h ?mod-v ?sample ?line :> ?pix-location)
-        (schema/mk-data-value ?timeseries :> ?data-val)
-        (schema/chunk-value ?name ?t-res nil ?pix-location ?data-val :> ?chunk))))
+        val-src (<- [?name ?t-res ?date ?s-res ?h ?v ?id ?size ?data]
+                    (tile-chunk-src _ ?tile-chunk)
+                    (thrift/unpack ?tile-chunk :> ?name ?tile-loc ?data ?t-res ?date)
+                    (thrift/unpack ?tile-loc :> ?s-res ?h ?v ?id ?size)
+                     (:distinct false))
+        ts-src (<- [?name ?t-res ?s-res ?h ?v ?id ?size ?pixel-idx ?ts]
+                   (val-src ?name ?t-res ?date ?s-res ?h ?v ?id ?size ?val)
+                   (mk-tseries ?t-res ?date ?val :> ?pixel-idx ?start ?end ?series)
+                   (thrift/TimeSeries* ?start ?end ?series :> ?ts))]
+    (<- [?pixel-chunk]
+        (ts-src ?name ?t-res ?s-res ?h ?v ?id ?size ?pixel-idx ?ts)
+        (r/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line)
+        (thrift/ModisPixelLocation* ?s-res ?h ?v ?sample ?line :> ?pixel-loc)
+        (thrift/DataChunk* ?name ?tile-loc ?ts ?t-res :> ?pixel-chunk)
+        (:distinct false))))
 
 (def ^:dynamic *missing-val*
   -9999)
@@ -101,30 +99,30 @@
   "Converts the datestring into a time period based on the supplied
   temporal resolution."
   [src t-res]
-  (<- [?name ?datestring ?s-res ?mod-h ?mod-v ?s ?l ?tuple]
-      (src _ ?chunk)
-      (schema/unpack-chunk-val ?chunk :> ?name _ ?date ?location ?val)
-      (merge-firevals ?val :> ?tuple)
+  (<- [?name ?datestring ?s-res ?h ?v ?sample ?line ?tuple]
+      (src _ ?pixel-chunk)
+      (thrift/unpack ?pixel-chunk :> ?name ?pixel-loc ?data _ ?date)
+      (merge-firevals ?data :> ?tuple)
       (date/beginning t-res ?date :> ?datestring)
-      (schema/unpack-pixel-location ?location :> ?s-res ?mod-h ?mod-v ?s ?l)))
+      (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)))
 
 (defn create-fire-series
   "Aggregates fires into timeseries."
   [src t-res start end]
-  (let [[start end]     (map (partial date/datetime->period t-res) [start end])
-        length          (inc (- end start))
-        mk-fire-tseries (p/vals->sparsevec start length (schema/fire-value 0 0 0 0))
-        series-src      (aggregate-fires src t-res)
+  (let [[start end] (map (partial date/datetime->period t-res) [start end])
+        length (inc (- end start))
+        mk-fire-tseries (p/vals->sparsevec start length (thrift/FireValue* 0 0 0 0))
+        series-src (aggregate-fires src t-res)
         query (<- [?name ?s-res ?mod-h ?mod-v ?s ?l ?fire-series]
                   (series-src ?name ?datestring ?s-res ?mod-h ?mod-v ?s ?l ?tuple)
                   (date/datetime->period t-res ?datestring :> ?tperiod)
                   (mk-fire-tseries ?tperiod ?tuple :> _ ?tseries)
                   (running-fire-sum start ?tseries :> ?fire-series))]
-    (<- [?chunk]
-        (query ?name ?s-res ?mod-h ?mod-v ?s ?l ?fire-series)
-        (schema/pixel-location ?s-res ?mod-h ?mod-v ?s ?l :> ?location)
-        (schema/mk-data-value ?fire-series :> ?data-val)
-        (schema/chunk-value ?name t-res nil ?location ?data-val :> ?chunk))))
+    (<- [?pixel-chunk]
+        (query ?name ?s-res ?h ?v ?sample ?line ?fire-series)
+        (thrift/ModisPixelLocation* ?s-res ?h ?v ?sample ?line :> ?pixel-loc)
+        (thrift/DataChunk* ?name ?pixel-loc ?fire-series t-res :> ?pixel-chunk)
+        (:distinct false))))
 
 (defn fire-query
   "Returns a source of fire timeseries data chunk objects."
