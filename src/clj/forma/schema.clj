@@ -114,7 +114,7 @@
   [[x & more]]
   (if x
     (reduce merge-neighbors (neighbor-value x) more)
-    (thrift/NeighborValue* (thrift/FireValue* 0 0 0 0) 0 0 0 0 0 0 0 0 0)))
+    (thrift/NeighborValue* (thrift/FireValue* 0 0 0 0) (long 0) 0. 0. 0. 0. 0. 0. 0. 0.)))
 
 (defn forma-value
   "Returns a vector containing a FireValue, short-term drop,

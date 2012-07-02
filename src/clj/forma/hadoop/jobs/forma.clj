@@ -107,7 +107,7 @@
 (defmapop series-end
   [series start]
   (let [length (count series)]
-    (dec (+ start length))))
+    (+ start length)))
 
 (defn analyze-trends
   "Accepts an est-map, and sources for ndvi and rain timeseries and

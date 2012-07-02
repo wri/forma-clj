@@ -92,7 +92,7 @@
               :long-block 15
               :window 5}
    "500-16" {:est-start "2005-12-31"
-             :est-end "2012-01-17"
+             :est-end "2012-04-22"
              :s-res "500"
              :t-res "16"
              :neighbors 1
@@ -225,7 +225,7 @@
                  "Final step to collect all data for the feature vector -
                  trends + fires data"
                  (?- (hfs-seqfile forma-mid-path)
-                     (forma/forma-tap (hfs-seqfile trends-path)
+                     (forma/forma-tap (hfs-seqfile cleanup-path)
                                       (hfs-seqfile adjusted-fire-path))))
               
               final-forma

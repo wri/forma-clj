@@ -79,12 +79,12 @@
     (weighted-avg 8 3 1 1) => 6.25"
   [& val-weight-pairs]
   {:pre [(even? (count val-weight-pairs))]}
-  (float (->> (for [[x weight] (partition 2 val-weight-pairs)]
-                (if  (>= weight 0)
-                  [(* x weight) weight]
-                  (throw-illegal "All weights must be positive.")))
-              (reduce (partial map +))
-              (apply /))))
+  (double (->> (for [[x weight] (partition 2 val-weight-pairs)]
+                 (if  (>= weight 0)
+                   [(* x weight) weight]
+                   (throw-illegal "All weights must be positive.")))
+               (reduce (partial map +))
+               (apply /))))
 
 (defn positions
   "Returns a lazy sequence containing the positions at which pred
