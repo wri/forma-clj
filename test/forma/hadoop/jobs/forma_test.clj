@@ -1,13 +1,18 @@
 (ns forma.hadoop.jobs.forma-test
+  (:use [forma.hadoop.jobs.forma] :reload)
   (:use cascalog.api
         [midje sweet cascalog]
-        [clojure.string :only (join)] forma.hadoop.jobs.forma)
+        [clojure.string :only (join)]
+        [forma.playground])
   (:require [forma.schema :as schema]
+            [forma.thrift :as thrift]
             [forma.date-time :as date]
             [forma.trends.filter :as f]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]
-            [cascalog.ops :as c]))
+            [forma.reproject :as r]
+            [cascalog.ops :as c])
+  (:import [backtype.hadoop.pail Pail]))
 
 (def some-map
   {:est-start "2005-12-01"
@@ -23,7 +28,7 @@
 ;; timeseries, to test the business with the neighbors.
 
 (def dynamic-tuples
-  (let [ts (schema/timeseries-value 370 [3 2 1])]
+  (let [ts (schema/create-timeseries 370 [3 2 1])]
     (into [["1000" 13 9 610 611 ts ts ts]]
           (for [sample (range 4)
                 line   (range 4)]
@@ -31,9 +36,9 @@
 
 (def fire-values
   (let [keep? (complement #{[0 1] [0 2] [1 2] [3 2] [1 3] [2 3]})
-        series (schema/timeseries-value 370 [(schema/fire-value 1 1 1 1)
-                                             (schema/fire-value 0 1 1 1)
-                                             (schema/fire-value 3 2 1 1)])]
+        series (schema/create-timeseries 370 [(thrift/FireValue* 1 1 1 1)
+                                             (thrift/FireValue* 0 1 1 1)
+                                             (thrift/FireValue* 3 2 1 1)])]
     (into [["1000" 13 9 610 611 series]]
           (for [sample (range 4)
                 line (range 4)
@@ -41,12 +46,13 @@
             ["1000" 13 9 sample line series]))))
 
 (def outer-src
-  (let [no-fire-3 (schema/forma-value nil 3 3 3 3)
-        no-fire-2 (schema/forma-value nil 2 2 2 2)
-        no-fire-1 (schema/forma-value nil 1 1 1 1)
-        forma-3 (schema/forma-value (schema/fire-value 1 1 1 1) 3 3 3 3)
-        forma-2 (schema/forma-value (schema/fire-value 0 1 1 1) 2 2 2 2)
-        forma-1 (schema/forma-value (schema/fire-value 3 2 1 1) 1 1 1 1)]
+  (let [;; TODO: FireValue is required in the forma.thrift IDL.
+        ;;no-fire-3 (thrift/FormaValue* nil 3 3 3 3)
+        ;;no-fire-2 (thrift/FormaValue* nil 2 2 2 2)
+        ;;no-fire-1 (thrift/FormaValue* nil 1 1 1 1)
+        forma-3 (thrift/FormaValue* (thrift/FireValue* 1 1 1 1) 3.0 3.0 3.0 3.0)
+        forma-2 (thrift/FormaValue* (thrift/FireValue* 0 1 1 1) 2.0 2.0 2.0 2.0)
+        forma-1 (thrift/FormaValue* (thrift/FireValue* 3 2 1 1) 1.0 1.0 1.0 1.0)]
     [["1000" 370 13 9 0 0 forma-3]
      ["1000" 371 13 9 0 0 forma-2]
      ["1000" 372 13 9 0 0 forma-1]
@@ -59,9 +65,9 @@
      ["1000" 370 13 9 3 0 forma-3]
      ["1000" 371 13 9 3 0 forma-2]
      ["1000" 372 13 9 3 0 forma-1]
-     ["1000" 370 13 9 0 1 no-fire-3]
-     ["1000" 371 13 9 0 1 no-fire-2]
-     ["1000" 372 13 9 0 1 no-fire-1]
+     ;;["1000" 370 13 9 0 1 no-fire-3]
+     ;;["1000" 371 13 9 0 1 no-fire-2]
+     ;;["1000" 372 13 9 0 1 no-fire-1]
      ["1000" 370 13 9 1 1 forma-3]
      ["1000" 371 13 9 1 1 forma-2]
      ["1000" 372 13 9 1 1 forma-1]
@@ -71,27 +77,27 @@
      ["1000" 370 13 9 3 1 forma-3]
      ["1000" 371 13 9 3 1 forma-2]
      ["1000" 372 13 9 3 1 forma-1]
-     ["1000" 370 13 9 0 2 no-fire-3]
-     ["1000" 371 13 9 0 2 no-fire-2]
-     ["1000" 372 13 9 0 2 no-fire-1]
-     ["1000" 370 13 9 1 2 no-fire-3]
-     ["1000" 371 13 9 1 2 no-fire-2]
-     ["1000" 372 13 9 1 2 no-fire-1]
+     ;;["1000" 370 13 9 0 2 no-fire-3]
+     ;;["1000" 371 13 9 0 2 no-fire-2]
+     ;;["1000" 372 13 9 0 2 no-fire-1]
+     ;;["1000" 370 13 9 1 2 no-fire-3]
+     ;;["1000" 371 13 9 1 2 no-fire-2]
+     ;;["1000" 372 13 9 1 2 no-fire-1]
      ["1000" 370 13 9 2 2 forma-3]
      ["1000" 371 13 9 2 2 forma-2]
      ["1000" 372 13 9 2 2 forma-1]
-     ["1000" 370 13 9 3 2 no-fire-3]
-     ["1000" 371 13 9 3 2 no-fire-2]
-     ["1000" 372 13 9 3 2 no-fire-1]
+     ;; ["1000" 370 13 9 3 2 no-fire-3]
+     ;; ["1000" 371 13 9 3 2 no-fire-2]
+     ;; ["1000" 372 13 9 3 2 no-fire-1]
      ["1000" 370 13 9 0 3 forma-3]
      ["1000" 371 13 9 0 3 forma-2]
      ["1000" 372 13 9 0 3 forma-1]
-     ["1000" 370 13 9 1 3 no-fire-3]
-     ["1000" 371 13 9 1 3 no-fire-2]
-     ["1000" 372 13 9 1 3 no-fire-1]
-     ["1000" 370 13 9 2 3 no-fire-3]
-     ["1000" 371 13 9 2 3 no-fire-2]
-     ["1000" 372 13 9 2 3 no-fire-1]
+     ;; ["1000" 370 13 9 1 3 no-fire-3]
+     ;; ["1000" 371 13 9 1 3 no-fire-2]
+     ;; ["1000" 372 13 9 1 3 no-fire-1]
+     ;; ["1000" 370 13 9 2 3 no-fire-3]
+     ;; ["1000" 371 13 9 2 3 no-fire-2]
+     ;; ["1000" 372 13 9 2 3 no-fire-1]
      ["1000" 370 13 9 3 3 forma-3]
      ["1000" 371 13 9 3 3 forma-2]
      ["1000" 372 13 9 3 3 forma-1]
@@ -204,7 +210,22 @@
    ["1000" 1 "2001-01-01" 13 9 610 611
     (join \tab [3 2 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0])]])
 
-(let [est-map {:est-start "2005-12-01"
+(comment
+  (fact
+  "Uses simple timeseries to test cleaning query"
+  (let [t-res "16"
+        ts-length 10
+        est-map {:est-start (date/period->datetime t-res (- ts-length 5))
+                 :est-end (date/period->datetime t-res ts-length)
+                 :t-res t-res}
+        ndvi [1 2 3 4 5 6 7 8 9 10] ;;(vec (range 8000 (+ 8000 ts-length)))
+        precl (vec (range ts-length))
+        reli [0 2 3 0 1 0 3 1 1 0]
+        dynamic-src [["500" 28 8 0 0 0 ndvi precl reli]]]
+    (dynamic-clean est-map dynamic-src) => (produces-some
+                                            [["500" 28 8 0 0 0 [1.0 2.0 3.0 4 5]] ["500" 28 8 0 0 0 [1.0 2.0 3.0 4 5 6]]])))
+
+  (let [est-map {:est-start "2005-12-01"
                :est-end "2011-04-01"
                :t-res "32"
                :neighbors 1
@@ -234,20 +255,7 @@
           (forma-query est-map :n-src :reli-src :r-src :v-src country-src :f-src)  
           (provided
             (forma-tap est-map :n-src :reli-src :r-src :v-src :f-src) => outer-tap)))
-
-(fact
-  "Uses simple timeseries to test cleaning query"
-  (let [t-res "16"
-        ts-length 10
-        est-map {:est-start (date/period->datetime t-res (- ts-length 5))
-                 :est-end (date/period->datetime t-res ts-length)
-                 :t-res t-res}
-        ndvi [1 2 3 4 5 6 7 8 9 10] ;;(vec (range 8000 (+ 8000 ts-length)))
-        precl (vec (range ts-length))
-        reli [0 2 3 0 1 0 3 1 1 0]
-        dynamic-src [["500" 28 8 0 0 0 ndvi precl reli]]]
-    (dynamic-clean est-map dynamic-src) => (produces-some
-                                            [["500" 28 8 0 0 0 [1.0 2.0 3.0 4 5]] ["500" 28 8 0 0 0 [1.0 2.0 3.0 4 5 6]]])))
+)
 
 (fact
   (let [model-ts [[1 [1 2 3]]]
@@ -262,6 +270,63 @@
         est-map {:window 10 :long-block 30}
         ndvi (flatten [(range 25) (range 25 0 -1)])
         precl (flatten [(range 25 0 -1) (range 25)])
-        clean-src [["500" 28 8 0 0 0 ndvi]]
-        rain-src [["500" 28 8 0 0 0 -1 precl -1]]]
-    (analyze-trends est-map clean-src rain-src)) => (produces-some [["500" 28 8 0 0 0 -0.46384872080089 -4.198030811863873E-16 -2.86153967746369 4.3841345603546955]]))
+        clean-src [["500" 28 8 0 0 0 ndvi precl]]]
+    (analyze-trends est-map clean-src)) => (produces-some [["500" 28 8 0 0 0 49 -0.46384872080089 -4.198030811863873E-16 -2.86153967746369 4.3841345603546955]]))
+
+(fact
+  (let [src [["500" 28 8 0 0 693 693 0.1 0.2 0.3 0.4]
+             ["500" 28 8 0 0 693 694 0.11 0.12 0.13 0.14]
+             ["500" 28 8 0 1 693 693 0.1 0.2 0.3 0.4]
+             ["500" 28 8 0 1 693 694 0.11 0.12 0.13 0.14]]]
+    (consolidate-trends src)) => (produces-some [["500" 28 8 0 0 693 [[693 694]] [[0.1 0.11]] [[0.2 0.12]] [[0.3 0.13]] [[0.4 0.14]]]]))
+
+(fact
+  (let [trends-src [["500" 28 8 0 0 693 693 0.1 0.2 0.3 0.4]
+                    ["500" 28 8 0 0 693 694 0.11 0.12 0.13 0.14]
+                    ["500" 28 8 0 1 693 693 0.1 0.2 0.3 0.4]
+                    ["500" 28 8 0 1 693 694 0.11 0.12 0.13 0.14]]]
+    (trends-cleanup trends-src)) => (produces-some [["500" 28 8 0 0 693 694 [[0.1 0.11]] [[0.2 0.12]] [[0.3 0.13]] [[0.4 0.14]]]]))
+
+(def dynamic-src
+  [["500" 28 8 0 0 693 694
+   [[0.1 0.2]] [[0.5 0.6]] [[0.8 0.9]] [[0.11 0.12]]]
+  ["500" 28 8 0 1 693 694
+   [[0.2 0.3]] [[0.5 0.6]] [[0.8 0.9]] [[0.11 0.12]]]])
+
+(def fire-src
+  (let [fires [(thrift/FireValue* 1 1 1 1)
+               (thrift/FireValue* 0 0 0 0)]
+        fires-ts (thrift/TimeSeries* 693 fires)]
+    [["500" 28 8 0 0 fires-ts]])) 
+
+(tabular
+ (fact
+   (forma-tap dynamic-src fire-src) => (produces ?result))
+ ?result
+ [["500" 693 28 8 0 0 [(thrift/FireValue* 1 1 1 1) 0.1 0.5 0.8 0.11]]
+  ["500" 694 28 8 0 0 [(thrift/FireValue* 0 0 0 0) 0.2 0.6 0.9 0.12]]
+  ["500" 693 28 8 0 1 [(thrift/FireValue* 0 0 0 0) 0.2 0.5 0.8 0.11]]
+  ["500" 694 28 8 0 1 [(thrift/FireValue* 0 0 0 0) 0.3 0.6 0.9 0.12]]])
+
+(tabular
+ (fact
+  (let [est-map {:est-start "2005-12-31"
+               :est-end "2012-04-22"
+               :s-res "500"
+               :t-res "16"
+               :neighbors 1
+               :window-dims [600 600]
+               :vcf-limit 25
+               :long-block 30
+               :window 10
+               :ridge-const 1e-8
+               :convergence-thresh 1e-6
+               :max-iterations 500
+               :border-idx 2}
+      neighbor-val (thrift/NeighborValue* (thrift/FireValue* 1 1 0 2)
+                                          1 1 1 1 1 1 1 1 1)
+      dynamic-src [["500" 827 28 8 0 0 [(thrift/FireValue* 1 1 1 1) 0.1 0.5 0.8 0.11] neighbor-val]]
+      static-src [["500" 28 8 0 0 0 0 20 1 3]]]
+    (beta-generator est-map dynamic-src static-src)) => (produces ?result))
+ ?result
+ [["500" 20 [1.3198604873070732 1.3198597780973624 1.319859892111878 1.3198598198327303 1.3198598313920957 0.13198598484041146 0.6599299207046119 1.0558879051269205 0.1451845793640933 1.319859809559916 1.3198598177683474 0.0 2.639719651470132 1.3198599150601593 1.3198598139702982 1.319859936960821 1.319859865224203 1.3198598449368701 1.3198598523914609 1.319859846129606 1.3198598133198294]]])
