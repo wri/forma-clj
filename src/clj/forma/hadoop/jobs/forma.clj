@@ -89,7 +89,7 @@
    start-period val-ts]
   (let [[start-idx end-idx] (date/relative-period t-res start-period
                                                   [est-start est-end])]
-    (vec (map vector (f/tele-ts start-idx end-idx val-ts)))))
+    (vec (map (comp vector vec) (f/tele-ts start-idx end-idx val-ts)))))
 
 (defn dynamic-clean
   "Accepts an est-map, and sources for ndvi and rain timeseries and
