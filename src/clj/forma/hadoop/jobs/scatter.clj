@@ -169,7 +169,7 @@
                      (mk-filter vcf-path
                                 (adjusted-precl-tap
                                  ts-pail-path s-res "32" t-res))))
-              
+
               adjustseries
               ([:tmp-dirs adjusted-series-path]
                  "Adjusts lengths of all timeseries so they all cover the same
@@ -202,14 +202,16 @@
                   actually run the timeseries cleaning function"
                  (?- (hfs-seqfile clean-series)
                      (forma/dynamic-clean
-                      est-map (hfs-seqfile adjusted-series-path))))
+                      est-map
+                      (hfs-seqfile adjusted-series-path))))
 
               trends
               ([:tmp-dirs trends-path]
                  "Runs the trends processing."
                  (?- (hfs-seqfile trends-path)
                      (forma/analyze-trends
-                      est-map (hfs-seqfile clean-series))))
+                      est-map
+                      (hfs-seqfile clean-series))))
               
               trends-cleanup
               ([:tmp-dirs cleanup-path]
@@ -219,10 +221,9 @@
                      (forma/trends-cleanup (hfs-seqfile trends-path))))
 
               mid-forma
-              ([:tmp-dirs forma-mid-path
-                "Final step to collect all data for the feature vector -
+              ([:tmp-dirs forma-mid-path]
+                 "Final step to collect all data for the feature vector -
                  trends + fires data"
-                :deps [trends adjustfires]]
                  (?- (hfs-seqfile forma-mid-path)
                      (forma/forma-tap (hfs-seqfile trends-path)
                                       (hfs-seqfile adjusted-fire-path))))

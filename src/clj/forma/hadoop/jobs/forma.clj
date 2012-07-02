@@ -84,6 +84,13 @@
       ;;     (f/tele-ts start-idx end-idx reli-ts)
       [[nil]])))
 
+(defmapcatop telescope-ts
+  [{:keys [est-start est-end t-res]}
+   start-period val-ts]
+  (let [[start-idx end-idx] (date/relative-period t-res start-period
+                                                  [est-start est-end])]
+    (vec (map vector (f/tele-ts start-idx end-idx val-ts)))))
+
 (defn dynamic-clean
   "Accepts an est-map, and sources for ndvi and rain timeseries and
   vcf values split up by pixel.
@@ -92,12 +99,10 @@
   occur before the analysis. Note that all variable names within this
   query are TIMESERIES, not individual values."
   [est-map dynamic-src]
-  (let [good-set #{0 1}
-        bad-set #{2 3 255}]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?clean-ndvi ?precl]
-        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl ?reli)
-        (tele-clean est-map good-set bad-set ?start ?ndvi ?reli :> ?clean-ndvi)
-        (:distinct false))))
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?tele-ndvi ?precl]
+      (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl _)
+      (telescope-ts est-map ?start ?ndvi :> ?tele-ndvi)
+      (:distinct false)))
 
 (defmapop series-end
   [series start]
