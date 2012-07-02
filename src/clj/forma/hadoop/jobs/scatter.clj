@@ -259,7 +259,13 @@
                  (?- (hfs-seqfile out-path :sinkmode :replace)
                       (forma/forma-estimate (hfs-seqfile beta-path)
                                             (hfs-seqfile final-path)
-                                            (static-src est-map pail-path)))))))
+                                            static-path)))
+
+              stop-process
+              ([]
+                 "stop everything before deleting the temp directory"
+                 (?- (hfs-seqfile "/mnt/hgfs/Dropbox/yikes")
+                     (hfs-seqfile "/mnt/hgfs/Dropbox/yikestimes"))))))
 
 (defmain simplerunner
   [tmp-root pail-path ts-pail-path out-path run-key]
