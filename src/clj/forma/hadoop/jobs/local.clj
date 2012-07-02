@@ -72,19 +72,19 @@
 ;;           (= ?hansen 100))))
 
 
-;; (defn label-sequence [casc-out]
-;;   (log/to-double-rowmat (vec (map #(/ (nth % 4) 100) casc-out))))
+(defn label-sequence [casc-out]
+  (log/to-double-rowmat (vec (map #(/ (nth % 4) 100) casc-out))))
 
-;; (defn feat-sequence [casc-out]
-;;   (log/to-double-matrix
-;;    (vec (map (comp (partial into [1]) vec (partial drop 5)) casc-out))))
+(defn feat-sequence [casc-out]
+  (log/to-double-matrix
+   (vec (map (comp (partial into [1]) vec (partial drop 5)) casc-out))))
 
-;; (defn probs []
-;;   (let [casc-output (create-feature-vectors 135)
-;;         label (label-sequence casc-output)
-;;         feat  (feat-sequence casc-output)
-;;         beta  (log/to-double-rowmat (log/logistic-beta-vector label feat 1e-8 1e-6 250))]
-;;     (log/probability-calc beta feat)))
+(defn probs []
+  (let [casc-output (create-feature-vectors 135)
+        label (label-sequence casc-output)
+        feat  (feat-sequence casc-output)
+        beta  (log/to-double-rowmat (log/logistic-beta-vector label feat 1e-8 1e-6 250))]
+    (log/probability-calc beta feat)))
 
 ;; (defn xy-hansen []
 ;;   (let [casc-out (create-feature-vectors 135)
