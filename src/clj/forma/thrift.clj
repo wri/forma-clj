@@ -207,10 +207,10 @@
   [fire ncount avg-short min-short avg-long min-long avg-stat min-stat
    & [avg-break min-break]]
   {:pre [(instance? forma.schema.FireValue fire)
-         (or (not avg-break) (instance? java.lang.Double avg-break))
-         (or (not min-break) (instance? java.lang.Double min-break))
+         (or (nil? avg-break) (float? avg-break))
+         (or (nil? min-break) (float? min-break))
          (instance? java.lang.Long ncount)
-         (every? #(instance? java.lang.Double %)
+         (every? #(float? %)
                  [avg-short min-short avg-long min-long avg-stat min-stat])]}
   (let [n-value (NeighborValue. fire ncount avg-short min-short avg-long min-long
                                 avg-stat min-stat)]

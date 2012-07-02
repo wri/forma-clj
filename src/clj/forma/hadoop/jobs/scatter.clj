@@ -92,7 +92,7 @@
               :long-block 15
               :window 5}
    "500-16" {:est-start "2005-12-31"
-             :est-end "2012-01-17"
+             :est-end "2012-04-22"
              :s-res "500"
              :t-res "16"
              :neighbors 1
@@ -225,7 +225,7 @@
                  "Final step to collect all data for the feature vector -
                  trends + fires data"
                  (?- (hfs-seqfile forma-mid-path)
-                     (forma/forma-tap (hfs-seqfile trends-path)
+                     (forma/forma-tap (hfs-seqfile cleanup-path)
                                       (hfs-seqfile adjusted-fire-path))))
               
               final-forma
@@ -259,7 +259,13 @@
                  (?- (hfs-seqfile out-path :sinkmode :replace)
                       (forma/forma-estimate (hfs-seqfile beta-path)
                                             (hfs-seqfile final-path)
-                                            (static-src est-map pail-path)))))))
+                                            static-path)))
+
+              stop-process
+              ([]
+                 "stop everything before deleting the temp directory"
+                 (?- (hfs-seqfile "/mnt/hgfs/Dropbox/yikes")
+                     (hfs-seqfile "/mnt/hgfs/Dropbox/yikestimes"))))))
 
 (defmain simplerunner
   [tmp-root pail-path ts-pail-path out-path run-key]
