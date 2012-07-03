@@ -14,6 +14,18 @@
 ;; We're mapping across two sequences at the end, there; the
 ;; long-series and the t-stat-series.
 
+(defn consolidate-static
+  "Due to an issue with Pail, we consolidate separate sequence files of static
+   data with one big join"
+  [vcf-src gadm-src hansen-src ecoid-src border-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?vcf ?gadm ?ecoid ?hansen ?coast-dist]
+        (vcf-src    ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
+        (hansen-src ?s-res ?mod-h ?mod-v ?sample ?line ?hansen)
+        (ecoid-src  ?s-res ?mod-h ?mod-v ?sample ?line ?ecoid)
+        (gadm-src   ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
+        (border-src ?s-res ?mod-h ?mod-v ?sample ?line ?coast-dist)
+        (>= ?vcf vcf-limit)))
+
 (defn fire-tap
   "Accepts an est-map and a query source of fire timeseries. Note that
   this won't work, pulling directly from the pail!"
