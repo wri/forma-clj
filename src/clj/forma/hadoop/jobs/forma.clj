@@ -12,20 +12,17 @@
             [forma.ops.classify :as log]
             [forma.trends.filter :as f]))
 
-;; We're mapping across two sequences at the end, there; the
-;; long-series and the t-stat-series.
-
 (defn consolidate-static
   "Due to an issue with Pail, we consolidate separate sequence files of static
    data with one big join"
-  [vcf-src gadm-src hansen-src ecoid-src border-src]
+  [vcf-limit vcf-src gadm-src hansen-src ecoid-src border-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?vcf ?gadm ?ecoid ?hansen ?coast-dist]
-        (vcf-src    ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
-        (hansen-src ?s-res ?mod-h ?mod-v ?sample ?line ?hansen)
-        (ecoid-src  ?s-res ?mod-h ?mod-v ?sample ?line ?ecoid)
-        (gadm-src   ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
-        (border-src ?s-res ?mod-h ?mod-v ?sample ?line ?coast-dist)
-        (>= ?vcf vcf-limit)))
+      (vcf-src    ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
+      (hansen-src ?s-res ?mod-h ?mod-v ?sample ?line ?hansen)
+      (ecoid-src  ?s-res ?mod-h ?mod-v ?sample ?line ?ecoid)
+      (gadm-src   ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
+      (border-src ?s-res ?mod-h ?mod-v ?sample ?line ?coast-dist)
+      (>= ?vcf vcf-limit)))
 
 (defn fire-tap
   "Accepts an est-map and a query source of fire timeseries. Note that
@@ -51,12 +48,7 @@
   [vcf-src vcf-limit chunk-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?series]
       (chunk-src _ ?ts-chunk)
-      (vcf-src _ ?vcf-chunk)
-
-      ;; pre-blossomed vcf, so just have single values here
-      (thrift/unpack ?vcf-chunk :> _ ?vcf-loc ?vcf-data _ _)
-      (thrift/get-field-value ?vcf-data :> ?vcf-val)
-      (thrift/unpack ?vcf-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
+      (vcf-src ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
       
       ;; unpack ts object
        (thrift/unpack ?ts-chunk :> _ ?ts-loc ?ts-data _ _)
@@ -243,17 +235,13 @@ value, and the aggregate of the neighbors."
 (defn beta-data-prep
   "for example, static-path can equal this on dan's local machine:
    \"/mnt/hgfs/Dropbox/local/static-out\""
-  [{:keys [t-res est-start min-coast-dist]} dynamic-src static-path]
-  (let [first-idx (date/datetime->period t-res est-start)
-        [ecoid hansen border] (read-static-sources static-path
-                                                  ["ecoid" "hansen" "border"])]
+  [{:keys [t-res est-start min-coast-dist]} dynamic-src static-src]
+  (let [first-idx (date/datetime->period t-res est-start)]
     (<- [?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?eco ?hansen]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-        (ecoid ?s-res ?mod-h ?mod-v ?s ?l ?eco)
-        (border ?s-res ?mod-h ?mod-v ?s ?l ?border)
-        (hansen ?s-res ?mod-h ?mod-v ?s ?l ?hansen)
+        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen ?coast-dist)
         (= ?pd first-idx)
-        (>= ?border min-coast-dist)
+        (>= ?coast-dist min-coast-dist)
         (:distinct false))))
 
 (defn beta-gen
@@ -269,17 +257,13 @@ value, and the aggregate of the neighbors."
 (defn beta-generator
   "query to return the beta vector associated with each ecoregion"
   [{:keys [t-res est-start ridge-const convergence-thresh max-iterations min-coast-dist]}
-   dynamic-src static-path]
-  (let [first-idx (date/datetime->period t-res est-start)
-        [ecoid hansen border] (read-static-sources static-path
-                                                  ["ecoid" "hansen" "border"])]
+   dynamic-src static-src]
+  (let [first-idx (date/datetime->period t-res est-start)]
     (<- [?s-res ?eco ?beta]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-        (ecoid ?s-res ?mod-h ?mod-v ?s ?l ?eco)
-        (border ?s-res ?mod-h ?mod-v ?s ?l ?border)
-        (hansen ?s-res ?mod-h ?mod-v ?s ?l ?hansen)
+        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen ?coast-dist)
         (= ?pd first-idx)
-        (>= ?border min-coast-dist)
+        (>= ?coast-dist min-coast-dist)
         (log/logistic-beta-wrap [ridge-const convergence-thresh max-iterations]
                                 ?hansen ?val ?neighbor-val :> ?beta))))
 
@@ -291,13 +275,11 @@ value, and the aggregate of the neighbors."
 (defn forma-estimate
   "query to end all queries: estimate the probabilities for each
   period after the training period."
-  [beta-src dynamic-src static-path]
-  (let [betas (log/beta-dict beta-src)
-        [ecoid hansen border] (read-static-sources static-path
-                                                   ["ecoid" "hansen" "border"])]
+  [beta-src dynamic-src static-src]
+  (let [betas (log/beta-dict beta-src)]
     (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-        (ecoid ?s-res ?mod-h ?mod-v ?s ?l ?eco)
+        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _ _)
         (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
         (log/mk-timeseries ?pd ?prob :> ?prob-series)
         (:distinct false))))

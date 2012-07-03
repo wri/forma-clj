@@ -29,13 +29,7 @@
       (chunk-src _ ?chunk)
       (thrift/unpack ?chunk :> _ ?loc ?data _ _)
       (thrift/get-field-value ?data :> ?val)
-;;      (p/index ?vals :> ?pixel-idx ?val)
-      (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
-;;      (r/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line)
-
-      ;;(p/blossom-chunk ?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line
-      ;;?val)
-      ))
+      (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
 
 (defn country-tap
   [gadm-src convert-src]
@@ -143,42 +137,33 @@
               vcf-step
               ([:tmp-dirs vcf-path]
                  (?- (hfs-seqfile vcf-path)
-                     (<- [?subpail ?data-chunk]
-                         ((constrained-tap pail-path "vcf" s-res "00")
-                          ?subpail ?data-chunk))))
+                     (static-tap (constrained-tap pail-path "vcf" s-res "00"))))
 
               gadm-step
               ([:tmp-dirs gadm-path]
                  (?- (hfs-seqfile gadm-path)
-                     (<- [?subpail ?data-chunk]
-                         ((constrained-tap pail-path "gadm" s-res "00")
-                          ?subpail ?data-chunk))))
+                     (static-tap (constrained-tap pail-path "gadm" s-res "00"))))
 
               hansen-step
               ([:tmp-dirs hansen-path]
                  (?- (hfs-seqfile hansen-path)
-                     (<- [?subpail ?data-chunk]
-                         ((constrained-tap pail-path "hansen" s-res "00")
-                          ?subpail ?data-chunk))))
+                     (static-tap (constrained-tap pail-path "hansen" s-res "00"))))
 
               ecoid-step
               ([:tmp-dirs ecoid-path]
                  (?- (hfs-seqfile ecoid-path)
-                     (<- [?subpail ?data-chunk]
-                         ((constrained-tap pail-path "ecoid" s-res "00")
-                          ?subpail ?data-chunk))))
+                     (static-tap (constrained-tap pail-path "ecoid" s-res "00"))))
 
               border-step
               ([:tmp-dirs border-path]
                  (?- (hfs-seqfile border-path)
-                     (<- [?subpail ?data-chunk]
-                         ((constrained-tap pail-path "border" s-res "00")
-                          ?subpail ?data-chunk))))
+                     (static-tap (constrained-tap pail-path "border" s-res "00"))))
 
               static-step
               ([:tmp-dirs static-path]
                  (?- (hfs-seqfile static-path)
-                     (forma/consolidate-static (hfs-seqfile vcf-path)
+                     (forma/consolidate-static (:vcf-limit est-map)
+                                               (hfs-seqfile vcf-path)
                                                (hfs-seqfile gadm-path)
                                                (hfs-seqfile hansen-path)
                                                (hfs-seqfile ecoid-path)
@@ -283,7 +268,7 @@
                  (?- (hfs-seqfile beta-data-path)
                      (forma/beta-data-prep est-map
                                            (hfs-seqfile final-path)
-                                           (static-src est-map pail-path))))
+                                           (hfs-seqfile static-path))))
 
               gen-betas
               ([:tmp-dirs beta-path]
@@ -297,7 +282,7 @@
                  (?- (hfs-seqfile out-path :sinkmode :replace)
                       (forma/forma-estimate (hfs-seqfile beta-path)
                                             (hfs-seqfile final-path)
-                                            static-path)))
+                                            (hfs-seqfile static-path))))
 
               stop-process
               ([]
