@@ -57,7 +57,7 @@
        (thrift/unpack ?ts-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
 
       ;; filter on vcf-limit
-      (>= ?vcf-val vcf-limit)))
+      (>= ?vcf vcf-limit)))
 
 (defn dynamic-filter
   "Returns a new generator of ndvi and rain timeseries obtained by
