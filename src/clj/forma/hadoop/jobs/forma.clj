@@ -1,5 +1,6 @@
 (ns forma.hadoop.jobs.forma
-  (:use cascalog.api)
+  (:use cascalog.api
+        [forma.hadoop.pail :only (split-chunk-tap)])
   (:require [cascalog.ops :as c]
             [forma.matrix.walk :as w]
             [forma.reproject :as r]
@@ -119,7 +120,7 @@
 (defmapop series-end
   [series start]
   (let [length (count series)]
-    (dec (+ start length))))
+    (+ start length)))
 
 (defn analyze-trends
   "Accepts an est-map, and sources for ndvi and rain timeseries and
@@ -223,12 +224,34 @@ value, and the aggregate of the neighbors."
         (process-neighbors [neighbors] ?window :> ?win-idx ?val ?neighbor-val)
         (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line))))
 
+(defn gen-static-sources
+  [pail-path out-dir dataset-str]
+  (let [out-path (str out-dir "/" dataset-str)
+        src (split-chunk-tap pail-path [dataset-str])]
+    (<- [?s-res ?h ?v ?s ?l ?val]
+        (src _ ?x)
+        (thrift/unpack ?x :> _ ?loc ?obj _ _)
+        (thrift/unpack ?loc :> ?s-res ?h ?v ?s ?l)
+        (thrift/get-field-value ?obj :> ?val))))
+
+(defn read-static-sources
+  [seq-dir name-vec]
+  (let [gen-path (fn [name] (str seq-dir "/" name))
+        static-paths (map gen-path name-vec)]
+   (map hfs-seqfile static-paths)))
+
 (defn beta-data-prep
-  [{:keys [t-res est-start min-coast-dist]} dynamic-src static-src]
-  (let [first-idx (date/datetime->period t-res est-start)]
+  "for example, static-path can equal this on dan's local machine:
+   \"/mnt/hgfs/Dropbox/local/static-out\""
+  [{:keys [t-res est-start min-coast-dist]} dynamic-src static-path]
+  (let [first-idx (date/datetime->period t-res est-start)
+        [ecoid hansen border] (read-static-sources static-path
+                                                  ["ecoid" "hansen" "border"])]
     (<- [?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?eco ?hansen]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen ?border)
+        (ecoid ?s-res ?mod-h ?mod-v ?s ?l ?eco)
+        (border ?s-res ?mod-h ?mod-v ?s ?l ?border)
+        (hansen ?s-res ?mod-h ?mod-v ?s ?l ?hansen)
         (= ?pd first-idx)
         (>= ?border min-coast-dist)
         (:distinct false))))
@@ -246,11 +269,15 @@ value, and the aggregate of the neighbors."
 (defn beta-generator
   "query to return the beta vector associated with each ecoregion"
   [{:keys [t-res est-start ridge-const convergence-thresh max-iterations min-coast-dist]}
-   dynamic-src static-src]
-  (let [first-idx (date/datetime->period t-res est-start)]
+   dynamic-src static-path]
+  (let [first-idx (date/datetime->period t-res est-start)
+        [ecoid hansen border] (read-static-sources static-path
+                                                  ["ecoid" "hansen" "border"])]
     (<- [?s-res ?eco ?beta]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen ?border)
+        (ecoid ?s-res ?mod-h ?mod-v ?s ?l ?eco)
+        (border ?s-res ?mod-h ?mod-v ?s ?l ?border)
+        (hansen ?s-res ?mod-h ?mod-v ?s ?l ?hansen)
         (= ?pd first-idx)
         (>= ?border min-coast-dist)
         (log/logistic-beta-wrap [ridge-const convergence-thresh max-iterations]
@@ -264,12 +291,13 @@ value, and the aggregate of the neighbors."
 (defn forma-estimate
   "query to end all queries: estimate the probabilities for each
   period after the training period."
-  [beta-src dynamic-src static-src]
-  (let [betas (log/beta-dict beta-src)]
+  [beta-src dynamic-src static-path]
+  (let [betas (log/beta-dict beta-src)
+        [ecoid hansen border] (read-static-sources static-path
+                                                   ["ecoid" "hansen" "border"])]
     (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _ _)
-;;        (= period ?pd)
+        (ecoid ?s-res ?mod-h ?mod-v ?s ?l ?eco)
         (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
         (log/mk-timeseries ?pd ?prob :> ?prob-series)
         (:distinct false))))
