@@ -238,7 +238,8 @@
               ([:tmp-dirs rain-screened-path]
                  "Only keeps rain for a specific country"
                  (?- (hfs-seqfile rain-screened-path)
-                     (forma/screen-by-tileset tile-set rain-seq-path)))
+                     (forma/screen-by-tileset (hfs-seqfile rain-seq-path)
+                                              (tile-set :MYS))))
               
               rain-filter
               ([:tmp-dirs rain-path]
@@ -258,6 +259,12 @@
                                              (hfs-seqfile reli-path)
                                              (hfs-seqfile rain-path)))))
 
+              stop-pre-clean
+              ([]
+                 "stop everything before deleting the temp directory"
+                 (?- (hfs-seqfile "/mnt/hgfs/Dropbox/yikes")
+                     (hfs-seqfile "/mnt/hgfs/Dropbox/yikestimes")))
+              
               cleanseries
               ([:tmp-dirs clean-series]
                  "Screen out extremely cloudy pixels. Currently doesn't
@@ -282,6 +289,22 @@
                  (?- (hfs-seqfile cleanup-path)
                      (forma/trends-cleanup (hfs-seqfile trends-path))))
 
+              fire-step
+              ([:tmp-dirs fire-path]
+                 "Create fire series"
+                 (?- (hfs-seqfile fire-path)
+                     (tseries/fire-query fire-pail-path
+                                         t-res
+                                         "2000-11-01"
+                                         est-end)))
+
+              adjustfires
+              ([:tmp-dirs adjusted-fire-path]
+                 "Make sure fires data lines up temporally with our other
+                  timeseries."
+                 (?- (hfs-seqfile adjusted-fire-path)
+                     (forma/fire-tap est-map (hfs-seqfile fire-path))))
+              
               mid-forma
               ([:tmp-dirs forma-mid-path]
                  "Final step to collect all data for the feature vector -
