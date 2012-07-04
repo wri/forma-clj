@@ -222,17 +222,13 @@
               ([:tmp-dirs ndvi-path]
                  "Filters out NDVI with VCF < 25"
                  (?- (hfs-seqfile ndvi-path) 
-                     (mk-filter vcf-path
-                                (constrained-tap
-                                 ts-pail-path "ndvi" s-res t-res))))
+                     (mk-filter vcf-path (hfs-seqfile ndvi-seq-path))))
 
               reli-filter
               ([:tmp-dirs reli-path]
                  "Filters out reliability with VCF < 25"
                  (?- (hfs-seqfile reli-path)
-                     (mk-filter vcf-path
-                                (constrained-tap
-                                 ts-pail-path "reli" s-res t-res))))
+                     (mk-filter vcf-path (hfs-seqfile reli-seq-path))))
               
               screen-rain
               ([:tmp-dirs rain-screened-path]
@@ -246,8 +242,11 @@
                  "Filter out rain with VCF < 25"
                  (?- (hfs-seqfile rain-path)
                      (mk-filter vcf-path
-                                (adjusted-precl-tap
-                                 ts-pail-path s-res "32" t-res rain-screened-path))))
+                                (adjusted-precl-tap ts-pail-path
+                                                    s-res
+                                                    "32"
+                                                    t-res
+                                                    rain-screened-path))))
 
               adjustseries
               ([:tmp-dirs adjusted-series-path]
@@ -288,22 +287,6 @@
                   kill us with lots of observations"
                  (?- (hfs-seqfile cleanup-path)
                      (forma/trends-cleanup (hfs-seqfile trends-path))))
-
-              fire-step
-              ([:tmp-dirs fire-path]
-                 "Create fire series"
-                 (?- (hfs-seqfile fire-path)
-                     (tseries/fire-query fire-pail-path
-                                         t-res
-                                         "2000-11-01"
-                                         est-end)))
-
-              adjustfires
-              ([:tmp-dirs adjusted-fire-path]
-                 "Make sure fires data lines up temporally with our other
-                  timeseries."
-                 (?- (hfs-seqfile adjusted-fire-path)
-                     (forma/fire-tap est-map (hfs-seqfile fire-path))))
               
               mid-forma
               ([:tmp-dirs forma-mid-path]
