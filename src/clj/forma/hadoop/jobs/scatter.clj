@@ -126,7 +126,7 @@
           (:distinct false)))))
 
 (defmain formarunner
-  [tmp-root pail-path ts-pail-path out-path run-key]
+  [tmp-root pail-path ts-pail-path fire-pail-path out-path run-key]
   (let [{:keys [s-res t-res est-end] :as est-map} (forma-run-parameters run-key)
         mk-filter (fn [vcf-path ts-src] (forma/filter-query (hfs-seqfile vcf-path)
                                                            (:vcf-limit est-map)
@@ -170,6 +170,11 @@
                                                (hfs-seqfile ecoid-path)
                                                (hfs-seqfile border-path))))
 
+              stop-static
+              ([]
+                 "stop everything before deleting the temp directory"
+                 (?- (hfs-seqfile "/mnt/hgfs/Dropbox/yikes")
+                     (hfs-seqfile "/mnt/hgfs/Dropbox/yikestimes")))
               ndvi-step
               ([:tmp-dirs ndvi-path]
                  "Filters out NDVI with VCF < 25"
@@ -208,7 +213,7 @@
               ([:tmp-dirs fire-path]
                  "Create fire series"
                  (?- (hfs-seqfile fire-path)
-                     (tseries/fire-query pail-path
+                     (tseries/fire-query fire-pail-path
                                          t-res
                                          "2000-11-01"
                                          est-end)))
