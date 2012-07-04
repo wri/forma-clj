@@ -125,7 +125,7 @@
           (:distinct false))))
 
 (defmain formarunner
-  [tmp-root pail-path ts-pail-path out-path run-key]
+  [tmp-root pail-path ts-pail-path fire-pail-path out-path run-key]
   (let [{:keys [s-res t-res est-end] :as est-map} (forma-run-parameters run-key)
         mk-filter (fn [vcf-path ts-src] (forma/filter-query (hfs-seqfile vcf-path)
                                                            (:vcf-limit est-map)
@@ -168,22 +168,6 @@
                                                (hfs-seqfile hansen-path)
                                                (hfs-seqfile ecoid-path)
                                                (hfs-seqfile border-path))))
-
-              fire-step
-              ([:tmp-dirs fire-path]
-                 "Create fire series"
-                 (?- (hfs-seqfile fire-path)
-                     (tseries/fire-query ts-pail-path
-                                         t-res
-                                         "2000-11-01"
-                                         est-end)))
-
-              adjustfires
-              ([:tmp-dirs adjusted-fire-path]
-                 "Make sure fires data lines up temporally with our other
-                  timeseries."
-                 (?- (hfs-seqfile adjusted-fire-path)
-                     (forma/fire-tap est-map (hfs-seqfile fire-path))))
 
               ndvi-pail-seq-step
               ([:tmp-dirs ndvi-seq-path]
@@ -254,12 +238,6 @@
                        (forma/dynamic-filter (hfs-seqfile ndvi-path)
                                              (hfs-seqfile reli-path)
                                              (hfs-seqfile rain-path)))))
-
-              stop-pre-clean
-              ([]
-                 "stop everything before deleting the temp directory"
-                 (?- (hfs-seqfile "/mnt/hgfs/Dropbox/yikes")
-                     (hfs-seqfile "/mnt/hgfs/Dropbox/yikestimes")))
               
               cleanseries
               ([:tmp-dirs clean-series]
@@ -285,6 +263,28 @@
                  (?- (hfs-seqfile cleanup-path)
                      (forma/trends-cleanup (hfs-seqfile trends-path))))
               
+              stop-pre-clean
+              ([]
+                 "stop everything before deleting the temp directory"
+                 (?- (hfs-seqfile "/mnt/hgfs/Dropbox/yikes")
+                     (hfs-seqfile "/mnt/hgfs/Dropbox/yikestimes")))
+
+              fire-step
+              ([:tmp-dirs fire-path]
+                 "Create fire series"
+                 (?- (hfs-seqfile fire-path)
+                     (tseries/fire-query fire-pail-path
+                                         t-res
+                                         "2000-11-01"
+                                         est-end)))
+
+              adjustfires
+              ([:tmp-dirs adjusted-fire-path]
+                 "Make sure fires data lines up temporally with our other
+                  timeseries."
+                 (?- (hfs-seqfile adjusted-fire-path)
+                     (forma/fire-tap est-map (hfs-seqfile fire-path))))
+
               mid-forma
               ([:tmp-dirs forma-mid-path]
                  "Final step to collect all data for the feature vector -
