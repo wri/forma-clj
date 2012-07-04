@@ -111,12 +111,9 @@
 (defn adjusted-precl-tap
   "Document... returns a tap that adjusts for the incoming
   resolution."
-  [ts-path s-res base-t-res t-res & src]
-  (let [src (if src
-              src
-              (constrained-tap ts-path "precl" s-res base-t-res))]
-    (if (= t-res base-t-res)
-      src
+  [ts-path s-res base-t-res t-res src]
+  (if (= t-res base-t-res)
+      src ;;(constrained-tap ts-path "precl" s-res base-t-res)
       (<- [?path ?adjusted-pixel-chunk]
           (src ?path ?pixel-chunk)
           (thrift/unpack ?pixel-chunk :> ?name ?in-pix-loc ?ts ?t-res _)
@@ -125,10 +122,10 @@
           (map-round ?expanded-ts :> ?rounded-ts)
           (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?out-pix-loc)
           (thrift/DataChunk* ?name ?out-pix-loc ?rounded-ts ?t-res :> ?adjusted-pixel-chunk)
-          (:distinct false)))))
+          (:distinct false))))
 
 (defmain formarunner
-  [tmp-root pail-path ts-pail-path fire-pail-path out-path run-key]
+  [tmp-root pail-path ts-pail-path out-path run-key]
   (let [{:keys [s-res t-res est-end] :as est-map} (forma-run-parameters run-key)
         mk-filter (fn [vcf-path ts-src] (forma/filter-query (hfs-seqfile vcf-path)
                                                            (:vcf-limit est-map)
@@ -176,7 +173,7 @@
               ([:tmp-dirs fire-path]
                  "Create fire series"
                  (?- (hfs-seqfile fire-path)
-                     (tseries/fire-query fire-pail-path
+                     (tseries/fire-query ts-pail-path
                                          t-res
                                          "2000-11-01"
                                          est-end)))
@@ -246,7 +243,7 @@
                                                     s-res
                                                     "32"
                                                     t-res
-                                                    rain-screened-path))))
+                                                    (hfs-seqfile rain-screened-path)))))
 
               adjustseries
               ([:tmp-dirs adjusted-series-path]
