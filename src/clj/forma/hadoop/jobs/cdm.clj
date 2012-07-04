@@ -1,6 +1,7 @@
 (ns forma.hadoop.jobs.cdm
   "Functions and Cascalog queries for converting data into map tile coordinates."
   (:use [cascalog.api]
+        [forma.source.admin]
         [forma.gfw.cdm :only (latlon->tile, read-latlon, latlon-valid?)]
         [forma.utils :only (positions)])
   (:require [forma.postprocess.output :as o]
@@ -53,15 +54,18 @@
   Arguments:
     start - Start period date string.
     src - The source tap for FORMA data.
+    gadm-src - a sequence file source with mod-h, mod-v, sample, line, and gadm
     thresh - The threshold number for valid detections.
     tres - The temporal resolution as a string.
     tres-out - The output temporal resolution as a string.
     zoom - The map zoom level."
-  [src zoom tres tres-out start thresh]
+  [src gadm-src zoom tres tres-out start thresh]
   (let [epoch (date/datetime->period tres-out "2000-01-01")
         start-period (date/datetime->period tres start)]
-    (<- [?x ?y ?z ?p]
+    (<- [?x ?y ?z ?p ?iso]
         (src ?sres ?modh ?modv ?s ?l ?prob-series)
+        (gadm-src _ ?modh ?modv ?s ?l ?gadm)
+        (gadm->iso ?gadm :> ?iso)
         (o/clean-probs ?prob-series :> ?clean-series)
         (first-hit thresh ?clean-series :> ?first-hit-idx)
         (+ start-period ?first-hit-idx :> ?period)
@@ -143,3 +147,5 @@
 
 
 )
+
+
