@@ -194,13 +194,14 @@
 
   Also note that !!fire is an ungrounding variable, and triggers a left join
   with the trend result variables."
-  [dynamic-src fire-src]
-  (<- [?s-res ?period ?mh ?mv ?s ?l ?forma-val]
-      (fire-src ?s-res ?mh ?mv ?s ?l !!fire)
-      (dynamic-src ?s-res ?mh ?mv ?s ?l ?start ?end ?short ?long ?t-stat ?break)
-      (schema/forma-seq !!fire ?short ?long ?t-stat ?break :> ?forma-seq)
-      (p/index ?forma-seq :zero-index ?start :> ?period ?forma-val)
-      (:distinct false)))
+  [t-res est-map dynamic-src fire-src]
+  (let [start (date/datetime->period t-res (:est-start est-map))]
+    (<- [?s-res ?period ?mh ?mv ?s ?l ?forma-val]
+        (fire-src ?s-res ?mh ?mv ?s ?l !!fire)
+        (dynamic-src ?s-res ?mh ?mv ?s ?l _ ?end ?short ?long ?t-stat ?break)
+        (schema/forma-seq !!fire ?short ?long ?t-stat ?break :> ?forma-seq)
+        (p/index ?forma-seq :zero-index start :> ?period ?forma-val)
+        (:distinct false))))
 
 (defmapcatop [process-neighbors [num-neighbors]]
   "Processes all neighbors... Returns the index within the chunk, the

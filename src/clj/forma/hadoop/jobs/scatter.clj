@@ -130,12 +130,13 @@
 (defmain formarunner
   [tmp-root pail-path ts-pail-path fire-pail-path out-path run-key]
   (let [{:keys [s-res t-res est-end] :as est-map} (forma-run-parameters run-key)
-        mk-filter (fn [vcf-path ts-src]
-                    (forma/filter-query (hfs-seqfile vcf-path)
-                                        (:vcf-limit est-map)
-                                        ts-src))]
+        mk-filter (fn [vcf-path ts-src] (forma/filter-query (hfs-seqfile vcf-path)
+                                                           (:vcf-limit est-map)
+                                                           ts-src))]
     (assert est-map (str run-key " is not a valid run key!"))
+ 
     (workflow [tmp-root]
+
               vcf-step
               ([:tmp-dirs vcf-path]
                  (?- (hfs-seqfile vcf-path)
@@ -286,7 +287,9 @@
                  "Final step to collect all data for the feature vector -
                  trends + fires data"
                  (?- (hfs-seqfile forma-mid-path)
-                     (forma/forma-tap (hfs-seqfile cleanup-path)
+                     (forma/forma-tap t-res
+                                      est-map
+                                      (hfs-seqfile cleanup-path)
                                       (hfs-seqfile adjusted-fire-path))))
               
               final-forma
@@ -312,15 +315,15 @@
               ([:tmp-dirs beta-path]
                  "Generate beta vector"
                  (?- (hfs-seqfile beta-path)
-                       (forma/beta-gen est-map (hfs-seqfile beta-data-path))))
+                     (forma/beta-gen est-map (hfs-seqfile beta-data-path))))
 
               forma-estimate
               ([]
                  "Apply beta vector"
                  (?- (hfs-seqfile out-path :sinkmode :replace)
-                      (forma/forma-estimate (hfs-seqfile beta-path)
-                                            (hfs-seqfile final-path)
-                                            (hfs-seqfile static-path))))
+                     (forma/forma-estimate (hfs-seqfile beta-path)
+                                           (hfs-seqfile final-path)
+                                           (hfs-seqfile static-path))))
 
               stop-process
               ([]
