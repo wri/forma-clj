@@ -111,12 +111,14 @@
 (defn adjusted-precl-tap
   "Document... returns a tap that adjusts for the incoming
   resolution."
-  [ts-pail-path s-res base-t-res t-res]
-  (let [precl-tap (constrained-tap ts-pail-path "precl" s-res base-t-res)]
+  [ts-path s-res base-t-res t-res & src]
+  (let [src (if src
+              src
+              (constrained-tap ts-path "precl" s-res base-t-res))]
     (if (= t-res base-t-res)
-      precl-tap
+      src
       (<- [?path ?adjusted-pixel-chunk]
-          (precl-tap ?path ?pixel-chunk)
+          (src ?path ?pixel-chunk)
           (thrift/unpack ?pixel-chunk :> ?name ?in-pix-loc ?ts ?t-res _)
           (thrift/unpack ?in-pix-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
           (stretch/ts-expander base-t-res t-res ?ts :> ?expanded-ts)
@@ -169,45 +171,6 @@
                                                (hfs-seqfile ecoid-path)
                                                (hfs-seqfile border-path))))
 
-              stop-static
-              ([]
-                 "stop everything before deleting the temp directory"
-                 (?- (hfs-seqfile "/mnt/hgfs/Dropbox/yikes")
-                     (hfs-seqfile "/mnt/hgfs/Dropbox/yikestimes")))
-              ndvi-step
-              ([:tmp-dirs ndvi-path]
-                 "Filters out NDVI with VCF < 25"
-                 (?- (hfs-seqfile ndvi-path)
-                     (mk-filter vcf-path
-                                (constrained-tap
-                                 ts-pail-path "ndvi" s-res t-res))))
-
-              reli-step
-              ([:tmp-dirs reli-path]
-                 "Filters out reliability with VCF < 25"
-                 (?- (hfs-seqfile reli-path)
-                     (mk-filter vcf-path
-                                (constrained-tap
-                                 ts-pail-path "reli" s-res t-res))))
-
-              rain-step
-              ([:tmp-dirs rain-path]
-                 "Filter out rain with VCF < 25"
-                 (?- (hfs-seqfile rain-path)
-                     (mk-filter vcf-path
-                                (adjusted-precl-tap
-                                 ts-pail-path s-res "32" t-res))))
-
-              adjustseries
-              ([:tmp-dirs adjusted-series-path]
-                 "Adjusts lengths of all timeseries so they all cover the same
-                  time spans."
-                 (with-job-conf {"mapred.min.split.size" 805306368}
-                   (?- (hfs-seqfile adjusted-series-path)
-                       (forma/dynamic-filter (hfs-seqfile ndvi-path)
-                                             (hfs-seqfile reli-path)
-                                             (hfs-seqfile rain-path)))))
-
               fire-step
               ([:tmp-dirs fire-path]
                  "Create fire series"
@@ -223,6 +186,76 @@
                   timeseries."
                  (?- (hfs-seqfile adjusted-fire-path)
                      (forma/fire-tap est-map (hfs-seqfile fire-path))))
+
+              ndvi-pail-seq-step
+              ([:tmp-dirs ndvi-seq-path]
+                 "Filters out NDVI with VCF < 25"
+                 (?- (hfs-seqfile ndvi-seq-path)
+                     (<- [?pail-path ?data-chunk]
+                         ((constrained-tap ts-pail-path
+                                           "ndvi"
+                                           s-res
+                                           t-res) ?pail-path ?data-chunk))))
+
+              reli-pail-seq-step
+              ([:tmp-dirs reli-seq-path]
+                 "Filters out reliability with VCF < 25"
+                 (?- (hfs-seqfile reli-seq-path)
+                     (<- [?pail-path ?data-chunk]
+                         ((constrained-tap ts-pail-path
+                                           "reli"
+                                           s-res
+                                           t-res) ?pail-path ?data-chunk))))
+
+              rain-pail-seq-step
+              ([:tmp-dirs rain-seq-path]
+                 "Filter out rain with VCF < 25"
+                 (?- (hfs-seqfile rain-seq-path)
+                     (<- [?pail-path ?data-chunk]
+                         ((constrained-tap ts-pail-path
+                                           "precl"
+                                           s-res
+                                           "32") ?pail-path ?data-chunk))))
+
+              ndvi-filter
+              ([:tmp-dirs ndvi-path]
+                 "Filters out NDVI with VCF < 25"
+                 (?- (hfs-seqfile ndvi-path) 
+                     (mk-filter vcf-path
+                                (constrained-tap
+                                 ts-pail-path "ndvi" s-res t-res))))
+
+              reli-filter
+              ([:tmp-dirs reli-path]
+                 "Filters out reliability with VCF < 25"
+                 (?- (hfs-seqfile reli-path)
+                     (mk-filter vcf-path
+                                (constrained-tap
+                                 ts-pail-path "reli" s-res t-res))))
+              
+              screen-rain
+              ([:tmp-dirs rain-screened-path]
+                 "Only keeps rain for a specific country"
+                 (?- (hfs-seqfile rain-screened-path)
+                     (forma/screen-by-tileset tile-set rain-seq-path)))
+              
+              rain-filter
+              ([:tmp-dirs rain-path]
+                 "Filter out rain with VCF < 25"
+                 (?- (hfs-seqfile rain-path)
+                     (mk-filter vcf-path
+                                (adjusted-precl-tap
+                                 ts-pail-path s-res "32" t-res rain-screened-path))))
+
+              adjustseries
+              ([:tmp-dirs adjusted-series-path]
+                 "Adjusts lengths of all timeseries so they all cover the same
+                  time spans."
+                 (with-job-conf {"mapred.min.split.size" 805306368}
+                   (?- (hfs-seqfile adjusted-series-path)
+                       (forma/dynamic-filter (hfs-seqfile ndvi-path)
+                                             (hfs-seqfile reli-path)
+                                             (hfs-seqfile rain-path)))))
 
               cleanseries
               ([:tmp-dirs clean-series]

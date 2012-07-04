@@ -24,6 +24,19 @@
       (border-src ?s-res ?mod-h ?mod-v ?sample ?line ?coast-dist)
       (>= ?vcf vcf-limit)))
 
+(defn within-tileset?
+  [tile-set h v]
+  (let [tile [h v]]
+    (contains? tile-set tile)))
+
+(defn screen-by-tileset
+  [src tile-set]
+  (<- [?pixel-chunk]
+      (src _ ?pixel-chunk)
+      (thrift/unpack ?pixel-chunk :> _ ?pixel-loc _ _ _)
+      (thrift/unpack ?pixel-loc :> _ ?h ?v _ _)
+      (within-tileset? tile-set ?h ?v)))
+
 (defn fire-tap
   "Accepts an est-map and a query source of fire timeseries. Note that
   this won't work, pulling directly from the pail!"
