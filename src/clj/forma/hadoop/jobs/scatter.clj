@@ -249,7 +249,9 @@
                  "Final step to collect all data for the feature vector -
                  trends + fires data"
                  (?- (hfs-seqfile forma-mid-path)
-                     (forma/forma-tap (hfs-seqfile cleanup-path)
+                     (forma/forma-tap t-res
+                                      est-map
+                                      (hfs-seqfile cleanup-path)
                                       (hfs-seqfile adjusted-fire-path))))
               
               final-forma
