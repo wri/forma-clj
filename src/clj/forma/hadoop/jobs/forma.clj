@@ -31,8 +31,8 @@
 
 (defn screen-by-tileset
   [src tile-set]
-  (<- [?pixel-chunk]
-      (src _ ?pixel-chunk)
+  (<- [?pail-path ?pixel-chunk]
+      (src ?pail-path ?pixel-chunk)
       (thrift/unpack ?pixel-chunk :> _ ?pixel-loc _ _ _)
       (thrift/unpack ?pixel-loc :> _ ?h ?v _ _)
       (within-tileset? tile-set ?h ?v)))
