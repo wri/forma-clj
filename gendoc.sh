@@ -9,7 +9,7 @@ cd doc
 git checkout gh-pages
 git add .
 git commit -am "new documentation push."
-echo "Pushing to gh-pages branch on github..."
+echo "Pushing to gh-pages branch on github ..."
 git push -u origin gh-pages
 cd ..
 
