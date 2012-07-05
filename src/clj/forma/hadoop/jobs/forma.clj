@@ -144,6 +144,7 @@
         (a/long-stats ?ndvi ?short-precl :> ?long ?t-stat)
         (a/hansen-stat ?ndvi :> ?break)
         (series-end ?ndvi ?start :> ?end)
+        (:trap (hfs-textline "s3n://formareset/trap" :sinkmode :replace))
         (:distinct false))))
 
 (defn count-series
