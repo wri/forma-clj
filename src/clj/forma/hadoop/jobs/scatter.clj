@@ -111,19 +111,18 @@
 (defn adjusted-precl-tap
   "Document... returns a tap that adjusts for the incoming
   resolution."
-  [ts-pail-path s-res base-t-res t-res]
-  (let [precl-tap (constrained-tap ts-pail-path "precl" s-res base-t-res)]
-    (if (= t-res base-t-res)
-      precl-tap
+  [ts-path s-res base-t-res t-res src]
+  (if (= t-res base-t-res)
+      src ;;(constrained-tap ts-path "precl" s-res base-t-res)
       (<- [?path ?adjusted-pixel-chunk]
-          (precl-tap ?path ?pixel-chunk)
+          (src ?path ?pixel-chunk)
           (thrift/unpack ?pixel-chunk :> ?name ?in-pix-loc ?ts ?t-res _)
           (thrift/unpack ?in-pix-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
           (stretch/ts-expander base-t-res t-res ?ts :> ?expanded-ts)
           (map-round ?expanded-ts :> ?rounded-ts)
           (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?out-pix-loc)
           (thrift/DataChunk* ?name ?out-pix-loc ?rounded-ts ?t-res :> ?adjusted-pixel-chunk)
-          (:distinct false)))))
+          (:distinct false))))
 
 (defmain formarunner
   [tmp-root pail-path ts-pail-path fire-pail-path out-path run-key]
@@ -170,34 +169,65 @@
                                                (hfs-seqfile ecoid-path)
                                                (hfs-seqfile border-path))))
 
-              stop-static
-              ([]
-                 "stop everything before deleting the temp directory"
-                 (?- (hfs-seqfile "/mnt/hgfs/Dropbox/yikes")
-                     (hfs-seqfile "/mnt/hgfs/Dropbox/yikestimes")))
-              ndvi-step
+              ndvi-pail-seq-step
+              ([:tmp-dirs ndvi-seq-path]
+                 "Filters out NDVI with VCF < 25"
+                 (?- (hfs-seqfile ndvi-seq-path)
+                     (<- [?pail-path ?data-chunk]
+                         ((constrained-tap ts-pail-path
+                                           "ndvi"
+                                           s-res
+                                           t-res) ?pail-path ?data-chunk))))
+
+              reli-pail-seq-step
+              ([:tmp-dirs reli-seq-path]
+                 "Filters out reliability with VCF < 25"
+                 (?- (hfs-seqfile reli-seq-path)
+                     (<- [?pail-path ?data-chunk]
+                         ((constrained-tap ts-pail-path
+                                           "reli"
+                                           s-res
+                                           t-res) ?pail-path ?data-chunk))))
+
+              rain-pail-seq-step
+              ([:tmp-dirs rain-seq-path]
+                 "Filter out rain with VCF < 25"
+                 (?- (hfs-seqfile rain-seq-path)
+                     (<- [?pail-path ?data-chunk]
+                         ((constrained-tap ts-pail-path
+                                           "precl"
+                                           s-res
+                                           "32") ?pail-path ?data-chunk))))
+
+              ndvi-filter
               ([:tmp-dirs ndvi-path]
                  "Filters out NDVI with VCF < 25"
-                 (?- (hfs-seqfile ndvi-path)
-                     (mk-filter vcf-path
-                                (constrained-tap
-                                 ts-pail-path "ndvi" s-res t-res))))
+                 (?- (hfs-seqfile ndvi-path) 
+                     (mk-filter vcf-path (hfs-seqfile ndvi-seq-path))))
 
-              reli-step
+              reli-filter
               ([:tmp-dirs reli-path]
                  "Filters out reliability with VCF < 25"
                  (?- (hfs-seqfile reli-path)
-                     (mk-filter vcf-path
-                                (constrained-tap
-                                 ts-pail-path "reli" s-res t-res))))
-
-              rain-step
+                     (mk-filter vcf-path (hfs-seqfile reli-seq-path))))
+              
+              screen-rain
+              ([:tmp-dirs rain-screened-path]
+                 "Only keeps rain for a specific country"
+                 (?- (hfs-seqfile rain-screened-path)
+                     (forma/screen-by-tileset (hfs-seqfile rain-seq-path)
+                                              (tile-set :MYS))))
+              
+              rain-filter
               ([:tmp-dirs rain-path]
                  "Filter out rain with VCF < 25"
                  (?- (hfs-seqfile rain-path)
                      (mk-filter vcf-path
-                                (adjusted-precl-tap
-                                 ts-pail-path s-res "32" t-res))))
+                                (adjusted-precl-tap ts-pail-path
+                                                    s-res
+                                                    "32"
+                                                    t-res
+                                                    (hfs-seqfile rain-screened-path)))))
 
               adjustseries
               ([:tmp-dirs adjusted-series-path]
@@ -208,23 +238,7 @@
                        (forma/dynamic-filter (hfs-seqfile ndvi-path)
                                              (hfs-seqfile reli-path)
                                              (hfs-seqfile rain-path)))))
-
-              fire-step
-              ([:tmp-dirs fire-path]
-                 "Create fire series"
-                 (?- (hfs-seqfile fire-path)
-                     (tseries/fire-query fire-pail-path
-                                         t-res
-                                         "2000-11-01"
-                                         est-end)))
-
-              adjustfires
-              ([:tmp-dirs adjusted-fire-path]
-                 "Make sure fires data lines up temporally with our other
-                  timeseries."
-                 (?- (hfs-seqfile adjusted-fire-path)
-                     (forma/fire-tap est-map (hfs-seqfile fire-path))))
-
+              
               cleanseries
               ([:tmp-dirs clean-series]
                  "Screen out extremely cloudy pixels. Currently doesn't
@@ -248,6 +262,28 @@
                   kill us with lots of observations"
                  (?- (hfs-seqfile cleanup-path)
                      (forma/trends-cleanup (hfs-seqfile trends-path))))
+              
+              stop-pre-clean
+              ([]
+                 "stop everything before deleting the temp directory"
+                 (?- (hfs-seqfile "/mnt/hgfs/Dropbox/yikes")
+                     (hfs-seqfile "/mnt/hgfs/Dropbox/yikestimes")))
+
+              fire-step
+              ([:tmp-dirs fire-path]
+                 "Create fire series"
+                 (?- (hfs-seqfile fire-path)
+                     (tseries/fire-query fire-pail-path
+                                         t-res
+                                         "2000-11-01"
+                                         est-end)))
+
+              adjustfires
+              ([:tmp-dirs adjusted-fire-path]
+                 "Make sure fires data lines up temporally with our other
+                  timeseries."
+                 (?- (hfs-seqfile adjusted-fire-path)
+                     (forma/fire-tap est-map (hfs-seqfile fire-path))))
 
               mid-forma
               ([:tmp-dirs forma-mid-path]

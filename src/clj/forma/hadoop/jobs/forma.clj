@@ -24,6 +24,19 @@
       (border-src ?s-res ?mod-h ?mod-v ?sample ?line ?coast-dist)
       (>= ?vcf vcf-limit)))
 
+(defn within-tileset?
+  [tile-set h v]
+  (let [tile [h v]]
+    (contains? tile-set tile)))
+
+(defn screen-by-tileset
+  [src tile-set]
+  (<- [?pail-path ?pixel-chunk]
+      (src ?pail-path ?pixel-chunk)
+      (thrift/unpack ?pixel-chunk :> _ ?pixel-loc _ _ _)
+      (thrift/unpack ?pixel-loc :> _ ?h ?v _ _)
+      (within-tileset? tile-set ?h ?v)))
+
 (defn fire-tap
   "Accepts an est-map and a query source of fire timeseries. Note that
   this won't work, pulling directly from the pail!"
@@ -131,6 +144,7 @@
         (a/long-stats ?ndvi ?short-precl :> ?long ?t-stat)
         (a/hansen-stat ?ndvi :> ?break)
         (series-end ?ndvi ?start :> ?end)
+        (:trap (hfs-textline "s3n://formareset/trends-trap" :sinkmode :replace))
         (:distinct false))))
 
 (defn count-series

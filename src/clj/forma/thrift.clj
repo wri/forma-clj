@@ -62,16 +62,16 @@
   (get-property [x]))
 
 (defprotocol IModisChunkLocation
-  (get-resolution [x])
-  (get-tile-h [x])
-  (get-tile-v [x])
+  (get-chunk-resolution [x])
+  (get-chunk-tile-h [x])
+  (get-chunk-tile-v [x])
   (get-chunk-id [x])
   (get-chunk-size [x]))
 
 (defprotocol IModisPixelLocation
-  (get-resolution [x])
-  (get-tile-h [x])
-  (get-tile-v [x])
+  (get-pixel-resolution [x])
+  (get-pixel-tile-h [x])
+  (get-pixel-tile-v [x])
   (get-sample [x])
   (get-line [x]))
 
@@ -82,7 +82,7 @@
   (get-count [x]))
 
 (defprotocol IFormaValue
-  (get-fire-value [x])
+  (get-forma-fire-value [x])
   (get-short-drop [x])
   (get-long-drop [x])
   (get-tstat [x])
@@ -227,7 +227,8 @@
   [temp-330 conf-50 both-preds count]
   {:pre [(every? #(instance? java.lang.Long %) [temp-330 conf-50 both-preds count])
          (every? #(>= % 0) [temp-330 conf-50 both-preds count])
-         (or (= both-preds 0) (= both-preds 1))]}
+         ;;(or (= both-preds 0) (= both-preds 1))
+         ]}
   (FireValue. temp-330 conf-50 both-preds count))
 
 (defn ModisChunkLocation*
@@ -280,7 +281,7 @@
   {:pre  [(every? #(instance? java.lang.String %) [name res])
           (LocationPropertyValue? loc)
           (DataValue? val)
-          (or (not date) (string? date))]}
+          (or (not date) (string? (first date)))]}
   (let [loc (mk-location-prop loc)
         val (if (coll? val)
               (->> val pack mk-array-value mk-data-value)
@@ -302,17 +303,17 @@
 
 (extend-protocol IModisPixelLocation
   ModisPixelLocation
-  (get-resolution [x] (.getResolution x))
-  (get-tile-h [x] (.getTileH x))
-  (get-tile-v [x] (.getTileV x))  
+  (get-pixel-resolution [x] (.getResolution x))
+  (get-pixel-tile-h [x] (.getTileH x))
+  (get-pixel-tile-v [x] (.getTileV x))  
   (get-sample [x] (.getSample x))
   (get-line [x] (.getLine x)))  
 
 (extend-protocol IModisChunkLocation
   ModisPixelLocation
-  (get-resolution [x] (.getResolution x))
-  (get-tile-h [x] (.getTileH x))
-  (get-tile-v [x] (.getTileV x))  
+  (get-chunk-resolution [x] (.getResolution x))
+  (get-chunk-tile-h [x] (.getTileH x))
+  (get-chunk-tile-v [x] (.getTileV x))  
   (get-chunk-id [x] (.getChunkID x))
   (get-chunk-size [x] (.getChunkSize x)))  
 
@@ -331,7 +332,7 @@
 
 (extend-protocol IFormaValue
   FormaValue
-  (get-fire-value [x] (.getFireValue x))
+  (get-forma-fire-value [x] (.getFireValue x))
   (get-short-drop [x] (.getShortDrop x))
   (get-long-drop [x] (.getLongDrop x))
   (get-tstat [x] (.getTStat x))
@@ -417,6 +418,14 @@
 
   DataChunk
   (unpack [x] (vec (map #(.getFieldValue x %) (keys (DataChunk/metaDataMap)))))
+
+  ;; DataChunk
+  ;; (unpack [x]
+  ;;   (let [[name loc data t-res date]
+  ;;         (map #(.getFieldValue x %) (keys (DataChunk/metaDataMap)))
+  ;;         loc (->> loc get-property get-field-value)
+  ;;         data (->> data .getFieldValue)]
+  ;;     [name loc data t-res date]))
   
   ArrayValue
   (unpack [x] (->> x .getFieldValue unpack)))
