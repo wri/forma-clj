@@ -117,7 +117,8 @@
                   (series-src ?name ?datestring ?s-res ?mod-h ?mod-v ?s ?l ?tuple)
                   (date/datetime->period t-res ?datestring :> ?tperiod)
                   (mk-fire-tseries ?tperiod ?tuple :> _ ?tseries)
-                  (running-fire-sum start ?tseries :> ?fire-series))]
+                  (running-fire-sum start ?tseries :> ?fire-series)
+                  (:distinct true))]
     (<- [?pixel-chunk]
         (query ?name ?s-res ?h ?v ?sample ?line ?fire-series)
         (thrift/ModisPixelLocation* ?s-res ?h ?v ?sample ?line :> ?pixel-loc)
@@ -130,3 +131,4 @@
   (-> source-pail-path
       (pail/split-chunk-tap ["fire" "1000-01"])
       (create-fire-series t-res start end)))
+
