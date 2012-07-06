@@ -1,7 +1,7 @@
 (ns forma.hadoop.jobs.cdm
   "Functions and Cascalog queries for converting data into map tile coordinates."
   (:use [cascalog.api]
-        [cartodb.client]
+        [cartodb.client :only (insert-rows delete-all)]
         [forma.source.admin]
         [forma.gfw.cdm :only (latlon->tile, read-latlon, latlon-valid?)]
         [forma.utils :only (positions)])
@@ -11,6 +11,7 @@
             [cascalog.ops :as c]))
 
 ;; TODO: https://github.com/reddmetrics/forma-clj/pull/16#r782582
+
 (defbufferop min-period
   "Returns the minimum value in tuples."
   [tuples]
