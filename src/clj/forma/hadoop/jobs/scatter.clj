@@ -217,7 +217,7 @@
                  (?- (hfs-seqfile rain-screened-path)
                      (forma/screen-by-tileset (hfs-seqfile rain-seq-path)
                                               (tile-set :IDN :BRA))))
-              
+
               rain-filter
               ([:tmp-dirs rain-path]
                  "Filter out rain with VCF < 25"
@@ -263,21 +263,21 @@
                  (?- (hfs-seqfile cleanup-path)
                      (forma/trends-cleanup (hfs-seqfile trends-path))))
               
-              ;; fire-step
-              ;; ([:tmp-dirs fire-path]
-              ;;    "Create fire series"
-              ;;    (?- (hfs-seqfile fire-path)
-              ;;        (tseries/fire-query fire-pail-path
-              ;;                            t-res
-              ;;                            "2000-11-01"
-              ;;                            est-end)))
+              fire-step
+              ([:tmp-dirs fire-path]
+                 "Create fire series"
+                 (?- (hfs-seqfile fire-path)
+                     (tseries/fire-query fire-pail-path
+                                         t-res
+                                         "2000-11-01"
+                                         est-end)))
 
-              ;; adjustfires
-              ;; ([:tmp-dirs adjusted-fire-path]
-              ;;    "Make sure fires data lines up temporally with our other
-              ;;     timeseries."
-              ;;    (?- (hfs-seqfile adjusted-fire-path)
-              ;;        (forma/fire-tap est-map (hfs-seqfile fire-path))))
+              adjustfires
+              ([:tmp-dirs adjusted-fire-path]
+                 "Make sure fires data lines up temporally with our other
+                  timeseries."
+                 (?- (hfs-seqfile adjusted-fire-path)
+                     (forma/fire-tap est-map (hfs-seqfile fire-path))))
 
               mid-forma
               ([:tmp-dirs forma-mid-path]
