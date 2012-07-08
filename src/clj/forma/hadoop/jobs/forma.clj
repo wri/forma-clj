@@ -10,7 +10,8 @@
             [forma.hadoop.predicate :as p]
             [forma.trends.analysis :as a]
             [forma.ops.classify :as log]
-            [forma.trends.filter :as f]))
+            [forma.trends.filter :as f]
+            [forma.source.admin :as admin]))
 
 (defn consolidate-static
   "Due to an issue with Pail, we consolidate separate sequence files of static
@@ -29,6 +30,11 @@
   (let [tile [h v]]
     (contains? tile-set tile)))
 
+(defn in-country?
+  [iso-set gadm-id]
+  (contains? iso-set
+             (admin/gadm->iso gadm-id)))
+
 (defn screen-by-tileset
   [src tile-set]
   (<- [?pail-path ?pixel-chunk]
@@ -36,6 +42,13 @@
       (thrift/unpack ?pixel-chunk :> _ ?pixel-loc _ _ _)
       (thrift/unpack ?pixel-loc :> _ ?h ?v _ _)
       (within-tileset? tile-set ?h ?v)))
+
+(defn screen-by-iso
+  [iso-set static-src dynamic-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ndvi-ts ?precl-ts ?reli-ts]
+      (static-src ?s-res ?mod-h ?mod-v ?sample ?line _ ?gadm _ _ _)
+      (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ndvi-ts ?precl-ts ?reli-ts)
+      (in-country? iso-set ?gadm)))
 
 (defn fire-tap
   "Accepts an est-map and a query source of fire timeseries. Note that
