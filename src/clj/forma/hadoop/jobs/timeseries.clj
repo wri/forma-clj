@@ -102,8 +102,8 @@
   (<- [?name ?datestring ?s-res ?h ?v ?sample ?line ?agg-fire-val]
       (src _ ?pixel-chunk)
       (thrift/unpack ?pixel-chunk :> ?name ?pixel-loc ?data _ ?date)
-      (thrift/unpack ?data :> ?temp330 ?conf50 ?bothPreds ?count)
-      (thrift/FireValue* ?temp330 ?conf50 ?bothPreds ?count :> ?fire-val)
+      (thrift/unpack ?data :> ?temp-330 ?conf-50 ?bothPreds ?count)
+      (thrift/FireValue* ?temp-330 ?conf-50 ?bothPreds ?count :> ?fire-val)
       (merge-firevals ?fire-val :> ?agg-fire-val)
       (date/beginning t-res ?date :> ?datestring)
       (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)))

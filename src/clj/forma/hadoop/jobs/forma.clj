@@ -13,8 +13,8 @@
             [forma.trends.filter :as f]))
 
 (defn consolidate-static
-  "Due to an issue with Pail, we consolidate separate sequence files of static
-   data with one big join"
+  "Due to an issue with Pail, we consolidate separate sequence files
+   of static data with one big join"
   [vcf-limit vcf-src gadm-src hansen-src ecoid-src border-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?vcf ?gadm ?ecoid ?hansen ?coast-dist]
       (vcf-src    ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
@@ -85,9 +85,9 @@
                      :> ?start-idx ?precl-ts ?ndvi-ts ?reli-ts)))
 
 (defmapcatop tele-clean
-  "Return clean timeseries with telescoping window, nil if no (or not enough) good training data"
-  [{:keys [est-start est-end t-res]}
-   good-set bad-set start-period val-ts reli-ts]
+  "Return clean timeseries with telescoping window, nil if no (or not
+  enough) good training data"
+  [{:keys [est-start est-end t-res]} good-set bad-set start-period val-ts reli-ts]
   (let [reli-thresh 0.1
         freq (date/res->period-count t-res)
         [start-idx end-idx] (date/relative-period t-res start-period
@@ -193,8 +193,8 @@
 
   Note that all values internally discuss timeseries.
 
-  Also note that !!fire is an ungrounding variable, and triggers a left join
-  with the trend result variables."
+  Also note that !!fire is an ungrounding variable, and triggers a
+  left join with the trend result variables."
   [t-res est-map dynamic-src fire-src]
   (let [start (date/datetime->period t-res (:est-start est-map))]
     (<- [?s-res ?period ?mh ?mv ?s ?l ?forma-val]
@@ -206,10 +206,11 @@
 
 (defmapcatop [process-neighbors [num-neighbors]]
   "Processes all neighbors... Returns the index within the chunk, the
-value, and the aggregate of the neighbors."
+  value, and the aggregate of the neighbors."
   [window]
-  (for [[idx [val neighbors]] (->> (w/neighbor-scan num-neighbors window)
-                                   (map-indexed vector))
+  (for [[idx [val neighbors]]
+        (->> (w/neighbor-scan num-neighbors window)
+             (map-indexed vector))
         :when val]
     [idx val (->> neighbors
                   (apply concat)
@@ -298,40 +299,3 @@ value, and the aggregate of the neighbors."
         (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
         (log/mk-timeseries ?pd ?prob :> ?prob-series)
         (:distinct false))))
-
-(comment
-  (let [m {:est-start "2005-12-31"
-           :est-end "2010-01-17"
-           :s-res "500"
-           :t-res "16"
-           :neighbors 1
-           :window-dims [600 600]
-           :vcf-limit 25
-           :long-block 30
-           :window 10
-           :ridge-const 1e-8
-           :convergence-thresh 1e-10
-           :max-iterations 500}
-        ndvi-src [[1 (schema/chunk-value
-                      "ndvi" "32" nil
-                      (schema/pixel-location "500" 8 6 0 0)
-                      (schema/timeseries-value 693 (concat ndvi ndvi)))]]
-        reli-src [[1 (schema/chunk-value
-                      "reli" "32" nil
-                      (schema/pixel-location "500" 8 6 0 0)
-                      (schema/timeseries-value 693 (concat reli reli)))]]
-        rain-src [[2 (schema/chunk-value
-                      "precl" "32" nil
-                      (schema/pixel-location "500" 8 6 0 0)
-                      (schema/timeseries-value 693 (concat rain-raw rain-raw)))]]
-        vcf-src  [[3 (schema/chunk-value
-                      "vcf" "00" nil
-                      (schema/chunk-location "500" 8 6 0 24000)
-                      (into [] (repeat 156 30)))]]
-        fire-src [[(schema/chunk-value
-                    "precl" "32" nil
-                    (schema/pixel-location "500" 8 6 0 0)
-                    (schema/timeseries-value
-                     693 (repeat 312 (schema/fire-value
-                                      1 1 1 1))))]]]
-    (??- (forma-tap m ndvi-src reli-src rain-src vcf-src fire-src))))
