@@ -77,4 +77,3 @@
         (r/modis->latlon ?sres ?modh ?modv ?s ?l :> ?lat ?lon)
         (latlon-valid? ?lat ?lon) ;; Skip if lat/lon invalid.
         (latlon->tile ?lat ?lon zoom :> ?x ?y ?z))))
-
