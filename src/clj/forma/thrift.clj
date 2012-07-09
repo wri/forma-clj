@@ -249,7 +249,7 @@
 (defn TimeSeries*
   "Create a TimeSeries."
   ([start vals]
-    {:pre [(every? #(instance? java.lang.Long %) [start end])
+    {:pre [(instance? java.lang.Long start)
            (coll? vals)]}
     (let [elems (count vals)]
       (TimeSeries* start
