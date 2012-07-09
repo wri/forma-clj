@@ -216,8 +216,8 @@
                  "Only keeps rain for a specific country"
                  (?- (hfs-seqfile rain-screened-path)
                      (forma/screen-by-tileset (hfs-seqfile rain-seq-path)
-                                              (tile-set :MYS))))
-              
+                                              (tile-set :IDN :BRA))))
+
               rain-filter
               ([:tmp-dirs rain-path]
                  "Filter out rain with VCF < 25"
@@ -263,12 +263,6 @@
                  (?- (hfs-seqfile cleanup-path)
                      (forma/trends-cleanup (hfs-seqfile trends-path))))
               
-              stop-pre-clean
-              ([]
-                 "stop everything before deleting the temp directory"
-                 (?- (hfs-seqfile "/mnt/hgfs/Dropbox/yikes")
-                     (hfs-seqfile "/mnt/hgfs/Dropbox/yikestimes")))
-
               fire-step
               ([:tmp-dirs fire-path]
                  "Create fire series"
@@ -317,8 +311,11 @@
               gen-betas
               ([:tmp-dirs beta-path]
                  "Generate beta vector"
-                 (?- (hfs-seqfile beta-path)
-                     (forma/beta-gen est-map (hfs-seqfile beta-data-path))))
+                 (with-job-conf
+                   {"mapred.reduce.tasks" 200
+                    "mapred.child.java.opts" "-Xmx2048M"}
+                   (?- (hfs-seqfile beta-path)
+                       (forma/beta-gen est-map (hfs-seqfile beta-data-path)))))
 
               forma-estimate
               ([]
