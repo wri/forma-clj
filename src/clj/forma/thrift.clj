@@ -225,8 +225,7 @@
 (defn FireValue*
   "Create a FireValue."
   [temp-330 conf-50 both-preds count]
-  {:pre [(every? #(>= % 0) [temp-330 conf-50 both-preds count])
-         (or (= both-preds 0) (= both-preds 1))]}
+  {:pre [(every? #(>= % 0) [temp-330 conf-50 both-preds count])]}
   (FireValue. temp-330 conf-50 both-preds count))
 
 (defn ModisChunkLocation*
