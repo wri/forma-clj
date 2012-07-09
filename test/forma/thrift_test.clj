@@ -46,9 +46,9 @@
   (unpack (DataValue/doubleVal 1)) => 1.0)
 
 (fact "Check creating and unpacking TimeSeries objects."
-  (TimeSeries* 0 1 [1 1 1 1]) =>
-  (TimeSeries. 0 1 (->> (vec (map int [1 1 1 1])) IntArray. ArrayValue/ints))
-
+  (TimeSeries* 0 3 [1 1 1 1]) => (TimeSeries. 0 3 (->> (vec (map int [1 1 1 1])) IntArray. ArrayValue/ints))
+  (TimeSeries* 0 [1 1 1 1]) => (TimeSeries. 0 3 (->> (vec (map int [1 1 1 1])) IntArray. ArrayValue/ints))
+  
   (unpack (TimeSeries* 0 1 [1 1 1 1])) =>
   [0 1 (->> (map int [1 1 1 1]) IntArray. ArrayValue/ints)])
 
