@@ -120,7 +120,6 @@
                   (date/datetime->period t-res ?datestring :> ?tperiod)
                   (mk-fire-tseries ?tperiod ?tuple :> _ ?tseries)
                   (running-fire-sum start ?tseries :> ?fire-series)
-                  ;; (:trap (hfs-textline "s3n://formareset/fire-trap" :sinkmode :replace))
                   (:distinct true))]
     (<- [?pixel-chunk]
         (query ?name ?s-res ?h ?v ?sample ?line ?fire-series)
