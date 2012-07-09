@@ -1,13 +1,28 @@
+;; This namespace associates a GADM ID (a subprovince-level unique
+;; integer identifier) with a country-level ISO3 code.  The global
+;; variable `gadm-iso` is bound to a large map with GADM IDs as keys
+;; and ISO3 codes as values.  The supporting function `gadm->iso`
+;; pulls out the ISO3 value of a supplied GADM ID for use withing a
+;; cascalog query.
+
+;; Example: (gadm->iso 2048) => "AUS"
+
+;; References:
+;; GADM: http://www.gadm.org (level: ID_2)
+;; ISO3: http://en.wikipedia.org/wiki/ISO_3166-1_alpha-3
+
 (ns forma.source.gadmiso
   (:use cascalog.api)
   (:require [clojure.string :as string]
-            [clojure-csv.core :as csv]))
+            [clojure-csv.core :as csv]
+            [forma.testing :as t]))
 
 (def text-in
   "Reads `admin-map.csv` into a Clojure data structure, specifically a
   lazy sequence of vectors of the form [\"AFG\" \"1\"].  Note that the
   last line is empty, necessitating the use of `butlast`"
-  (butlast (csv/parse-csv (slurp "resources/admin-map.csv"))))
+  (let [csv-path (t/project-path "/resources/admin-map.csv")]
+    (butlast (csv/parse-csv (slurp csv-path)))))
 
 (defn parse-line
   "Accepts a vector of two strings of the form [\"AFG\" \"1\"],

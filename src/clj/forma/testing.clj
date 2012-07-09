@@ -1,8 +1,3 @@
-(ns forma.testing
-  "This namespace contains functions that assist in various testing
-operations."
-  (:use cascalog.api))
-
 ;; ## Directory Management
 ;;
 ;; These functions provide assistance for directory navigation for
@@ -12,6 +7,9 @@ operations."
 ;; on pallet or cake. We've included a test to make sure that `dev`
 ;; exists on any deployment of the given project; a failing test means
 ;; that this directory should be created.
+
+(ns forma.testing
+  (:use cascalog.api))
 
 (def dev-resources-subdir "/dev")
 
