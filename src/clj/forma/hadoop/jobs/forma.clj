@@ -125,7 +125,7 @@
 (defmapop series-end
   [series start]
   (let [length (count series)]
-    (+ start length)))
+    (dec (+ start length))))
 
 (defn analyze-trends
   "Accepts an est-map, and sources for ndvi and rain timeseries and
@@ -198,7 +198,7 @@
   (let [start (date/datetime->period t-res (:est-start est-map))]
     (<- [?s-res ?period ?mh ?mv ?s ?l ?forma-val]
         (fire-src ?s-res ?mh ?mv ?s ?l !!fire)
-        (dynamic-src ?s-res ?mh ?mv ?s ?l _ ?end ?short ?long ?t-stat ?break)
+        (dynamic-src ?s-res ?mh ?mv ?s ?l _ _ ?short ?long ?t-stat ?break)
         (schema/forma-seq !!fire ?short ?long ?t-stat ?break :> ?forma-seq)
         (p/index ?forma-seq :zero-index start :> ?period ?forma-val)
         (:distinct false))))
