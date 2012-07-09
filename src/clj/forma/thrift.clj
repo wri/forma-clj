@@ -404,8 +404,13 @@
   (unpack [x] (->> x .getDoubles vec))
 
   DataValue
-  (unpack [x] (->> x .getFieldValue unpack))
-
+  (unpack
+    [x]
+    (let [val (->> x .getFieldValue)]
+      (cond (instance? TUnion val) (unpack val)
+            (instance? TBase val) (unpack val)
+            :else val)))
+  
   FormaValue
   (unpack [x] (vec (map #(.getFieldValue x %) (keys (FormaValue/metaDataMap)))))
 

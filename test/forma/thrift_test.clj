@@ -41,6 +41,10 @@
   (ModisPixelLocation* "500" "1" 1 1 1) => (throws AssertionError)
   (unpack (ModisPixelLocation* "500" 1 1 1 1)) => ["500" 1 1 1 1])
 
+(fact "Check unpacking DataValue with primitive value."
+  (unpack (DataValue/intVal 1)) => 1
+  (unpack (DataValue/doubleVal 1)) => 1.0)
+
 (fact "Check creating and unpacking TimeSeries objects."
   (TimeSeries* 0 1 [1 1 1 1]) =>
   (TimeSeries. 0 1 (->> (vec (map int [1 1 1 1])) IntArray. ArrayValue/ints))
