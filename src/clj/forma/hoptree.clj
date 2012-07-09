@@ -93,7 +93,7 @@
   (util/idx->rowcol (:height window-map) (:width window-map) (:idx t)))
 
 (defmethod global-index WindowIndex [sres t & [window-map]]
-  (global-index sres (window-rowcol sres window-map t) window-map))
+  (global-index sres (WindowRowCol* (window-rowcol sres window-map t)) window-map))
 
 (defmulti global-rowcol (fn [sres t] (class t)))
 
