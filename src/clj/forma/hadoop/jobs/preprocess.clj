@@ -23,9 +23,10 @@
 
 (defmain PreprocessRain
   "See project wiki for example usage."
-  [path pail-path & countries]
+  [path pail-path s-res & countries]
+  {:pre [(string? s-res)]}
   (let [countries (map read-string countries)]
-    (rain-chunker "1000"
+    (rain-chunker s-res
                   static/chunk-size
                   (apply tile-set countries)
                   path
@@ -41,8 +42,9 @@
 
 (defmain PreprocessStatic
   "See project wiki for example usage."
-  [dataset ascii-path output-path & countries]
-  (static-chunker "500"
+  [dataset ascii-path output-path s-res & countries]
+  {:pre [(string? s-res)]}
+  (static-chunker s-res
                   static/chunk-size
                   (->> countries
                        (map read-string)
@@ -55,14 +57,15 @@
 (defmain PreprocessAscii
   "TODO: This is only good for hansen datasets looking to be combined
   Tidy up. This needs to be combined with PreprocessStatic."
-  [dataset ascii-path pail-path & countries]
-  {:pre [(#{"hansen" "vcf"} dataset)]}
+  [dataset ascii-path pail-path s-res & countries]
+  {:pre [(#{"hansen" "vcf"} dataset)
+         (string? s-res)]}
   (with-fs-tmp [_ tmp-dir]
     (let [line-tap (hfs-textline ascii-path)
           pix-tap  (->> countries
                         (map read-string)
                         (apply tile-set)
-                        (p/pixel-generator tmp-dir "1000"))]
+                        (p/pixel-generator tmp-dir s-res))]
       (->> (s/static-modis-chunks static/chunk-size
                                   dataset
                                   ({"vcf" c/min "hansen" c/sum} dataset c/max)
@@ -80,9 +83,9 @@
 (defmain PreprocessFire
   "Path for running FORMA fires processing. See the forma-clj wiki for
 more details."
-  [type path pail-path]
+  [type path pail-path m-res]
   (->> (case type
              "daily" (f/fire-source-daily     (hfs-textline path))
              "monthly" (f/fire-source-monthly (hfs-textline path)))
-       (f/reproject-fires "1000")
+       (f/reproject-fires m-res)
        (to-pail pail-path)))

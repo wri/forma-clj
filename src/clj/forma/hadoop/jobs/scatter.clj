@@ -181,6 +181,7 @@
               fire-step ([:tmp-dirs fire-path]
                            (?- (hfs-seqfile fire-path)
                                (tseries/fire-query pail-path
+                                                   s-res
                                                    t-res
                                                    "2000-11-01"
                                                    est-end)))
