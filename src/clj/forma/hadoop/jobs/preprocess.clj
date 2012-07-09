@@ -83,9 +83,9 @@
 (defmain PreprocessFire
   "Path for running FORMA fires processing. See the forma-clj wiki for
 more details."
-  [type path pail-path]
+  [type path pail-path m-res]
   (->> (case type
              "daily" (f/fire-source-daily     (hfs-textline path))
              "monthly" (f/fire-source-monthly (hfs-textline path)))
-       (f/reproject-fires "1000")
+       (f/reproject-fires m-res)
        (to-pail pail-path)))
