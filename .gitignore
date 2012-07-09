@@ -7,7 +7,6 @@ native
 logs/
 classes
 docs
-dev
 doc
 autodoc
 .#*

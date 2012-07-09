@@ -225,10 +225,7 @@
 (defn FireValue*
   "Create a FireValue."
   [temp-330 conf-50 both-preds count]
-  {:pre [(every? #(instance? java.lang.Long %) [temp-330 conf-50 both-preds count])
-         (every? #(>= % 0) [temp-330 conf-50 both-preds count])
-         ;;(or (= both-preds 0) (= both-preds 1))
-         ]}
+  {:pre [(every? #(>= % 0) [temp-330 conf-50 both-preds count])]}
   (FireValue. temp-330 conf-50 both-preds count))
 
 (defn ModisChunkLocation*
@@ -405,8 +402,13 @@
   (unpack [x] (->> x .getDoubles vec))
 
   DataValue
-  (unpack [x] (->> x .getFieldValue unpack))
-
+  (unpack
+    [x]
+    (let [val (->> x .getFieldValue)]
+      (cond (instance? TUnion val) (unpack val)
+            (instance? TBase val) (unpack val)
+            :else val)))
+  
   FormaValue
   (unpack [x] (vec (map #(.getFieldValue x %) (keys (FormaValue/metaDataMap)))))
 
