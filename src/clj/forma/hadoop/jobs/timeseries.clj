@@ -99,10 +99,12 @@
   "Converts the datestring into a time period based on the supplied
   temporal resolution."
   [src t-res]
-  (<- [?name ?datestring ?s-res ?h ?v ?sample ?line ?tuple]
+  (<- [?name ?datestring ?s-res ?h ?v ?sample ?line ?agg-fire-val]
       (src _ ?pixel-chunk)
       (thrift/unpack ?pixel-chunk :> ?name ?pixel-loc ?data _ ?date)
-      (merge-firevals ?data :> ?tuple)
+      (thrift/unpack ?data :> ?temp-330 ?conf-50 ?bothPreds ?count)
+      (thrift/FireValue* ?temp-330 ?conf-50 ?bothPreds ?count :> ?fire-val)
+      (merge-firevals ?fire-val :> ?agg-fire-val)
       (date/beginning t-res ?date :> ?datestring)
       (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)))
 
@@ -118,7 +120,6 @@
                   (date/datetime->period t-res ?datestring :> ?tperiod)
                   (mk-fire-tseries ?tperiod ?tuple :> _ ?tseries)
                   (running-fire-sum start ?tseries :> ?fire-series)
-                  (:trap (hfs-textline "s3n://formareset/fire-trap" :sinkmode :replace))
                   (:distinct true))]
     (<- [?pixel-chunk]
         (query ?name ?s-res ?h ?v ?sample ?line ?fire-series)

@@ -88,4 +88,3 @@ more details."
              "monthly" (f/fire-source-monthly (hfs-textline path)))
        (f/reproject-fires "1000")
        (to-pail pail-path)))
-

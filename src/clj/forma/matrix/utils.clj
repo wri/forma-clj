@@ -120,9 +120,6 @@ supplied collection returns true when compared to `compare-val` by
   ([edge idx]
      (idx->rowcol edge edge idx))
   ([nrows ncols idx]
-     {:pre [(< idx (* nrows ncols)), (not (neg? idx))]
-      :post [(and (< (first %) nrows)
-                  (< (second %) ncols))]}
      ((juxt #(quot % ncols) #(mod % ncols)) idx)))
 
 (defn rowcol->idx
@@ -133,9 +130,6 @@ supplied, assumes a square matrix."
   ([edge row col]
      (rowcol->idx edge edge row col))
   ([nrows ncols row col]
-     {:pre [(not (or (neg? row), (>= row nrows)
-                     (neg? col), (>= col ncols)))]
-      :post [(< % (* nrows ncols))]}
      (+ col (* ncols row))))
 
 ;; ## Multi-Dimensional Matrix Operations

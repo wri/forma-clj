@@ -1,8 +1,8 @@
 (ns forma.hadoop.jobs.cdm
   "Functions and Cascalog queries for converting data into map tile coordinates."
   (:use [cascalog.api]
-        [cartodb.client]
-        [forma.source.admin]
+        [cartodb.playground :only (insert-rows delete-all)]
+        [forma.source.gadmiso :only (gadm->iso)]
         [forma.gfw.cdm :only (latlon->tile, read-latlon, latlon-valid?)]
         [forma.utils :only (positions)])
   (:require [forma.postprocess.output :as o]
@@ -10,7 +10,6 @@
             [forma.date-time :as date]
             [cascalog.ops :as c]))
 
-;; TODO: https://github.com/reddmetrics/forma-clj/pull/16#r782582
 (defbufferop min-period
   "Returns the minimum value in tuples."
   [tuples]
@@ -25,9 +24,7 @@
     series - A vector of numbers.
 
   Example usage:
-    > (first-hit 5 [1 2 3 4 5 6 7 8 9 10])
-    > 4
-  "
+    (first-hit 5 [1 2 3 4 5 6 7 8 9 10]) => 4"
   [thresh series]
   (first (positions (partial <= thresh) series)))
 
@@ -74,6 +71,5 @@
         (- ?period-new-res epoch :> ?rp)
         (min-period ?rp :> ?p)
         (r/modis->latlon ?sres ?modh ?modv ?s ?l :> ?lat ?lon)
-        (latlon-valid? ?lat ?lon) ;; Skip if lat/lon invalid.
+        (latlon-valid? ?lat ?lon)
         (latlon->tile ?lat ?lon zoom :> ?x ?y ?z))))
-

@@ -185,8 +185,6 @@
   (<- [?pixel-chunk]
       (p/add-fields m-res :> ?m-res)
       (src ?dataset ?date ?t-res ?lat ?lon ?tuple)
-      (thrift/pack ?tuple :> ?tuple-val)
       (r/latlon->modis ?m-res ?lat ?lon :> ?h ?v ?sample ?line)
       (thrift/ModisPixelLocation* ?m-res ?h ?v ?sample ?line :> ?pixel-loc)
-      (thrift/DataChunk* ?dataset ?pixel-loc ?tuple-val ?t-res ?date  :> ?pixel-chunk)
-      ))
+      (thrift/DataChunk* ?dataset ?pixel-loc ?tuple ?t-res ?date  :> ?pixel-chunk)))
