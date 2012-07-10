@@ -2,44 +2,51 @@
   (:use [forma.utils :only (positions average scale idx)])
   (:require  [forma.matrix.utils :as u]
              [incanter.core :as i]
-             [incanter.stats :as s]))
+             [incanter.stats :as s]
+             [clojure.set :as set]))
 
 ;; Remove seasonal component by basic dummy decomposition
 
 (defn dummy-mat
-  "returns an incanter matrix of `n` cycling identity matrices of
+  "Returns an incanter matrix of `n` cycling identity matrices of
   dimension `freq`, used as the cofactor matrix for deseasonalizing a
   time series.
 
   Example:
-    (dummy-mat 23 (count (s/sample-normal 100)))
+    (use '[forma.trends.data :only (ndvi)])
+    (dummy-mat 23 (count ndvi))
     ;; 23: frequency of 16-day MODIS data
     ;; 12: frequency of 32-day MODIS data"
   [freq n]
-  (i/matrix (take n (cycle (i/identity-matrix freq)))))
+  {:pre [(>= n freq)]}
+  (let [cycle-mat (cycle (i/identity-matrix freq))]
+    (i/matrix
+     (take n cycle-mat))))
 
 (defn deseasonalize
-  "accepts a timeseries `ts` with frequency `freq` and returns a
-  vector with the seasonal component removed; the returned vector is
-  only the trend component and the idiosyncratic disturbance of the
-  original time series.
+  "Accepts a timeseries `ts` with cyclical frequency `freq` and
+  returns a vector with the seasonal component removed; the returned
+  vector is only the trend component and the idiosyncratic disturbance
+  of the original time series.
 
   Precondition avoids singular matrix by throwing exception
   when `ts` is shorter than `freq`. Throws an exception - due to meaningless
   results - if `freq` equals 1 or in case we see `nil` as the `ts`.
 
   Example:
-    (deseasonalize 23 (s/sample-uniform 200))"
+    (use '[forma.trends.data :only (ndvi)])
+    (deseasonalize 23 ndvi)"
   [freq ts]
-  {:pre [(>= (count ts) freq)
+  {:pre [(>= (i/nrow ts) freq)
          (< 1 freq)]}
   (let [x (dummy-mat freq (i/nrow ts))
-          xt (i/trans x)
-          xtx (i/mmult xt x)
-          coefs (i/mmult (i/solve xtx) xt ts)
-          fitted (i/mmult x coefs)]
-      (i/to-vect (i/plus (i/minus ts fitted)
-                         (s/mean ts)))))
+        xt (i/trans x)
+        xtx (i/mmult xt x)
+        coefs (i/mmult (i/solve xtx) xt ts)
+        fitted (i/mmult x coefs)]
+    (i/to-vect
+     (i/plus (i/minus ts fitted)
+             (s/mean ts)))))
 
 ;; Remove seasonal component by harmonic decomposition
 
@@ -67,10 +74,14 @@
   3 to replicate procedure in the Verbesselt (2010)), and the
   time-series.
 
+  Example:
+    (use '[forma.trends.data :only (ndvi)])
+    (harmonic-seasonal-decomposition 23 3 ndvi)
+
   Reference:
-  Verbesselt, J. et al. (2010) Phenological Change Detection while
-  Accounting for Abrupt and Gradual Trends in Satellite Image Time
-  Series, Remote Sensing of Environment, 114(12), 2970-298"
+    Verbesselt, J. et al. (2010) Phenological Change Detection while
+    Accounting for Abrupt and Gradual Trends in Satellite Image Time
+    Series, Remote Sensing of Environment, 114(12), 2970-298"
   [freq k coll]
   (let [S (:fitted (s/linear-model coll (k-harmonic-matrix freq k coll)))]
     (map #(-> (- % %2) (+ (average coll)))
@@ -82,8 +93,8 @@
 ;; Reference: http://goo.gl/VC7jJ
 
 (defn hp-mat
-  "returns the matrix of coefficients from the minimization problem
-  required to parse the trend component from a time-series of length
+  "Returns the matrix of coefficients from the minimization problem
+  required to extract the trend component from a time-series of length
   `T`, which has to be greater than or equal to 9 periods."
   [T]
   {:pre  [(>= T 9)]
@@ -91,9 +102,9 @@
   (let [[first second :as but-2]
         (for [x (range (- T 2))
               :let [idx (if (>= x 2) (- x 2) 0)]]
-          (u/insert-into-val 0 idx T (cond (= x 0)  [1 -2 1]
-                                           (= x 1)  [-2 5 -4 1]
-                                           :else [1 -4 6 -4 1])))]
+          (u/insert-into-val 0 idx T (cond (= x 0) [1 -2 1]
+                                           (= x 1) [-2 5 -4 1]
+                                           :else   [1 -4 6 -4 1])))]
     (->> [second first]
          (map reverse)
          (concat but-2)
@@ -102,9 +113,15 @@
 (defn hp-filter
   "return a smoothed time series, given the original time series and
   H-P filter parameter (lambda); from the following reference, we calculate
-  inv(lambdaF + I)*y
+  inv(lambdaF + I)*y; in general, lambda = 1600 is suggested for quarterly
+  data.
 
- Reference: http://goo.gl/VC7jJ"
+  Example:
+    (use '[forma.trends.data :only (ndvi)])
+    (hp-filter 100 ndvi)
+
+  Reference:
+    http://goo.gl/hUx2d"
   [lambda ts]
   (let [T (count ts)
         coeff-matrix (i/mult lambda (hp-mat T))
@@ -116,13 +133,13 @@
 ;; Interpolate unreliable values
 
 (defn interpolate
-  "calculate a linear interpolation between `x1` and `x2` with the specified
-  `length` between them."
+  "calculate a linear interpolation between `x1` and `x2` with the
+  specified `length` between them."
   [x1 x2 length]
+  {:post [(= (count %) length)]}
   (let [delta (/ (- x2 x1) length)]
     (vec
-     (for [n (range length)]
-       (float (+ x1 (* n delta)))))))
+     (for [n (range length)] (float (+ x1 (* n delta)))))))
 
 (defn stretch-ts
   "stretch time-series across bad values if the left and right values of a
@@ -156,10 +173,10 @@
 
 (defn bad-ends
   "make a set of indices of a collection `coll` for which there are
-  continuous *bad* values, given by the set of values in `bad-set`
-  which serves as a predicate function to (effectively) filter `coll`
-  on the ends.  If there are no bad values on either end, then the
-  function will return an empty set."
+  continuous bad values, given by the set of values in `bad-set` which
+  serves as a predicate function to (effectively) filter `coll` on the
+  ends.  If there are no bad values on either end, then the function
+  will return an empty set."
   [bad-set coll]
   (let [m-coll (map-indexed vector coll)
         r-coll (reverse m-coll)]
@@ -169,25 +186,23 @@
                  [m-coll r-coll])))))
 
 (defn apply-to-valid
-  "apply function `f` to all valid (non-nil) values within a collection `coll`"
+  "apply function `f` to all valid (non-nil) values within a
+  collection `coll`"
   [f coll]
   (f (filter (complement nil?) coll)))
 
 (defn neutralize-ends
-  "replace the ends of a value-collection (like NDVI) with the mean of valid values
-  if the ends are unreliable, according to an associated reliability index, manifest
-  in `reli-coll`. If there are no bad values (as indicated by `bad-set` values in
-  `reli-coll`) then `neutralize-ends` will return the original time-series.
-  `bad-set` is a set of `reli-coll` values that indicate unreliable pixels."
+  "replace the ends of a value-collection (like NDVI) with the mean of
+  valid values if the ends are unreliable, according to an associated
+  reliability index, manifest in `reli-coll`. If there are no bad
+  values (as indicated by `bad-set` values in `reli-coll`) then
+  `neutralize-ends` will return the original time-series.  `bad-set`
+  is a set of `reli-coll` elements that indicate unreliable pixels."
   [bad-set reli-coll val-coll]
-  (let [avg (apply-to-valid u/coll-avg
-                            (mask bad-set reli-coll val-coll))]
-    (replace-index-set (bad-ends bad-set reli-coll)
-                       avg
-                       val-coll)))
-
-;; TODODAN: This function works, but it's ugly.  Clean up. And put in
-;; pre- and post-conditions.
+  (let [masked-coll (mask bad-set reli-coll val-coll)
+        avg (apply-to-valid u/coll-avg masked-coll)
+        bad-idx (bad-ends bad-set reli-coll)]
+    (replace-index-set bad-idx avg val-coll)))
 
 (defn make-reliable
   "Cleans up a timeseries by replacing or interpolating over low-quality
@@ -218,6 +233,27 @@
                                       (partition 2 1 good-seq))
                                  (nth new-vals (last good-seq))]))))))
 
+(defn walk-reliable [good-set bad-set value-coll quality-coll]
+  (let [bad-end-set (bad-ends bad-set quality-coll)
+                      new-qual (replace-index-set bad-end-set
+                                                  (first good-set)
+                                                  quality-coll)
+                      new-vals (neutralize-ends bad-set
+                                                quality-coll
+                                                 value-coll)
+                      good-seq (positions (complement bad-set)
+                                          new-qual)]
+                  (vec (flatten [(map (partial stretch-ts new-vals)
+                                      (partition 2 1 good-seq))
+                                 (nth new-vals (last good-seq))]))))
+
+(defn make-reliable
+  [good-set bad-set val-coll reli-coll]
+  (let [reli-set (set reli-coll)]
+    (cond (empty? (seq (set/intersection good-set reli-set))) nil
+          (empty? (set/difference good-set reli-set)) (vec val-coll)
+          :else (walk-reliable good-set bad-set val-coll reli-coll))))
+
 ;; Functions to collect cleaning functions for use in the trend
 ;; feature extraction
 
@@ -247,22 +283,19 @@
        (map #(Math/round %))))
 
 (defn reliable?
-  "Checks whether the share of reliable pixels exceeds a supplied minimum.
+  "Checks that the share of reliable pixels exceeds a supplied minimum.
 
-  This should be used to filter out pixels that are too unreliable for analysis, given
-   that we use linear interpolation to replace unreliable periods. We have not hardcoded
-   a specific threshold, but the papers below provide guidance:
+  This should be used to filter out pixels that are too unreliable for
+  analysis, given that we use linear interpolation to replace
+  unreliable periods. We have not hardcoded a specific threshold, but
+  the papers below provide guidance:
 
-  0.8 reliable in de Beurs (2009) http://dx.doi.org/10.1088/1748-9326/4/4/045012
-  0.9 reliable in Verbesselt 2010 http://dx.doi.org/10.1016/j.rse.2010.08.003
+  0.8 reliable in de Beurs (2009) http://goo.gl/zknDv
+  0.9 reliable in Verbesselt (2010) http://goo.gl/daZwN
 
-  Usage:
-
-  (reliable? #{0 1} 0.9 [0 0 0 1 1 0 1 1 0 0])
-  ;=> true
-
-  (reliable? #{0 1} 0.9 [0 0 0 2 2 0 1 1 0 0])
-  ;=> false"
+  Example usage:
+    (reliable? #{0 1} 0.9 [0 0 0 1 1 0 1 1 0 0]) => true
+    (reliable? #{0 1} 0.9 [0 0 0 2 2 0 1 1 0 0]) => false"
   [good-set good-min reli-ts]
   (<= good-min (float
                 (/ (count (filter good-set reli-ts))
@@ -272,4 +305,3 @@
   "Shorten timeseries to length of model timeseries"
   [model-ts ts]
   [(vec (take (count model-ts) ts))])
-
