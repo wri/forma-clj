@@ -204,48 +204,49 @@
         bad-idx (bad-ends bad-set reli-coll)]
     (replace-index-set bad-idx avg val-coll)))
 
-(defn make-reliable
-  "Cleans up a timeseries by replacing or interpolating over low-quality
-   or unreliable values, such as those with cloud contamination. `good-set`
-   and `bad-set` are Clojure sets used to identify good and bad values.
+;; (defn make-reliable
+;;   "Cleans up a timeseries by replacing or interpolating over low-quality
+;;    or unreliable values, such as those with cloud contamination. `good-set`
+;;    and `bad-set` are Clojure sets used to identify good and bad values.
 
-  This function has two parts: (1) replace bad values at the ends
-  with the average of the reliable values in the target coll,
-  `value-coll`. (2) smooth over *bad* values, given by `bad-set`,
-  which are determined based on the reliability (or quality)
-  collection, `quality-coll`.  The `good-set` parameter is a set of
-  passable values, presumably interchangeable.  If this assumption is
-  not true, then an adjustment will have to be made to this function."
+;;   This function has two parts: (1) replace bad values at the ends
+;;   with the average of the reliable values in the target coll,
+;;   `value-coll`. (2) smooth over *bad* values, given by `bad-set`,
+;;   which are determined based on the reliability (or quality)
+;;   collection, `quality-coll`.  The `good-set` parameter is a set of
+;;   passable values, presumably interchangeable.  If this assumption is
+;;   not true, then an adjustment will have to be made to this function."
+;;   [good-set bad-set value-coll quality-coll]
+;;   (let [qual-set (set quality-coll)]
+;;     (cond (empty? (seq (clojure.set/intersection good-set qual-set))) nil
+;;           (empty? (clojure.set/difference qual-set good-set)) (vec value-coll)
+;;           :else (let [bad-end-set (bad-ends bad-set quality-coll)
+;;                       new-qual (replace-index-set bad-end-set
+;;                                                   (first good-set)
+;;                                                   quality-coll)
+;;                       new-vals (neutralize-ends bad-set
+;;                                                 quality-coll
+;;                                                  value-coll)
+;;                       good-seq (positions (complement bad-set)
+;;                                           new-qual)]
+;;                   (vec (flatten [(map (partial stretch-ts new-vals)
+;;                                       (partition 2 1 good-seq))
+;;                                  (nth new-vals (last good-seq))]))))))
+
+(defn walk-reliable
   [good-set bad-set value-coll quality-coll]
-  (let [qual-set (set quality-coll)]
-    (cond (empty? (seq (clojure.set/intersection good-set qual-set))) nil
-          (empty? (clojure.set/difference qual-set good-set)) (vec value-coll)
-          :else (let [bad-end-set (bad-ends bad-set quality-coll)
-                      new-qual (replace-index-set bad-end-set
-                                                  (first good-set)
-                                                  quality-coll)
-                      new-vals (neutralize-ends bad-set
-                                                quality-coll
-                                                 value-coll)
-                      good-seq (positions (complement bad-set)
-                                          new-qual)]
-                  (vec (flatten [(map (partial stretch-ts new-vals)
-                                      (partition 2 1 good-seq))
-                                 (nth new-vals (last good-seq))]))))))
-
-(defn walk-reliable [good-set bad-set value-coll quality-coll]
   (let [bad-end-set (bad-ends bad-set quality-coll)
-                      new-qual (replace-index-set bad-end-set
-                                                  (first good-set)
-                                                  quality-coll)
-                      new-vals (neutralize-ends bad-set
-                                                quality-coll
-                                                 value-coll)
-                      good-seq (positions (complement bad-set)
-                                          new-qual)]
-                  (vec (flatten [(map (partial stretch-ts new-vals)
-                                      (partition 2 1 good-seq))
-                                 (nth new-vals (last good-seq))]))))
+        new-qual (replace-index-set bad-end-set
+                                    (first good-set)
+                                    quality-coll)
+        new-vals (neutralize-ends bad-set
+                                  quality-coll
+                                  value-coll)
+        good-seq (positions (complement bad-set)
+                            new-qual)]
+    (vec (flatten [(map (partial stretch-ts new-vals)
+                        (partition 2 1 good-seq))
+                   (nth new-vals (last good-seq))]))))
 
 (defn make-reliable
   [good-set bad-set val-coll reli-coll]
@@ -278,8 +279,8 @@
    further documentation. We use round to remove unwarranted numerical precision
    from cleaned timeseries values."
   [freq good-set bad-set spectral-ts reli-ts]
-  (->> (make-reliable good-set bad-set spectral-ts reli-ts)
-       (deseasonalize freq)
+  (->> (make-reliable bad-set good-set spectral-ts reli-ts) 
+       (deseasonalize freq) 
        (map #(Math/round %))))
 
 (defn reliable?
