@@ -108,7 +108,7 @@ has five elements."
 (fact "ensure that the beginning of the fully clean -- reliable and
 deseasonalized -- NDVI timeseries matches true values. "
   (make-clean 23 #{0 1} #{2 3 255} ndvi reli)
-  => (has-prefix [7243 9048 6544 6439 6317]))
+  => (has-prefix [7753 7955 7635 8360 7888]))
 
 (fact "Make sure rain is shortened to length of input ts"
   (shorten-ts [1 2 3] [1 2 3 4 5]) => [[1 2 3]])
