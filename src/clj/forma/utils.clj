@@ -9,32 +9,45 @@
 (defn throw-illegal [s]
   (throw (IllegalArgumentException. s)))
 
-(defn round-places
-  "Rounds the supplied number to the supplied number of decimal
-  points, and returns a float representation."
-  [sig-figs number]
-  (let [factor (expt 10 sig-figs)]
-    (double (/ (round (* factor number)) factor))))
-
 (defn strings->floats
   "Accepts any number of string representations of floats, and
-  returns the corresponding sequence of floats."
+  returns the corresponding sequence of floats.
+
+  Example usage:
+    (strings->floats \"192\" \"12\") => [192.0 12.0]"
   [& strings]
   (map #(Float. %) strings))
 
 (defn between?
   "Returns true of the supplied arg `x` falls between the supplied
-  `lower` and `upper` bounds (inclusive), false otherwise."
+  `lower` and `upper` bounds (inclusive), false otherwise.
+
+  Example usage:
+    (between? -2 5 1) => true"
   [lower upper x]
   (and (>= x lower) (<= x upper)))
 
-(defn thrush [& args]
+(defn thrush
+  "Very similar to `clojure.core/comp`, this function applies the
+ function and parameters from left to right in such a way that it
+ evaluates the function, unlike a macro.  Unlike, `comp` however, this
+ function accepts an arbitrary number of functions as arguments.
+
+  Example usage:
+    (thrush 2 #(* % 5) (partial + 2)) => 12
+    (thrush 3 #(* % 5) (partial + 2)) => 17
+
+    similar to: ((comp (partial + 2) #(* % 5)) 2) => 12"
+  [& args]
   (reduce #(%2 %1) args))
 
 (defn nth-in
   "Takes a nested collection and a sequence of keys, and returns the
   value obtained by taking `nth` in turn on each level of the nested
-  collection."
+  collection.
+
+  Example usage:
+    (nth-in [[1 2 3] [4 5 6]] [0 2]) => 3"
   [coll ks]
   (apply thrush coll (for [k ks]
                        (fn [xs] (nth xs k)))))
@@ -43,39 +56,36 @@
   "Splits a sequence with an even number of entries into two sequences
   by pulling alternating entries. For example:
 
-    (unweave [0 1 2 3])
-    ;=> [(0 2) (1 3)]"
+  Example usage:
+    (unweave [0 1 2 3]) => [(0 2) (1 3)]"
   [coll]
   {:pre [(seq coll), (even? (count coll))]}
   [(take-nth 2 coll) (take-nth 2 (rest coll))])
 
 (defn find-first
-  "Returns the first item of coll for which (pred item) returns logical true.
-  Consumes sequences up to the first match, will consume the entire sequence
-  and return nil if no match is found."
+  "Returns the first item of coll for which (pred item) returns
+  logical true. Consumes sequences up to the first match, will consume
+  the entire sequence and return nil if no match is found.
+
+  Example usage:
+    (find-first pos? [-1 -2 0 3 4 -1 5]) => 3"
   [pred coll]
   (first (filter pred coll)))
 
 (defn scale
-  "Returns a collection obtained by scaling each number in `coll` by
-  the supplied number `fact`."
+  "Returns a collection obtained by scaling each element in `coll` by
+  the supplied number `factor`.
+
+  Example usage:
+    (scale 4 [0 1 2]) => '(0 4 8)"
   [factor coll]
   (for [x coll] (* x factor)))
-
-(defn dot-product
-  "returns the dot product of two vectors"
-  [x y]
-  (reduce + (map * x y)))
-
-(defn multiply-rows
-  "multiply matrix rows (in place) by a collection"
-  [coll mat]
-  (map (partial map * coll) mat))
 
 (defn weighted-mean
   "Accepts a number of `<val, weight>` pairs, and returns the mean of
   all values with corresponding weights applied. For example:
 
+  Example usage:
     (weighted-avg 8 3 1 1) => 6.25"
   [& val-weight-pairs]
   {:pre [(even? (count val-weight-pairs))]}
@@ -88,7 +98,10 @@
 
 (defn positions
   "Returns a lazy sequence containing the positions at which pred
-   is true for items in coll."
+   is true for items in coll.
+
+  Example usage:
+    (positions pos? [-1 -2 0 6 12 -1 2]) => '(3 4 6)"
   [pred coll]
   (for [[idx elt] (map-indexed vector coll) :when (pred elt)] idx))
 
@@ -96,6 +109,7 @@
   "Trims a sequence with initial value indexed at x0 to fit within
   bottom (inclusive) and top (exclusive). For example:
 
+  Example usage:
     (trim-seq 0 2 0 [4 5 6]) => [4 5]"
   [bottom top x0 seq]
   {:pre [(not (empty? seq))]}
