@@ -54,7 +54,8 @@ as thrush is a function, not a macro, and can evaluate its arguments."
 
 (fact "positions test."
   (positions pos? [-1 -2 0 6 12 -1 2]) => [3 4 6]
-  (positions pos? (range -8 -2)) => '())
+  (positions pos? (range -8 2)) => '(9)
+  (positions pos? (range -8 1)) => '())
 
 (fact "trim-seq tests."
   (trim-seq 0 2 1 [1 2 3]) => [1]
