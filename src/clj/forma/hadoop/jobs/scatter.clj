@@ -15,7 +15,8 @@
             [forma.hadoop.jobs.timeseries :as tseries]
             [forma.date-time :as date]
             [forma.classify.logistic :as log]
-            [forma.thrift :as thrift]))
+            [forma.thrift :as thrift]
+            [forma.hadoop.jobs.cdm :as cdm]))
 
 (def convert-line-src
   (hfs-textline "s3n://modisfiles/ascii/admin-map.csv"))
@@ -238,12 +239,21 @@
                        (forma/dynamic-filter (hfs-seqfile ndvi-path)
                                              (hfs-seqfile reli-path)
                                              (hfs-seqfile rain-path)))))
+
+              screen-iso
+              ([:tmp-dirs screen-by-iso-path]
+                 "Screen out pixels that don't fall inside specific countries"
+                 (with-job-conf {"mapred.reduce.tasks" 100}
+                   (?- (hfs-seqfile screen-by-iso-path)
+                       (forma/screen-by-iso #{"BRA" "IDN"}
+                                            (hfs-seqfile static-path)
+                                            (hfs-seqfile adjusted-series-path)))))
               
-              cleanseries
-              ([:tmp-dirs clean-series]
+              clean-series
+              ([:tmp-dirs clean-series-path]
                  "Screen out extremely cloudy pixels. Currently doesn't
                   actually run the timeseries cleaning function"
-                 (?- (hfs-seqfile clean-series)
+                 (?- (hfs-seqfile clean-series-path)
                      (forma/dynamic-clean
                       est-map
                       (hfs-seqfile adjusted-series-path))))
@@ -254,7 +264,7 @@
                  (?- (hfs-seqfile trends-path)
                      (forma/analyze-trends
                       est-map
-                      (hfs-seqfile clean-series))))
+                      (hfs-seqfile clean-series-path))))
               
               trends-cleanup
               ([:tmp-dirs cleanup-path]
@@ -324,6 +334,7 @@
                      (forma/forma-estimate (hfs-seqfile beta-path)
                                            (hfs-seqfile final-path)
                                            (hfs-seqfile static-path))))
+
 
               stop-process
               ([]
