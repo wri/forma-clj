@@ -214,13 +214,19 @@
     (replace-index-set bad-end-set representative-good-val reli-coll)))
 
 (defn good-positions
-  ""
+  "returns the indices of the _internal_ good positions within a
+  reliability collection.  Note, however, that the indices of the ends
+  of the columns are included in this good-position column, even if
+  they are flagged as bad.  The ends are dealt with separately."
   [good-set bad-set reli-coll]
   (let [internal-reli (restrict-reli good-set bad-set reli-coll)]
     (positions (complement bad-set) internal-reli)))
 
 (defn walk-reliable
-  ""
+  "returns a transformed version of `val-coll` with the unreliable (or
+  bad) values adjusted.  The adjustment is aimed at reducing the
+  amount of noise in the value-column by relying on additional
+  information on the reliability of the estimates."
   [good-set bad-set val-coll reli-coll]
   (let [new-vals (neutralize-ends bad-set reli-coll val-coll)
         good-seq (good-positions good-set bad-set reli-coll)
@@ -230,7 +236,9 @@
     (flatten [interpolated-chunks last-val])))
 
 (defn make-reliable
-  ""
+  "returns either a nil value, the original value column, or an
+  adjusted value column, depending on whether there are any reliable
+  values."
   [good-set bad-set val-coll reli-coll]
   (let [reli-set (set reli-coll)]
     (cond (empty? (set/intersection good-set reli-set)) nil
