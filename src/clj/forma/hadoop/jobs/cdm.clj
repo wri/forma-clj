@@ -16,12 +16,9 @@
   [(reduce min (map first tuples))])
 
 (defn first-hit
-  "Returns the index of the first value in a vector of numbers that is greater
-  than or equal to a threshold.
-
-  Arguments:
-    thresh - The threshold value.
-    series - A vector of numbers.
+  "Returns the index of the first value in a vector of numbers that is
+  greater than or equal to a threshold. `thresh` - The threshold
+  value.  `series` - A vector of numbers.
 
   Example usage:
     (first-hit 5 [1 2 3 4 5 6 7 8 9 10]) => 4"
@@ -29,12 +26,9 @@
   (first (positions (partial <= thresh) series)))
 
 (defn hansen->cdm
-  "Returns a Cascalog query that transforms Hansen data into map tile coordinates.
-
-  Arguments:
-    src - The source tap.
-    zoom - The map zoom level.
-    tres - The temporal resolution."
+  "Returns a Cascalog query that transforms Hansen data into map tile
+  coordinates. `src` - The source tap.  `zoom` - The map zoom level.
+  `tres` - The temporal resolution."
   [src zoom tres]
   (let [epoch (date/datetime->period tres "2000-01-01")
         hansen (date/datetime->period tres "2010-12-31")
@@ -47,16 +41,23 @@
         (latlon->tile ?lat ?lon zoom :> ?x ?y ?z))))
 
 (defn forma->cdm
-  "Returns a Cascalog query that transforms FORMA data into map tile coordinates.
+  "Returns a Cascalog generator that transforms FORMA data into map
+    tile coordinates.  `start` - Estimation start period date string.
+    `src` - The source tap for FORMA data.  `gadm-src` - a sequence
+    file source with mod-h, mod-v, sample, line, and gadm. `thresh` -
+    The threshold number for valid detections (0-100, integer).
+    `tres` - The input temporal resolution (string).  `tres-out` - The
+    output temporal resolution (string).  `zoom` - The map zoom
+    level (integer).
 
-  Arguments:
-    start - Start period date string.
-    src - The source tap for FORMA data.
-    gadm-src - a sequence file source with mod-h, mod-v, sample, line, and gadm
-    thresh - The threshold number for valid detections.
-    tres - The temporal resolution as a string.
-    tres-out - The output temporal resolution as a string.
-    zoom - The map zoom level."
+  Example usage:
+    (forma->cdm (hfs-seqfile \"/home/dan/Dropbox/local/output\")
+                (hfs-seqfile \"/tmp/forma/data/gadm-path\")
+                17
+                \"16\"
+                \"32\"
+                \"2005-12-31\"
+                50)"
   [src gadm-src zoom tres tres-out start thresh]
   (let [epoch (date/datetime->period tres-out "2000-01-01")
         start-period (date/datetime->period tres start)]
