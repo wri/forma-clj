@@ -110,7 +110,7 @@
 
 (defn tilestring->hv
   "Extracts integer representations of the MODIS H and V coordinates
-referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
+  referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
   [tilestr]
   {:post [(valid-modis? [%])]}
   (map (comp #(Integer. %)
@@ -119,8 +119,8 @@ referenced by the supplied MODIS tilestring, of format 'HHHVVV'."
 
 (defn tile-position
   "General version accepts a window's dimensions and position and a
-pixel index within that window, and returns the global sample and
-line. For example:
+  pixel index within that window, and returns the global sample and
+  line. For example:
 
     (tile-position 10 10 2 1 0) => [20 10]
 
@@ -273,8 +273,7 @@ line. For example:
   "Converts the supplied MODIS coordinates into `[lat, lon]` based on
   the supplied resolution.
 
-Example usage:
-
+  Example usage:
     (modis->latlon \"1000\" 8 6 12 12)
     ;=> (29.89583333333333 -115.22901262147285)"
   [res mod-h mod-v sample line]
@@ -287,7 +286,7 @@ Example usage:
   coordinates at the supplied resolution. The resolution is
   expected to be either 1000, 500, or 250.
 
-Example usage:
+  Example usage:
 
     (latlon->modis \"1000\" 29.89583 -115.2290)
     ;=> [8 6 12 12]"
@@ -309,11 +308,9 @@ Example usage:
   "Takes a floating-point value and step size, and returns the
   step-sized bucket into which the value falls. For example:
 
-     (bucket 0.4 1.3)
-     ;=> 3
-
-     (bucket 0.9 1.3)
-     ;=> 1"
+  Example usage:
+    (bucket 0.4 1.3) => 3
+    (bucket 0.9 1.3) => 1"
   [step-size val]
   (->> step-size (/ 1) (* val) Math/floor int))
 
@@ -323,9 +320,10 @@ Example usage:
   `start`. (The function takes an extra half-step, so as to return the
   centroid of the point reached.) For example:
 
-    (travel 0.5 + 0 2)
-    => 1.25
-    (start, travel, end at centroid.)
+  Example usage:
+    (travel 0.5 + 0 2) => 1.25
+
+  (start, travel, end at centroid.)
     0.0 --> 0.5 --> 1.0 -*- 1.5"
   [step-size dir start idx]
   (dir start (* (+ idx 0.5) step-size)))
@@ -351,8 +349,9 @@ Example usage:
 (defn line-torus
   "Returns the magnitude of the difference between the supplied value
   and the corner point within the supplied range. Values are assumed
-  to wrap around at the edge of the range. For example,
+  to wrap around at the edge of the range.
 
+  Example usage:
     (line-torus + 10 -2 1) => 3
     (line-torus + 10 -2 -3) => 9
 

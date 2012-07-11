@@ -118,8 +118,10 @@ supplied collection returns true when compared to `compare-val` by
   row and column within a matrix with the supplied dimensions. If only
   one dimension is supplied, assumes a square matrix."
   ([edge idx]
+     {:pre [(pos? edge)]}
      (idx->rowcol edge edge idx))
   ([nrows ncols idx]
+     {:pre [(pos? nrows) (pos? ncols)]}
      ((juxt #(quot % ncols) #(mod % ncols)) idx)))
 
 (defn rowcol->idx
