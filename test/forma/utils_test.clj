@@ -62,63 +62,55 @@ as thrush is a function, not a macro, and can evaluate its arguments."
   (trim-seq 0 3 0 [1 2 3]) => [1 2 3]
   (trim-seq 5 10 0 [1 2 3]) => [])
 
-;; ## IO Tests
+(fact "windowed-map test"
+  (windowed-map (partial reduce +) 8 (range 10)) => [28 36 44])
 
-;; (def test-gzip (t/dev-path "/testdata/sample.txt.gz"))
-;; (def test-txt  (t/dev-path "/testdata/sample.txt"))
+(fact "Check average of vector. Casting as float to generalize for
+another vector as necessary. Otherwise average will return fractions."
+  (float (average [1 2 3.])) => 2.0)
 
-;; (facts "forma-flavored `input-stream` testing."
-;;   (with-open [gzip (input-stream test-gzip)
-;;               txt  (input-stream test-txt)]
-;;     (type gzip) => #(isa? % GZIPInputStream)
-;;     (type txt)  => #(isa? % InputStream)))
+(fact "moving-average test."
+  (moving-average 3 (range 10)) => [1 2 3 4 5 6 7 8]
+  (moving-average 2 (range 5))  => [1/2 3/2 5/2 7/2])
 
-;; (facts "force-fill test."
-;;   (with-open [txt (input-stream test-txt)]
-;;     (let [arr (byte-array 10)
-;;           bytes-filled (force-fill! arr txt)]
-;;       bytes-filled => 10
-;;       (every? (complement zero?) arr) => truthy)))
-
-;; (fact "partition-stream test. These are sort of crappy tests, but they
-;; do show that we have a sequence of byte arrays being generated."
-;;   (with-open [txt (input-stream test-txt)]
-;;     (let [result (partition-stream 10 txt)]
-;;       (count (first result)) => 10
-;;       (type (first result)) => byte-array-type
-;;       (count result) => 6)))
-
-;; (tabular
-;;  (fact "read numbers testing."
-;;    (read-numbers ?input) => ?output)
-;;  ?input ?output
-;;  "100"  100
-;;  "-2.9" -2.9
-;;  "face" (throws AssertionError))
+(fact "Check that indexing is correct"
+  (idx [4 5 6]) => [1 2 3]
+  (idx (range 3 5)) => [1 2])
 
 ;; ## Byte Manipulation Tests
 
 (fact float-bytes => 4)
 
-(fact
-  "Check average of vector.
-   Casting as float to generalize for another vector as necessary. Otherwise average will return fractions."
-  (float (average [1 2 3.])) => 2.0)
+;; ## IO Tests
 
-(fact
-  "Check that indexing is correct"
-  (idx [4 5 6]) => [1 2 3])
+(def test-gzip (t/dev-path "/testdata/sample.txt.gz"))
+(def test-txt  (t/dev-path "/testdata/sample.txt"))
+
+(facts "forma-flavored `input-stream` testing."
+  (with-open [gzip (input-stream test-gzip)
+              txt  (input-stream test-txt)]
+    (type gzip) => #(isa? % GZIPInputStream)
+    (type txt)  => #(isa? % InputStream)))
+
+(facts "force-fill test."
+  (with-open [txt (input-stream test-txt)]
+    (let [arr (byte-array 10)
+          bytes-filled (force-fill! arr txt)]
+      bytes-filled => 10
+      (every? (complement zero?) arr) => truthy)))
+
+(fact "partition-stream test. These are sort of crappy tests, but they
+do show that we have a sequence of byte arrays being generated."
+  (with-open [txt (input-stream test-txt)]
+    (let [result (partition-stream 10 txt)]
+      (count (first result)) => 10
+      (type (first result)) => byte-array-type
+      (count result) => 6)))
 
 (tabular
- (fact
-  "check scaling all elements of a vector by a scalar"
-  (scale ?scalar ?coll) => ?expected)
- ?scalar ?coll ?expected
- 1 [1 2 3] [1 2 3]
- 2 [1 2 3] [2 4 6]
- 1.5 [1 2 3] [1.5 3.0 4.5])
-
-;; (fact
-;;   "Check windowed-map"
-;;   (windowed-map ols-trend 2 [1 2 50]) => (contains (map roughly [1.0 48.0])))
-
+ (fact "read numbers testing."
+   (read-numbers ?input) => ?output)
+ ?input ?output
+ "100"  100
+ "-2.9" -2.9
+ "face" (throws AssertionError))

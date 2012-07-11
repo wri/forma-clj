@@ -119,13 +119,17 @@
 
 (defn windowed-map
   "maps an input function across a sequence of windows onto a vector
-  `v` of length `window-len` and offset by 1.
+  `v` of length `window-len` and offset by 1.  Of limited value.
 
-  Note that this does not work with some functions, such as +. Not sure why"
+  Example usage:
+  (windowed-map (partial reduce +) 8 (range 10)) => '(28 36 44)"
   [f window-len v]
   (pmap f (partition window-len 1 v)))
 
-(defn average [lst] (/ (reduce + lst) (count lst)))
+(defn average
+  "Returns the average of the supplied collection."
+  [coll]
+  (/ (reduce + coll) (count coll)))
 
 (defn moving-average
   "returns a moving average of windows on `lst` with length `window`"
@@ -137,6 +141,15 @@
   input"
   [coll]
   (vec (map inc (range (count coll)))))
+
+;; ## Byte Manipulation
+
+(def float-bytes
+  (/ ^Integer Float/SIZE
+     ^Integer Byte/SIZE))
+
+(def byte-array-type
+  (class (make-array Byte/TYPE 0)))
 
 ;; ## IO Utils
 
@@ -193,11 +206,4 @@ valid arguments."
       (assert (number? val) "You can only liberate numbers!")
       val)))
 
-;; ## Byte Manipulation
 
-(def float-bytes
-  (/ ^Integer Float/SIZE
-     ^Integer Byte/SIZE))
-
-(def byte-array-type
-  (class (make-array Byte/TYPE 0)))
