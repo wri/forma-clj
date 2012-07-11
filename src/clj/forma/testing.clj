@@ -35,7 +35,8 @@
   Example usage:
     (dev-path) => \"forma-clj/dev\"
     (dev-path \"/test.txt\") => \"forma-clj/dev/test.txt\""
-  ([] (dev-path ""))
+  ([]
+     (dev-path ""))
   ([sub-path]
      (project-path (str dev-resources-subdir
                         sub-path))))
