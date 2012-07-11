@@ -1,6 +1,7 @@
 (ns forma.hadoop.jobs.scatter
   "Namespace for arbitrary queries."
   (:use cascalog.api
+        cascalog.lzo
         [forma.hadoop.pail :only (to-pail)]
         [forma.source.tilesets :only (tile-set country-tiles)]
         [forma.hadoop.pail :only (?pail- split-chunk-tap)]
@@ -181,7 +182,6 @@
               fire-step ([:tmp-dirs fire-path]
                            (?- (hfs-seqfile fire-path)
                                (tseries/fire-query pail-path
-                                                   s-res
                                                    t-res
                                                    "2000-11-01"
                                                    est-end)))
