@@ -33,8 +33,8 @@
 
 (facts
   "Test the numerical outcomes of running the logistic classifier on a
-relatively small dataset extracted from Malaysia (features and labels
-for 1,000 pixels)."
+  relatively small dataset extracted from Malaysia (features and
+  labels for 1,000 pixels)."
   (let [label-path   (t/dev-path "/testdata/mys-label.csv")
         feature-path (t/dev-path "/testdata/mys-feature.csv")
         beta         (test-beta label-path feature-path)]
@@ -44,8 +44,8 @@ for 1,000 pixels)."
 
 (fact
   "Test a basic property of the logistic probability function, namely
-that a linear combination that results in zero will yield a
-probability of 0.5; and that the result is an instance of a double row
-matrix"
+  that a linear combination that results in zero will yield a
+  probability of 0.5; and that the result is an instance of a double
+  row matrix"
   (logistic-prob (to-double-rowmat [1 2 3])
                  (to-double-rowmat [0 0 0])) => (to-double-rowmat [0.5]))
