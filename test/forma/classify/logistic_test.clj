@@ -9,7 +9,7 @@
   (:import [org.jblas FloatMatrix MatrixFunctions DoubleMatrix])
   (:require [forma.testing :as t]))
 
-(defn csv->seq
+(defn- csv->seq
   "Returns a lazy sequence of the rows in the CSV file located at the
   supplied path."
   [file-path]
@@ -18,7 +18,7 @@
    (butlast (parse-csv
              (slurp file-path)))))
 
-(defn test-beta
+(defn- test-beta
   "Returns the coefficient vector for the supplied data sets.  The
   rows in each data set correspond to the labels and features to a
   specific pixel, so that the first row in each data set indicates the

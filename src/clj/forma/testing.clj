@@ -20,30 +20,22 @@
 
 (defn project-path
   "Accepts a sub-path within the current project structure and returns
-  a fully qualified system path. For example:
+  a fully qualified system path.
 
-    (project-path \"/dev/file.txt\")
-    ;=> \"/home/sritchie/myproject/dev/file.txt\""
+  Example usage:
+    (project-path \"/dev/file.txt\")"
   ([] (project-path ""))
   ([sub-path]
      (str (get-current-directory) sub-path)))
 
 (defn dev-path
+  "Returns the path within the project to the dev path or a
+  subdirectory within dev.
+
+  Example usage:
+    (dev-path) => \"forma-clj/dev\"
+    (dev-path \"/test.txt\") => \"forma-clj/dev/test.txt\""
   ([] (dev-path ""))
   ([sub-path]
      (project-path (str dev-resources-subdir
                         sub-path))))
-
-;; ## Cascalog Helpers
-
-(defn to-stdout
-  "Prints all tuples produced by the supplied generator to the output
-  stream."
-  [gen]
-  (?- (stdout) gen))
-
-(defbufferop tuples->string
-  "Returns a string representation of the tuples input to this
-  buffer."
-  [tuples]
-  [(apply str tuples)])

@@ -1,16 +1,11 @@
 (ns forma.testing-test
-  (:use forma.testing
-        cascalog.api
-        [midje sweet cascalog])
-  (:require [cascalog.vars :as v]
-            [clojure.java.io :as io]))
+  (:use forma.testing :reload)
+  (:use [midje sweet])
+  (:require [clojure.java.io :as io]))
 
-(fact
-  "the development resources path must exist! I don't want to pull
-this out of cake or lein, so I've hardcoded it into
-`dev-resources-subdir`. I'm counting on this test to fail if the
-directory moves."
-  (-> (dev-path) io/file .exists) => true?)
-
-(fact?<- "tuples->string testing."
-         [["(1)(2)(3)"]] [?str] ([1 2 3] ?a) (tuples->string ?a :> ?str))
+(facts
+  "The development resources path must exist, as well as the testdata
+  subdirectory within dev. This test will fail if either directory
+  moves."
+  (-> (dev-path) io/file .exists) => true?
+  (-> (dev-path "/testdata/") io/file .exists) => true?)
