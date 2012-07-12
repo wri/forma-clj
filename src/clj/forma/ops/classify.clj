@@ -15,20 +15,8 @@
     (into [] (concat intercept fire-seq [short long t-stat break]
                      fire-neighbor more))))
 
-(defn wrap-unpack-feature-vec
-  [forma-vec neighbor-obj]
-  [(vec (unpack-feature-vec forma-vec neighbor-obj))])
-
 (defbufferop [logistic-beta-wrap [r c m]]
-  "returns a vector of parameter coefficients.  note that this is
-  where the intercept is added (to the front of each stacked vector in
-  the feature matrix
-
-  TODO: The intercept is included in the feature vector for now, as a
-  kludge when we removed the hansen statistic.  When we include the
-  hansen stat, we will have to replace the feature-mat binding below
-  with a line that tacks on a 1 to each feature vector.
-  "
+  "Returns a vector of parameter coefficients."
   [tuples]
   (let [make-binary  (fn [x] (if (zero? x) 0 1))
         label-seq    (map (comp make-binary first) tuples) 
