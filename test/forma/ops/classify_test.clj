@@ -14,6 +14,8 @@
                :est-start "2005-12-31"
                :max-iterations 500})
 
+(def test-val )
+
 (defn- generate-betas
   [{:keys [convergence-thresh t-res ridge-const est-start max-iterations]} src]
   (let [first-idx (date/datetime->period t-res est-start)]
@@ -30,4 +32,3 @@ from the beta generation queries."
     eco => 40157
     (first beta) => (roughly -8.206515)
     (last beta)  => (roughly 1.1485239)))
-

@@ -19,7 +19,8 @@ statistic on `ndvi`"
 (defn- shift-down-end
   "Returns a transformed collection, where the last half is shifted
   down by some factor; used to test that the hansen-stat identifies
-  down-shifts in a time-series (see next test)."  [coll]
+  down-shifts in a time-series (see next test)."
+  [coll]
   (let [half-count (Math/floor (/ (count ndvi) 2))
         first-half (take half-count ndvi)
         second-half (drop half-count ndvi)]
