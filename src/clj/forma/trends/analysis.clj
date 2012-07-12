@@ -67,13 +67,12 @@
   [ts]
   (let [ts-mat (i/matrix ts)
         foc (first-order-conditions ts-mat)
-        focsum (map i/cumulative-sum foc)
         foc-mat (i/mmult foc (i/trans foc))
-        focsum-mat (i/mmult focsum (i/trans focsum))]
-    (i/trace
-     (i/mmult
-      (i/solve (i/mult foc-mat (i/nrow ts-mat)))
-      focsum-mat))))
+        final-mat (i/mult foc-mat (i/nrow ts-mat))]
+    (if-not (singular? final-mat)
+      (let [focsum (map i/cumulative-sum foc)
+            focsum-mat (i/mmult focsum (i/trans focsum))]
+        (-> (i/solve final-mat) (i/mmult focsum-mat) (i/trace))))))
 
 ;; Long-term trend characteristic; supporting functions 
 
