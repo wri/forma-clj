@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html><head><link href="css/default.css" rel="stylesheet" type="text/css"><script src="js/jquery.min.js" type="text/javascript"></script><script src="js/page_effects.js" type="text/javascript"></script><title>forma.source.rain documentation</title></head><body><div id="header"><h1><a href="index.html">Forma 0.2.0-SNAPSHOT API documentation</a></h1></div><div class="sidebar" id="namespaces"><h3>Namespaces</h3><ul><li><a href="forma.classify.logistic.html">forma.classify.logistic</a></li><li><a href="forma.date-time.html">forma.date-time</a></li><li><a href="forma.gfw.cdm.html">forma.gfw.cdm</a></li><li><a href="forma.hadoop.cli.html">forma.hadoop.cli</a></li><li><a href="forma.hadoop.io.html">forma.hadoop.io</a></li><li><a href="forma.hadoop.jobs.cdm.html">forma.hadoop.jobs.cdm</a></li><li><a href="forma.hadoop.jobs.forma.html">forma.hadoop.jobs.forma</a></li><li><a href="forma.hadoop.jobs.modis.html">forma.hadoop.jobs.modis</a></li><li><a href="forma.hadoop.jobs.neighbors.html">forma.hadoop.jobs.neighbors</a></li><li><a href="forma.hadoop.jobs.preprocess.html">forma.hadoop.jobs.preprocess</a></li><li><a href="forma.hadoop.jobs.scatter.html">forma.hadoop.jobs.scatter</a></li><li><a href="forma.hadoop.jobs.timeseries.html">forma.hadoop.jobs.timeseries</a></li><li><a href="forma.hadoop.pail.html">forma.hadoop.pail</a></li><li><a href="forma.hadoop.predicate.html">forma.hadoop.predicate</a></li><li><a href="forma.hoptree.html">forma.hoptree</a></li><li><a href="forma.matrix.jblas.html">forma.matrix.jblas</a></li><li><a href="forma.matrix.utils.html">forma.matrix.utils</a></li><li><a href="forma.matrix.walk.html">forma.matrix.walk</a></li><li><a href="forma.ops.classify.html">forma.ops.classify</a></li><li><a href="forma.playground.html">forma.playground</a></li><li><a href="forma.postprocess.output.html">forma.postprocess.output</a></li><li><a href="forma.postprocess.select.html">forma.postprocess.select</a></li><li><a href="forma.reproject.html">forma.reproject</a></li><li><a href="forma.schema.html">forma.schema</a></li><li><a href="forma.source.fire.html">forma.source.fire</a></li><li><a href="forma.source.gadmiso.html">forma.source.gadmiso</a></li><li><a href="forma.source.hdf.html">forma.source.hdf</a></li><li class="current"><a href="forma.source.rain.html">forma.source.rain</a></li><li><a href="forma.source.static.html">forma.source.static</a></li><li><a href="forma.source.tilesets.html">forma.source.tilesets</a></li><li><a href="forma.static.html">forma.static</a></li><li><a href="forma.testing.html">forma.testing</a></li><li><a href="forma.thrift.html">forma.thrift</a></li><li><a href="forma.trends.analysis.html">forma.trends.analysis</a></li><li><a href="forma.trends.filter.html">forma.trends.filter</a></li><li><a href="forma.trends.stretch.html">forma.trends.stretch</a></li><li><a href="forma.utils.html">forma.utils</a></li></ul></div><div class="sidebar" id="vars"><h3>Public Vars</h3><ul><li><a href="forma.source.rain.html#var-floats-for-step">floats-for-step</a></li><li><a href="forma.source.rain.html#var-rain-chunks">rain-chunks</a></li><li><a href="forma.source.rain.html#var-rain-months">rain-months</a></li><li><a href="forma.source.rain.html#var-rain-tuples">rain-tuples</a></li><li><a href="forma.source.rain.html#var-rain-values">rain-values</a></li><li><a href="forma.source.rain.html#var-resample-rain">resample-rain</a></li><li><a href="forma.source.rain.html#var-to-datestring">to-datestring</a></li><li><a href="forma.source.rain.html#var-to-rows">to-rows</a></li><li><a href="forma.source.rain.html#var-unpack-rain">unpack-rain</a></li></ul></div><div class="namespace-docs" id="content"><h2>forma.source.rain documentation</h2><pre class="doc"></pre><div class="public" id="var-floats-for-step"><h3>floats-for-step</h3><div class="usage"><code>(floats-for-step step)</code></div><pre class="doc">Length of the row of floats (in # of bytes) representing the earth
+at the specified spatial step.</pre></div><div class="public" id="var-rain-chunks"><h3>rain-chunks</h3><div class="usage"><code>(rain-chunks m-res {:keys [nodata], :as ascii-map} chunk-size file-tap pix-tap)</code></div><pre class="doc">Cascalog subquery to fully process a WGS84 float array at the
+supplied resolution (`:step`, within `ascii-map`) into tuples
+suitable for comparison to any MODIS dataset at the supplied modis
+resolution `m-res`, partitioned by the supplied chunk size.</pre></div><div class="public" id="var-rain-months"><h3>rain-months</h3><div class="usage"><code>(rain-months step)</code></div><pre class="doc">Generates a predicate macro to extract all months from a directory
+of PREC/L datasets, paired with a datestring of the format
+`yyyy-mm-dd`.  Filename must be of the format
+
+  precl_mon_v1.0.lnx.YYYY.gri0.5m(.gz, optionally).</pre></div><div class="public" id="var-rain-tuples"><h3>rain-tuples</h3><div class="usage"><code>(rain-tuples step stream)</code></div><pre class="doc">Returns a lazy seq of 2-tuples representing NOAA PREC/L rain
+data. Each 2-tuple is of the form `[idx, month-arr]`, where `idx`
+is the 1-based month and `month-vec` is a `(* 720 360)` float-array.
+
+Note that we take every other element in the `partition-stream` seq,
+skipping data concerning # of gauges.</pre></div><div class="public" id="var-rain-values"><h3>rain-values</h3><div class="usage"><code>(rain-values step source)</code></div><pre class="doc">Generates a cascalog subquery from the supplied WGS84 step size and
+source of `?filename` and `?file` tiles; this subquery returns
+individual rain values, marked by `?row`, `?col` and `?val` from the
+original WGS84 matrix. A date field is also included.</pre></div><div class="public" id="var-resample-rain"><h3>resample-rain</h3><div class="usage"><code>(resample-rain m-res {:keys [step nodata], :as ascii-map} file-tap pix-tap &amp; args)</code></div><pre class="doc">A Cascalog query that takes a tap emitting rain tuples and a tap emitting
+MODIS pixels for a set of MODIS tiles and emits the same rain tuples
+resampled into MODIS pixel coordinates.
+
+For example, given a rain tuple [date row col value]:
+
+  [2000-01-01 239 489 100]
+
+The corresponding rain tuple [h v sample line] in MODIS pixel coordinates is:
+
+  [8 6 0 0]
+
+Definitely note that there's a join happening in this query! The value of ?row
+and ?col must be the same wherever it is used, and since rain-vals and
+wgs84-indexer are separate sources of ?row and ?col, Cascalog will use an
+implicit join to resolve the query. Powerful stuff!
+
+Arguments:
+  m-res - The MODIS resolution as a string.
+  ascii-map - A map containing values for step and nodata values.
+  file-tap - Cascalog generator that emits rain tuples  [date row col value]. 
+  pix-tap - Cascalog generator that emits MODIS pixel tuples [h v sample line].
+  args - Optional memory file-tap of rain tuples used for testing.
+
+Query result variables:
+  ?dataset - The dataset name (precl)
+  ?m-res - The MODIS spatial resolution in meters.
+  ?t-res - The MODIS temporal resolution in days.
+  !date - The nullable date of the rain tuple.
+  ?mod-h - The MODIS h tile coordinate.
+  ?mod-v - The MODIS v tile coordinate.
+  ?sample - The MODIS tile sample coordinate.
+  ?line - The MODIS tile line coordinate.
+  ?val - The rain value.
+
+Example usage:
+  &gt; (??- 
+      (let [tile-seq #{[8 6]}
+           file-tap nil
+           test-rain-data [[&quot;2000-01-01&quot; 239 489 100]] 
+           pix-tap [[8 6 0 0]]
+           ascii-map {:corner [0 -90] :travel [+ +] :step 0.5 :nodata -999}
+           m-res &quot;500&quot;]
+          (resample-rain m-res ascii-map file-tap pix-tap test-rain-data)))</pre></div><div class="public" id="var-to-datestring"><h3>to-datestring</h3><div class="usage"><code>(to-datestring filename month-int)</code></div><pre class="doc">Processes an NOAA PRECL filename and integer month index, and
+returns a datestring of the format `yyyy-mm-dd`. Filename is assumed
+to by formatted as `precl_mon_v1.0.lnx.YYYY.gri0.5m`, with a single
+group of four digits representing the year.</pre></div><div class="public" id="var-to-rows"><h3>to-rows</h3><div class="usage"><code>(to-rows coll)</code></div><pre class="doc">Converts a month's worth of PRECL data, stored in a vector,
+into single rows of data, based on the supplied step size. `to-rows`
+outputs 2-tuples of the form `[row-idx, row-array]`.</pre></div><div class="public" id="var-unpack-rain"><h3>unpack-rain</h3><div class="usage"><code>(unpack-rain stream)</code></div><pre class="doc">Unpacks a PREC/L binary file for a given year, and returns a lazy
+sequence of 2-tuples, in the form of (month, data). Assumes that
+binary files are packaged as hadoop BytesWritable objects.</pre></div></div></body></html>

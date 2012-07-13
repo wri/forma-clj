@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html><head><link href="css/default.css" rel="stylesheet" type="text/css"><script src="js/jquery.min.js" type="text/javascript"></script><script src="js/page_effects.js" type="text/javascript"></script><title>forma.utils documentation</title></head><body><div id="header"><h1><a href="index.html">Forma 0.2.0-SNAPSHOT API documentation</a></h1></div><div class="sidebar" id="namespaces"><h3>Namespaces</h3><ul><li><a href="forma.classify.logistic.html">forma.classify.logistic</a></li><li><a href="forma.date-time.html">forma.date-time</a></li><li><a href="forma.gfw.cdm.html">forma.gfw.cdm</a></li><li><a href="forma.hadoop.cli.html">forma.hadoop.cli</a></li><li><a href="forma.hadoop.io.html">forma.hadoop.io</a></li><li><a href="forma.hadoop.jobs.cdm.html">forma.hadoop.jobs.cdm</a></li><li><a href="forma.hadoop.jobs.forma.html">forma.hadoop.jobs.forma</a></li><li><a href="forma.hadoop.jobs.modis.html">forma.hadoop.jobs.modis</a></li><li><a href="forma.hadoop.jobs.neighbors.html">forma.hadoop.jobs.neighbors</a></li><li><a href="forma.hadoop.jobs.preprocess.html">forma.hadoop.jobs.preprocess</a></li><li><a href="forma.hadoop.jobs.scatter.html">forma.hadoop.jobs.scatter</a></li><li><a href="forma.hadoop.jobs.timeseries.html">forma.hadoop.jobs.timeseries</a></li><li><a href="forma.hadoop.pail.html">forma.hadoop.pail</a></li><li><a href="forma.hadoop.predicate.html">forma.hadoop.predicate</a></li><li><a href="forma.hoptree.html">forma.hoptree</a></li><li><a href="forma.matrix.jblas.html">forma.matrix.jblas</a></li><li><a href="forma.matrix.utils.html">forma.matrix.utils</a></li><li><a href="forma.matrix.walk.html">forma.matrix.walk</a></li><li><a href="forma.ops.classify.html">forma.ops.classify</a></li><li><a href="forma.playground.html">forma.playground</a></li><li><a href="forma.postprocess.output.html">forma.postprocess.output</a></li><li><a href="forma.postprocess.select.html">forma.postprocess.select</a></li><li><a href="forma.reproject.html">forma.reproject</a></li><li><a href="forma.schema.html">forma.schema</a></li><li><a href="forma.source.fire.html">forma.source.fire</a></li><li><a href="forma.source.gadmiso.html">forma.source.gadmiso</a></li><li><a href="forma.source.hdf.html">forma.source.hdf</a></li><li><a href="forma.source.rain.html">forma.source.rain</a></li><li><a href="forma.source.static.html">forma.source.static</a></li><li><a href="forma.source.tilesets.html">forma.source.tilesets</a></li><li><a href="forma.static.html">forma.static</a></li><li><a href="forma.testing.html">forma.testing</a></li><li><a href="forma.thrift.html">forma.thrift</a></li><li><a href="forma.trends.analysis.html">forma.trends.analysis</a></li><li><a href="forma.trends.filter.html">forma.trends.filter</a></li><li><a href="forma.trends.stretch.html">forma.trends.stretch</a></li><li class="current"><a href="forma.utils.html">forma.utils</a></li></ul></div><div class="sidebar" id="vars"><h3>Public Vars</h3><ul><li><a href="forma.utils.html#var-average">average</a></li><li><a href="forma.utils.html#var-between%3F">between?</a></li><li><a href="forma.utils.html#var-find-first">find-first</a></li><li><a href="forma.utils.html#var-force-fill%21">force-fill!</a></li><li><a href="forma.utils.html#var-idx">idx</a></li><li><a href="forma.utils.html#var-input-stream">input-stream</a></li><li><a href="forma.utils.html#var-moving-average">moving-average</a></li><li><a href="forma.utils.html#var-nth-in">nth-in</a></li><li><a href="forma.utils.html#var-partition-stream">partition-stream</a></li><li><a href="forma.utils.html#var-positions">positions</a></li><li><a href="forma.utils.html#var-scale">scale</a></li><li><a href="forma.utils.html#var-strings-%3Efloats">strings-&gt;floats</a></li><li><a href="forma.utils.html#var-thrush">thrush</a></li><li><a href="forma.utils.html#var-trim-seq">trim-seq</a></li><li><a href="forma.utils.html#var-unweave">unweave</a></li><li><a href="forma.utils.html#var-weighted-mean">weighted-mean</a></li><li><a href="forma.utils.html#var-windowed-map">windowed-map</a></li></ul></div><div class="namespace-docs" id="content"><h2>forma.utils documentation</h2><pre class="doc"></pre><div class="public" id="var-average"><h3>average</h3><div class="usage"><code>(average coll)</code></div><pre class="doc">Returns the average of the supplied collection.
+</pre></div><div class="public" id="var-between%3F"><h3>between?</h3><div class="usage"><code>(between? lower upper x)</code></div><pre class="doc">Returns true of the supplied arg `x` falls between the supplied
+`lower` and `upper` bounds (inclusive), false otherwise.
+
+Example usage:
+  (between? -2 5 1) =&gt; true</pre></div><div class="public" id="var-find-first"><h3>find-first</h3><div class="usage"><code>(find-first pred coll)</code></div><pre class="doc">Returns the first item of coll for which (pred item) returns
+logical true. Consumes sequences up to the first match, will consume
+the entire sequence and return nil if no match is found.
+
+Example usage:
+  (find-first pos? [-1 -2 0 3 4 -1 5]) =&gt; 3</pre></div><div class="public" id="var-force-fill%21"><h3>force-fill!</h3><div class="usage"><code>(force-fill! buffer stream)</code></div><pre class="doc">Forces the contents of the supplied `InputStream` into the supplied
+byte buffer. (In certain cases, such as when a GZIPInputStream
+doesn't have a large enough buffer by default, the stream simply
+won't load the requested number of bytes. `force-fill!` blocks until
+`buffer` has been filled.</pre></div><div class="public" id="var-idx"><h3>idx</h3><div class="usage"><code>(idx coll)</code></div><pre class="doc">return a list of indices starting with 1 equal to the length of
+input</pre></div><div class="public" id="var-input-stream"><h3>input-stream</h3><div class="usage"><code>(input-stream arg)</code><code>(input-stream arg default-bufsize)</code></div><pre class="doc">Attempts to coerce the given argument to an InputStream, with
+automatic flipping to `GZipInputStream` if appropriate for the
+supplied input. see `clojure.java.io/input-stream` for guidance on
+valid arguments.</pre></div><div class="public" id="var-moving-average"><h3>moving-average</h3><div class="usage"><code>(moving-average window lst)</code></div><pre class="doc">returns a moving average of windows on `lst` with length `window`
+</pre></div><div class="public" id="var-nth-in"><h3>nth-in</h3><div class="usage"><code>(nth-in coll ks)</code></div><pre class="doc">Takes a nested collection and a sequence of keys, and returns the
+value obtained by taking `nth` in turn on each level of the nested
+collection.
+
+Example usage:
+  (nth-in [[1 2 3] [4 5 6]] [0 2]) =&gt; 3</pre></div><div class="public" id="var-partition-stream"><h3>partition-stream</h3><div class="usage"><code>(partition-stream n stream)</code></div><pre class="doc">Generates a lazy seq of byte-arrays of size `n` pulled from the
+supplied input stream `stream`.</pre></div><div class="public" id="var-positions"><h3>positions</h3><div class="usage"><code>(positions pred coll)</code></div><pre class="doc">Returns a lazy sequence containing the positions at which pred
+ is true for items in coll.
+
+Example usage:
+  (positions pos? [-1 -2 0 6 12 -1 2]) =&gt; '(3 4 6)</pre></div><div class="public" id="var-scale"><h3>scale</h3><div class="usage"><code>(scale factor coll)</code></div><pre class="doc">Returns a collection obtained by scaling each element in `coll` by
+the supplied number `factor`.
+
+Example usage:
+  (scale 4 [0 1 2]) =&gt; '(0 4 8)</pre></div><div class="public" id="var-strings-%3Efloats"><h3>strings-&gt;floats</h3><div class="usage"><code>(strings-&gt;floats &amp; strings)</code></div><pre class="doc">Accepts any number of string representations of floats, and
+returns the corresponding sequence of floats.
+
+Example usage:
+  (strings-&gt;floats &quot;192&quot; &quot;12&quot;) =&gt; [192.0 12.0]</pre></div><div class="public" id="var-thrush"><h3>thrush</h3><div class="usage"><code>(thrush &amp; args)</code></div><pre class="doc">Very similar to `clojure.core/comp`, this function applies the
+function and parameters from left to right in such a way that it
+evaluates the function, unlike a macro.  Unlike, `comp` however, this
+function accepts an arbitrary number of functions as arguments.
+
+ Example usage:
+   (thrush 2 #(* % 5) (partial + 2)) =&gt; 12
+   (thrush 3 #(* % 5) (partial + 2)) =&gt; 17
+
+   similar to: ((comp (partial + 2) #(* % 5)) 2) =&gt; 12</pre></div><div class="public" id="var-trim-seq"><h3>trim-seq</h3><div class="usage"><code>(trim-seq bottom top x0 seq)</code></div><pre class="doc">Trims a sequence with initial value indexed at x0 to fit within
+bottom (inclusive) and top (exclusive). For example:
+
+Example usage:
+  (trim-seq 0 2 0 [4 5 6]) =&gt; [4 5]</pre></div><div class="public" id="var-unweave"><h3>unweave</h3><div class="usage"><code>(unweave coll)</code></div><pre class="doc">Splits a sequence with an even number of entries into two sequences
+by pulling alternating entries. For example:
+
+Example usage:
+  (unweave [0 1 2 3]) =&gt; [(0 2) (1 3)]</pre></div><div class="public" id="var-weighted-mean"><h3>weighted-mean</h3><div class="usage"><code>(weighted-mean &amp; val-weight-pairs)</code></div><pre class="doc">Accepts a number of `&lt;val, weight&gt;` pairs, and returns the mean of
+all values with corresponding weights applied. For example:
+
+Example usage:
+  (weighted-avg 8 3 1 1) =&gt; 6.25</pre></div><div class="public" id="var-windowed-map"><h3>windowed-map</h3><div class="usage"><code>(windowed-map f window-len v)</code></div><pre class="doc">maps an input function across a sequence of windows onto a vector
+`v` of length `window-len` and offset by 1.  Of limited value.
+
+Example usage:
+(windowed-map (partial reduce +) 8 (range 10)) =&gt; '(28 36 44)</pre></div></div></body></html>
