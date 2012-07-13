@@ -36,8 +36,10 @@
            day-seq (expand-to-days start-idx series pd base-res offset)
            result (transient [])]
       (if (or (empty? periods) (empty? day-seq))
-        (let [res (persistent! result)]
-          (thrift/TimeSeries* (long beg) (long (dec (+ beg (count res)))) res))
+        (let [res (persistent! result)
+              start-idx (long beg)
+              end-idx (long (dec (+ beg (count res))))]
+          (thrift/TimeSeries* start-idx end-idx  res))
         (let [num-days (date/period-span target-res pd)]
           (recur more
                  (drop num-days day-seq)
