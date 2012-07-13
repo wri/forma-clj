@@ -29,8 +29,8 @@
   vector is only the trend component and the idiosyncratic disturbance
   of the original time series.
 
-  Precondition avoids singular matrix by throwing exception
-  when `ts` is shorter than `freq`. Throws an exception - due to meaningless
+  Precondition avoids singular matrix by throwing exception when `ts`
+  is shorter than `freq`. Throws an exception - due to meaningless
   results - if `freq` equals 1 or in case we see `nil` as the `ts`.
 
   Example:
@@ -154,12 +154,12 @@
                  (- right left))))
 
 (defn mask
-  "Apply `pred` to `coll-a` to create a mask over `coll-b`, returning a vector of
-   valid values and nils. If a value in `coll-a` passes `pred`, the value in the
-   corresponding location in `coll-b` will be included in the output vector.
-   Otherwise, that location will be set to `nil`."
-  [pred coll-a coll-b]
-  {:pre [(= (count coll-a) (count coll-b))]}
+  "Apply `pred` to `coll-a` to create a mask over `coll-b`, returning
+   a vector of valid values and nils. If a value in `coll-a` passes
+   `pred`, the value in the corresponding location in `coll-b` will be
+   included in the output vector.  Otherwise, that location will be
+   set to `nil`."
+  [pred coll-a coll-b] {:pre [(= (count coll-a) (count coll-b))]}
   (map #(when-not (pred %2) %1)
        coll-b
        coll-a))
@@ -186,13 +186,13 @@
                  [m-coll r-coll])))))
 
 (defn apply-to-valid
-  "apply function `f` to all valid (non-nil) values within a
+  "Apply function `f` to all valid (non-nil) values within a
   collection `coll`"
   [f coll]
   (f (filter (complement nil?) coll)))
 
 (defn neutralize-ends
-  "replace the ends of a value-collection (like NDVI) with the mean of
+  "Replace the ends of a value-collection (like NDVI) with the mean of
   valid values if the ends are unreliable, according to an associated
   reliability index, manifest in `reli-coll`. If there are no bad
   values (as indicated by `bad-set` values in `reli-coll`) then
@@ -205,7 +205,7 @@
     (replace-index-set bad-idx avg val-coll)))
 
 (defn restrict-reli
-  "returns a sequence of reliability indicators where the bad value
+  "Returns a sequence of reliability indicators where the bad value
   indicators on the end are replaced with good value indicators; used
   to deal with internal bad values first, and then replace the ends after."
   [good-set bad-set reli-coll]
@@ -214,7 +214,7 @@
     (replace-index-set bad-end-set representative-good-val reli-coll)))
 
 (defn good-positions
-  "returns the indices of the _internal_ good positions within a
+  "Returns the indices of the _internal_ good positions within a
   reliability collection.  Note, however, that the indices of the ends
   of the columns are included in this good-position column, even if
   they are flagged as bad.  The ends are dealt with separately."
@@ -223,7 +223,7 @@
     (positions (complement bad-set) internal-reli)))
 
 (defn walk-reliable
-  "returns a transformed version of `val-coll` with the unreliable (or
+  "Returns a transformed version of `val-coll` with the unreliable (or
   bad) values adjusted.  The adjustment is aimed at reducing the
   amount of noise in the value-column by relying on additional
   information on the reliability of the estimates."
@@ -236,7 +236,7 @@
     (flatten [interpolated-chunks last-val])))
 
 (defn make-reliable
-  "returns either a nil value, the original value column, or an
+  "Returns either a nil value, the original value column, or an
   adjusted value column, depending on whether there are any reliable
   values."
   [good-set bad-set val-coll reli-coll]
@@ -249,7 +249,7 @@
 ;; feature extraction
 
 (defn tele-ts
-  "create a telescoping sequence of sequences, where each incremental
+  "Create a telescoping sequence of sequences, where each incremental
   sequence is one element longer than the last, pinned to the same
   initial subsequence.
 
