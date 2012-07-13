@@ -4,6 +4,7 @@
   (:require [cascalog.ops :as c]
             [forma.reproject :as r]
             [forma.schema :as schema]
+            [forma.thrift :as thrift]
             [forma.hadoop.io :as io]
             [clojure.java.io :as java.io]
             [forma.hadoop.predicate :as p]))
@@ -114,15 +115,14 @@
                                (r/chunk-dims m-res chunk-size)
                                "?val"
                                nodata)]
-    (<- [?datachunk]
-        (src ?dataset ?s-res ?t-res !date ?mod-h ?mod-v  _ ?chunkid ?window)
-        (p/flatten-window ?window :> ?chunk)
-        (schema/to-struct ?chunk :> ?struct)
-        (schema/mk-array-value ?struct :> ?arr)
-        (count ?chunk :> ?count)
+    (<- [?tile-chunk]
+        (src ?dataset ?s-res ?t-res !date ?h ?v  _ ?id ?window)
+        (p/flatten-window ?window :> ?data)
+        (thrift/pack ?data :> ?val)
+        (count ?data :> ?count)
         (= ?count chunk-size)
-        (chunkifier
-         ?dataset !date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?arr :> ?datachunk))))
+        (chunkifier ?dataset !date ?s-res ?t-res ?h ?v ?id ?val :> ?tile-chunk)
+        )))
 
 (defn static-chunks
   "TODO: DOCS!"
@@ -138,4 +138,4 @@
   "TODO: DESTROY. Replace with a better system."
   [chunk-size dataset agg line-tap pix-tap]
   (-> (absorb-modis "500" dataset pix-tap line-tap agg)
-       (agg-chunks "500" chunk-size -9999)))
+      (agg-chunks "500" chunk-size -9999)))
