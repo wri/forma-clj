@@ -1,4 +1,7 @@
 (ns forma.playground
+  "This namespace is a playground for playing in the playground with play things.
+  It mostly includes handy Thrift objects and Thrift memory taps for playing with
+  at the REPL."
   (:require [forma.thrift :as thrift]))
 
 ;; MODIS tile chunk:
