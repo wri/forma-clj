@@ -1,45 +1,42 @@
 (ns forma.hoptree
+  "An API to access the location of MODIS pixels at three levels: (1)
+Within the tile, which is identified by a tile location and the
+pixel location within the tile.  The tile identifier follows the
+standard form: mod-h, mod-v, sample, line. (2) Global position, as
+if MODIS tiles did not exist and the world was a single MODIS grid
+at the supplied resolution. (3) An arbitrary, rectangular window,
+which is defined by the pixel at the top-left corner of the window,
+the width in pixels, and the height in pixels.
+
+For levels (2) and (3), we are interested in both the [row column]
+of the pixel as well as the unique index that is found by counting
+from the top left and travelling left-to-right and then
+top-to-bottom.  The unique index is not interesting at the tile
+level, or at least we have never needed that index.
+
+Everything is zero-indexed, so that the top-left corner of any
+window will have row and column defined by [0 0] and index 0.
+
+Note that if the global index of the pixel under consideration
+falls outside of the specified window, then the conversion will
+throw an error.
+
+The API operates on three levels: tile, global, window. The
+three-leaved hoptree is a deciduous tree that is native to North
+America; it's bark is smooth but gets rough with age.
+
+http://en.wikipedia.org/wiki/Ptelea_trifoliata"
   (:require [forma.matrix.utils :as util]
             [forma.reproject :as r]
             [forma.hadoop.predicate :as p]))
 
-;; An API to access the location of MODIS pixels at three levels: (1)
-;; Within the tile, which is identified by a tile location and the
-;; pixel location within the tile.  The tile identifier follows the
-;; standard form: mod-h, mod-v, sample, line. (2) Global position, as
-;; if MODIS tiles did not exist and the world was a single MODIS grid
-;; at the supplied resolution. (3) An arbitrary, rectangular window,
-;; which is defined by the pixel at the top-left corner of the window,
-;; the width in pixels, and the height in pixels.
-
-;; For levels (2) and (3), we are interested in both the [row column]
-;; of the pixel as well as the unique index that is found by counting
-;; from the top left and travelling left-to-right and then
-;; top-to-bottom.  The unique index is not interesting at the tile
-;; level, or at least we have never needed that index.
-
-;; Everything is zero-indexed, so that the top-left corner of any
-;; window will have row and column defined by [0 0] and index 0.
-
-;; Note that if the global index of the pixel under consideration
-;; falls outside of the specified window, then the conversion will
-;; throw an error.
-
-;; The API operates on three levels: tile, global, window. The
-;; three-leaved hoptree is a deciduous tree that is native to North
-;; America; it's bark is smooth but gets rough with age.
-
-;; http://en.wikipedia.org/wiki/Ptelea_trifoliata
-
-;; TODO: remove redundancy from multimethods
-
 (defn global-dims
-  "accepts a spatial resolution and returns a tuple of the form [row
+  "Accepts a spatial resolution and returns a tuple of the form [row
   column] with the total number of rows and columns of the entire
   world at the supplied resolution.
 
-  EXAMPLE:
-  (global-dims \"500\") => (43200 86400)"
+  Example usage:
+    (global-dims \"500\") => (43200 86400)"
   [sres]
   (let [num-pixels (r/pixels-at-res sres)]
     (map (partial * num-pixels) [r/v-tiles r/h-tiles])))
@@ -112,7 +109,7 @@
   (util/idx->rowcol (:height window-map) (:width window-map) (:idx t)))
 
 (defn in-window?
-  "returns true if the tuple of the form [row col] is within the
+  "Returns true if the tuple of the form [row col] is within the
   window that is defined by window-map that has
   keys :topleft-rowcol, :height, and :width."
   [window-map tuple]
