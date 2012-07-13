@@ -7,6 +7,8 @@
 (defn unpack-feature-vec [forma-val neighbor-val]
   "TODO: Convert forma-val to thrift - see forma-seq
   (schema/unpack-forma-val forma-val)"
+  {:pre [(instance? forma.schema.FormaValue forma-val)
+         (instance? forma.schema.NeighborValue neighbor-val)]}
   (let [intercept [1]
         [fire short long t-stat break] forma-val
         fire-seq (thrift/unpack fire)

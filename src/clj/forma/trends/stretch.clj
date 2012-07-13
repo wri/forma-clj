@@ -36,7 +36,7 @@
   expanding the original timeseries to a daily timeseries, then
   consuming it at the new resolution."
   [base-res target-res timeseries]
-  {:pre [(instance? forma.schema.DataValue timeseries)]}
+  ;; {:pre [(instance? forma.schema.DataValue timeseries)]}
   (let [[start-idx end-idx series-value] (thrift/unpack timeseries)
         series (thrift/unpack series-value)
         [beg end] (shift-periods-target-res base-res target-res start-idx end-idx)
