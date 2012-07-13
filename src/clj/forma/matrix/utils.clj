@@ -1,12 +1,8 @@
 (ns forma.matrix.utils
-  "Useful general functions for matrix operations or filters."
+  "A set of useful and general functions for matrix operations or
+filters."
   (:use [forma.utils :only (thrush)])
   (:require [incanter.core :as i]))
-
-;; The first functions should be very simple functions used as
-;; composites or filters.  The latter functions should be matrix
-;; operations that deal with arbitrarily large, multi-dimensional
-;; matrices.
 
 (defn is-square?
   "Returns true if input matrix is square, and false otherwise.

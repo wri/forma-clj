@@ -1,8 +1,7 @@
-;; Accepts a time series of one, low resolution and stretches it to a
-;; higher resolution; first to daily, and then consuming the series in
-;; chunks of whatever the targe resolution is.
-
 (ns forma.trends.stretch
+  "Accepts a time series of one, low resolution and stretches it to a
+higher resolution; first to daily, and then consuming the series in
+chunks of whatever the targe resolution is."
   (:use [forma.matrix.utils :only (coll-avg)])
   (:require [forma.date-time :as date]
             [forma.schema :as schema]
@@ -16,8 +15,8 @@
   original resolution, and `end-idx` (inclusive) in the original
   temporal resolution.
 
-  Example:
-  (shift-periods-target-res \"32\" \"16\" 384 386)"
+  Example usage:
+    (shift-periods-target-res \"32\" \"16\" 384 386)"
   [base-res target-res start-idx end-idx]
   (map (partial date/shift-resolution base-res target-res)
        [start-idx (inc end-idx)]))
@@ -36,7 +35,6 @@
   expanding the original timeseries to a daily timeseries, then
   consuming it at the new resolution."
   [base-res target-res timeseries]
-  ;; {:pre [(instance? forma.schema.DataValue timeseries)]}
   (let [[start-idx end-idx series-value] (thrift/unpack timeseries)
         series (thrift/unpack series-value)
         [beg end] (shift-periods-target-res base-res target-res start-idx end-idx)

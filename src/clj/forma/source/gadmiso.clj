@@ -1,17 +1,16 @@
-;; This namespace associates a GADM ID (a subprovince-level unique
-;; integer identifier) with a country-level ISO3 code.  The global
-;; variable `gadm-iso` is bound to a large map with GADM IDs as keys
-;; and ISO3 codes as values.  The supporting function `gadm->iso`
-;; pulls out the ISO3 value of a supplied GADM ID for use within a
-;; cascalog query.
-
-;; Example: (gadm->iso 2048) => "AUS"
-
-;; References:
-;; GADM: http://www.gadm.org (level: ID_2)
-;; ISO3: http://en.wikipedia.org/wiki/ISO_3166-1_alpha-3
-
 (ns forma.source.gadmiso
+  "This namespace associates a GADM ID (a subprovince-level unique
+integer identifier) with a country-level ISO3 code.  The global
+variable `gadm-iso` is bound to a large map with GADM IDs as keys and
+ISO3 codes as values.  The supporting function `gadm->iso` pulls out
+the ISO3 value of a supplied GADM ID for use within a cascalog query.
+
+Example:
+  (gadm->iso 2048) => \"AUS\"
+
+References:
+  GADM: http://www.gadm.org (level: ID_2)
+  ISO3: http://en.wikipedia.org/wiki/ISO_3166-1_alpha-3"
   (:use cascalog.api)
   (:require [clojure.string :as string]
             [clojure-csv.core :as csv]
