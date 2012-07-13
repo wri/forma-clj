@@ -1,7 +1,8 @@
 (ns forma.schema-test
   (:use forma.schema
         [midje sweet cascalog])
-  (:require [forma.date-time :as date])
+  (:require [forma.date-time :as date]
+            [forma.thrift :as thrift])
   (:import [forma.schema
             ArrayValue DataChunk DataValue DoubleArray FireArray
             FireValue FormaValue IntArray LocationProperty
@@ -13,13 +14,14 @@
 ;; ## Various schema tests
 
 (def neighbors
-  [(forma-value nil 1 1 1 1)
-   (forma-value (fire-value 1 1 1 1) 2 2 2 2)])
+  [(thrift/FormaValue* nil 1 1 1 1)
+   (thrift/FormaValue* (thrift/FireValue* 1 1 1 1) 2 2 2 2)])
 
 (fact
   "Checks that neighbors are being combined properly."
-  (let [test-seq [(forma-value nil 1 1 1 1) (forma-value nil 2 2 2 2)]]
-    (combine-neighbors test-seq) => (neighbor-value (fire-value 0 0 0 0)
+  (let [test-seq [(thrift/FormaValue* nil 1 1 1 1)
+                  (thrift/FormaValue* nil 2 2 2 2)]]
+    (combine-neighbors test-seq) => (neighbor-value (thrift/FireValue* 0 0 0 0)
                                                     2
                                                     1.5 1
                                                     1.5 1
@@ -45,44 +47,53 @@
                   :t-res "32"}
          f-start (date/datetime->period "32" "2005-01-01")
          mk-f-series (fn [offset]
-                       (timeseries-value (+ f-start offset)
-                                         (mk-array-value (FireArray.
-                                                          [(fire-value 0 0 0 1)
-                                                           (fire-value 1 1 1 1)]))))]
-     (adjust-fires est-map (mk-f-series ?offset)) => [?series]))
+                       (thrift/TimeSeries* (+ f-start offset)
+                                           [(thrift/FireValue* 0 0 0 1)
+                                            (thrift/FireValue* 1 1 1 1)]))]
+     (adjust-fires est-map (mk-f-series ?offset)) => [?series]
+     ))
  ?offset ?series
- 0       (timeseries-value  f-start (mk-array-value (FireArray.
-                                                     [(fire-value 0 0 0 1)
-                                                      (fire-value 1 1 1 1)])))
- 1       (timeseries-value f-start (mk-array-value (FireArray.
-                                                    [(fire-value 0 0 0 1)])))
+ 0       (thrift/TimeSeries*  f-start [(thrift/FireValue* 0 0 0 1)
+                                        (thrift/FireValue* 1 1 1 1)])
+ 1       (thrift/TimeSeries* f-start [[(thrift/FireValue* 0 0 0 1)]])
  2       nil)
 
-(fact "chunk to pixel location conversions."
-  (let [pix-loc (-> (chunk-location "1000" 10 10 59 24000)
-                    (chunkloc->pixloc 23999))]
-    pix-loc => (pixel-location "1000" 10 10 1199 1199)))
+(let [fires (thrift/TimeSeries* 0 [(thrift/FireValue* 0 5 0 0)
+                                   (thrift/FireValue* 0 0 0 0)])
+      forma-val-1 [[(thrift/FireValue* 0 5 0 0) 1 4 7 1]
+                   [(thrift/FireValue* 0 0 0 0) 2 5 8 1]]
+      forma-val-2 [[(thrift/FireValue* 0 0 0 0) 1 4 7 1]
+                   [(thrift/FireValue* 0 0 0 0) 2 5 8 1]]]
+  (tabular
+   (fact
+     (forma-seq ?fires ?short ?long ?t-stat ?break)  => ?result)
+   ?fires ?short ?long ?t-stat ?break ?result
+   fires [1 2] [4 5] [7 8] [1 1] [forma-val-1]
+   nil [1 2] [4 5] [7 8] [1 1] [forma-val-2]))
 
-(tabular
- (fact "Test Thriftable protocol"
-   (get-vals ?x) => ?vals)
- ?x ?vals
- (TimeSeries. 0 1 (mk-array-value (DoubleArray. [1 2 3]))) [1 2 3]
- (FormaArray. [(FormaValue. (FireValue. 1 1 1 1) 0 0 0)]) [(FormaValue. (FireValue. 1 1 1 1) 0 0 0)]
- (ShortArray. [1 2 3]) [1 2 3]
- (IntArray. [1 2 3]) [1 2 3]
- (LongArray. [1 2 3]) [1 2 3]
- (DoubleArray. [1 2 3]) [1 2 3]
- (FireArray. [1 2 3]) [1 2 3]
- (mk-array-value (DoubleArray. [1 2 3])) [1 2 3])
 
-(fact "Test chunk-locval method."
-  (let [loc (LocationProperty. 
-             (LocationPropertyValue/chunkLocation
-              (ModisChunkLocation. "500" 28 8 1 24000)))
-        val (DataValue/vals (ArrayValue/ints (IntArray. [1 1 1 1])))
-        dc (DataChunk. "vcf" loc val "16")]
-    (chunk-locval dc) => [loc [1 1 1 1]]))
+(let [fires (thrift/TimeSeries* 0 [(thrift/FireValue* 0 5 0 0)
+                                   (thrift/FireValue* 0 0 0 0)])
+      forma-val-1 [[(thrift/FireValue* 0 5 0 0) 1 4 7 1]
+                   [(thrift/FireValue* 0 0 0 0) 2 5 8 1]]
+      forma-val-2 [[(thrift/FireValue* 0 0 0 0) 1 4 7 1]
+                   [(thrift/FireValue* 0 0 0 0) 2 5 8 1]]]
+  (tabular
+   (fact
+     (forma-seq ?fires ?short ?long ?t-stat ?break)  => ?result)
+   ?fires ?short ?long ?t-stat ?break ?result
+   fires [1 2] [4 5] [7 8] [1 1] [forma-val-1]
+   nil [1 2] [4 5] [7 8] [1 1] [forma-val-2]))
+
+
+(let [forma-val-1 [[(thrift/FireValue* 0 0 0 0) 1 4 7 1]
+                   [(thrift/FireValue* 0 0 0 0) -1 5 8 3]
+                   [(thrift/FireValue* 0 0 0 0) -1 5 8 3]]]
+  (tabular
+   (fact
+     (forma-seq-non-thrift ?fires ?short ?long ?t-stat ?break)  => ?result)
+   ?fires ?short ?long ?t-stat ?break ?result
+   nil [1 -1 2] [4 5 5] [7 8 8] [1 3 2] [forma-val-1]))
 
 (fact "Test pixel-prop-location method."
   (let [modis-pixel (ModisPixelLocation. "500" 28 8 1 10)
