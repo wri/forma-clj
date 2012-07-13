@@ -1,6 +1,8 @@
 (ns forma.hadoop.jobs.cdm
   "Functions and Cascalog queries for converting data into map tile coordinates."
   (:use [cascalog.api]
+        [cartodb.playground :only (insert-rows delete-all)]
+        [forma.source.gadmiso :only (gadm->iso)]
         [forma.gfw.cdm :only (latlon->tile, read-latlon, latlon-valid?)]
         [forma.utils :only (positions)])
   (:require [forma.postprocess.output :as o]
@@ -8,7 +10,6 @@
             [forma.date-time :as date]
             [cascalog.ops :as c]))
 
-;; TODO: https://github.com/reddmetrics/forma-clj/pull/16#r782582
 (defbufferop min-period
   "Returns the minimum value in tuples."
   [tuples]
@@ -23,9 +24,7 @@
     series - A vector of numbers.
 
   Example usage:
-    > (first-hit 5 [1 2 3 4 5 6 7 8 9 10])
-    > 4
-  "
+    (first-hit 5 [1 2 3 4 5 6 7 8 9 10]) => 4"
   [thresh series]
   (first (positions (partial <= thresh) series)))
 
@@ -53,15 +52,18 @@
   Arguments:
     start - Start period date string.
     src - The source tap for FORMA data.
+    gadm-src - a sequence file source with mod-h, mod-v, sample, line, and gadm
     thresh - The threshold number for valid detections.
     tres - The temporal resolution as a string.
     tres-out - The output temporal resolution as a string.
     zoom - The map zoom level."
-  [src zoom tres tres-out start thresh]
+  [src gadm-src zoom tres tres-out start thresh]
   (let [epoch (date/datetime->period tres-out "2000-01-01")
         start-period (date/datetime->period tres start)]
-    (<- [?x ?y ?z ?p]
+    (<- [?x ?y ?z ?p ?iso ?lat ?lon]
         (src ?sres ?modh ?modv ?s ?l ?prob-series)
+        (gadm-src _ ?modh ?modv ?s ?l ?gadm)
+        (gadm->iso ?gadm :> ?iso)
         (o/clean-probs ?prob-series :> ?clean-series)
         (first-hit thresh ?clean-series :> ?first-hit-idx)
         (+ start-period ?first-hit-idx :> ?period)
@@ -69,5 +71,5 @@
         (- ?period-new-res epoch :> ?rp)
         (min-period ?rp :> ?p)
         (r/modis->latlon ?sres ?modh ?modv ?s ?l :> ?lat ?lon)
-        (latlon-valid? ?lat ?lon) ;; Skip if lat/lon invalid.
+        (latlon-valid? ?lat ?lon)
         (latlon->tile ?lat ?lon zoom :> ?x ?y ?z))))
