@@ -4,6 +4,8 @@
         [forma.reproject :only (pixels-at-res)])
   (:require [forma.utils :as u]
             [forma.schema :as schema]
+            [forma.reproject :as r]
+            [forma.thrift :as thrift]
             [forma.hadoop.io :as io]
             [clojure.string :as s]
             [cascalog.ops :as c]
@@ -118,44 +120,41 @@
       (mangle #"," ?textline :> ?country ?admin-s)
       (u/strings->floats ?admin-s :> ?admin)))
 
-(def blossom-chunk
-  "Returns a Cascalog predicate macro that emits MODIS pixel values for each
-  element in a DataChunk array.
-
-  A DataChunk Thrift object is composed with a DataValue Thrift object which is
-  an array of pixel values representing values at different periods. This query
-  emits a tuple for each element in that array.
-
-  Input variables:
-    ?chunk - A DataChunk Thrift object.
-
-  Output variables:
-    ?s-res - The spatial resolution in meters as a string.
-    ?mod-h - The MODIS tile coordinate column.
-    ?mod-v - The MODIS tile coordinate row.
-    ?sample - The MODIS tile pixel row.
-    ?line - The MODIS tile pixel column.
-    ?val - The pixel value
+(defn blossom-chunk
+  [tile-chunk-src]
+  "Return a Cascalog predicate macro that takes a MODIS tile chunk and emits
+  all MODIS pixel coordinates.
 
   Example usage:
-
-    (let [src [[dc]]] ;; dc is a DataChunk Thrift object
+   (use `forma.playground)
+   (let [src tile-chunk-tap]
          (??<-
-           [?s-res ?mod-h ?mod-v ?sample ?line ?val]
-           (src ?chunk)
-           (blossom-chunk ?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val)))"
-  (<- [?chunk :> ?s-res ?mod-h ?mod-v ?sample ?line ?val]
-      (index ?static-chunk :> ?pix-idx ?val)      
-      (schema/chunk-locval ?chunk :> ?loc ?static-chunk)
-      (schema/chunkloc->pixloc ?loc ?pix-idx :> ?pixloc)
-      (schema/pixel-prop-location ?pixloc :> ?pixlocval)
-      (schema/unpack-pixel-location ?pixlocval :> ?s-res ?mod-h ?mod-v ?sample ?line)))
+          [?res ?h ?v ?sample ?line ?val]
+          (src ?tile-chunk)
+          (blossom-chunk ?tile-chunk :> ?res ?h ?v ?sample ?line ?val)))"
+  (<- [?s-res ?h ?v ?sample ?line ?val]
+      (tile-chunk-src ?tile-chunk)
+      (thrift/unpack ?tile-chunk :> _ ?tile-loc ?data _ _)
+      (thrift/unpack* ?data :> ?data-value)
+      (index ?data-value :> ?pixel-idx ?val)
+      (thrift/unpack ?tile-loc :> ?s-res ?h ?v ?id ?size)
+      (r/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line)))
 
-(defn chunkify [chunk-size]
-  (<- [?dataset !date ?s-res ?t-res ?mh ?mv ?chunkid ?chunk :> ?datachunk]
-      (schema/chunk-location ?s-res ?mh ?mv ?chunkid chunk-size :> ?location)
-      (schema/mk-data-value ?chunk :> ?data-val)
-      (schema/chunk-value ?dataset ?t-res !date ?location ?data-val :> ?datachunk)))
+(defn chunkify
+  "Return a Cascalog predicate macro that emits a tile DataChunk of a specified size.
+
+  Example usage:
+   (use `forma.playground)
+   (let [src [[\"fire\" nil \"500\" \"16\" 8 0 0 [1 1 1 1]]]
+         query (chunkify 24000)]
+         (??<-
+          [?tile-chunk]
+          (src ?name !date ?s-res ?t-res ?h ?v ?id ?val)
+          (query ?name !date ?s-res ?t-res ?h ?v ?id ?val :> ?tile-chunk)))"
+  [size]
+  (<- [?name !date ?s-res ?t-res ?h ?v ?id ?val :> ?tile-chunk]
+      (thrift/ModisChunkLocation* ?s-res ?h ?v ?id size :> ?tile-loc)
+      (thrift/DataChunk* ?name ?tile-loc ?val ?t-res !date :> ?tile-chunk)))
 
 (def break
   "Takes a source of textlines representing rows of a gridded
@@ -194,6 +193,8 @@
     res - The spatial resolution.
     tileseq - Map of country ISO keywords to MODIS tiles (see: forma.source.tilesets)"
   [tmp-path res tileseq]
+  {:pre [(coll? tileseq) 
+         (string? res)]}
   (let [tap (:sink (hfs-seqfile tmp-path))]
     (with-open [^TupleEntryCollector collector
                 (-> (hadoop/job-conf (conf/project-conf))
@@ -201,7 +202,7 @@
                     (.openTapForWrite tap))]
       (doseq [item (for [[h v]  tileseq
                          sample (range (pixels-at-res res))
-                         line   (range (pixels-at-res res))]
+                         line (range (pixels-at-res res))]
                      [h v sample line])]
         (.add collector (Util/coerceToTuple item))))
     (name-vars tap ["?mod-h" "?mod-v" "?sample" "?line"])))
