@@ -1,28 +1,23 @@
 (ns forma.ops.classify
   (:use [forma.classify.logistic]
         [cascalog.api])
-  (:require [cascalog.ops :as c]))
+  (:require [cascalog.ops :as c]
+            [forma.thrift :as thrift]))
 
-(defn unpack-neighbors
-  "Returns a vector containing the fields of a forma-neighbor-value."
-  [neighbor-val]
-  (map (partial get neighbor-val)
-       [:fire-value :neighbor-count
-        :avg-short-drop :min-short-drop
-        :avg-long-drop :min-long-drop
-        :avg-t-stat :min-t-stat]))
-
-(defn unpack-fire [fire]
-  (map (partial get fire)
-       [:temp-330 :conf-50 :both-preds :count]))
-
-(defn unpack-feature-vec [val neighbor-val]
+(defn unpack-feature-vec [forma-val neighbor-val]
+  "TODO: Convert forma-val to thrift - see forma-seq
+  (schema/unpack-forma-val forma-val)"
   (let [intercept [1]
-        [fire short _ long t-stat] val
-        fire-seq (unpack-fire fire)
-        [fire-neighbors & more] (unpack-neighbors neighbor-val)
-        fire-neighbor (unpack-fire fire-neighbors)]
-    (into [] (concat intercept fire-seq [short long t-stat] fire-neighbor more))))
+        [fire short long t-stat break] forma-val
+        fire-seq (thrift/unpack fire)
+        [fire-neighbors _ & more] (thrift/unpack neighbor-val) ;; skip count
+        fire-neighbor (thrift/unpack fire-neighbors)]
+    (into [] (concat intercept fire-seq [short long t-stat break]
+                     fire-neighbor more))))
+
+(defn wrap-unpack-feature-vec
+  [forma-vec neighbor-obj]
+  [(vec (unpack-feature-vec forma-vec neighbor-obj))])
 
 (defbufferop [logistic-beta-wrap [r c m]]
   "returns a vector of parameter coefficients.  note that this is
