@@ -160,6 +160,15 @@ value, and the aggregate of the neighbors."
   (let [beta ((log/mk-key eco) betas)]
     (log/logistic-prob-wrap beta val neighbor-val)))
 
+(defbufferop mk-timeseries
+  "A very specific function that accepts all probabilities for a given
+  pixel for all time series, sorts them by the observed period and
+  then returns a single series of probabilities; used only in the
+  `forma-estimate` query below."
+  [tuples]
+  [[(map second
+         (sort-by first tuples))]])
+
 (defn forma-estimate
   "query to end all queries: estimate the probabilities for each
   period after the training period."
