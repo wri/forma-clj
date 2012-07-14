@@ -3,6 +3,23 @@
         midje.sweet)
   (:require [incanter.core :as i]))
 
+(facts "singular? tests."
+  (singular? (i/matrix [[1 0] [1 0]])) => true
+  (singular? (i/matrix [[1 0] [0 1]])) => false)
+
+(facts "test that the transpose of the transpose is the original
+matrix; test also that the transpose swaps the dimensions."
+  (let [coll-mat [[1 2 3] [4 5 6]]]
+    (transpose coll-mat) => '([1 4] [2 5] [3 6])
+    (transpose (transpose coll-mat)) => coll-mat
+    (count (transpose coll-mat)) => (count (first coll-mat))))
+
+(facts "check the values and dimension of the output."
+  (let [coll [1 2 3]
+        outer (outer-product coll)]
+    outer => '(1.0 2.0 3.0 2.0 4.0 6.0 3.0 6.0 9.0)
+    (count outer) => (i/sq (count coll))))
+
 (fact "insert-at tests."
   (insert-at 1 [2 1] [4 5 6]) => [4 2 1 5 6]
   (insert-at 1 [[2 1]] [4 5 6]) => [4 [2 1] 5 6]
@@ -22,8 +39,8 @@
   container."
   (insert-into-val 0 8 10 [1 2 3]) => (throws AssertionError))
 
-(facts "pred-replace."
-  (pred-replace #{:cake} 3 [1 2 :cake 4]))
+(facts "test pred-replace."
+  (pred-replace #{:cake} 3 [1 2 :cake 4]) => '(1 2 3 4))
 
 (facts "logical-replace."
   (logical-replace > 3 2 [1 2 5 6]) => [1 2 2 2])
@@ -79,37 +96,26 @@ function, as per the documentation."
 
 (facts "idx and rowcol conversion, out of bounds."
   "Upper bounds for squares..."
-  (idx->rowcol 10 100) => (throws AssertionError)
-  (rowcol->idx 10 10 10) => (throws AssertionError)
+  (idx->rowcol 10 100) => nil
+  (rowcol->idx 10 10 10) => nil
 
   "And rectangles."
-  (idx->rowcol 3 4 12) => (throws AssertionError)
-  (rowcol->idx 3 4 3 2) => (throws AssertionError)
+  (idx->rowcol 3 4 12) => nil
+  (rowcol->idx 3 4 3 2) => nil
 
   "Below zero for squares..."
   (idx->rowcol 10 -1) => (throws AssertionError)
   (rowcol->idx 10 -1 0) => (throws AssertionError)
 
   "And for rectangles."
-  (idx->rowcol 10 8 81) => (throws AssertionError)
+  (idx->rowcol 10 8 81) => nil
   (rowcol->idx 10 10 -1 0) => (throws AssertionError))
 
-(tabular
- (fact "Variance Matrix tests. TODODAN: Please expand this with some
- more test cases, including assertion errors."
-   (= (variance-matrix ?input) (i/matrix ?output)) => truthy)
- ?input        ?output
- [[1 2] [3 4]] [[5 -3.5] [-3.5 2.5]])
-
-(tabular
- (fact "Column matrix tests."
-   (column-matrix ?val ?cols) => ?result)
- ?val ?cols ?result
- 2    5     [2.0 2.0 2.0 2.0 2.0]
- -1   2     [-1.0 -1.0]
- -1   0     []
- [-1] 2     (throws AssertionError)
- 2    -1    (throws AssertionError))
+(facts "Column matrix tests."
+  (column-matrix 4 3)  => [4.0 4.0 4.0]
+  (column-matrix 3 4)  => [3.0 3.0 3.0 3.0]
+  (column-matrix -1 3) => [-1.0 -1.0 -1.0]
+  (column-matrix 3 -1) => (throws AssertionError))
 
 (fact "Test of the ones column partial function."
   (ones-column 4) => [1.0 1.0 1.0 1.0])
@@ -117,23 +123,3 @@ function, as per the documentation."
 (facts "matrix-of test."
   (matrix-of 2 1 4) => [2 2 2 2]
   (matrix-of 0 2 2) => [[0 0] [0 0]])
-
-(fact
- "Checking outer product calculation against Numpy function np.outer() for mat and mat.T, where mat is [1 2 3]"
- (outer-product [1 2 3]) => [1.0 2.0 3.0 2.0 4.0 6.0 3.0 6.0 9.0])
-
-(fact
-  "Does transpose work as planned? Sure looks like it!"
-  (transpose [[1 2 3] [4 5 6]] ) => [[1 4] [2 5] [3 6]])
-
-
-(tabular
- (fact?- "Tabular generates lots of facts, one for each set of
-         substitutions in the table below."
-         (wc-query :path) => (produces ?results)
-         (provided
-           (hfs-textline :path) => [[?sentence]]))
- ?sentence       ?results
- "mock it out!"  [["mock" 1] ["it" 1] ["out!" 1]]
- "two two two"   [["two" 3]]
- "nathan M.M"    [["M.M" 1] ["nathan" 1]]) ;; 3 true facts
