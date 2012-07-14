@@ -15,6 +15,7 @@
                  [org.clojure/tools.cli "0.1.0"]
                  [org.clojure/tools.logging "0.2.3"]
                  [clojure-csv/clojure-csv "1.3.2"]
+                 [cartodb-clj "1.1.1"]
                  [org.clojure/math.numeric-tower "0.0.1"]
                  [incanter/incanter-core "1.3.0"]
                  [clj-time "0.3.4"]
