@@ -97,9 +97,6 @@
         clean-fn (comp vector (partial f/make-clean freq good-set bad-set))]
     (if (f/reliable? good-set reli-thresh training-reli)
       (vec (map vector (f/tele-ts start-idx end-idx val-ts)))
-      ;;  (map clean-fn
-      ;;     (f/tele-ts start-idx end-idx val-ts)
-      ;;     (f/tele-ts start-idx end-idx reli-ts)
       [[nil]])))
 
 (defmapcatop telescope-ts
