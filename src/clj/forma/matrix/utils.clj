@@ -101,7 +101,7 @@ filters."
   Example usage:
     (coll-avg [1 2 3 4]) => 2.5"
   [coll]
-  {:pre [(seq coll)]}
+  {:pre [(pos? (count coll))]}
   (float (/ (reduce + coll) (count coll))))
 
 (defn revolve
