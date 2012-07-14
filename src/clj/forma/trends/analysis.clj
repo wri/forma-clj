@@ -56,7 +56,9 @@
 (defn hansen-stat
   "Returns the Hansen (1992) test statistic, based on (1) the
   first-order conditions, and (2) the cumulative first-order
-  conditions.
+  conditions. The try statement will most likely fail if `foc-mat` is
+  singular, which will occur when the hansen-stat is applied to a
+  constant timeseries.
 
   Example:
     (hansen-stat ndvi) => 0.9113
@@ -67,12 +69,14 @@
   [ts]
   (let [ts-mat (i/matrix ts)
         foc (first-order-conditions ts-mat)
-        foc-mat (i/mmult foc (i/trans foc))
-        final-mat (i/mult foc-mat (i/nrow ts-mat))]
-    (if-not (singular? final-mat)
+        foc-mat (i/mmult foc (i/trans foc))]
+    (try
       (let [focsum (map i/cumulative-sum foc)
             focsum-mat (i/mmult focsum (i/trans focsum))]
-        (-> (i/solve final-mat) (i/mmult focsum-mat) (i/trace))))))
+        (-> (i/solve (i/mult foc-mat (i/nrow ts-mat)))
+            (i/mmult focsum-mat)
+            (i/trace)))
+      (catch Exception e))))
 
 ;; Long-term trend characteristic; supporting functions 
 
