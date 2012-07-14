@@ -1,14 +1,7 @@
 (ns forma.trends.analysis-test
   (:use [forma.trends.analysis] :reload)
-  (:use [cascalog.api]
-        [forma.matrix.utils :only (transpose)]
-        [midje sweet cascalog]
-        [forma.trends.data :only (ndvi rain reli Yt)]
-        [forma.utils :only (idx)]
-        [forma.schema :only (timeseries-value)]
-        [forma.trends.stretch :only (ts-expander)]
-        [clojure.math.numeric-tower :only (floor abs expt)]
-        [clojure.test :only (deftest)])
+  (:use [midje sweet]
+        [forma.trends.data :only (ndvi rain reli)])
   (:require [incanter.core :as i]))
 
 (facts
@@ -20,13 +13,15 @@ statistic on `ndvi`"
 
 (fact
  "first-order-conditions has been checked"
- (last (map last (first-order-conditions (i/matrix ndvi)))) => (roughly 89557.2243))
+ (last (map last (first-order-conditions (i/matrix ndvi))))
+ => (roughly 89557.2243))
 
-(defn shift-down-end
-  "returns a transformed collection, where the last half is shifted
-  down by some factor"
+(defn- shift-down-end
+  "Returns a transformed collection, where the last half is shifted
+  down by some factor; used to test that the hansen-stat identifies
+  down-shifts in a time-series (see next test)."
   [coll]
-  (let [half-count (floor (/ (count ndvi) 2))
+  (let [half-count (Math/floor (/ (count ndvi) 2))
         first-half (take half-count ndvi)
         second-half (drop half-count ndvi)]
     (concat first-half
@@ -38,11 +33,14 @@ statistic on `ndvi`"
  (- (hansen-stat (i/matrix (shift-down-end ndvi)))
     (hansen-stat (i/matrix ndvi))) => pos?)
 
-(fact
-  "test the value of the hansen stat, based off standard NDVI test series"
-  (hansen-stat (i/matrix ndvi)) => (roughly 0.911317))
+(facts
+  "test the value of the hansen stat, based off standard NDVI test
+series; test also that the hansen-stat will return nil for time-series
+that yield a singular first-order-condition matrix."
+  (hansen-stat (i/matrix ndvi)) => (roughly 0.911317)
+  (hansen-stat (repeat 100 0))  => nil)
 
 (def ts-tap
-  "sample tap that mimics 2 identical pixels (each with the same time series)"
+  "sample tap that mimics 2 identical pixels (each with the same time
+series)"
   (vec (repeat 2 {:start 0 :end 271 :ndvi ndvi :reli reli :rain rain})))
-
