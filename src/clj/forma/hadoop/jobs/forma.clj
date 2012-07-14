@@ -268,7 +268,7 @@
 
 (defmapop [apply-betas [betas]]
   [eco val neighbor-val]
-  (let [beta ((log/mk-key eco) betas)]
+  (let [beta (((comp keyword str) eco) betas)]
     (log/logistic-prob-wrap beta val neighbor-val)))
 
 (defbufferop mk-timeseries
@@ -289,5 +289,5 @@
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _ _)
         (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
-        (log/mk-timeseries ?pd ?prob :> ?prob-series)
+        (mk-timeseries ?pd ?prob :> ?prob-series)
         (:distinct false))))
