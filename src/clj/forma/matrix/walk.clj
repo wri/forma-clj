@@ -1,4 +1,6 @@
 (ns forma.matrix.walk
+  "Functions that move along a 2D array, collecting features of the
+moving window."
   (:use cascalog.api
         [forma.utils :only (nth-in)]
         [forma.matrix.utils :only (insert-into-val
@@ -48,9 +50,8 @@
   indicated by the supplied key sequence.
 
   Example usage:
-    (def test-matrix [[0 1 2]
-                      [3 4 5]])
-    (wipe-out test-matrix []) => "
+    (def test-matrix [[0 1 2] [3 4 5]])
+    (wipe-out test-matrix [1 2]) => [[0 1 2] [3 4]]"
   [coll [k & ks]]
   {:pre [(or (nil? k) (coll? coll))]}
   (if-not k

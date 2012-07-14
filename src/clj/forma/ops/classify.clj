@@ -4,10 +4,15 @@
   (:require [cascalog.ops :as c]
             [forma.thrift :as thrift]))
 
-(defn unpack-feature-vec [forma-val neighbor-val]
-  "TODO: Convert forma-val to thrift - see forma-seq"
-  {:pre [(instance? forma.schema.FormaValue forma-val)
-         (instance? forma.schema.NeighborValue neighbor-val)]}
+(defn unpack-feature-vec
+  "Creates a persistent vector from forma- and neighbor-val objects;
+  building the vector for the logistic classifier.
+
+  TODO: add back in preconditions when this function can accommodate a
+  thrift object as a forma-val.  Simplify this function."
+  [forma-val neighbor-val]
+  ;; {:pre [(instance? forma.schema.FormaValue forma-val)
+         ;; (instance? forma.schema.NeighborValue neighbor-val)]}
   (let [intercept [1]
         [fire short long t-stat break] forma-val
         fire-seq (thrift/unpack fire)
