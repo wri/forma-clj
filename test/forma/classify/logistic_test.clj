@@ -1,72 +1,51 @@
+;; This namespace tests the numerical properties of the logistic
+;; classifier.
+
 (ns forma.classify.logistic-test
   (:use [forma.classify.logistic] :reload)
-  (:use [midje sweet cascalog]
-        [clojure-csv.core]
+  (:use [midje sweet]
         [cascalog.api]
-        [midje.cascalog]
         [clojure-csv.core])
   (:import [org.jblas FloatMatrix MatrixFunctions DoubleMatrix])
-  (:require [incanter.core :as i]
-            [forma.testing :as t]
-            [forma.date-time :as date]
-            [cascalog.ops :as c]))
+  (:require [forma.testing :as t]))
 
-(defn read-mys-csv
-  "returns a properly adjusted list of the malaysia test data."
-  [file-name]
+(defn- csv->seq
+  "Returns a lazy sequence of the rows in the CSV file located at the
+  supplied path."
+  [file-path]
   (map
    (partial map #(Float/parseFloat %))
    (butlast (parse-csv
-             (slurp file-name)))))
+             (slurp file-path)))))
 
-(def label-path (t/dev-path "/testdata/mys-label.csv"))
-(def feature-path (t/dev-path "/testdata/mys-feature.csv"))
-
-(def y
-  "returns a list of binary labels for training."
-  (apply concat (read-mys-csv label-path)))
-
-(def X
-  "returns a clojure object of the feature vectors, with a constant
-  prepended."
-  (map (partial cons 1) (read-mys-csv feature-path)))
-
-(fact
-  "a linear combination that results in zero will yield a probability of 0.5"
-  (logistic-prob (to-double-rowmat [1 2 3])
-                 (to-double-rowmat [0 0 0])) => (to-double-rowmat [0.5]))
-
-(def y-mat (to-double-rowmat y))
-(def X-mat (to-double-matrix X))
+(defn- test-beta
+  "Returns the coefficient vector for the supplied data sets.  The
+  rows in each data set correspond to the labels and features to a
+  specific pixel, so that the first row in each data set indicates the
+  labels and features of the same pixel.  features in the first row of
+  the feature data set."
+  [label-path feature-path]
+  (let [y (to-double-rowmat
+           (apply concat (csv->seq label-path)))
+        X (to-double-matrix
+           (map (partial cons 1) (csv->seq feature-path)))]
+    (logistic-beta-vector y X 1e-8 1e-10 6)))
 
 (facts
- (let [beta (logistic-beta-vector y-mat X-mat 1e-8 1e-10 6)]
-   (vector? beta) => true
-   (last beta)    => (roughly -15.1054)
-   (first beta)   => (roughly -2.4156)))
+  "Test the numerical outcomes of running the logistic classifier on a
+  relatively small dataset extracted from Malaysia (features and
+  labels for 1,000 pixels)."
+  (let [label-path   (t/dev-path "/testdata/mys-label.csv")
+        feature-path (t/dev-path "/testdata/mys-feature.csv")
+        beta         (test-beta label-path feature-path)]
+    (vector? beta) => true
+    (last beta)    => (roughly -15.1054)
+    (first beta)   => (roughly -2.41557)))
 
-;; USEFUL FOR BENCHMARK
-
-(defn multiplier
-  [n]
-  ((partial * 1000) n))
-
-(defn mk-x
-  [n]
-  (DoubleMatrix/rand (multiplier n) 20))
-
-(defn mk-y
-  [n]
-  (to-double-rowmat (repeatedly (multiplier n) #(rand-int 2))))
-
-(defn run-logistic-beta-vector
-  "Run logistic-beta-vector on dataset of size n * 1000, with up to specified iterations"
-  [n iterations]
-  (let [big-X (mk-x n)
-        big-y (mk-y n)]
-    (prn (.rows big-X) (.columns big-X))
-    (logistic-beta-vector big-y big-X 1e-8 1e-10 iterations)))
-
-;; TIME required to calculate logistic betas for 1 million obs, 10 iterations
-;; (time (run-logistic-beta-vector 1000 10))
-;; "Elapsed time: 5014.590245 msecs"
+(fact
+  "Test a basic property of the logistic probability function, namely
+  that a linear combination that results in zero will yield a
+  probability of 0.5; and that the result is an instance of a double
+  row matrix"
+  (logistic-prob (to-double-rowmat [1 2 3])
+                 (to-double-rowmat [0 0 0])) => (to-double-rowmat [0.5]))

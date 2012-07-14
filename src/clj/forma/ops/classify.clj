@@ -4,9 +4,15 @@
   (:require [cascalog.ops :as c]
             [forma.thrift :as thrift]))
 
-(defn unpack-feature-vec [forma-val neighbor-val]
-  "TODO: Convert forma-val to thrift - see forma-seq
-  (schema/unpack-forma-val forma-val)"
+(defn unpack-feature-vec
+  "Creates a persistent vector from forma- and neighbor-val objects;
+  building the vector for the logistic classifier.
+
+  TODO: add back in preconditions when this function can accommodate a
+  thrift object as a forma-val.  Simplify this function."
+  [forma-val neighbor-val]
+  ;; {:pre [(instance? forma.schema.FormaValue forma-val)
+         ;; (instance? forma.schema.NeighborValue neighbor-val)]}
   (let [intercept [1]
         [fire short long t-stat break] forma-val
         fire-seq (thrift/unpack fire)
@@ -15,20 +21,8 @@
     (into [] (concat intercept fire-seq [short long t-stat break]
                      fire-neighbor more))))
 
-(defn wrap-unpack-feature-vec
-  [forma-vec neighbor-obj]
-  [(vec (unpack-feature-vec forma-vec neighbor-obj))])
-
 (defbufferop [logistic-beta-wrap [r c m]]
-  "returns a vector of parameter coefficients.  note that this is
-  where the intercept is added (to the front of each stacked vector in
-  the feature matrix
-
-  TODO: The intercept is included in the feature vector for now, as a
-  kludge when we removed the hansen statistic.  When we include the
-  hansen stat, we will have to replace the feature-mat binding below
-  with a line that tacks on a 1 to each feature vector.
-  "
+  "Returns a vector of parameter coefficients."
   [tuples]
   (let [make-binary  (fn [x] (if (zero? x) 0 1))
         label-seq    (map (comp make-binary first) tuples) 

@@ -6,7 +6,6 @@
         [cascalog.checkpoint :only (workflow)]
         [clojure.math.numeric-tower :only (round)])
   (:require [cascalog.ops :as c]
-            [forma.utils :only (throw-illegal)]
             [forma.reproject :as r]
             [forma.schema :as schema]
             [forma.trends.stretch :as stretch]

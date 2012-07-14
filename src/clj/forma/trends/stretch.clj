@@ -1,17 +1,29 @@
 (ns forma.trends.stretch
+  "Accepts a time series of one, low resolution and stretches it to a
+higher resolution; first to daily, and then consuming the series in
+chunks of whatever the targe resolution is."
   (:use [forma.matrix.utils :only (coll-avg)])
   (:require [forma.date-time :as date]
             [forma.schema :as schema]
             [forma.thrift :as thrift]))
 
 (defn shift-periods-target-res
-  "Shift original ts start/end periods to appropriate values for target res"
+  "Shift original timeseries start/end periods to appropriate values
+  for target temporal resolution. `base-res` is the temporal
+  resolution of the original data set, `target-res` is the target
+  resolution, `start-idx` is the beginning index (inclusive) in the
+  original resolution, and `end-idx` (inclusive) in the original
+  temporal resolution.
+
+  Example usage:
+    (shift-periods-target-res \"32\" \"16\" 384 386)"
   [base-res target-res start-idx end-idx]
   (map (partial date/shift-resolution base-res target-res)
        [start-idx (inc end-idx)]))
 
 (defn expand-to-days
-  "Expand timeseries to daily timeseries"
+  "Expand timeseries at the base resolution to daily
+  timeseries. `start-idx`"
   [start-idx series pd base-res offset]
   (->> (map-indexed #(vector (+ % start-idx) %2) series)
        (mapcat (fn [[pd val]]
@@ -19,14 +31,9 @@
        (drop offset)))
 
 (defn ts-expander
-  "timeseries is a TimeSeries.
-
-  Expand a timeseries from lower resolution to higher resolution, by
-   expanding the original timeseries to a daily timeseries, then
-   consuming it at the new resolution.
-
-   The final argument must be a TimeSeries object as defined in
-   forma.thrift."
+  "Expand a timeseries from lower resolution to higher resolution, by
+  expanding the original timeseries to a daily timeseries, then
+  consuming it at the new resolution."
   [base-res target-res timeseries]
   (let [[start-idx end-idx series-value] (thrift/unpack timeseries)
         series (thrift/unpack series-value)
