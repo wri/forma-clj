@@ -56,9 +56,11 @@
 (defn hansen-stat
   "Returns the Hansen (1992) test statistic, based on (1) the
   first-order conditions, and (2) the cumulative first-order
-  conditions. The try statement will most likely fail if `foc-mat` is
-  singular, which will occur when the hansen-stat is applied to a
-  constant timeseries.
+  conditions. The try statement will most likely throw an exception if
+  `foc-mat` is singular, which will occur when the hansen-stat is
+  applied to a constant timeseries.  If the matrix is singular,
+  `hansen-stat` will return nil, which will be filtered in the
+  subsequent cascalog join.
 
   Example:
     (hansen-stat ndvi) => 0.9113
