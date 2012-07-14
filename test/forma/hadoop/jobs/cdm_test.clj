@@ -19,5 +19,3 @@
    (forma->cdm ?src ?zoom ?tres ?tres-out ?start ?thresh) => (produces ?row))
  ?src ?zoom ?tres ?tres-out ?start ?thresh ?row
  [["500" 28 8 0 0 [1 49 90]]] 16 "16" "32" "2005-12-31" 50 [[51253 30938 16 71]])
-
-
