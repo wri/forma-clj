@@ -54,9 +54,13 @@
               (i/minus sq-resid mu)))))
 
 (defn hansen-stat
-  "returns the Hansen (1992) test statistic, based on (1) the
+  "Returns the Hansen (1992) test statistic, based on (1) the
   first-order conditions, and (2) the cumulative first-order
-  conditions.
+  conditions. The try statement will most likely throw an exception if
+  `foc-mat` is singular, which will occur when the hansen-stat is
+  applied to a constant timeseries.  If the matrix is singular,
+  `hansen-stat` will return nil, which will be filtered in the
+  subsequent cascalog join.
 
   Example:
     (hansen-stat ndvi) => 0.9113
@@ -67,13 +71,14 @@
   [ts]
   (let [ts-mat (i/matrix ts)
         foc (first-order-conditions ts-mat)
-        focsum (map i/cumulative-sum foc)
-        foc-mat (i/mmult foc (i/trans foc))
-        focsum-mat (i/mmult focsum (i/trans focsum))]
-    (i/trace
-     (i/mmult
-      (i/solve (i/mult foc-mat (i/nrow ts-mat)))
-      focsum-mat))))
+        foc-mat (i/mmult foc (i/trans foc))]
+    (try
+      (let [focsum (map i/cumulative-sum foc)
+            focsum-mat (i/mmult focsum (i/trans focsum))]
+        (-> (i/solve (i/mult foc-mat (i/nrow ts-mat)))
+            (i/mmult focsum-mat)
+            (i/trace)))
+      (catch Exception e))))
 
 ;; Long-term trend characteristic; supporting functions 
 
