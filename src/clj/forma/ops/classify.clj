@@ -10,7 +10,7 @@
 
   TODO: add back in preconditions when this function can accommodate a
   thrift object as a forma-val.  Simplify the fuck out of this
-  function."
+  function. See: https://github.com/reddmetrics/forma-clj/issues/104"
   [forma-val neighbor-val]
   ;; {:pre [(instance? forma.schema.FormaValue forma-val)
          ;; (instance? forma.schema.NeighborValue neighbor-val)]}
@@ -31,7 +31,8 @@
   vector resulting from a logistic regression.
 
   TODO: replace the `maps` with a list comprehension and just
-  generally simplify this function."
+  generally simplify this function.
+  See: https://github.com/reddmetrics/forma-clj/issues/105"
   [tuples]
   (let [make-binary  (fn [x] (if (zero? x) 0 1))
         label-seq    (map (comp make-binary first) tuples) 
