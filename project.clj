@@ -18,7 +18,6 @@
                  [clojure-csv/clojure-csv "1.3.2"]
                  [org.clojure/math.numeric-tower "0.0.1"]
                  [incanter/incanter-core "1.3.0"]
-                 [incanter/incanter-charts "1.3.0"]
                  [clj-time "0.3.4"]
                  [forma/gdal "1.8.0"]
                  [forma/jblas "1.2.1"]
@@ -29,6 +28,5 @@
                  [org.apache.thrift/libthrift "0.8.0"
                   :exclusions [org.slf4j/slf4j-api]]]
   :dev-dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
-                     [midje-cascalog "0.4.0"]
-                     [incanter/incanter-charts "1.3.0"]]
+                     [midje-cascalog "0.4.0"]]
   :aot [forma.hadoop.pail, forma.schema, #"forma.hadoop.jobs.*"])

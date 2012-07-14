@@ -57,4 +57,5 @@
   (let [src (name-vars beta-src ["?s-res" "?eco" "?beta"])
         beta-vec (??<- [?eco ?beta] (src _ ?eco ?beta))]
     (apply merge
-           (for [[eco beta] beta-vec] {((comp keyword str) eco) beta}))))
+           (for [[eco beta] beta-vec]
+             {((comp keyword str) eco) beta}))))
