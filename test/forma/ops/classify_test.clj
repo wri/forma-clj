@@ -39,7 +39,7 @@ NeighborValue. TODO: rewrite tests when issue #90 is resolved. "
 
 (fact "Check the structural (and numerical) stability of the output
 from the beta generation queries."
-  (let [src (hfs-seqfile (t/dev-path "/testdata/estimation-seqfile"))
+  (let [src (hfs-seqfile (t/dev-path "/testdata/smallsample-testdata/beta-data-path"))
         [sres eco beta] (ffirst (??- (generate-betas test-map src)))
         fire-val (thrift/FireValue* 1 1 1 1)
         forma-val [fire-val 3.0 3.0 3.0 3.0]
@@ -50,6 +50,6 @@ from the beta generation queries."
     (logistic-prob-wrap beta forma-val neighbor-val) => [2.88252532638858E-5]))
 
 (fact
-  (let [src (hfs-seqfile (t/dev-path "/testdata/estimation-seqfile"))
+  (let [src (hfs-seqfile (t/dev-path "/testdata/smallsample-testdata/beta-data-path"))
         beta-src (generate-betas test-map src)]
     (set (keys (beta-dict beta-src))) => (set [:40160 :40157])))

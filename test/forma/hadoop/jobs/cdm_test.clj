@@ -18,7 +18,7 @@ specified row; but an invalid lat-lon will not produce a row."
 (fact "Check that `forma->cdm` produces the expected output, ready for
 input into CartoDB table."
   (let [src (hfs-seqfile (t/dev-path "/testdata/output"))
-        gadm-src (hfs-seqfile (t/dev-path "/testdata/gadm-path"))
+        gadm-src (hfs-seqfile (t/dev-path "/testdata/smallsample-testdata/gadm-path"))
         out-tap (forma->cdm src gadm-src 17 "16" "32" "2005-12-31" 50)]
     (c/first-n out-tap 3)
     => (produces [[102620 65277 17 71 "IDN" 0.7104166666666597 101.85574611194706]

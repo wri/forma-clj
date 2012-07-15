@@ -36,3 +36,9 @@ directory should be created."
   ([sub-path]
      (project-path (str dev-resources-subdir
                         sub-path))))
+
+(defn sampledata-path
+  ([]
+     (dev-path "/testdata/smallsample-testdata/"))
+  ([sub-path]
+     (dev-path (str "/testdata/smallsample-testdata/" sub-path))))
