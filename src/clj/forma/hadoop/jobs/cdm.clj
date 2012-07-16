@@ -4,7 +4,7 @@ coordinates."
   (:use [cascalog.api]
         [forma.source.gadmiso :only (gadm->iso)]
         [forma.gfw.cdm :only (latlon->tile, read-string->num, latlon-valid?,
-                              meters->tile)]
+                              meters->maptile)]
         [forma.utils :only (positions)])
   (:require [forma.postprocess.output :as o]
             [forma.reproject :as r]
