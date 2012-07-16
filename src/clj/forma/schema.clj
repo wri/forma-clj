@@ -80,8 +80,9 @@
 
 (defn neighbor-value
   "Accepts either a forma value or a sequence of sub-values."
-  ([[fire short param long t-stat]]
-     (thrift/NeighborValue* fire 1 short short long long t-stat t-stat param param))
+  ([forma-val]
+     (let [[fire short param long t-stat] (thrift/unpack forma-val)]
+       (thrift/NeighborValue* fire 1 short short long long t-stat t-stat param param)))
   ([fire neighbors avg-short
     min-short avg-long min-long avg-stat min-stat avg-param min-param]
      (thrift/NeighborValue* fire neighbors avg-short min-short avg-long min-long
@@ -93,7 +94,7 @@
   `neighbor-val`. (`neighbor-val` must be an instance of
   `NeighborValue`."
   [neighbor-val forma-val]
-  (let [[fire short param long t] forma-val        
+  (let [[fire short param long t] (thrift/unpack forma-val)        
         [n-fire ncount avg-short min-short avg-long min-long avg-stat min-stat
          ave-break min-break] (thrift/unpack neighbor-val)]
     (thrift/NeighborValue* (add-fires n-fire fire)
