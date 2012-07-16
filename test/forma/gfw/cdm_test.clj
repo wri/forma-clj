@@ -15,7 +15,7 @@
 (tabular
  (fact
    "Test read-latlon function."
-   (read-latlon ?lat ?lon) => ?result)
+   (read-string->num ?lat ?lon) => ?result)
  ?lat ?lon ?result
  "41.850033" "-87.65005229999997" [41.850033 -87.65005229999997]
  41.850033 -87.65005229999997 (throws AssertionError)
@@ -45,5 +45,16 @@
  -181 0 false
  181 0 false)
 
-
-
+(tabular
+ (fact
+   "Test meters->maptile function"
+   (meters->maptile ?x ?y ?z) => ?result)
+ ?x ?y ?z ?result
+ -1  1  1 [0 0 1]
+ -1  1  4 [7 7 4]
+  1  1  1 [1 0 1]
+  1  1  4 [8 7 4]
+ -1 -1  1 [0 1 1]
+ -1 -1  4 [7 8 4]
+  1 -1  1 [1 1 1]
+  1 -1  4 [8 8 4])

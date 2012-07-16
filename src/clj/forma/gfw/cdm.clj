@@ -133,7 +133,7 @@
                (/ res))]
     [xp yp]))
 
-(defn meters->tile
+(defn meters->maptile
   [xm ym zoom]
   "Returns the map tile coordinates [x y zoom] for a given x, y (in meters),
    resolution (in meters) and zoom level."

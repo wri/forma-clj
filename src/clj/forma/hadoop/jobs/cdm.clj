@@ -2,9 +2,9 @@
   "Functions and Cascalog queries for converting data into map tile
 coordinates."
   (:use [cascalog.api]
-        [cartodb.playground :only (insert-rows delete-all big-insert)]
         [forma.source.gadmiso :only (gadm->iso)]
-        [forma.gfw.cdm :only (latlon->tile, read-latlon, latlon-valid?)]
+        [forma.gfw.cdm :only (latlon->tile, read-string->num, latlon-valid?,
+                              meters->tile)]
         [forma.utils :only (positions)])
   (:require [forma.postprocess.output :as o]
             [forma.reproject :as r]
@@ -26,8 +26,8 @@ coordinates."
   [thresh series]
   (first (positions (partial <= thresh) series)))
 
-(defn hansen->cdm
-  "Returns a Cascalog query that transforms Hansen data into map tile
+(defn hansen-latlon->cdm
+  "Returns a Cascalog query that transforms Hansen latlon data into map tile
   coordinates. `src` - The source tap.  `zoom` - The map zoom level.
   `tres` - The temporal resolution."
   [src zoom tres]
@@ -36,10 +36,24 @@ coordinates."
         period (- hansen epoch)]
     (<- [?x ?y ?z ?p]
         (src ?longitude ?latitude _)
-        (read-latlon ?latitude ?longitude :> ?lat ?lon)
+        (read-string->num ?latitude ?longitude :> ?lat ?lon)
         (latlon-valid? ?lat ?lon) ;; Skip if lat/lon invalid.
         (identity period :> ?p)
         (latlon->tile ?lat ?lon zoom :> ?x ?y ?z))))
+
+(defn hansen-xy->cdm
+  "Returns a Cascalog query that transforms Hansen xy data into map tile
+  coordinates. `src` - The source tap.  `zoom` - The map zoom level.
+  `tres` - The temporal resolution."
+  [src zoom tres]
+  (let [epoch (date/datetime->period tres "2000-01-01")
+        hansen (date/datetime->period tres "2010-12-31")
+        period (- hansen epoch)]
+    (<- [?x ?y ?z ?p]
+        (src ?xm-str ?ym-str _)
+        (read-string->num ?xm-str ?ym-str :> ?xm ?ym)
+        (identity period :> ?p)
+        (meters->maptile ?xm ?ym zoom :> ?x ?y ?z))))
 
 (defn forma->cdm
   "Returns a Cascalog generator that transforms FORMA data into map
