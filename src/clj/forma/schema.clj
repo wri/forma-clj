@@ -97,6 +97,13 @@
     min-short avg-long min-long avg-stat min-stat avg-param min-param]
      (thrift/NeighborValue* fire neighbors avg-short min-short avg-long min-long
                             avg-stat min-stat avg-param min-param)))
+(def empty-neighbor-val
+  "Returns a NeighborValue object with values for a pixel that should
+  have an empty or nil value without breaking the process.  TODO:
+  figure out what values should be inserted for each feature to truly
+  represent the notion of emptiness."
+  (thrift/NeighborValue* (thrift/FireValue* 0 0 0 0)
+                         (long 0) 0. 0. 0. 0. 0. 0. 0. 0.))
 
 (defn merge-neighbors
   "Merges the supplied instance of `FormaValue` into the existing
@@ -125,8 +132,7 @@
   [[x & more]]
   (if x
     (reduce merge-neighbors (neighbor-value x) more)
-    (thrift/NeighborValue* (thrift/FireValue* 0 0 0 0)
-                           (long 0) 0. 0. 0. 0. 0. 0. 0. 0.)))
+    empty-neighbor-val))
 
 (defn forma-value
   "Returns a vector containing a FireValue, short-term drop,
