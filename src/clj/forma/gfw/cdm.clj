@@ -99,11 +99,11 @@
 ;; Map of lat/lon min and max values.
 (def latlon-range {:lat-min -90 :lat-max 90 :lon-min -180 :lon-max 180})
 
-(defn read-latlon
-  "Converts lat and lon values from string to number."
-  [lat lon]
-  {:pre [(= (type lat) java.lang.String), (= (type lon) java.lang.String)]}
-  [ (read-string lat) (read-string lon)])
+(defn read-string->num
+  "Convert strings to number."
+  [& s]
+  {:pre [(every? string? s)]}
+  (vec (map read-string s)))
 
 (defn latlon-valid?
   [lat lon]
