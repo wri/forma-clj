@@ -1,4 +1,8 @@
 (ns forma.schema-test
+  "Tests for most functions in forma.schema.  So far, the tests for
+  the fundamental, building-block functions are indirectly tested
+  through the tests of the higher-order functions (which call the
+  lower-order functions)."
   (:use forma.schema
         [midje sweet cascalog])
   (:require [forma.date-time :as date]
@@ -11,95 +15,72 @@
             NeighborValue]
            [org.apache.thrift TBase TUnion]))
 
-;; ## Various schema tests
-
 (def neighbors
+  "Create a small vector of FormaValues indicating that they are
+  neighbors; used for testing that the neighbor values are
+  appropriately merged and combined."
   [(thrift/FormaValue* (thrift/FireValue* 1 1 1 1) 1. 1. 1. 1.)
    (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) 2. 2. 2. 2.)])
 
-(fact
-  "Checks that neighbors are being combined properly."
-  (combine-neighbors neighbors) => (neighbor-value (thrift/FireValue* 3 2 2 3)
-                                                   2
-                                                   1.5 1.
-                                                   1.5 1.
-                                                   1.5 1.
-                                                   1.5 1.))
+(defn- f-series
+  "Returns a fire series of length 10 with starting index `start-idx`
+  for testing."
+  [start-idx]
+  (thrift/TimeSeries* start-idx (repeat 10 (thrift/FireValue* 0 0 0 0))))
 
-;; (fact "boundaries testing."
-;;   (boundaries [ 0 [1 2 3 4] 1 [2 3 4 5]]) => [1 4]
-;;   (boundaries [ 0 [1 2 3 4] [2 3 4 5]]) => (throws AssertionError))
+(facts "Test that fire sequence is appropriately trimmed. Note that
+  the interval length defined by :est-start and :est-end amounts to 5
+  periods."
 
-;; (tabular
-;;  (fact "sequence adjustment testing."
-;;    (adjust ?a0 ?a-vec ?b0 ?b-vec) => [?start ?a ?b])
-;;  ?a0 ?a-vec    ?b0 ?b-vec    ?start ?a      ?b
-;;  0   [1 2 3 4] 1   [2 3 4 5] 1      [2 3 4] [2 3 4]
-;;  2   [9 8 7]   0   [1 2 3 4] 2      [9 8]   [3 4]
-;;  10  [2 3 4]   1   [1 2 3]   10     []      [])
+  ;; Test for appropriate trimming over both ends of the interval
+  (let [est-map {:est-start "2005-12-31" :est-end "2006-03-01" :t-res "16"}
+        [_ _ arr] (apply thrift/unpack (adjust-fires est-map (f-series 826)))]
+    (count (thrift/unpack arr)) => 5)
 
-;; (tabular
-;;  (facts "adjust-fires testing."
-;;    (let [est-map {:est-start "2005-01-01"
-;;                   :est-end "2005-02-01"
-;;                   :t-res "32"}
-;;          f-start (date/datetime->period "32" "2005-01-01")
-;;          mk-f-series (fn [offset]
-;;                        (thrift/TimeSeries* (+ f-start offset)
-;;                                            [(thrift/FireValue* 0 0 0 1)
-;;                                             (thrift/FireValue* 1 1 1 1)]))]
-;;      (adjust-fires est-map (mk-f-series ?offset)) => [?series]
-;;      ))
-;;  ?offset ?series
-;;  0       (thrift/TimeSeries*  f-start [(thrift/FireValue* 0 0 0 1)
-;;                                         (thrift/FireValue* 1 1 1 1)])
-;;  1       (thrift/TimeSeries* f-start [[(thrift/FireValue* 0 0 0 1)]])
-;;  2       nil)
+  ;; Test for overhang only over the tail-end of the interval
+  (let [est-map {:est-start "2005-12-31" :est-end "2006-03-01" :t-res "16"}
+        [_ _ arr] (apply thrift/unpack (adjust-fires est-map (f-series 830)))]
+    (count (thrift/unpack arr)) => 2))
 
-;; (let [fires (thrift/TimeSeries* 0 [(thrift/FireValue* 0 5 0 0)
-;;                                    (thrift/FireValue* 0 0 0 0)])
-;;       forma-val-1 [[(thrift/FireValue* 0 5 0 0) 1 4 7 1]
-;;                    [(thrift/FireValue* 0 0 0 0) 2 5 8 1]]
-;;       forma-val-2 [[(thrift/FireValue* 0 0 0 0) 1 4 7 1]
-;;                    [(thrift/FireValue* 0 0 0 0) 2 5 8 1]]]
-;;   (tabular
-;;    (fact
-;;      (forma-seq ?fires ?short ?long ?t-stat ?break)  => ?result)
-;;    ?fires ?short ?long ?t-stat ?break ?result
-;;    fires [1 2] [4 5] [7 8] [1 1] [forma-val-1]
-;;    nil [1 2] [4 5] [7 8] [1 1] [forma-val-2]))
+(fact "Checks that neighbors are being combined properly."
+  (combine-neighbors neighbors)
+  => (neighbor-value (thrift/FireValue* 3 2 2 3)
+                     2
+                     1.5 1.
+                     1.5 1.
+                     1.5 1.
+                     1.5 1.))
 
+(fact "boundaries testing."
+  (boundaries [ 0 [1 2 3 4] 1 [2 3 4 5]]) => [1 4]
+  (boundaries [ 0 [1 2 3 4] [2 3 4 5]]) => (throws AssertionError))
 
-;; (let [fires (thrift/TimeSeries* 0 [(thrift/FireValue* 0 5 0 0)
-;;                                    (thrift/FireValue* 0 0 0 0)])
-;;       forma-val-1 [[(thrift/FireValue* 0 5 0 0) 1 4 7 1]
-;;                    [(thrift/FireValue* 0 0 0 0) 2 5 8 1]]
-;;       forma-val-2 [[(thrift/FireValue* 0 0 0 0) 1 4 7 1]
-;;                    [(thrift/FireValue* 0 0 0 0) 2 5 8 1]]]
-;;   (tabular
-;;    (fact
-;;      (forma-seq ?fires ?short ?long ?t-stat ?break)  => ?result)
-;;    ?fires ?short ?long ?t-stat ?break ?result
-;;    fires [1 2] [4 5] [7 8] [1 1] [forma-val-1]
-;;    nil [1 2] [4 5] [7 8] [1 1] [forma-val-2]))
+(tabular
+ (fact "sequence adjustment testing."
+   (adjust ?a0 ?a-vec ?b0 ?b-vec) => [?start ?a ?b])
+ ?a0 ?a-vec    ?b0 ?b-vec    ?start ?a      ?b
+ 0   [1 2 3 4] 1   [2 3 4 5] 1      [2 3 4] [2 3 4]
+ 2   [9 8 7]   0   [1 2 3 4] 2      [9 8]   [3 4]
+ 10  [2 3 4]   1   [1 2 3]   10     []      [])
 
+(fact "Test that the first element of each of the supplied timeseries
+  to `forma-seq` are appropriately bundled into the first FormaValue
+  of the output timeseries (consisting of FormaValues for each
+  period)."
+  (let [fire-1 (thrift/FireValue* 1 1 1 1)
+        fire-0 (thrift/FireValue* 0 0 0 0)
+        fire-series (thrift/TimeSeries* 826 (repeat 5 fire-1))
+        short-series  [0. 1. 2. 3. 4.]
+        long-series   [1. 3. 5. 7. 9.]
+        t-stat-series [2. 4. 6. 8. 10.]
+        break-series  [10. 11. 12. 13. 14.]]
 
-;; (let [forma-val-1 [[(thrift/FireValue* 0 0 0 0) 1 4 7 1]
-;;                    [(thrift/FireValue* 0 0 0 0) -1 5 8 3]
-;;                    [(thrift/FireValue* 0 0 0 0) -1 5 8 3]]]
-;;   (tabular
-;;    (fact
-;;      (forma-seq-non-thrift ?fires ?short ?long ?t-stat ?break)  => ?result)
-;;    ?fires ?short ?long ?t-stat ?break ?result
-;;    nil [1 -1 2] [4 5 5] [7 8 8] [1 3 2] [forma-val-1]))
+    ;; Test for an existing fire
+    (ffirst
+     (forma-seq fire-series short-series long-series t-stat-series break-series))
+    => (thrift/FormaValue* fire-1 0. 1. 2. 10.)
 
-;; (fact "Test pixel-prop-location method."
-;;   (let [modis-pixel (ModisPixelLocation. "500" 28 8 1 10)
-;;         val (LocationPropertyValue/pixelLocation modis-pixel)
-;;         locprop (LocationProperty. val)]
-;;     (pixel-prop-location locprop) => modis-pixel))
-
-;; (fact
-;;   "Test vector wrapping of get-vals"
-;;   (let [arr (mk-array-value (DoubleArray. [1 2 3]))]
-;;     (get-vals-wrap arr)) => [[1 2 3]])
+    ;; Test for the case when there are no fires
+    (ffirst
+     (forma-seq nil short-series long-series t-stat-series break-series))
+    => (thrift/FormaValue* fire-0 0. 1. 2. 10.)))
