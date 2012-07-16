@@ -75,21 +75,21 @@
                  (/ res))]
       [yp xp]))
 
-    (pixels->tile
-     [this]
-     "Returns this alert coordinates as map tile coordinates."
-     (let [[yp xp] (meters->pixels this)
-           res (resolution this)
-           yt (-> (/ yp map-tile-dim)
-                  (Math/ceil)
-                  (- 1)
-                  (int))
-           xt (-> (/ xp map-tile-dim)
-                  (Math/ceil)
-                  (- 1)
-                  (int))]
-       [yt xt]))   
-
+  (pixels->tile
+    [this]
+    "Returns this alert coordinates as map tile coordinates."
+    (let [[yp xp] (meters->pixels this)
+          res (resolution this)
+          yt (-> (/ yp map-tile-dim)
+                 (Math/ceil)
+                 (- 1)
+                 (int))
+          xt (-> (/ xp map-tile-dim)
+                 (Math/ceil)
+                 (- 1)
+                 (int))]
+      [yt xt]))   
+  
     (resolution
      [this]
      "Returns this alert map resolution in meters per pixel."
@@ -121,3 +121,32 @@
   {:pre [(latlon-valid? lat lon)]}
   "Returns the map tile coordinates [x y zoom] at a given lat, lon, and zoom."
   (get-maptile (Alert. lat lon zoom)))
+
+(defn meters->pixels-direct
+  [xm ym zoom]
+  "Directly converts x and y coordinates to pixel coordinates at zoom level,
+   without passing through latlon."
+  (let [res (/ initial-res (expt 2 zoom))
+        yp (-> (+ ym origin-shift)
+               (/ res))
+        xp (-> (+ xm origin-shift)
+               (/ res))]
+    [xp yp]))
+
+(defn meters->tile
+  [xm ym zoom]
+  "Returns the map tile coordinates [x y zoom] for a given x, y (in meters),
+   resolution (in meters) and zoom level."
+  (let [res (/ initial-res (expt 2 zoom))
+        [xp yp] (meters->pixels-direct xm ym zoom)
+        yt (-> (/ yp map-tile-dim)
+               (Math/ceil)
+               (- 1)
+               (int))
+        xt (-> (/ xp map-tile-dim)
+               (Math/ceil)
+               (- 1)
+                  (int))
+        yt-flipped (-> (- (expt 2 zoom) 1)
+                       (- yt))]
+    [xt yt-flipped zoom]))
