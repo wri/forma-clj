@@ -11,16 +11,11 @@
   few minutes to finish -- let alone check certain values. TODO: for
   these functions, come up with a few tests on an _even smaller_
   number of pixels."
+  (:use forma.hadoop.jobs.forma :reload)
   (:use cascalog.api
         [midje sweet cascalog]
-        [clojure.string :only (join)] forma.hadoop.jobs.forma)
-  (:require [forma.schema :as schema]
-            [forma.date-time :as date]
-            [forma.trends.filter :as f]
-            [forma.hadoop.io :as io]
-            [forma.hadoop.predicate :as p]
-            [cascalog.ops :as c]
-            [forma.testing :as t]
+        [clojure.string :only (join)])
+  (:require [forma.testing :as t]
             [forma.thrift :as thrift]))
 
 (def test-map
