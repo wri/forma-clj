@@ -1,4 +1,6 @@
 (ns forma.ops.classify
+  "Convenient wrapper functions for the classify.logistic namespace,
+  used mainly to compose cascalog queries."
   (:use [forma.classify.logistic]
         [cascalog.api])
   (:require [cascalog.ops :as c]
@@ -6,45 +8,34 @@
 
 (defn unpack-feature-vec
   "Creates a persistent vector from forma- and neighbor-val objects;
-  building the vector for the logistic classifier.
-
-  TODO: add back in preconditions when this function can accommodate a
-  thrift object as a forma-val.  Simplify the fuck out of this
-  function. See: https://github.com/reddmetrics/forma-clj/issues/104"
+  building the vector for the logistic classifier.  The `[1]`
+  indicates the mandatory intercept in the logistic regression."
   [forma-val neighbor-val]
-  ;; {:pre [(instance? forma.schema.FormaValue forma-val)
-         ;; (instance? forma.schema.NeighborValue neighbor-val)]}
-  (let [intercept [1]
-        [fire short long t-stat break] (thrift/unpack forma-val)
+  {:pre [(instance? forma.schema.FormaValueforma-val)
+         (instance? forma.schema.NeighborValue neighbor-val)]}
+  (let [[fire short long t-stat break] (thrift/unpack forma-val)
         fire-seq (thrift/unpack fire)
-        [fire-neighbors _ & more] (thrift/unpack neighbor-val) ;; skip count
+        [fire-neighbors _ & more] (thrift/unpack neighbor-val)
         fire-neighbor (thrift/unpack fire-neighbors)]
-    (into [] (concat intercept fire-seq [short long t-stat break]
+    (into [] (concat [1] fire-seq [short long t-stat break]
                      fire-neighbor more))))
-
-(defn wrap-unpack-feature-vec
-  [forma-vec neighbor-obj]
-  [(vec (unpack-feature-vec forma-vec neighbor-obj))])
 
 (defbufferop [logistic-beta-wrap [r c m]]
   "Accepts all tuples within an ecoregion and returns a coefficient
-  vector resulting from a logistic regression.
-
-  TODO: replace the `maps` with a list comprehension and just
-  generally simplify this function.
-  See: https://github.com/reddmetrics/forma-clj/issues/105"
+  vector resulting from a logistic regression."
   [tuples]
   (let [make-binary  (fn [x] (if (zero? x) 0 1))
-        label-seq    (map (comp make-binary first) tuples) 
-        val-mat      (map second tuples) 
-        neighbor-mat (map last tuples)
-        feature-mat  (map unpack-feature-vec val-mat neighbor-mat)]
-    [[(logistic-beta-vector
-       (to-double-rowmat label-seq)
-       (to-double-matrix feature-mat)
-       r c m)]]))
+        pixel-features (for [x tuples]
+                         (let [[label val neighbor] x]
+                           [(make-binary label) (unpack-feature-vec val neighbor)]))]
+    [[(logistic-beta-vector (to-double-rowmat (map first pixel-features))
+                            (to-double-matrix (map second pixel-features))
+                            r c m)]]))
 
 (defn logistic-prob-wrap
+  "Accepts the approrpiate coefficient (beta) vector for a given
+  pixel, along with that pixel's features (within-pixel and
+  neighboring values); returns the probability of deforestation."
   [beta-vec val neighbor-val]
   (let [beta-mat (to-double-rowmat beta-vec)
         features-mat (to-double-rowmat (unpack-feature-vec val neighbor-val))]
