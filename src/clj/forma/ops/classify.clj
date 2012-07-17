@@ -8,9 +8,10 @@
 
 (defn unpack-feature-vec
   "Creates a persistent vector from forma- and neighbor-val objects;
-  building the vector for the logistic classifier."
+  building the vector for the logistic classifier.  The `[1]`
+  indicates the mandatory intercept in the logistic regression."
   [forma-val neighbor-val]
-  {:pre [(instance? forma.schema.FormaValue forma-val)
+  {:pre [(instance? forma.schema.FormaValueforma-val)
          (instance? forma.schema.NeighborValue neighbor-val)]}
   (let [[fire short long t-stat break] (thrift/unpack forma-val)
         fire-seq (thrift/unpack fire)
@@ -24,11 +25,11 @@
   vector resulting from a logistic regression."
   [tuples]
   (let [make-binary  (fn [x] (if (zero? x) 0 1))
-        clean (for [x tuples]
-                (let [[label val neighbor] x]
-                  [(make-binary label) (unpack-feature-vec val neighbor)]))]
-    [[(logistic-beta-vector (to-double-rowmat (map first clean))
-                            (to-double-matrix (map second clean))
+        pixel-features (for [x tuples]
+                         (let [[label val neighbor] x]
+                           [(make-binary label) (unpack-feature-vec val neighbor)]))]
+    [[(logistic-beta-vector (to-double-rowmat (map first pixel-features))
+                            (to-double-matrix (map second pixel-features))
                             r c m)]]))
 
 (defn logistic-prob-wrap
