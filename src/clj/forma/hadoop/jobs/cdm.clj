@@ -2,7 +2,6 @@
   "Functions and Cascalog queries for converting data into map tile
 coordinates."
   (:use [cascalog.api]
-        [cartodb.playground :only (insert-rows delete-all big-insert)]
         [forma.source.gadmiso :only (gadm->iso)]
         [forma.gfw.cdm :only (latlon->tile, read-latlon, latlon-valid?)]
         [forma.utils :only (positions)])
