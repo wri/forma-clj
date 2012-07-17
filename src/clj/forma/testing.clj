@@ -1,10 +1,10 @@
 (ns forma.testing "These functions provide assistance for directory
-navigation for testing. One compromise we make here is the binding of
-`dev-resources-subdir`; This is defined as `:dev-resources-path` in
-`project.clj`, but reading either of these would force a dependency on
-pallet or cake. We've included a test to make sure that `dev` exists
-on any deployment of the given project; a failing test means that this
-directory should be created."
+  navigation for testing. One compromise we make here is the binding
+  of `dev-resources-subdir`; This is defined as `:dev-resources-path`
+  in `project.clj`, but reading either of these would force a
+  dependency on pallet or cake. We've included a test to make sure
+  that `dev` exists on any deployment of the given project; a failing
+  test means that this directory should be created."
   (:use cascalog.api))
 
 (def dev-resources-subdir "/dev")
@@ -36,6 +36,11 @@ directory should be created."
   ([sub-path]
      (project-path (str dev-resources-subdir
                         sub-path))))
+
+(defn resources-path
+  "Returns the resources path"
+  ([sub-path]
+     (project-path (str "/resources" sub-path))))
 
 (defn test-path
   "Returns the path within the project where the small-sample test
