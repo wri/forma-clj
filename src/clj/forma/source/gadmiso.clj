@@ -1,18 +1,20 @@
 (ns forma.source.gadmiso
-  (:use cascalog.api)
-  (:require [clojure.string :as string]))
+  (:use clojure-csv.core)
+  (:require [clojure.string :as string]
+            [forma.testing :as t]))
 
 (def text-map
-  "Returns a sequence vectorized strings (e.g., [\"AFG,1\"]) from the
-  admin-map located in the resources folder."
-  (first (??- (hfs-textline "resources/admin-map.csv"))))
+  "Returns a sequence vectorized string tuples (e.g., [\"AFG\" \"1\"])
+  from the admin-map located in the resources folder."
+  (butlast (parse-csv
+            (slurp (t/resources-path "admin-map.csv")))))
 
 (defn parse-line
   "Accepts a vectorized string, as outputted by `text-map`, and
   returns a single hash-map with the GADM ID (integer) as the key and
   the ISO3 code (string) as the value."
-  [[x]]
-  (let [[iso gadm-str] (string/split x #",")]
+  [x]
+  (let [[iso gadm-str] x]
     {(read-string gadm-str) iso}))
 
 (def gadm-iso
@@ -25,4 +27,3 @@
   a string; wraps gadm-iso map for use in a cascalog query"
   [gadm]
   (gadm-iso gadm))
-
