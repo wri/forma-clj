@@ -36,3 +36,11 @@ directory should be created."
   ([sub-path]
      (project-path (str dev-resources-subdir
                         sub-path))))
+
+(defn test-path
+  "Returns the path within the project where the small-sample test
+  data is stored."
+  ([]
+     (dev-path "/testdata/smallsample-testdata/"))
+  ([sub-path]
+     (dev-path (str "/testdata/smallsample-testdata/" sub-path))))
