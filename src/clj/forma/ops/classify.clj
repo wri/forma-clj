@@ -11,7 +11,7 @@
   building the vector for the logistic classifier.  The `[1]`
   indicates the mandatory intercept in the logistic regression."
   [forma-val neighbor-val]
-  {:pre [(instance? forma.schema.FormaValueforma-val)
+  {:pre [(instance? forma.schema.FormaValue forma-val)
          (instance? forma.schema.NeighborValue neighbor-val)]}
   (let [[fire short long t-stat break] (thrift/unpack forma-val)
         fire-seq (thrift/unpack fire)
