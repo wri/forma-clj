@@ -4,8 +4,10 @@
             [forma.testing :as t]))
 
 (def text-map
-  "Returns a sequence vectorized string tuples (e.g., [\"AFG\" \"1\"])
-  from the admin-map located in the resources folder."
+  "Returns a sequence of vectorized string tuples (e.g., [\"AFG\" \"1\"])
+  from the admin-map located in the resources folder.
+
+  `butlast` avoids empty string at end of parsed csv file."
   (butlast (parse-csv
             (slurp (t/resources-path "/admin-map.csv")))))
 
