@@ -99,12 +99,6 @@
 ;; Map of lat/lon min and max values.
 (def latlon-range {:lat-min -90 :lat-max 90 :lon-min -180 :lon-max 180})
 
-(defn read-string->num
-  "Convert strings to number."
-  [& s]
-  {:pre [(every? string? s)]}
-  (vec (map read-string s)))
-
 (defn latlon-valid?
   [lat lon]
   "Returns true if lat and lon are valid, otherwise returns false."
@@ -146,7 +140,7 @@
         xt (-> (/ xp map-tile-dim)
                (Math/ceil)
                (- 1)
-                  (int))
+               (int))
         yt-flipped (-> (- (expt 2 zoom) 1)
                        (- yt))]
     [xt yt-flipped zoom]))

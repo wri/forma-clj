@@ -3,13 +3,17 @@
 coordinates."
   (:use [cascalog.api]
         [forma.source.gadmiso :only (gadm->iso)]
-        [forma.gfw.cdm :only (latlon->tile, read-string->num, latlon-valid?,
-                              meters->maptile)]
+        [forma.gfw.cdm :only (latlon->tile, latlon-valid?, meters->maptile)]
         [forma.utils :only (positions)])
   (:require [forma.postprocess.output :as o]
             [forma.reproject :as r]
             [forma.date-time :as date]
             [cascalog.ops :as c]))
+
+(defn split-line
+  "Split a line of text using the supplied regular expression"
+  [line re]
+  (clojure.string/split line re))
 
 (defbufferop min-period
   "Returns the minimum value in tuples."
@@ -35,8 +39,9 @@ coordinates."
         hansen (date/datetime->period tres "2010-12-31")
         period (- hansen epoch)]
     (<- [?x ?y ?z ?p]
-        (src ?longitude ?latitude _)
-        (read-string->num ?latitude ?longitude :> ?lat ?lon)
+        (src ?line)
+        (split-line ?line #"," :> ?lon-str ?lat-str _)
+        ((c/each #'read-string) ?lat-str ?lon-str :> ?lat ?lon)
         (latlon-valid? ?lat ?lon) ;; Skip if lat/lon invalid.
         (identity period :> ?p)
         (latlon->tile ?lat ?lon zoom :> ?x ?y ?z))))
@@ -50,8 +55,9 @@ coordinates."
         hansen (date/datetime->period tres "2010-12-31")
         period (- hansen epoch)]
     (<- [?x ?y ?z ?p]
-        (src ?xm-str ?ym-str _)
-        (read-string->num ?xm-str ?ym-str :> ?xm ?ym)
+        (src ?line)
+        (split-line ?line #"," :> ?xm-str ?ym-str _)
+        ((c/each #'read-string) ?xm-str ?ym-str :> ?xm ?ym)
         (identity period :> ?p)
         (meters->maptile ?xm ?ym zoom :> ?x ?y ?z))))
 

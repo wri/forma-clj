@@ -14,16 +14,6 @@
 
 (tabular
  (fact
-   "Test read-latlon function."
-   (read-string->num ?lat ?lon) => ?result)
- ?lat ?lon ?result
- "41.850033" "-87.65005229999997" [41.850033 -87.65005229999997]
- 41.850033 -87.65005229999997 (throws AssertionError)
- "41.850033" -87.65005229999997 (throws AssertionError)
- 41.850033 "-87.65005229999997" (throws AssertionError))
-
-(tabular
- (fact
    "Test latlon-valid? function."
    (latlon-valid? ?lat ?lon) => ?result)
  ?lat ?lon ?result
