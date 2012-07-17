@@ -6,14 +6,10 @@
 
 (defn unpack-feature-vec
   "Creates a persistent vector from forma- and neighbor-val objects;
-  building the vector for the logistic classifier.
-
-  TODO: add back in preconditions when this function can accommodate a
-  thrift object as a forma-val.  Simplify the fuck out of this
-  function. See: https://github.com/reddmetrics/forma-clj/issues/104"
+  building the vector for the logistic classifier."
   [forma-val neighbor-val]
-  ;; {:pre [(instance? forma.schema.FormaValue forma-val)
-         ;; (instance? forma.schema.NeighborValue neighbor-val)]}
+  {:pre [(instance? forma.schema.FormaValue forma-val)
+         (instance? forma.schema.NeighborValue neighbor-val)]}
   (let [intercept [1]
         [fire short long t-stat break] (thrift/unpack forma-val)
         fire-seq (thrift/unpack fire)
@@ -39,6 +35,7 @@
         val-mat      (map second tuples) 
         neighbor-mat (map last tuples)
         feature-mat  (map unpack-feature-vec val-mat neighbor-mat)]
+    (prn (take 10 val-mat))
     [[(logistic-beta-vector
        (to-double-rowmat label-seq)
        (to-double-matrix feature-mat)
