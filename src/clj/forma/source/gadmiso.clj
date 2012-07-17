@@ -7,7 +7,7 @@
   "Returns a sequence vectorized string tuples (e.g., [\"AFG\" \"1\"])
   from the admin-map located in the resources folder."
   (butlast (parse-csv
-            (slurp (t/resources-path "admin-map.csv")))))
+            (slurp (t/resources-path "/admin-map.csv")))))
 
 (defn parse-line
   "Accepts a vectorized string, as outputted by `text-map`, and

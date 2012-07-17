@@ -40,7 +40,7 @@
 (defn resources-path
   "Returns the resources path"
   ([sub-path]
-     (project-path (str "/resources/" sub-path))))
+     (project-path (str "/resources" sub-path))))
 
 (defn test-path
   "Returns the path within the project where the small-sample test
