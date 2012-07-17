@@ -228,22 +228,6 @@
         (process-neighbors [neighbors] ?window :> ?win-idx ?val ?neighbor-val)
         (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line))))
 
-(defn gen-static-sources
-  [pail-path out-dir dataset-str]
-  (let [out-path (str out-dir "/" dataset-str)
-        src (split-chunk-tap pail-path [dataset-str])]
-    (<- [?s-res ?h ?v ?s ?l ?val]
-        (src _ ?x)
-        (thrift/unpack ?x :> _ ?loc ?obj _ _)
-        (thrift/unpack ?loc :> ?s-res ?h ?v ?s ?l)
-        (thrift/get-field-value ?obj :> ?val))))
-
-(defn read-static-sources
-  [seq-dir name-vec]
-  (let [gen-path (fn [name] (str seq-dir "/" name))
-        static-paths (map gen-path name-vec)]
-   (map hfs-seqfile static-paths)))
-
 (defn beta-data-prep
   "for example, static-path can equal this on dan's local machine:
    \"/mnt/hgfs/Dropbox/local/static-out\""

@@ -15,7 +15,7 @@
   ;; {:pre [(instance? forma.schema.FormaValue forma-val)
          ;; (instance? forma.schema.NeighborValue neighbor-val)]}
   (let [intercept [1]
-        [fire short long t-stat break] forma-val
+        [fire short long t-stat break] (thrift/unpack forma-val)
         fire-seq (thrift/unpack fire)
         [fire-neighbors _ & more] (thrift/unpack neighbor-val) ;; skip count
         fire-neighbor (thrift/unpack fire-neighbors)]

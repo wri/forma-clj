@@ -22,3 +22,4 @@ doc/
 *.ipr
 *.iws
 .lein-plugins
+*.crc
