@@ -8,12 +8,12 @@ namespace."
             [cascalog.ops :as c]))
 
 (tabular
- (fact "Test hansen->cdm function.  A valid lat-lon should produce the
+ (fact "Test hansen-latlon->cdm function.  A valid lat-lon should produce the
 specified row; but an invalid lat-lon will not produce a row."
-   (hansen->cdm ?src ?zoom ?tres) => (produces ?row))
+   (hansen-latlon->cdm ?src ?zoom ?tres) => (produces ?row))
  ?src ?zoom ?tres ?row 
- [["-87.65005229999997" "41.850033" "1"]] 16 "32" [[16811 24364 16 131]]
- [["2000" "2000" "1"]] 16 "32" [])
+ [["-87.65005229999997,41.850033,1"]] 16 "32" [[16811 24364 16 131]]
+ [["2000,2000,1"]] 16 "32" [])
 
 (fact "Check that `forma->cdm` produces the expected output, ready for
 input into CartoDB table."
