@@ -9,13 +9,6 @@
 (defn throw-illegal [s]
   (throw (IllegalArgumentException. s)))
 
-(defn round-places
-  "Rounds the supplied number to the supplied number of decimal
-  points, and returns a float representation."
-  [sig-figs number]
-  (let [factor (expt 10 sig-figs)]
-    (double (/ (round (* factor number)) factor))))
-
 (defn strings->floats
   "Accepts any number of string representations of floats, and
   returns the corresponding sequence of floats."
@@ -36,15 +29,15 @@
   value obtained by taking `nth` in turn on each level of the nested
   collection."
   [coll ks]
-  (apply thrush coll (for [k ks]
-                       (fn [xs] (nth xs k)))))
+  (apply thrush coll
+         (for [k ks] (fn [xs] (nth xs k)))))
 
 (defn unweave
   "Splits a sequence with an even number of entries into two sequences
-  by pulling alternating entries. For example:
+  by pulling alternating entries.
 
-    (unweave [0 1 2 3])
-    ;=> [(0 2) (1 3)]"
+  Example usage:
+    (unweave [0 1 2 3]) => [(0 2) (1 3)]"
   [coll]
   {:pre [(seq coll), (even? (count coll))]}
   [(take-nth 2 coll) (take-nth 2 (rest coll))])
@@ -74,15 +67,17 @@
 
 (defn weighted-mean
   "Accepts a number of `<val, weight>` pairs, and returns the mean of
-  all values with corresponding weights applied. For example:
+  all values with corresponding weights applied.  Preconditions ensure
+  that there are pairs of value and weights, and that all weights are
+  greater than or equal to zero.
 
+  Example usage:
     (weighted-avg 8 3 1 1) => 6.25"
   [& val-weight-pairs]
-  {:pre [(even? (count val-weight-pairs))]}
+  {:pre [(even? (count val-weight-pairs))
+         (every? #(>= % 0) (take-nth 2 (rest val-weight-pairs)))]}
   (double (->> (for [[x weight] (partition 2 val-weight-pairs)]
-                 (if  (>= weight 0)
-                   [(* x weight) weight]
-                   (throw-illegal "All weights must be positive.")))
+                 [(* x weight) weight])
                (reduce (partial map +))
                (apply /))))
 
@@ -94,8 +89,9 @@
 
 (defn trim-seq
   "Trims a sequence with initial value indexed at x0 to fit within
-  bottom (inclusive) and top (exclusive). For example:
+  bottom (inclusive) and top (exclusive).
 
+  Example usage: 
     (trim-seq 0 2 0 [4 5 6]) => [4 5]"
   [bottom top x0 seq]
   {:pre [(not (empty? seq))]}
@@ -128,9 +124,9 @@
 
 (defn input-stream
   "Attempts to coerce the given argument to an InputStream, with
-automatic flipping to `GZipInputStream` if appropriate for the
-supplied input. see `clojure.java.io/input-stream` for guidance on
-valid arguments."
+  automatic flipping to `GZipInputStream` if appropriate for the
+  supplied input. see `clojure.java.io/input-stream` for guidance on
+  valid arguments."
   ([arg] (input-stream arg nil))
   ([arg default-bufsize]
      (let [^InputStream stream (io/input-stream arg)]
