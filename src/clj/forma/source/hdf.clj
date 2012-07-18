@@ -184,7 +184,7 @@ as a 1-tuple."
         ret (int-array (* width height))]
     (.ReadRaster band 0 0 width height ret)
     (map-indexed (fn [idx xs]
-                   [idx (thrift/pack xs)])
+                   [idx xs])
                  (partition chunk-size ret))))
 
 ;; ### Metadata Parsing
@@ -259,5 +259,4 @@ as a 1-tuple."
         (split-id ?tileid :> ?mod-h ?mod-v)
         ((c/juxt #'spatial-res #'temporal-res) ?productname :> ?s-res ?t-res)
         (thrift/pack ?chunk :> ?array)
-        (chunkifier ?dataset ?date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?array :> ?datachunk)
-        )))
+        (chunkifier ?dataset ?date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?array :> ?datachunk))))
