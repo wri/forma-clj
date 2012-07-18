@@ -1,10 +1,8 @@
 (ns forma.schema
+  "A set of functions to structure other queries."
   (:require [forma.date-time :as date]
-            [forma.reproject :as r]
-            [forma.thrift :as thrift]            
             [forma.utils :as u]
-            [forma.thrift :as thrift]
-            [clojure.string :as s]))
+            [forma.thrift :as thrift]))
 
 (defn create-timeseries
   "Create a TimeSeries from a period start index and a collection of timeseries
@@ -22,9 +20,9 @@
 
 (defn boundaries
   "Accepts a sequence of pairs of <initial time period, collection>
-  and returns the maximum start period and the minimum end period. For
-  example:
+  and returns the maximum start period and the minimum end period.
 
+  Example usage:
     (boundaries [0 [1 2 3 4] 1 [2 3 4 5]]) => [1 4]"
   [pair-seq]
   {:pre [(even? (count pair-seq))]}
@@ -36,26 +34,16 @@
 (defn adjust
   "Appropriately truncates the incoming timeseries values (paired with
   the initial integer period), and outputs a new start and both
-  truncated series. For example:
+  truncated series.
 
-    (adjust 0 [1 2 3 4] 1 [2 3 4 5])
-    ;=> (1 [2 3 4] [2 3 4])"
+  Example usage:
+    (adjust 0 [1 2 3 4] 1 [2 3 4 5]) => (1 [2 3 4] [2 3 4])"
   [& pairs]
   {:pre [(even? (count pairs))]}
   (let [[bottom top] (boundaries pairs)]
     (cons bottom
           (for [[x0 seq] (partition 2 pairs)]
             (into [] (u/trim-seq bottom top x0 seq))))))
-
-(defn fire-series
-  "Creates a `FireSeries` object from the supplied sequence of
-  `FireValue` objects."
-  ([start xs]
-     (fire-series start
-                  (dec (+ start (count xs)))
-                  xs))
-  ([start end xs]
-     (thrift/TimeSeries* start end xs)))
 
 (defn adjust-fires
   "Returns a TimeSeries object of fires that are within the bounds of
