@@ -55,11 +55,6 @@
   [factor coll]
   (for [x coll] (* x factor)))
 
-(defn dot-product
-  "returns the dot product of two vectors"
-  [x y]
-  (reduce + (map * x y)))
-
 (defn multiply-rows
   "multiply matrix rows (in place) by a collection"
   [coll mat]
