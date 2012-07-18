@@ -14,7 +14,8 @@
   (:use forma.hadoop.jobs.forma :reload)
   (:use cascalog.api
         [midje sweet cascalog]
-        [clojure.string :only (join)])
+        [clojure.string :only (join)]
+        [forma.hadoop.pail :only (to-pail split-chunk-tap)])
   (:require [forma.testing :as t]
             [forma.thrift :as thrift]))
 
@@ -36,65 +37,57 @@
    :max-iterations 500
    :min-coast-dist 3})
 
-;; Supporting, private functions for the subsequent tests.
+(def t-res "16")
+(def s-res "500")
+(def loc-vec [s-res 28 8 0 0])
+(def pixel-loc (apply thrift/ModisPixelLocation* loc-vec))
+(def vcf-src    [(conj loc-vec 26)]) 
+(def hansen-src [(conj loc-vec 100)])
+(def ecoid-src  [(conj loc-vec 15000)])
+(def gadm-src   [(conj loc-vec 40132)])
+(def border-src [(conj loc-vec 4)])
 
-(defn- test-path
-  [path]
-  (hfs-seqfile (t/test-path path)))
+(def sample-hansen-dc
+  (thrift/DataChunk* "hansen" pixel-loc 100 t-res))
 
-(defn- tuple-seq
-  "Returns a sequence of tuples from the specified source, or a
-  function and associated argument sets that produce a source."
-  ([src]
-     (first (??- src)))
-  ([f & args]
-     (let [src (apply f args)]
-       (first (??- src)))))
+(defn sample-fire-series
+  [start-idx length]
+  (thrift/TimeSeries* start-idx (vec (repeat length (thrift/FireValue* 0 0 0 0)))))
 
-(defn- extract-obj
-  "Convenient wrapper for filter function; used mainly to grab a
-  thrift object from a cascalog record."
-  [cl coll]
-  (filter #(instance? cl %) coll))
+(def sample-hansen-src
+  (let [bad-loc (thrift/ModisPixelLocation* s-res 29 8 0 0)]
+    [[(thrift/DataChunk* "hansen" pixel-loc 100 t-res)]
+     [(thrift/DataChunk* "hansen" bad-loc 100 t-res)]]))
 
-;; Tests!!!
+(fact
+  "Checks that consolidate-static correctly merges static datasets."
+  (consolidate-static (:vcf-limit test-map)
+                      vcf-src gadm-src hansen-src ecoid-src border-src)
+  => (produces [(conj loc-vec 26 40132 15000 100 4)]))
 
-(facts "Test that the beta-data-prep yields pixel attributes with
-  certain characteristics; specifically that the neighbor t-stat
-  values of the first and last tuples are equal to known, reference
-  values."
-  (let [tuples (tuple-seq beta-data-prep
-                          test-map
-                          (test-path "final-path")
-                          (test-path "static-path"))]
+(fact
+  "Checks that `within-tileset?` correctly handles data inside and outside the given tile-set"
+  (let [tile-set #{[28 8]}]
+    (within-tileset? tile-set 28 8)
+    (within-tileset? tile-set 29 8)))
 
-  ;; Neighborhood minimimum t-stat value for first tuple
-    (apply thrift/get-min-tstat
-           (extract-obj forma.schema.NeighborValue (first tuples)))
-    => 0.25990809624094535)
+(fact
+  "Checks that query correctly screens out pixels not in tile-set"
+  (let [tile-set #{[28 8]}
+        bad-h 29
+        src [["fake-path" sample-hansen-dc]
+             ["fake-path" (thrift/DataChunk* "hansen"
+                                 (thrift/ModisPixelLocation* s-res bad-h 8 0 0)
+                                 100
+                                 t-res)]]]
+    (screen-by-tileset src tile-set)) => (produces [["fake-path" sample-hansen-dc]]))
 
-  ;; Neighborhood minimimum t-stat value for last tuple
-    (apply thrift/get-min-tstat
-           (extract-obj forma.schema.NeighborValue (last tuples)))
-    => 0.16269026002659434)
+(fact
+  "Checks that fire-tap is trimming the fire timeseries correctly.
+   Note that 828 is the period corresponding to 2006-01-01.
+   Also note that the timeseries is a running sum."
+  (let [src [[(thrift/DataChunk* "fire" pixel-loc (sample-fire-series 825 5) "01")]]]
+    (fire-tap {:est-start "2005-12-31"
+               :est-end "2006-01-01"
+               :t-res t-res} src)) => (produces [[s-res 28 8 0 0 (sample-fire-series 827 2)]]))
 
-(fact "Testing that `forma-estimate` produces the first value of the
-  probability sequence is equal to a known, reference value."
-  (let [test-src (forma-estimate (test-seq "beta-path")
-                                 (test-seq "final-path")
-                                 (test-seq "static-path"))
-        filtered-src (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
-                         (test-src ?s-res ?mod-h ?mod-v ?s ?l ?prob-series)
-                         (= ?s 461) (= ?l 2229))
-        tuple (first (tuple-seq filtered-src))]
-    (first (last tuple)) => 0.0014698426720482411))
-
-(fact "Testing that `beta-gen` produces the proper coefficient vectors
-  for the small-sample data.  There should be two betfa vectors, one
-  for each of the two ecoregions represented in the sample data."
-  (let [ref-src (hfs-seqfile (t/test-path "beta-path"))
-        ref-tap (<- [?s-res ?eco ?beta]
-                    (ref-src ?s-res ?eco ?beta))]
-
-    (beta-gen test-map (test-seq "beta-data-path"))
-    => (produces (first (??- ref-tap)))))
