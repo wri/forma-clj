@@ -47,11 +47,6 @@
 (def gadm-src   [(conj loc-vec 40132)])
 (def border-src [(conj loc-vec 4)])
 
-
-(comment
-  pail-src (to-pail "/tmp/pail-path" sample-hansen-src)
-  src (split-chunk-tap pail-src ["hansen"]))
-
 (def sample-hansen-dc
   (thrift/DataChunk* "hansen" pixel-loc 100 t-res))
 
