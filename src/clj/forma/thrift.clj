@@ -209,7 +209,7 @@
   {:pre [(instance? forma.schema.FireValue fire)
          (or (nil? avg-break) (float? avg-break))
          (or (nil? min-break) (float? min-break))
-         (instance? java.lang.Long ncount)
+         (integer? ncount)
          (every? float?
                  [avg-short min-short avg-long min-long avg-stat min-stat])]}
   (let [n-value (NeighborValue. fire ncount avg-short min-short avg-long min-long
@@ -231,14 +231,14 @@
 (defn ModisChunkLocation*
   "Create a ModisChunkLocation."
   [s-res h v id size]
-  {:pre [(instance? java.lang.String s-res)
+  {:pre [(string? s-res)
          (every? integer? [h v id size])]}
   (ModisChunkLocation. s-res h v id size))
 
 (defn ModisPixelLocation*
   "Create a ModisPixelLocation."
   [s-res h v sample line]
-  {:pre [(instance? java.lang.String s-res)
+  {:pre [(string? s-res)
          (every? integer? [h v sample line])]}
   (ModisPixelLocation. s-res h v sample line))
 
