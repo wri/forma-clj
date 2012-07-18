@@ -33,18 +33,17 @@
 
 (future-fact?-
  "Add in test for results, here! Add another test for the usual
- aggregate-fires business.
+  aggregate-fires business.
 
-Also note that we're testing for truncation after march."
- "this results vector needs an overhaul:"
+  Also note that we're testing for truncation after march."
  [[1] [2]]
  (??- (-> (vec (concat (test-fires 4 100)
                        (test-fires 10 100)))
           (create-fire-series "32" "1970-01-01" "1970-03-01"))))
 
 (future-fact
- "Need to update this -- we want to check that the results of
-this query don't contain -9999."
+  "Need to update this -- we want to check that the results of this
+  query don't contain -9999."
  (let [results (-> (concat (test-chunks "precl" 10 1200)
                            (test-chunks "ndvi" 10 1200))
                    (vec)
@@ -55,10 +54,10 @@ this query don't contain -9999."
 
 (fact
   "Test running-fire-sum"
-  (let [fires-src [[[(schema/fire-value 0 0 0 10)
-                     (schema/fire-value 1 0 0 33)]]]
-        result [(schema/fire-series 0 [(schema/fire-value 0 0 0 10)
-                                       (schema/fire-value 1 0 0 43)])]]
+  (let [fires-src [[[(thrift/FireValue* 0 0 0 10)
+                     (thrift/FireValue* 1 0 0 33)]]]
+        result [(thrift/TimeSeries* 0 [(thrift/FireValue* 0 0 0 10)
+                                       (thrift/FireValue* 1 0 0 43)])]]
     (??<- [?vals]
           (fires-src ?fire-vals)
           (running-fire-sum 0 ?fire-vals :> ?vals)) => [result]))

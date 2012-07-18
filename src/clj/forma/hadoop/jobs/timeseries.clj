@@ -93,7 +93,7 @@
   (when (seq tseries)
     (->> tseries
          (reductions schema/add-fires)
-         (schema/fire-series start))))
+         (thrift/TimeSeries* start))))
 
 (defn aggregate-fires
   "Converts the datestring into a time period based on the supplied
