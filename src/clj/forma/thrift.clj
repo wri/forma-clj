@@ -209,8 +209,8 @@
   {:pre [(instance? forma.schema.FireValue fire)
          (or (nil? avg-break) (float? avg-break))
          (or (nil? min-break) (float? min-break))
-         (instance? java.lang.Long ncount)
-         (every? #(float? %)
+         (integer? ncount)
+         (every? float?
                  [avg-short min-short avg-long min-long avg-stat min-stat])]}
   (let [n-value (NeighborValue. fire ncount avg-short min-short avg-long min-long
                                 avg-stat min-stat)]
@@ -231,30 +231,28 @@
 (defn ModisChunkLocation*
   "Create a ModisChunkLocation."
   [s-res h v id size]
-  {:pre [(instance? java.lang.String s-res)
-         (every? #(instance? java.lang.Long %) [h v id size])]}
+  {:pre [(string? s-res)
+         (every? integer? [h v id size])]}
   (ModisChunkLocation. s-res h v id size))
 
 (defn ModisPixelLocation*
   "Create a ModisPixelLocation."
   [s-res h v sample line]
-  {:pre [(instance? java.lang.String s-res)
-         (every? #(or (instance? java.lang.Long %)
-                      (instance? java.lang.Integer %))
-                 [h v sample line])]}
+  {:pre [(string? s-res)
+         (every? integer? [h v sample line])]}
   (ModisPixelLocation. s-res h v sample line))
 
 (defn TimeSeries*
   "Create a TimeSeries."
   ([start vals]
-    {:pre [(every? #(instance? java.lang.Long %) [start])
+    {:pre [(every? integer? [start])
            (coll? vals)]}
     (let [elems (count vals)]
       (TimeSeries* start
                    (dec (+ start (count vals)))
                    vals)))
   ([start end val]
-    {:pre [(every? #(instance? java.lang.Long %) [start end])
+    {:pre [(every? integer? [start end])
            (coll? val)]}
     (let [series (if (coll? val) (pack val) val)]
       (TimeSeries. start end (mk-array-value series)))))
@@ -263,8 +261,8 @@
   "Create a FormaValue."
   [fire short long tstat & break]
   {:pre [(instance? forma.schema.FireValue fire)
-         (every? #(instance? java.lang.Double %) [short long tstat])
-         (or (not break) (instance? java.lang.Double (first break)))]}
+         (every? float? [short long tstat])
+         (or (not break) (float? (first break)))]}
   (let [[break] break
         forma-value (FormaValue. fire short long tstat)]
     (if break
@@ -352,9 +350,9 @@
   java.lang.Iterable
   (pack [[v :as xs]]
     (cond (= forma.schema.FormaValue (type v)) (forma-array xs)
-          (= forma.schema.FireValue (type v))  (fire-array xs)
-          (integer? v)                         (int-struct xs)
-          (float? v)                           (double-struct xs))))
+          (= forma.schema.FireValue (type v)) (fire-array xs)
+          (integer? v) (int-struct xs)
+          (float? v) (double-struct xs))))
 
 (extend-protocol ITimeSeries
   TimeSeries
