@@ -6,15 +6,6 @@
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]))
 
-(tabular
- (fact "round-places testing."
-   (round-places ?places 129.876234) => ?rounded)
- ?places ?rounded
- 0       130.0
- 1       129.9
- 2       129.88
- 3       129.876)
-
 (facts "string conversion tests."  
   "Floats!"
   (strings->floats "192") => [192.0]
@@ -126,4 +117,3 @@ do show that we have a sequence of byte arrays being generated."
 (fact
   "Check windowed-map"
   (windowed-map ols-trend 2 [1 2 50]) => (contains (map roughly [1.0 48.0])))
-

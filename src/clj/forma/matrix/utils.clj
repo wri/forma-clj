@@ -1,6 +1,6 @@
 (ns forma.matrix.utils
   "A set of useful and general functions for matrix operations or
-filters."
+  filters."
   (:use [forma.utils :only (thrush)])
   (:require [incanter.core :as i]))
 
