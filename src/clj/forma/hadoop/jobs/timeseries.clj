@@ -129,7 +129,7 @@
 
 (defn fire-query
   "Returns a source of fire timeseries data chunk objects."
-  [source-pail-path t-res start end]
+  [source-pail-path m-res t-res start end]
   (-> source-pail-path
-      (pail/split-chunk-tap ["fire" "1000-01"])
+      (pail/split-chunk-tap ["fire" (str m-res "-01")])
       (create-fire-series t-res start end)))
