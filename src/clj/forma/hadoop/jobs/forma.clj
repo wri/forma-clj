@@ -42,8 +42,8 @@
   this won't work, pulling directly from the pail!"
   [est-map fire-src]
   (<- [?s-res ?h ?v ?sample ?line ?adjusted-ts]
-      (fire-src ?pixel-chunk)
-      (thrift/unpack ?pixel-chunk :> _ ?pixel-loc ?ts _ _)
+      (fire-src ?fire-pixel)
+      (thrift/unpack ?fire-pixel :> _ ?pixel-loc ?ts _ _)
       (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)
       (schema/adjust-fires est-map ?ts :> ?adjusted-ts)))
 
