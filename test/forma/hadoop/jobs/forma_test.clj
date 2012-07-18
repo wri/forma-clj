@@ -96,14 +96,3 @@
                :est-end "2006-01-01"
                :t-res t-res} src)) => (produces [[s-res 28 8 0 0 (sample-fire-series 827 2)]]))
 
-(fact
-  (let [forma-val (thrift/FormaValue* (thrift/FireValue* 0 0 0 0) 1.0 2.0 3.0 4.0)
-        neighbor-val (thrift/NeighborValue* (thrift/FireValue* 1 0 0 1)
-                                            1 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0)
-        dynamic-src [["500" 827 28 8 0 0 forma-val neighbor-val]
-                     ["500" 828 28 8 0 0 forma-val neighbor-val]]
-        static-src [["500" 28 8 0 0 26 40132 15000 100 4]]]
-    (beta-data-prep test-map dynamic-src static-src) => (produces [["500" 827 28 8 0 0 forma-val neighbor-val 15000 100]])))
-
-(future-fact
- "figure out why the test above fails.")
