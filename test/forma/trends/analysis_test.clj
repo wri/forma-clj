@@ -4,20 +4,19 @@
         [forma.trends.data :only (ndvi rain reli)])
   (:require [incanter.core :as i]))
 
-(facts
- "Test that `long-stats` yields the trend coefficient and t-test
+(facts "Test that `long-stats` yields the trend coefficient and t-test
  statistic on `ndvi`"
 
- ;; Long-term statistics on NDVI alone
- (let [[coeff t-test] (long-stats ndvi)]
-   coeff  => (roughly -1.14300)
-   t-test => (roughly -0.91826))
+  ;; Long-term statistics on NDVI alone
+  (let [[coeff t-test] (long-stats ndvi)]
+    coeff  => (roughly -1.14300)
+    t-test => (roughly -0.91826))
 
- ;; Long-term statistics on NDVI, with rain as a cofactor.  Note that
- ;; the trends change slightly.
- (let [[coeff t-test] (long-stats ndvi rain)]
-   coeff  => (roughly -1.23824)
-   t-test => (roughly -0.99763)))
+  ;; Long-term statistics on NDVI, with rain as a cofactor.  Note that
+  ;; the trends change slightly.
+  (let [[coeff t-test] (long-stats ndvi rain)]
+    coeff  => (roughly -1.23824)
+    t-test => (roughly -0.99763)))
 
 (fact "Test first-order conditions."
   (ffirst
@@ -33,8 +32,8 @@
     (concat (take half-count ndvi)
             (map #(- % (/ % 2)) second-half))))
 
-(fact "Test that the Hansen test statistic is relatively high for a time
- series with a constructed, short-term break"
+(fact "Test that the Hansen test statistic is relatively high for a
+  time series with a constructed, short-term break"
   (- (hansen-stat (i/matrix (shift-down-end ndvi)))
      (hansen-stat (i/matrix ndvi))) => pos?)
 
