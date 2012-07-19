@@ -117,11 +117,10 @@
     (<- [?tile-chunk]
         (src ?dataset ?s-res ?t-res _ ?h ?v  _ ?id ?window)
         (p/flatten-window ?window :> ?data)
-        (thrift/pack ?data :> ?val)
         (count ?data :> ?count)
         (= ?count chunk-size)
         (thrift/ModisChunkLocation* ?s-res ?h ?v ?id chunk-size :> ?tile-loc)
-        (thrift/DataChunk* ?dataset ?tile-loc ?val ?t-res :> ?tile-chunk))))
+        (thrift/DataChunk* ?dataset ?tile-loc ?data ?t-res :> ?tile-chunk))))
 
 (defn static-chunks
   "TODO: DOCS!"
