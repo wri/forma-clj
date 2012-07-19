@@ -30,68 +30,6 @@
   [res]
   (datetime->period res "2005-12-31"))
 
-(def sample-output-map
-  [{:cntry       "IDN"
-    :admin       23456
-    :modh 28
-    :modv 7
-    :line 5
-    :sample 10
-    :prob-series (schema/timeseries-value
-                  (end-training "16")
-                  [0.1 0.2 0.4 0.7 0.9])
-    :tres        "16"
-    :sres        "500"
-    :hansen      0}
-   {:cntry       "IDN"
-    :admin       23456
-    :modh 28
-    :modv 7
-    :line 5
-    :sample 9
-    :prob-series (schema/timeseries-value
-                  (end-training "16")
-                  [0.1 0.1 0.1 0.1 0.1])
-    :tres        "16"
-    :sres        "500"
-    :hansen      1}
-   {:cntry       "IDN"
-    :admin       23456
-    :modh 28
-    :modv 7
-    :line 4
-    :sample 10
-    :prob-series (schema/timeseries-value
-                  (end-training "16")
-                  [0.1 0.2 0.4 0.7 0.9])
-    :tres        "16"
-    :sres        "500"
-    :hansen      0}
-   {:cntry       "IDN"
-    :admin       23456
-    :modh 28
-    :modv 7
-    :line 5
-    :sample 11
-    :prob-series (schema/timeseries-value
-                  (end-training "16")
-                  [0.1 0.6 0.6 0.65 0.9])
-    :tres         "16"
-    :sres        "500"
-    :hansen       1}
-   {:cntry       "MYS"
-    :admin       12345
-    :modh 28
-    :modv 7
-    :line 4
-    :sample 9
-    :prob-series (schema/timeseries-value
-                  (end-training "16")
-                  [0.1 0.2 0.4 0.7 0.9])
-    :tres        "16"
-    :sres        "500"
-    :hansen      1}])
-
 (defn grab-series  
   [m]
   (:series (:prob-series m)))
@@ -172,7 +110,6 @@ clearing activity."
   (let [[error-vec] error-tap]
     (zipmap [:false-pos :true-neg :true-pos :false-neg]
             error-vec)))
-
 
 (defn precision
   [error-dict]
