@@ -85,6 +85,3 @@
         [[0 0 0 0 [[10 0 0 0 0]
                    [0 0 0 0 0]]]]
         (sparse-windower (pixel-tap [[0 0 0 0 10]]) ["?s" "?l"] [5 2] "?v" 0))
-
-(future-fact
- "write a test that shows why we need 0 in the start position of the expander.")
