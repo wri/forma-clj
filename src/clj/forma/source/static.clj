@@ -109,20 +109,19 @@
 
   ?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val"
   [val-gen m-res chunk-size nodata]
-  (let [chunkifier (p/chunkify chunk-size)
-        src (p/sparse-windower val-gen
+  (let [src (p/sparse-windower val-gen
                                ["?sample" "?line"]
                                (r/chunk-dims m-res chunk-size)
                                "?val"
                                nodata)]
     (<- [?tile-chunk]
-        (src ?dataset ?s-res ?t-res !date ?h ?v  _ ?id ?window)
+        (src ?dataset ?s-res ?t-res _ ?h ?v  _ ?id ?window)
         (p/flatten-window ?window :> ?data)
         (thrift/pack ?data :> ?val)
         (count ?data :> ?count)
         (= ?count chunk-size)
-        (chunkifier ?dataset !date ?s-res ?t-res ?h ?v ?id ?val :> ?tile-chunk)
-        )))
+        (thrift/ModisChunkLocation* ?s-res ?h ?v ?id chunk-size :> ?tile-loc)
+        (thrift/DataChunk* ?dataset ?tile-loc ?val ?t-res :> ?tile-chunk))))
 
 (defn static-chunks
   "TODO: DOCS!"
