@@ -4,7 +4,7 @@
   :source-path "src/clj"
   :java-source-path "src/jvm"
   :marginalia {:javascript ["mathjax/MathJax.js"]}
-  :resources-path "resources"
+  :resources-path "resources/"
   :dev-resources-path "dev"
   :jvm-opts ["-XX:MaxPermSize=128M"
              "-XX:+UseConcMarkSweepGC"
