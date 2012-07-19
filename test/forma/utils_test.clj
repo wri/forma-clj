@@ -1,30 +1,30 @@
 (ns forma.utils-test
-  (:use forma.utils
-        [forma.trends.analysis]
+  ""
+  (:use forma.utils :reload)
+  (:use forma.trends.analysis
         midje.sweet)
   (:require [forma.testing :as t])
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]))
 
 (facts "string conversion tests."  
-  "Floats!"
+  ;; Floats
   (strings->floats "192") => [192.0]
   (strings->floats "192" "12") => [192.0 12.0]
   
-  "Type checking."
+  ;; Type checking
   (strings->floats "192") => (just [float?])
   (strings->floats "192" "12") => (just [float? float?]))
 
 (facts "between? tests."
-  (between? -2 2 1) => truthy
+  (between? -2 2 1)  => truthy
   (between? -2 2 -2) => truthy
   (between? -2 2 -3) => falsey)
 
-(facts "thrush testing!
-
-Here are some examples of how to thread a value through a series of
-functions. This has some advantage over threading with `->`, as thrush
-is a function, not a macro, and can evaluate its arguments."
+(facts "thrush testing examples of how to thread a value through a
+  series of functions. This has some advantage over threading with
+  `->`, as thrush is a function, not a macro, and can evaluate its
+  arguments."
   (thrush 2 #(* % 5) (partial + 2)) => 12
   (apply thrush 1 (for [num (range 4)]
                     (fn [x] (+ x num)))) => 7)
@@ -47,10 +47,10 @@ is a function, not a macro, and can evaluate its arguments."
   (weighted-mean 8 3 1 1) => 6.25
   (weighted-mean 8 0 1 1) => 1.0
 
-  "Negative weights aren't acceptable."
-  (weighted-mean 8 -1 1 1) => (throws IllegalArgumentException)
+  ;; Negative weights aren't acceptable.
+  (weighted-mean 8 -1 1 1) => (throws AssertionError)
 
-  "Values and weights must come in pairs."
+  ;; Values and weights must come in pairs.
   (weighted-mean 8 1 1) => (throws AssertionError))
 
 (fact "trim-seq tests."
@@ -76,8 +76,8 @@ is a function, not a macro, and can evaluate its arguments."
       bytes-filled => 10
       (every? (complement zero?) arr) => truthy)))
 
-(fact "partition-stream test. These are sort of crappy tests, but they
-do show that we have a sequence of byte arrays being generated."
+(fact "Partition-stream test. These are sort of crappy tests, but they
+  do show that we have a sequence of byte arrays being generated."
   (with-open [txt (input-stream test-txt)]
     (let [result (partition-stream 10 txt)]
       (count (first result)) => 10
@@ -97,8 +97,8 @@ do show that we have a sequence of byte arrays being generated."
 (fact float-bytes => 4)
 
 (fact
-  "Check average of vector.
-   Casting as float to generalize for another vector as necessary. Otherwise average will return fractions."
+  "Check average of vector. Casting as float to generalize for another
+  vector as necessary. Otherwise average will return fractions."
   (float (average [1 2 3.])) => 2.0)
 
 (fact
@@ -114,6 +114,5 @@ do show that we have a sequence of byte arrays being generated."
  2 [1 2 3] [2 4 6]
  1.5 [1 2 3] [1.5 3.0 4.5])
 
-(fact
-  "Check windowed-map"
-  (windowed-map ols-trend 2 [1 2 50]) => (contains (map roughly [1.0 48.0])))
+(fact "Check windowed-map"
+  (windowed-map average 2 [1 2 50]) => [3/2 26])
