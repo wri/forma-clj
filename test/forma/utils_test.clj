@@ -1,5 +1,4 @@
 (ns forma.utils-test
-  ""
   (:use forma.utils :reload)
   (:use forma.trends.analysis
         midje.sweet)
