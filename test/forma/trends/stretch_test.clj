@@ -70,11 +70,6 @@
    Here, our timeseries values are repeated in a given year, as
    described in `mk-ts`.
 
-   The number of periods for 16- and 8-day timeseries should be given
-   by the number of directories in
-   ftp://e4ftl01p.cr.usgs.gov/MOLT/MOD13A1.005 for the range of
-   interest, but there appears to be some inconsistency ...
-
    For reference:
      Period 360 is 2000-01-01 at monthly resolution
      Period 736 is 2000-01-01 at 16-day resolution
