@@ -13,7 +13,7 @@
 
 (defn fire-datachunk
   [date mh mv sample line val]
-  (thrift/DataChunk* "fire" (thrift/ModisPixelLocation* "1000" mh mv sample line) val "01" date))
+  (thrift/DataChunk* "fire" (thrift/ModisPixelLocation* "1000" mh mv sample line) val "01" :date date))
 
 (fact?- "Projecting fires into 1000m resolution."
         [[(fire-datachunk "2011-03-15" 31 11 181 1087 (thrift/FireValue* 1 1 1 1))]

@@ -272,16 +272,15 @@
 
 (defn DataChunk*
   "Create a DataChunk."
-  [name loc val res & date]
-  {:pre  [(every? #(instance? java.lang.String %) [name res])
+  [name loc val res & {:keys [date] :or {date nil}}]
+  {:pre  [(every? string? [name res])
+          (or (nil? date) (string? date))
           (LocationPropertyValue? loc)
-          (DataValue? val)
-          (or (not date) (string? (first date)))]}
+          (DataValue? val)]}
   (let [loc (mk-location-prop loc)
         val (if (coll? val)
               (->> val pack mk-array-value mk-data-value)
               (mk-data-value val))
-        [date] date
         chunk (DataChunk. name loc val res)]
     (if date
       (doto chunk
