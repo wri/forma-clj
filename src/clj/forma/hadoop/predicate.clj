@@ -154,7 +154,7 @@
   [size]
   (<- [?name !date ?s-res ?t-res ?h ?v ?id ?val :> ?tile-chunk]
       (thrift/ModisChunkLocation* ?s-res ?h ?v ?id size :> ?tile-loc)
-      (thrift/DataChunk* ?name ?tile-loc ?val ?t-res !date :> ?tile-chunk)))
+      (thrift/DataChunk* ?name ?tile-loc ?val ?t-res :date !date :> ?tile-chunk)))
 
 (def break
   "Takes a source of textlines representing rows of a gridded
