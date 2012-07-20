@@ -10,12 +10,12 @@
                      (thrift/ModisChunkLocation* "500" 8 0 100 24000)
                      [1 1 1]
                      "16"
-                     "2001"))
+                     :date "2001"))
 
 ;; MODIS pixel chunk:
 (def pixel-chunk
   (thrift/DataChunk* "pixel-chunk" (thrift/ModisPixelLocation* "500" 1 2 3 4)
-                     [1 1 1] "16" "2001"))
+                     [1 1 1] "16" :date "2001"))
 
 ;; FireValue
 (def fire-pixel-value
@@ -23,7 +23,7 @@
                      (thrift/ModisPixelLocation* "500" 1 2 3 4)
                      (thrift/FireValue* 0 0 0 0)
                      "16"
-                     "2001"))
+                     :date "2001"))
 
 ;; Cascalog memory tap for tile chunks: 
 (def tile-chunk-tap [[tile-chunk]])

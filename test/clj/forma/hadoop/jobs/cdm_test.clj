@@ -1,11 +1,8 @@
 (ns forma.hadoop.jobs.cdm-test
   "This namespace defines Midge tests for the forma.hadoop.jobs.cdm
 namespace."
-  (:use cascalog.api
-        forma.hadoop.jobs.cdm
-        [midje sweet cascalog])
-  (:require [forma.testing :as t]
-            [cascalog.ops :as c]))
+  (:use [midje sweet]
+        forma.hadoop.jobs.cdm))
 
 (tabular
  (fact "Test hansen-latlon->cdm function.  A valid lat-lon should produce the

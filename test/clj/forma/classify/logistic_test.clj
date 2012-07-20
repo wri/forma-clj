@@ -1,8 +1,8 @@
 (ns forma.classify.logistic-test
   "This namespace tests the numerical properties of the logistic
   classifier."
-  (:use [forma.classify.logistic] :reload)
   (:use [midje sweet]
+        [forma.classify.logistic]
         [clojure-csv.core])
   (:import [org.jblas FloatMatrix MatrixFunctions DoubleMatrix])
   (:require [forma.testing :as t]))
