@@ -182,8 +182,8 @@
         mod-coords ["?mod-h" "?mod-v" "?sample" "?line"]]    
     (<- [?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val]
         (rain-vals !date ?row ?col ?float-val)
-        (not= ?val nodata)
-        (double ?val :> ?val)
+        (not= ?float-val nodata)
+        (double ?float-val :> ?val)
         (pix-tap :>> mod-coords)
         (p/add-fields "precl" "32" m-res :> ?dataset ?t-res ?m-res)
         (r/wgs84-indexer :<< (into [m-res ascii-map] mod-coords) :> ?row ?col))))
