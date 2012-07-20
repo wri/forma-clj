@@ -1,22 +1,17 @@
 (ns forma.source.gadmiso
-  (:use clojure-csv.core)
-  (:require [clojure.string :as string]
-            [forma.testing :as t]))
+  (:require [clojure.java.io :as io]))
 
 (def text-map
-  "Returns a sequence of vectorized string tuples (e.g., [\"AFG\" \"1\"])
-  from the admin-map located in the resources folder.
-
-  `butlast` avoids empty string at end of parsed csv file."
-  (butlast (parse-csv
-            (slurp (t/resources-path "/admin-map.csv")))))
+  "Returns a sequence of vectorized strings (e.g., [\"AFG,1\"])
+  from the admin-map located in the resources folder."
+  (-> "admin-map.csv" io/resource io/reader line-seq))
 
 (defn parse-line
   "Accepts a vectorized string, as outputted by `text-map`, and
   returns a single hash-map with the GADM ID (integer) as the key and
   the ISO3 code (string) as the value."
   [x]
-  (let [[iso gadm-str] x]
+  (let [[iso gadm-str] (.split x ",")]
     {(read-string gadm-str) iso}))
 
 (def gadm-iso
