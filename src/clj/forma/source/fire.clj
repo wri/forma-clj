@@ -187,4 +187,4 @@
       (src ?dataset ?date ?t-res ?lat ?lon ?tuple)
       (r/latlon->modis ?m-res ?lat ?lon :> ?h ?v ?sample ?line)
       (thrift/ModisPixelLocation* ?m-res ?h ?v ?sample ?line :> ?pixel-loc)
-      (thrift/DataChunk* ?dataset ?pixel-loc ?tuple ?t-res ?date  :> ?pixel-chunk)))
+      (thrift/DataChunk* ?dataset ?pixel-loc ?tuple ?t-res :date ?date  :> ?pixel-chunk)))
