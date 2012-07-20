@@ -2,7 +2,9 @@
   "This namespace defines Midge tests for the forma.hadoop.jobs.cdm
 namespace."
   (:use [midje sweet]
-        forma.hadoop.jobs.cdm))
+        forma.hadoop.jobs.cdm
+        cascalog.api
+        midje.cascalog))
 
 ;; TODO: Fix this. See: https://github.com/reddmetrics/forma-clj/issues/160
 ;; (tabular
