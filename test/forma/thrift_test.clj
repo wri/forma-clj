@@ -70,9 +70,37 @@
                  LocationProperty.)
         data (->> (vec (map int [1 1 1 1])) IntArray. ArrayValue/ints DataValue/vals)
         x (DataChunk. "name" loc data "16")
-        c (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" "2001")]
+        c (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :date "2001")]
     (doto x
       (.setDate "2001"))
     c => x
     (unpack c) => ["name" loc data "16" "2001"]))
 
+(fact "Test DataChunk* with various date values."
+  (let [loc (->> (ModisChunkLocation. "500" 8 0 100 24000)
+                 LocationPropertyValue/chunkLocation
+                 LocationProperty.)
+        data (->> (vec (map int [1 1 1 1])) IntArray. ArrayValue/ints DataValue/vals)
+        dc (DataChunk. "name" loc data "16")]    
+
+    (doto dc
+      (.setDate ""))
+
+    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16") =>
+    (DataChunk. "name" loc data "16")
+
+    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :date nil) =>
+    (DataChunk. "name" loc data "16")
+    
+    (doto dc
+      (.setDate nil))
+    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :date nil) => dc
+    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16") => dc
+    
+    (doto dc
+      (.setDate ""))
+    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :date "") => dc
+
+    (doto dc
+      (.setDate "1977"))
+    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :date "1977") => dc)))
