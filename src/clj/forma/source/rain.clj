@@ -181,8 +181,9 @@
         rain-vals (if (not test-rain-vals) (rain-values step file-tap) test-rain-vals)
         mod-coords ["?mod-h" "?mod-v" "?sample" "?line"]]    
     (<- [?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val]
-        (rain-vals !date ?row ?col ?val)
+        (rain-vals !date ?row ?col ?float-val)
         (not= ?val nodata)
+        (double ?val :> ?val)
         (pix-tap :>> mod-coords)
         (p/add-fields "precl" "32" m-res :> ?dataset ?t-res ?m-res)
         (r/wgs84-indexer :<< (into [m-res ascii-map] mod-coords) :> ?row ?col))))
@@ -193,4 +194,5 @@
   suitable for comparison to any MODIS dataset at the supplied modis
   resolution `m-res`, partitioned by the supplied chunk size."
   [m-res {:keys [nodata] :as ascii-map} chunk-size file-tap pix-tap]
-  (resample-rain m-res ascii-map file-tap pix-tap))
+  (-> (resample-rain m-res ascii-map file-tap pix-tap)
+      (static/agg-chunks m-res chunk-size nodata)))

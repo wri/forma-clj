@@ -18,7 +18,8 @@
     (let [file-tap (io/hfs-wholefile source-path)
           pix-tap (p/pixel-generator tmp-dir m-res tiles)
           ascii-map (:precl static/static-datasets)]
-      (r/rain-chunks m-res ascii-map chunk-size file-tap pix-tap))))
+      (->> (r/rain-chunks m-res ascii-map chunk-size file-tap pix-tap)
+           (to-pail sink-path)))))
 
 (defmain PreprocessRain
   "The locations can be ISO keywords or [h v] tuples."
@@ -27,7 +28,7 @@
          locations]}
   (let [tiles (apply tile-set (map read-string locations))
         chunk-size static/chunk-size]
-    (?- (hfs-seqfile sink-path) (rain-chunker s-res chunk-size tiles source-path sink-path))))
+    (rain-chunker s-res chunk-size tiles source-path sink-path)))
 
 (defn static-chunker
   "m-res - MODIS resolution. "
