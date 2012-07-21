@@ -2,6 +2,8 @@
 
 The Forest Monitoring for Action ([FORMA](http://www.cgdev.org/section/initiatives/_active/forestmonitoringforactionforma)) project provides free and open forest clearing alert data derived from MODIS satellite imagery every 16 days beginning in December 2005. FORMA is a project of [World Resources Institute](http://wri.org) with funding by the [Center for Global Development](http://www.cgdev.org).
 
+# Global Forest Watch 
+
 ![](http://i.imgur.com/u6TJA.png)
 
 FORMA data can be seen in action through the Global Forest Watch 2.0 initiative, a collaboration between the World Resources Institute, Center for Global Development, Vizzuality, Google, University of Maryland, and Imazon. It's a project that brings transparency to forest conservation through an advanced alert system that monitors forests over time using cell phones, laptops, and satellites.
