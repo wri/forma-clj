@@ -4,11 +4,14 @@
   :source-path "src/clj"
   :test-path "test/clj"
   :java-source-path "src/jvm"
+  :marginalia {:javascript ["mathjax/MathJax.js"]}
   :resources-path "resources"
   :dev-resources-path "dev"
   :jvm-opts ["-XX:MaxPermSize=128M"
              "-XX:+UseConcMarkSweepGC"
              "-Xms1024M" "-Xmx1048M" "-server"]
+  :plugins [[lein-midje "1.0.8"]
+            [lein-swank "1.4.4"]]
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [org.clojure/tools.cli "0.1.0"]
                  [org.clojure/tools.logging "0.2.3"]
