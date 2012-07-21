@@ -2,7 +2,7 @@
 #
 # Make sure you've installed codox!
 #
-# lein plugin install codox "0.3.3"
+# lein plugin install codox 0.6.1
 
 lein doc
 cd doc
