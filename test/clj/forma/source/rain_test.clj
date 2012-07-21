@@ -36,7 +36,7 @@
         ascii-map {:corner [0 -90] :travel [+ +] :step 0.5 :nodata -999}
         m-res "500"]
     (resample-rain m-res ascii-map file-tap pix-tap test-rain-data)
-    => (produces [["precl" "500" "32" "2000-01-01" 8 6 0 0 100]])))
+    => (produces [["precl" "500" "32" "2000-01-01" 8 6 0 0 100.0]])))
 
 ;; TODO: Mod for rain. Used to be for MODIS.
 ;;
