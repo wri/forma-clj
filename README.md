@@ -1,6 +1,6 @@
 # What is FORMA?
 
-The Forest Monitoring for Action ([FORMA](http://www.cgdev.org/section/initiatives/_active/forestmonitoringforactionforma)) project provides free and open forest clearing alert data derived from MODIS satellite imagery every 16 days beginning in December 2005. FORMA is a project of [World Resources Institute](http://wri.org) and was developed by the [Center for Global Development](http://www.cgdev.org).
+The Forest Monitoring for Action ([FORMA](http://www.cgdev.org/section/initiatives/_active/forestmonitoringforactionforma)) project provides free and open forest clearing alert data derived from MODIS satellite imagery every 16 days beginning in December 2005. FORMA is a project of [World Resources Institute](http://wri.org) with funding by the [Center for Global Development](http://www.cgdev.org).
 
 ![](http://i.imgur.com/u6TJA.png)
 
@@ -10,7 +10,7 @@ Read more on the [Vizzuality Blog](http://vizzuality.com/projects/gfwprototype).
 
 # About the software
 
-The FORMA software is written in the [Clojure](http://clojure.org) programming language. It rides on [Cascading](http://www.cascading.org) and [Cascalog](https://github.com/nathanmarz/cascalog) for processing "Big Data" on top of [Hadoop](http://hadoop.apache.org) using [MapReduce](http://research.google.com/archive/mapreduce.html).
+The FORMA software is designed and built by [REDD Metrics](http://www.reddmetrics.com). It's written in the [Clojure](http://clojure.org) programming language and rides on [Cascading](http://www.cascading.org) and [Cascalog](https://github.com/nathanmarz/cascalog) for processing "Big Data" on top of [Hadoop](http://hadoop.apache.org) using [MapReduce](http://research.google.com/archive/mapreduce.html).
 
 # Contributors
 
