@@ -103,4 +103,4 @@
 
     (doto dc
       (.setDate "1977"))
-    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :date "1977") => dc)))
+    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :date "1977") => dc))

@@ -1,4 +1,4 @@
-(ns forma.postprocess.output_test
+(ns forma.postprocess.output-test
   (:use [forma.postprocess.output] :reload)
   (:use [midje sweet]))
 
