@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html><head><link href="css/default.css" rel="stylesheet" type="text/css"><script src="js/jquery.min.js" type="text/javascript"></script><script src="js/page_effects.js" type="text/javascript"></script><title>forma.source.fire documentation</title></head><body><div id="header"><h1><a href="index.html">Forma 0.2.0-SNAPSHOT API documentation</a></h1></div><div class="sidebar" id="namespaces"><h3><span>Namespaces</span></h3><ul><li><a href="forma.classify.logistic.html"><span>forma.classify.logistic</span></a></li><li><a href="forma.date-time.html"><span>forma.date-time</span></a></li><li><a href="forma.gfw.cdm.html"><span>forma.gfw.cdm</span></a></li><li><a href="forma.hadoop.cli.html"><span>forma.hadoop.cli</span></a></li><li><a href="forma.hadoop.io.html"><span>forma.hadoop.io</span></a></li><li><a href="forma.hadoop.jobs.cdm.html"><span>forma.hadoop.jobs.cdm</span></a></li><li><a href="forma.hadoop.jobs.forma.html"><span>forma.hadoop.jobs.forma</span></a></li><li><a href="forma.hadoop.jobs.modis.html"><span>forma.hadoop.jobs.modis</span></a></li><li><a href="forma.hadoop.jobs.neighbors.html"><span>forma.hadoop.jobs.neighbors</span></a></li><li><a href="forma.hadoop.jobs.preprocess.html"><span>forma.hadoop.jobs.preprocess</span></a></li><li><a href="forma.hadoop.jobs.scatter.html"><span>forma.hadoop.jobs.scatter</span></a></li><li><a href="forma.hadoop.jobs.timeseries.html"><span>forma.hadoop.jobs.timeseries</span></a></li><li><a href="forma.hadoop.pail.html"><span>forma.hadoop.pail</span></a></li><li><a href="forma.hadoop.predicate.html"><span>forma.hadoop.predicate</span></a></li><li><a href="forma.hoptree.html"><span>forma.hoptree</span></a></li><li><a href="forma.matrix.utils.html"><span>forma.matrix.utils</span></a></li><li><a href="forma.matrix.walk.html"><span>forma.matrix.walk</span></a></li><li><a href="forma.ops.classify.html"><span>forma.ops.classify</span></a></li><li><a href="forma.playground.html"><span>forma.playground</span></a></li><li><a href="forma.postprocess.output.html"><span>forma.postprocess.output</span></a></li><li><a href="forma.reproject.html"><span>forma.reproject</span></a></li><li><a href="forma.schema.html"><span>forma.schema</span></a></li><li class="current"><a href="forma.source.fire.html"><span>forma.source.fire</span></a></li><li><a href="forma.source.gadmiso.html"><span>forma.source.gadmiso</span></a></li><li><a href="forma.source.hdf.html"><span>forma.source.hdf</span></a></li><li><a href="forma.source.rain.html"><span>forma.source.rain</span></a></li><li><a href="forma.source.static.html"><span>forma.source.static</span></a></li><li><a href="forma.source.tilesets.html"><span>forma.source.tilesets</span></a></li><li><a href="forma.static.html"><span>forma.static</span></a></li><li><a href="forma.testing.html"><span>forma.testing</span></a></li><li><a href="forma.thrift.html"><span>forma.thrift</span></a></li><li><a href="forma.trends.analysis.html"><span>forma.trends.analysis</span></a></li><li><a href="forma.trends.filter.html"><span>forma.trends.filter</span></a></li><li><a href="forma.trends.stretch.html"><span>forma.trends.stretch</span></a></li><li><a href="forma.utils.html"><span>forma.utils</span></a></li></ul></div><div class="sidebar" id="vars"><h3>Public Vars</h3><ul><li><a href="forma.source.fire.html#var-daily-datestring"><span>daily-datestring</span></a></li><li><a href="forma.source.fire.html#var-fire-characteristics"><span>fire-characteristics</span></a></li><li><a href="forma.source.fire.html#var-fire-pred"><span>fire-pred</span></a></li><li><a href="forma.source.fire.html#var-fire-source-daily"><span>fire-source-daily</span></a></li><li><a href="forma.source.fire.html#var-fire-source-monthly"><span>fire-source-monthly</span></a></li><li><a href="forma.source.fire.html#var-monthly-datestring"><span>monthly-datestring</span></a></li><li><a href="forma.source.fire.html#var-reproject-fires"><span>reproject-fires</span></a></li></ul></div><div class="namespace-docs" id="content"><h2>forma.source.fire documentation</h2><pre class="doc"></pre><div class="public" id="var-daily-datestring"><h3>daily-datestring</h3><div class="usage"><code>(daily-datestring date-str)</code></div><pre class="doc">Returns a daily date string formatted as YYYY-MM-DD.
+
+ Arguments:
+   date-str - Daily date string formatted as MM/DD/YYYY.
+
+Example usage:
+  &gt; (daily-&gt;standard 1977/02/02)
+  02-1977-02</pre></div><div class="public" id="var-fire-characteristics"><h3>fire-characteristics</h3><div class="usage"></div><pre class="doc">Returns a Cascalog predicate macro that creates a FireTuple Thrift object.
+
+Input variables:
+  ?conf - The fire confidence value.
+  ?kelvin - The fire degress in Kelvin
+
+Output variables:
+  ?tuple - The FireTuple Thrift object.
+
+Example usage:
+
+  &gt; (let [src [[60 380]]]
+          (??&lt;-
+          [?tuple]
+          (src ?conf ?kelvin)
+          (fire-characteristics ?conf ?kelvin :&gt; ?tuple)))</pre></div><div class="public" id="var-fire-pred"><h3>fire-pred</h3><div class="usage"></div><pre class="doc">Returns a Cascalog predicate macro that creates a FireTuple Thrift object.
+
+Input variables:
+  ?s-lat - The string latitude for the fire.
+  ?s-lon - The string latitude for the fire.
+  ?s-kelvin - The string kelvin value for the fire.
+  ?s-conf - The string confidence value for the fire.
+
+Output variables:
+  ?dataset - The fire dataset name (fire).
+  ?t-res - The fire temporal resolution (1 day).
+  ?lat - The fire latitude as a float.
+  ?lon - The fire longitude as a float.
+  ?tuple - The FireTuple Thrift object representing this fire.
+
+Example usage:
+  &gt; (let [src [[&quot;1&quot; &quot;2&quot; &quot;331&quot; &quot;51&quot;]]]
+         (??&lt;-
+          [?dataset ?t-res ?lat ?lon ?fire-tuple]
+          (src ?s-lat ?s-lon ?s-kelvin ?s-conf)
+          (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :&gt; ?dataset ?t-res ?lat ?lon ?tuple)))</pre></div><div class="public" id="var-fire-source-daily"><h3>fire-source-daily</h3><div class="usage"><code>(fire-source-daily src)</code></div><pre class="doc">Returns a Cascalog query that creates tuples for daily fires.
+
+Source:
+  src - An hfs-textline of daily fires (lat lon kelvin _ _ date _ _ conf _ _ _)
+
+Output variables:
+  ?dataset - The dataset name (fires).
+  ?date - The fire date formatted as YYYY-MM-DD.
+  ?t-res - The fire temporal resolution (1).
+  ?lat - The fire latitude as a float.
+  ?lon - The fire longitude as a float.
+  ?tuple - The FireTuple Thrift object representing the fire.</pre></div><div class="public" id="var-fire-source-monthly"><h3>fire-source-monthly</h3><div class="usage"><code>(fire-source-monthly src)</code></div><pre class="doc">Returns a Cascalog query that creates tuples for monthly fires.
+
+Source:
+  src - An hfs-textline of monthly fires (datestring _ _ s-lat s-lon s-kelvin _ _ _ s-conf)
+
+Output variables:
+  ?dataset - The dataset name (fires).
+  ?date - The fire date formatted as YYYY-MM-DD.
+  ?t-res - The fire temporal resolution (1).
+  ?lat - The fire latitude as a float.
+  ?lon - The fire longitude as a float.</pre></div><div class="public" id="var-monthly-datestring"><h3>monthly-datestring</h3><div class="usage"><code>(monthly-datestring date-str)</code></div><pre class="doc">Returns a monthly date string formatted as YYYY-MM-DD.
+
+ Arguments:
+   date-str - Monthly date string formatted as YYYYMMDD.
+
+Example usage:
+  &gt; (monthly-&gt;standard 19770202)
+  1977-02-02</pre></div><div class="public" id="var-reproject-fires"><h3>reproject-fires</h3><div class="usage"><code>(reproject-fires m-res src)</code></div><pre class="doc">Returns a Cascalog query that creates DataChunk Thrift objects for fires.
+</pre></div></div></body></html>

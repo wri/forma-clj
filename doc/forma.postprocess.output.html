@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html><head><link href="css/default.css" rel="stylesheet" type="text/css"><script src="js/jquery.min.js" type="text/javascript"></script><script src="js/page_effects.js" type="text/javascript"></script><title>forma.postprocess.output documentation</title></head><body><div id="header"><h1><a href="index.html">Forma 0.2.0-SNAPSHOT API documentation</a></h1></div><div class="sidebar" id="namespaces"><h3><span>Namespaces</span></h3><ul><li><a href="forma.classify.logistic.html"><span>forma.classify.logistic</span></a></li><li><a href="forma.date-time.html"><span>forma.date-time</span></a></li><li><a href="forma.gfw.cdm.html"><span>forma.gfw.cdm</span></a></li><li><a href="forma.hadoop.cli.html"><span>forma.hadoop.cli</span></a></li><li><a href="forma.hadoop.io.html"><span>forma.hadoop.io</span></a></li><li><a href="forma.hadoop.jobs.cdm.html"><span>forma.hadoop.jobs.cdm</span></a></li><li><a href="forma.hadoop.jobs.forma.html"><span>forma.hadoop.jobs.forma</span></a></li><li><a href="forma.hadoop.jobs.modis.html"><span>forma.hadoop.jobs.modis</span></a></li><li><a href="forma.hadoop.jobs.neighbors.html"><span>forma.hadoop.jobs.neighbors</span></a></li><li><a href="forma.hadoop.jobs.preprocess.html"><span>forma.hadoop.jobs.preprocess</span></a></li><li><a href="forma.hadoop.jobs.scatter.html"><span>forma.hadoop.jobs.scatter</span></a></li><li><a href="forma.hadoop.jobs.timeseries.html"><span>forma.hadoop.jobs.timeseries</span></a></li><li><a href="forma.hadoop.pail.html"><span>forma.hadoop.pail</span></a></li><li><a href="forma.hadoop.predicate.html"><span>forma.hadoop.predicate</span></a></li><li><a href="forma.hoptree.html"><span>forma.hoptree</span></a></li><li><a href="forma.matrix.utils.html"><span>forma.matrix.utils</span></a></li><li><a href="forma.matrix.walk.html"><span>forma.matrix.walk</span></a></li><li><a href="forma.ops.classify.html"><span>forma.ops.classify</span></a></li><li><a href="forma.playground.html"><span>forma.playground</span></a></li><li class="current"><a href="forma.postprocess.output.html"><span>forma.postprocess.output</span></a></li><li><a href="forma.reproject.html"><span>forma.reproject</span></a></li><li><a href="forma.schema.html"><span>forma.schema</span></a></li><li><a href="forma.source.fire.html"><span>forma.source.fire</span></a></li><li><a href="forma.source.gadmiso.html"><span>forma.source.gadmiso</span></a></li><li><a href="forma.source.hdf.html"><span>forma.source.hdf</span></a></li><li><a href="forma.source.rain.html"><span>forma.source.rain</span></a></li><li><a href="forma.source.static.html"><span>forma.source.static</span></a></li><li><a href="forma.source.tilesets.html"><span>forma.source.tilesets</span></a></li><li><a href="forma.static.html"><span>forma.static</span></a></li><li><a href="forma.testing.html"><span>forma.testing</span></a></li><li><a href="forma.thrift.html"><span>forma.thrift</span></a></li><li><a href="forma.trends.analysis.html"><span>forma.trends.analysis</span></a></li><li><a href="forma.trends.filter.html"><span>forma.trends.filter</span></a></li><li><a href="forma.trends.stretch.html"><span>forma.trends.stretch</span></a></li><li><a href="forma.utils.html"><span>forma.utils</span></a></li></ul></div><div class="sidebar" id="vars"><h3>Public Vars</h3><ul><li><a href="forma.postprocess.output.html#var-backward-looking-mavg"><span>backward-looking-mavg</span></a></li><li><a href="forma.postprocess.output.html#var-clean-probs"><span>clean-probs</span></a></li><li><a href="forma.postprocess.output.html#var-error-map"><span>error-map</span></a></li><li><a href="forma.postprocess.output.html#var-precision"><span>precision</span></a></li></ul></div><div class="namespace-docs" id="content"><h2>forma.postprocess.output documentation</h2><pre class="doc"></pre><div class="public" id="var-backward-looking-mavg"><h3>backward-looking-mavg</h3><div class="usage"><code>(backward-looking-mavg window series)</code></div><pre class="doc">Moving average calculated up to a given element (i.e. looking backwards),
+rather than starting with a given element. Ensures that only
+information up to and including given element is incorporated in the
+moving average.
+
+Expanded timeseries includes pre-pended nils. So moving average is
+actually forward looking, but starting with non-existing (and
+filtered out) 'prior' nil values.
+
+For example,
+
+  (backward-looking-mavg 3 [1 2 3 4])
+
+expands to
+
+  [nil nil 1 2 3 4]
+
+where the nils are filtered out, so the output is effectively:
+
+  [(average [1]) (average [1 2]) (average [1 2 3]) (average 2 3 4)]
+
+Example usage:
+  (backward-looking-mavg 3 [1 2 3 4]) =&gt; '(1.0 1.5 2.0 3.0)</pre></div><div class="public" id="var-clean-probs"><h3>clean-probs</h3><div class="usage"><code>(clean-probs ts)</code></div><pre class="doc">Accepts a timeseries of probabilities, and returns a nested vector
+'cleaned' time series.  Specifically, the cleaned timeseries Smooth
+the probabilities with a backward-looking moving average, make the
+series monotonically increasing, and finally make each probability
+0-&gt;1 an integer 0-&gt;100.  Note that the moving average window, here,
+is set to 3 periods.  This is hard-coded, since this function's
+expressed purpose is to clean the FORMA probability time series.
+That is, in some sense, FORMA is defined by the 3-length window.
+
+Example usage:
+  (clean-probs [0.1 0.2 0.3 0.4 0.5]) =&gt; [[10 15 20 30 40]]</pre></div><div class="public" id="var-error-map"><h3>error-map</h3><div class="usage"><code>(error-map threshold m)</code></div><pre class="doc">returns a vector indicating one of four possiblities: false
+positive, false negative, true positive, true negative.  This is
+used as an intermediate function to a cascalog query, where the
+order of the elements of the returned vector matters:
+[?false-pos ?true-neg ?true-pos ?false-neg]
+
+Example use case: 
+  (defn error-tap []
+    (??&lt;- [?fp-sum ?tn-sum ?tp-sum ?fn-sum]
+          (sample-output-map ?m)
+          (error-map 0.05 ?m :&gt; ?fp ?tn ?tp ?fn)
+          (c/sum ?fp ?tn ?tp ?fn :&gt; ?fp-sum ?tn-sum ?tp-sum ?fn-sum)))</pre></div><div class="public" id="var-precision"><h3>precision</h3><div class="usage"><code>(precision error-dict)</code></div><pre class="doc">returns 
+</pre></div></div></body></html>
