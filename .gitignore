@@ -7,14 +7,12 @@ native
 logs/
 classes
 docs
-doc
 autodoc
 .#*
 *#*
 .classpath
 .settings/
 .project
-doc/
 .lein-deps-sum
 .DS_Store
 .repl
