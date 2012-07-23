@@ -59,7 +59,7 @@
         (ts-src ?name ?t-res ?s-res ?h ?v ?id ?size ?pixel-idx ?ts)
         (r/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line)
         (thrift/ModisPixelLocation* ?s-res ?h ?v ?sample ?line :> ?pixel-loc)
-        (thrift/DataChunk* ?name ?tile-loc ?ts ?t-res :> ?pixel-chunk)
+        (thrift/DataChunk* ?name ?pixel-loc ?ts ?t-res :> ?pixel-chunk)
         (:distinct false))))
 
 (def ^:dynamic *missing-val*
@@ -133,3 +133,4 @@
   (-> source-pail-path
       (pail/split-chunk-tap ["fire" (str m-res "-01")])
       (create-fire-series t-res start end)))
+
