@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html><head><link href="css/default.css" rel="stylesheet" type="text/css"><script src="js/jquery.min.js" type="text/javascript"></script><script src="js/page_effects.js" type="text/javascript"></script><title>forma.reproject documentation</title></head><body><div id="header"><h1><a href="index.html">Forma 0.2.0-SNAPSHOT API documentation</a></h1></div><div class="sidebar" id="namespaces"><h3><span>Namespaces</span></h3><ul><li><a href="forma.classify.logistic.html"><span>forma.classify.logistic</span></a></li><li><a href="forma.date-time.html"><span>forma.date-time</span></a></li><li><a href="forma.gfw.cdm.html"><span>forma.gfw.cdm</span></a></li><li><a href="forma.hadoop.cli.html"><span>forma.hadoop.cli</span></a></li><li><a href="forma.hadoop.io.html"><span>forma.hadoop.io</span></a></li><li><a href="forma.hadoop.jobs.cdm.html"><span>forma.hadoop.jobs.cdm</span></a></li><li><a href="forma.hadoop.jobs.forma.html"><span>forma.hadoop.jobs.forma</span></a></li><li><a href="forma.hadoop.jobs.modis.html"><span>forma.hadoop.jobs.modis</span></a></li><li><a href="forma.hadoop.jobs.neighbors.html"><span>forma.hadoop.jobs.neighbors</span></a></li><li><a href="forma.hadoop.jobs.preprocess.html"><span>forma.hadoop.jobs.preprocess</span></a></li><li><a href="forma.hadoop.jobs.scatter.html"><span>forma.hadoop.jobs.scatter</span></a></li><li><a href="forma.hadoop.jobs.timeseries.html"><span>forma.hadoop.jobs.timeseries</span></a></li><li><a href="forma.hadoop.pail.html"><span>forma.hadoop.pail</span></a></li><li><a href="forma.hadoop.predicate.html"><span>forma.hadoop.predicate</span></a></li><li><a href="forma.hoptree.html"><span>forma.hoptree</span></a></li><li><a href="forma.matrix.utils.html"><span>forma.matrix.utils</span></a></li><li><a href="forma.matrix.walk.html"><span>forma.matrix.walk</span></a></li><li><a href="forma.ops.classify.html"><span>forma.ops.classify</span></a></li><li><a href="forma.playground.html"><span>forma.playground</span></a></li><li><a href="forma.postprocess.output.html"><span>forma.postprocess.output</span></a></li><li class="current"><a href="forma.reproject.html"><span>forma.reproject</span></a></li><li><a href="forma.schema.html"><span>forma.schema</span></a></li><li><a href="forma.source.fire.html"><span>forma.source.fire</span></a></li><li><a href="forma.source.gadmiso.html"><span>forma.source.gadmiso</span></a></li><li><a href="forma.source.hdf.html"><span>forma.source.hdf</span></a></li><li><a href="forma.source.rain.html"><span>forma.source.rain</span></a></li><li><a href="forma.source.static.html"><span>forma.source.static</span></a></li><li><a href="forma.source.tilesets.html"><span>forma.source.tilesets</span></a></li><li><a href="forma.static.html"><span>forma.static</span></a></li><li><a href="forma.testing.html"><span>forma.testing</span></a></li><li><a href="forma.thrift.html"><span>forma.thrift</span></a></li><li><a href="forma.trends.analysis.html"><span>forma.trends.analysis</span></a></li><li><a href="forma.trends.filter.html"><span>forma.trends.filter</span></a></li><li><a href="forma.trends.stretch.html"><span>forma.trends.stretch</span></a></li><li><a href="forma.utils.html"><span>forma.utils</span></a></li></ul></div><div class="sidebar" id="vars"><h3>Public Vars</h3><ul><li><a href="forma.reproject.html#var-bucket"><span>bucket</span></a></li><li><a href="forma.reproject.html#var-chunk-dims"><span>chunk-dims</span></a></li><li><a href="forma.reproject.html#var-constrain"><span>constrain</span></a></li><li><a href="forma.reproject.html#var-dataset-info"><span>dataset-info</span></a></li><li><a href="forma.reproject.html#var-dimensions-for-step"><span>dimensions-for-step</span></a></li><li><a href="forma.reproject.html#var-global-mags-%3Emodis"><span>global-mags-&gt;modis</span></a></li><li><a href="forma.reproject.html#var-global-mags-%3Esinu-xy"><span>global-mags-&gt;sinu-xy</span></a></li><li><a href="forma.reproject.html#var-hv-%3Etilestring"><span>hv-&gt;tilestring</span></a></li><li><a href="forma.reproject.html#var-latlon-%3Emodis"><span>latlon-&gt;modis</span></a></li><li><a href="forma.reproject.html#var-latlon-%3Erowcol"><span>latlon-&gt;rowcol</span></a></li><li><a href="forma.reproject.html#var-latlon-%3Esinu-xy"><span>latlon-&gt;sinu-xy</span></a></li><li><a href="forma.reproject.html#var-latlon-rad-%3Esinu-xy"><span>latlon-rad-&gt;sinu-xy</span></a></li><li><a href="forma.reproject.html#var-line-torus"><span>line-torus</span></a></li><li><a href="forma.reproject.html#var-modis-%3Eglobal-mags"><span>modis-&gt;global-mags</span></a></li><li><a href="forma.reproject.html#var-modis-%3Elatlon"><span>modis-&gt;latlon</span></a></li><li><a href="forma.reproject.html#var-modis-indexer"><span>modis-indexer</span></a></li><li><a href="forma.reproject.html#var-pixel-length"><span>pixel-length</span></a></li><li><a href="forma.reproject.html#var-rowcol-%3Elatlon"><span>rowcol-&gt;latlon</span></a></li><li><a href="forma.reproject.html#var-sinu-xy-%3Eglobal-mags"><span>sinu-xy-&gt;global-mags</span></a></li><li><a href="forma.reproject.html#var-sinu-xy-%3Elatlon"><span>sinu-xy-&gt;latlon</span></a></li><li><a href="forma.reproject.html#var-tile-position"><span>tile-position</span></a></li><li><a href="forma.reproject.html#var-tilestring-%3Ehv"><span>tilestring-&gt;hv</span></a></li><li><a href="forma.reproject.html#var-travel"><span>travel</span></a></li><li><a href="forma.reproject.html#var-valid-modis%3F"><span>valid-modis?</span></a></li><li><a href="forma.reproject.html#var-valid-rowcol%3F"><span>valid-rowcol?</span></a></li><li><a href="forma.reproject.html#var-valid-tiles"><span>valid-tiles</span></a></li><li><a href="forma.reproject.html#var-wgs84-indexer"><span>wgs84-indexer</span></a></li><li><a href="forma.reproject.html#var-wgs84-resolution"><span>wgs84-resolution</span></a></li></ul></div><div class="namespace-docs" id="content"><h2>forma.reproject documentation</h2><pre class="doc"></pre><div class="public" id="var-bucket"><h3>bucket</h3><div class="usage"><code>(bucket step-size val)</code></div><pre class="doc">Takes a floating-point value and step size, and returns the
+step-sized bucket into which the value falls. For example:
+
+   (bucket 0.4 1.3)
+   ;=&gt; 3
+
+   (bucket 0.9 1.3)
+   ;=&gt; 1</pre></div><div class="public" id="var-chunk-dims"><h3>chunk-dims</h3><div class="usage"><code>(chunk-dims m-res chunk-size)</code></div><pre class="doc">Returns the width and height in pixels of a chunk at the supplied
+resolution with `chunk-size` total entries.
+
+`chunk-size` must be a whole number multiple of the number of pixels
+per row in a MODIS tile of the supplied resolution `m-res`.</pre></div><div class="public" id="var-constrain"><h3>constrain</h3><div class="usage"><code>(constrain range start val)</code></div><pre class="doc">Constrains the supplied `val` to the range obtained by traveling
+`range` in the positive direction from the supplied starting
+value. If the value falls outside these bounds, it wraps around to
+the other edge.</pre></div><div class="public" id="var-dataset-info"><h3>dataset-info</h3><div class="usage"></div><pre class="doc">Returns the temporal resolution of the supplied MODIS short product
+name.</pre></div><div class="public" id="var-dimensions-for-step"><h3>dimensions-for-step</h3><div class="usage"><code>(dimensions-for-step step-size)</code></div><pre class="doc">returns the &lt;horz, vert&gt; dimensions of a WGS84 grid with the
+supplied spatial step-size between pixels.</pre></div><div class="public" id="var-global-mags-%3Emodis"><h3>global-mags-&gt;modis</h3><div class="usage"><code>(global-mags-&gt;modis res mag-x mag-y)</code></div><pre class="doc">Returns the MODIS pixel coordinate reached after traveling the
+supplied meter distances in the positive X and negative Y directions
+from the origin of the sinusoidal MODIS grid, located at its top
+left.</pre></div><div class="public" id="var-global-mags-%3Esinu-xy"><h3>global-mags-&gt;sinu-xy</h3><div class="usage"><code>(global-mags-&gt;sinu-xy mag-x mag-y)</code></div><pre class="doc">Returns the coordinate position on a sinusoidal grid reached after
+traveling the supplied magnitudes in the x and y directions. The
+origin of the sinusoidal grid is fixed in the top left corner.</pre></div><div class="public" id="var-hv-%3Etilestring"><h3>hv-&gt;tilestring</h3><div class="usage"><code>(hv-&gt;tilestring mod-h mod-v)</code></div><pre class="doc">Returns a 0-padded tilestring of format `HHHVVV`, for the supplied
+MODIS h and v coordinates. For example:
+
+   (tilestring 8 6)
+   ;=&gt; &quot;008006&quot;</pre></div><div class="public" id="var-latlon-%3Emodis"><h3>latlon-&gt;modis</h3><div class="usage"><code>(latlon-&gt;modis modis-res lat lon)</code></div><pre class="doc">Converts the supplied latitude and longitude into MODIS pixel
+  coordinates at the supplied resolution. The resolution is
+  expected to be either 1000, 500, or 250.
+
+Example usage:
+
+    (latlon-&gt;modis &quot;1000&quot; 29.89583 -115.2290)
+    ;=&gt; [8 6 12 12]</pre></div><div class="public" id="var-latlon-%3Erowcol"><h3>latlon-&gt;rowcol</h3><div class="usage"><code>(latlon-&gt;rowcol step-size lat-dir lon-dir lat-corner lon-corner lat lon)</code></div><pre class="doc">Takes a coordinate pair and returns its [row, col] position on a
+WGS84 grid with the supplied spatial resolution and width in
+columns.</pre></div><div class="public" id="var-latlon-%3Esinu-xy"><h3>latlon-&gt;sinu-xy</h3><div class="usage"><code>(latlon-&gt;sinu-xy lat lon)</code></div><pre class="doc">Returns the sinusoidal x and y coordinates for the supplied
+latitude and longitude (in degrees).</pre></div><div class="public" id="var-latlon-rad-%3Esinu-xy"><h3>latlon-rad-&gt;sinu-xy</h3><div class="usage"><code>(latlon-rad-&gt;sinu-xy lat lon)</code></div><pre class="doc">Returns the sinusoidal x and y coordinates for the supplied
+latitude and longitude (in radians).</pre></div><div class="public" id="var-line-torus"><h3>line-torus</h3><div class="usage"><code>(line-torus dir range corner val)</code></div><pre class="doc">Returns the magnitude of the difference between the supplied value
+and the corner point within the supplied range. Values are assumed
+to wrap around at the edge of the range. For example,
+
+  (line-torus + 10 -2 1) =&gt; 3
+  (line-torus + 10 -2 -3) =&gt; 9
+
+The -3 value is assumed to have wrapped around the edge of the
+range. Note that this function will wrap any number of times:
+
+  (line-torus + 10 -2 54) =&gt; 6</pre></div><div class="public" id="var-modis-%3Eglobal-mags"><h3>modis-&gt;global-mags</h3><div class="usage"><code>(modis-&gt;global-mags res mod-h mod-v sample line)</code></div><pre class="doc">Returns the distance traveled in meters from the top left of the
+sinusoidal MODIS grid that corresponds with the supplied MODIS pixel
+coordinates at the given resolution</pre></div><div class="public" id="var-modis-%3Elatlon"><h3>modis-&gt;latlon</h3><div class="usage"><code>(modis-&gt;latlon res mod-h mod-v sample line)</code></div><pre class="doc">Converts the supplied MODIS coordinates into `[lat, lon]` based on
+  the supplied resolution.
+
+Example usage:
+
+    (modis-&gt;latlon &quot;1000&quot; 8 6 12 12)
+    ;=&gt; (29.89583333333333 -115.22901262147285)</pre></div><div class="public" id="var-modis-indexer"><h3>modis-indexer</h3><div class="usage"><code>(modis-indexer m-res {:keys [step corner travel]} row col)</code></div><pre class="doc">Accepts WGS84 coordinates and returns the corresponding `[mod-h,
+mod-v, sample, line]` in the modis grid at the supplied resolution
+for an ASCII grid with the supplied step-size, corner coordinates
+and directions traveled for each axis.</pre></div><div class="public" id="var-pixel-length"><h3>pixel-length</h3><div class="usage"><code>(pixel-length res)</code></div><pre class="doc">The length, in meters, of the edge of a MODIS pixel at the supplied
+resolution.</pre></div><div class="public" id="var-rowcol-%3Elatlon"><h3>rowcol-&gt;latlon</h3><div class="usage"><code>(rowcol-&gt;latlon step-size lat-dir lon-dir lat-corner lon-corner row col)</code></div><pre class="doc">Returns the coordinates of the centroid of the point defined by
+`row` and `col` on an ascii grid with the supplied corner point and
+step size.</pre></div><div class="public" id="var-sinu-xy-%3Eglobal-mags"><h3>sinu-xy-&gt;global-mags</h3><div class="usage"><code>(sinu-xy-&gt;global-mags x y)</code></div><pre class="doc">Returns the magnitudes (in meters) required to reach the supplied
+coordinate position on a the MODIS sinusoidal grid. The origin of
+the sinusoidal grid is fixed in the top left corner.</pre></div><div class="public" id="var-sinu-xy-%3Elatlon"><h3>sinu-xy-&gt;latlon</h3><div class="usage"><code>(sinu-xy-&gt;latlon x y)</code></div><pre class="doc">Returns the latitude and longitude (in degrees) for a given set of
+sinusoidal map coordinates (in meters).</pre></div><div class="public" id="var-tile-position"><h3>tile-position</h3><div class="usage"><code>(tile-position m-res chunk-size chunk-row idx)</code><code>(tile-position win-width win-height win-col win-row idx)</code></div><pre class="doc">General version accepts a window's dimensions and position and a
+pixel index within that window, and returns the global sample and
+line. For example:
+
+    (tile-position 10 10 2 1 0) =&gt; [20 10]
+
+  Special-case version accepts a MODIS resolution, a chunk-size, and a
+  pixel's index within that chunk, and returns the tile sample and
+  line. For example:
+
+    (tile-position &quot;1000&quot; 24000 2 1231) =&gt; [31 41]</pre></div><div class="public" id="var-tilestring-%3Ehv"><h3>tilestring-&gt;hv</h3><div class="usage"><code>(tilestring-&gt;hv tilestr)</code></div><pre class="doc">Extracts integer representations of the MODIS H and V coordinates
+referenced by the supplied MODIS tilestring, of format 'HHHVVV'.</pre></div><div class="public" id="var-travel"><h3>travel</h3><div class="usage"><code>(travel step-size dir start idx)</code></div><pre class="doc">Returns the value obtained by traveling `idx` steps, each
+`step-size` large, in the supplied direction from the value
+`start`. (The function takes an extra half-step, so as to return the
+centroid of the point reached.) For example:
+
+  (travel 0.5 + 0 2)
+  =&gt; 1.25
+  (start, travel, end at centroid.)
+  0.0 --&gt; 0.5 --&gt; 1.0 -*- 1.5</pre></div><div class="public" id="var-valid-modis%3F"><h3>valid-modis?</h3><div class="usage"><code>(valid-modis? tileseq)</code><code>(valid-modis? mod-h mod-v)</code><code>(valid-modis? res mod-h mod-v sample line)</code></div><pre class="doc">Checks that the supplied values correspond to a valid MODIS tile,
+at the specified resolution. The single argument version accepts a
+sequence if `[mod-h, mod-v`] vectors.</pre></div><div class="public" id="var-valid-rowcol%3F"><h3>valid-rowcol?</h3><div class="usage"><code>(valid-rowcol? step row col)</code></div><pre class="doc">Determines whether or not the supplied ASCII row and column falls
+within the bounds of an ASCII grid with the supplied step size.</pre></div><div class="public" id="var-valid-tiles"><h3>valid-tiles</h3><div class="usage"></div><pre class="doc">Set of coordinate pairs for all MODIS tiles that contain actual
+data. This set is calculated by taking a vector of offsets,
+representing the first horizontal tile containing data for each row
+of tiles. (For example, the data for row 1 begins with tile 14,
+horizontal.)  For a visual representation of the MODIS grid and its
+available data, see http://remotesensing.unh.edu/modis/modis.shtml</pre></div><div class="public" id="var-wgs84-indexer"><h3>wgs84-indexer</h3><div class="usage"><code>(wgs84-indexer m-res ascii-map mod-h mod-v sample line)</code></div><pre class="doc">Accepts MODIS tile coordinates and returns the corresponding `[row,
+col]` within a WGS84 grid of values with the supplied step-size,
+corner coordinates and directions traveled for each axis.</pre></div><div class="public" id="var-wgs84-resolution"><h3>wgs84-resolution</h3><div class="usage"><code>(wgs84-resolution res)</code></div><pre class="doc">Returns the step size on a `&lt;lat, lon&gt;` grid corresponding to the
+supplied MODIS resolution. As each MODIS tile is 10 degrees on a
+side, we find this value by calculating the number of degrees
+spanned by each MODIS pixel. This is not exact, as MODIS uses a
+sinusoidal projection, but it's close enough for rough estimation.</pre></div></div></body></html>
