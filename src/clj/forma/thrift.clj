@@ -246,15 +246,29 @@
   "Create a TimeSeries."
   ([start vals]
     {:pre [(every? integer? [start])
-           (coll? vals)]}
-    (let [elems (count vals)]
+           (or (instance? IntArray vals)
+               (instance? DoubleArray vals)
+               (instance? LongArray vals)
+               (instance? ShortArray vals)
+               (instance? FireArray vals)
+               (instance? FormaArray vals)
+               (coll? vals))]}
+    (let [elems (if (coll? vals)
+                  (count vals)
+                  (count (vec (unpack vals))))]
       (TimeSeries* start
-                   (dec (+ start (count vals)))
+                   (dec (+ start elems))
                    vals)))
-  ([start end val]
+  ([start end vals]
     {:pre [(every? integer? [start end])
-           (coll? val)]}
-    (let [series (if (coll? val) (pack val) val)]
+           (or (instance? IntArray vals)
+               (instance? DoubleArray vals)
+               (instance? LongArray vals)
+               (instance? ShortArray vals)
+               (instance? FireArray vals)
+               (instance? FormaArray vals)
+               (coll? vals))]}
+    (let [series (if (coll? vals) (pack vals) vals)]
       (TimeSeries. start end (mk-array-value series)))))
 
 (defn FormaValue*
