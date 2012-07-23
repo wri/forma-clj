@@ -16,7 +16,7 @@ The FORMA software is designed and built by [REDD Metrics](http://www.reddmetric
 
 # Contributors
 
-- Robin Kraft [@robinkraft](https://github.com/robinkraft)
 - Dan Hammer [@danhammer](https://github.com/danhammer)
+- Robin Kraft [@robinkraft](https://github.com/robinkraft)
 - Sam Ritchie [@sritchie](https://github.com/sritchie)
 - Aaron Steele [@eightysteele](https://github.com/eightysteele)
