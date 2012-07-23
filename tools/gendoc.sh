@@ -4,12 +4,13 @@
 #
 # lein plugin install codox 0.6.1
 
+git checkout develop
 lein doc
-cd doc
+git add doc
+git commit -m "Update code docs via gendoc.sh script."
+git push origin develop
 git checkout gh-pages
-git add .
-git commit -am "new documentation push."
-echo "Pushing to gh-pages branch on github..."
+git checkout develop -- doc
+git commit -m "Update code docs via gendoc.sh script."
 git push -u origin gh-pages
-cd ..
-
+git checkout develop
