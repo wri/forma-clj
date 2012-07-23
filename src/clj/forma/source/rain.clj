@@ -182,7 +182,7 @@
         mod-coords ["?mod-h" "?mod-v" "?sample" "?line"]]    
     (<- [?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val]
         (rain-vals !date ?row ?col ?float-val)
-        (not= ?float-val nodata)
+        (== ?float-val nodata :> false)
         (double ?float-val :> ?val)
         (pix-tap :>> mod-coords)
         (p/add-fields "precl" "32" m-res :> ?dataset ?t-res ?m-res)
