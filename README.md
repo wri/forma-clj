@@ -1,6 +1,6 @@
 # What is FORMA?
 
-The Forest Monitoring for Action ([FORMA](http://www.cgdev.org/section/initiatives/_active/forestmonitoringforactionforma)) project provides free and open forest clearing alert data derived from MODIS satellite imagery every 16 days beginning in December 2005. FORMA is a project of [World Resources Institute](http://wri.org) with funding by the [Center for Global Development](http://www.cgdev.org).
+The Forest Monitoring for Action ([FORMA](http://www.cgdev.org/section/initiatives/_active/forestmonitoringforactionforma)) project provides free and open forest clearing alert data derived from MODIS satellite imagery every 16 days beginning in December 2005. FORMA is a project of [World Resources Institute](http://wri.org) and was developed by the [Center for Global Development](http://www.cgdev.org).
 
 # Global Forest Watch 
 
@@ -16,7 +16,7 @@ The FORMA software is designed and built by [REDD Metrics](http://www.reddmetric
 
 # Contributors
 
-- Robin Kraft [@robinkraft](https://github.com/robinkraft)
 - Dan Hammer [@danhammer](https://github.com/danhammer)
+- Robin Kraft [@robinkraft](https://github.com/robinkraft)
 - Sam Ritchie [@sritchie](https://github.com/sritchie)
 - Aaron Steele [@eightysteele](https://github.com/eightysteele)
