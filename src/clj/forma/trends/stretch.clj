@@ -39,7 +39,7 @@
         (let [res (persistent! result)
               start-idx (long beg)
               end-idx (long (dec (+ beg (count res))))]
-          (thrift/TimeSeries* start-idx end-idx  res))
+          (thrift/TimeSeries* start-idx end-idx res))
         (let [num-days (date/period-span target-res pd)]
           (recur more
                  (drop num-days day-seq)
