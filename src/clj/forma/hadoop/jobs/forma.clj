@@ -47,29 +47,26 @@
       (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)
       (schema/adjust-fires est-map ?ts :> ?adjusted-ts)))
 
-(defn ts-unpacking
-  [ts-src]
+(defn filter-query
+  "Use a join with `static-src` - already filtered by VCF - to keep only
+   pixels from `chunk-src` where VCF >= 25.
+
+   Arguments:
+     static-src: source of tuples of static data
+     vcf-limit: minimum VCF value required to keep a tuple
+     chunk-src: source of timeseries chunk tuples"
+  [static-src vcf-limit chunk-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?series]
-      (ts-src _ ?ts-chunk)
+      (chunk-src _ ?ts-chunk)
+      (static-src ?s-res ?mod-h ?mod-v ?sample ?line ?vcf _ _ _ _)
+      
       ;; unpack ts object
       (thrift/unpack ?ts-chunk :> _ ?ts-loc ?ts-data _ _)
       (thrift/unpack ?ts-data :> ?start-idx _ ?ts-array)
       (thrift/unpack* ?ts-array :> ?series)
-      (thrift/unpack ?ts-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
-
-(defn filter-query
-  [vcf-src vcf-limit chunk-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?series]
-      (chunk-src _ ?ts-chunk)
-      (vcf-src ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
+      (thrift/unpack ?ts-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
       
-      ;; unpack ts object
-       (thrift/unpack ?ts-chunk :> _ ?ts-loc ?ts-data _ _)
-       (thrift/unpack ?ts-data :> ?start-idx _ ?ts-array)
-       (thrift/unpack* ?ts-array :> ?series)
-       (thrift/unpack ?ts-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
-
-      ;; filter on vcf-limit
+      ;; filter on vcf-limit - ensures join & filter actually happens
       (>= ?vcf vcf-limit)))
 
 (defn dynamic-filter
