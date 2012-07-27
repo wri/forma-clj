@@ -170,7 +170,7 @@
 
               ndvi-pail-seq-step
               ([:tmp-dirs ndvi-seq-path]
-                 "Filters out NDVI with VCF < 25"
+                 "Convert ndvi pail to sequence files"
                  (?- (hfs-seqfile ndvi-seq-path)
                      (<- [?pail-path ?data-chunk]
                          ((constrained-tap ts-pail-path
@@ -180,7 +180,7 @@
 
               reli-pail-seq-step
               ([:tmp-dirs reli-seq-path]
-                 "Filters out reliability with VCF < 25"
+                 "Convert reliability pail to sequence files"
                  (?- (hfs-seqfile reli-seq-path)
                      (<- [?pail-path ?data-chunk]
                          ((constrained-tap ts-pail-path
@@ -190,7 +190,7 @@
 
               rain-pail-seq-step
               ([:tmp-dirs rain-seq-path]
-                 "Filter out rain with VCF < 25"
+                 "Convert rain pail to sequence files"
                  (?- (hfs-seqfile rain-seq-path)
                      (<- [?pail-path ?data-chunk]
                          ((constrained-tap ts-pail-path
