@@ -10,7 +10,6 @@
   :jvm-opts ["-XX:MaxPermSize=128M"
              "-XX:+UseConcMarkSweepGC"
              "-Xms1024M" "-Xmx1048M" "-server"]
-  :plugins [[lein-swank "1.4.4"]]
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [org.clojure/tools.cli "0.1.0"]
                  [org.clojure/tools.logging "0.2.3"]
@@ -28,5 +27,6 @@
                   :exclusions [org.slf4j/slf4j-api]]]
   :aot [forma.hadoop.pail, forma.schema, #"forma.hadoop.jobs.*"]
   :profiles {:dev {:dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
-                                  [midje-cascalog "0.4.0"]]}
-             :plugins [[lein-midje "2.0.0-SNAPSHOT"]]})
+                                  [midje-cascalog "0.4.0"]]
+                   :plugins [[lein-swank "1.4.4"]
+                             [lein-midje "1.0.8"]]}})
