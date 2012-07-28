@@ -1,8 +1,11 @@
 (ns forma.playground
-  "This namespace is a playground for playing in the playground with play things.
-  It mostly includes handy Thrift objects and Thrift memory taps for playing with
-  at the REPL."
-  (:require [forma.thrift :as thrift]))
+  "This namespace is a playground for playing in the playground with
+  play things.  It includes handy Thrift objects and Thrift
+  memory taps for playing with at the REPL, as well as dynamic charts."
+  (:require [forma.thrift :as thrift]
+            [incanter.charts :as charts]
+            [incanter.core :as i]
+            [incanter.stats :as stats]))
 
 ;; MODIS tile chunk:
 (def tile-chunk
@@ -43,3 +46,11 @@
 (def est-map {:est-start "1970-01-01"
               :est-end "2012-01-01"
               :t-res "16"})
+
+(let [x (range -3 3 0.1)]
+  (def pdf-chart (charts/xy-plot))
+  (i/view pdf-chart) 
+  (charts/sliders [mean (range -3 3 0.1) 
+                   stdev (range 0.1 10 0.1)]
+                  (i/set-data pdf-chart [x (stats/pdf-normal x :mean mean :sd stdev)])))
+

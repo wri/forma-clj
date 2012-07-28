@@ -16,6 +16,7 @@
                  [clojure-csv/clojure-csv "1.3.2"]
                  [org.clojure/math.numeric-tower "0.0.1"]
                  [incanter/incanter-core "1.3.0"]
+                 [incanter/incanter-charts "1.3.0"]
                  [clj-time "0.3.4"]
                  [forma/gdal "1.8.0"]
                  [forma/jblas "1.2.1"]
