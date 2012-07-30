@@ -104,31 +104,29 @@
 
 (defn map-round
   [series-obj]
-  (let [[start end series] (thrift/unpack series-obj)]
-    (thrift/TimeSeries* (long start) (long end) (map round (thrift/unpack series)))))
+  (let [[start _ series] (thrift/unpack series-obj)]
+    [start (vec (map round (thrift/unpack series)))]))
 
 (defn adjusted-precl-tap
   "Document... returns a tap that adjusts for the incoming
   resolution."
-  [ts-path s-res base-t-res t-res src]
+  [s-res base-t-res t-res src]
   (if (= t-res base-t-res)
       src ;;(constrained-tap ts-path "precl" s-res base-t-res)
-      (<- [?path ?adjusted-pixel-chunk]
-          (src ?path ?pixel-chunk)
-          (thrift/unpack ?pixel-chunk :> ?name ?in-pix-loc ?ts ?t-res _)
-          (thrift/unpack ?in-pix-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
-          (stretch/ts-expander base-t-res t-res ?ts :> ?expanded-ts)
-          (map-round ?expanded-ts :> ?rounded-ts)
-          (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?out-pix-loc)
-          (thrift/DataChunk* ?name ?out-pix-loc ?rounded-ts ?t-res :> ?adjusted-pixel-chunk)
+      (<- [?s-res ?mod-h ?mod-v ?sample ?line ?new-start-idx ?rounded-ts]
+          (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ts)
+          (thrift/TimeSeries* ?start-idx ?ts :> ?ts-obj)
+          (stretch/ts-expander base-t-res t-res ?ts-obj :> ?expanded-ts)
+          (map-round ?expanded-ts :> ?new-start-idx ?rounded-ts)
           (:distinct false))))
 
 (defmain formarunner
   [tmp-root pail-path ts-pail-path fire-pail-path out-path run-key]
   (let [{:keys [s-res t-res est-end] :as est-map} (forma-run-parameters run-key)
-        mk-filter (fn [vcf-path ts-src] (forma/filter-query (hfs-seqfile vcf-path)
-                                                           (:vcf-limit est-map)
-                                                           ts-src))]
+        mk-filter (fn [static-path ts-src]
+                    (forma/filter-query (hfs-seqfile static-path)
+                                        (:vcf-limit est-map)
+                                        ts-src))]
     (assert est-map (str run-key " is not a valid run key!"))
  
     (workflow [tmp-root]
@@ -202,31 +200,25 @@
               ([:tmp-dirs ndvi-path]
                  "Filters out NDVI with VCF < 25"
                  (?- (hfs-seqfile ndvi-path) 
-                     (mk-filter vcf-path (hfs-seqfile ndvi-seq-path))))
+                     (mk-filter static-path (hfs-seqfile ndvi-seq-path))))
 
               reli-filter
               ([:tmp-dirs reli-path]
                  "Filters out reliability with VCF < 25"
                  (?- (hfs-seqfile reli-path)
-                     (mk-filter vcf-path (hfs-seqfile reli-seq-path))))
+                     (mk-filter static-path (hfs-seqfile reli-seq-path))))
               
-              screen-rain
-              ([:tmp-dirs rain-screened-path]
-                 "Only keeps rain for a specific country"
-                 (?- (hfs-seqfile rain-screened-path)
-                     (forma/screen-by-tileset (hfs-seqfile rain-seq-path)
-                                              (tile-set :IDN :BRA))))
-
               rain-filter
               ([:tmp-dirs rain-path]
-                 "Filter out rain with VCF < 25"
+                 "Filters out rain with VCF < 25, before stretching rain ts"
                  (?- (hfs-seqfile rain-path)
-                     (mk-filter vcf-path
-                                (adjusted-precl-tap ts-pail-path
-                                                    s-res
-                                                    "32"
-                                                    t-res
-                                                    (hfs-seqfile rain-screened-path)))))
+                     (mk-filter static-path (hfs-seqfile rain-seq-path))))
+
+              rain-stretcher
+              ([:tmp-dirs rain-stretch-path]
+                 "Stretch rain timeseries to match MODIS timeseries resolution"
+                 (?- (hfs-seqfile rain-stretch-path)
+                     (adjusted-precl-tap s-res "32" t-res (hfs-seqfile rain-path))))
 
               adjustseries
               ([:tmp-dirs adjusted-series-path]
@@ -236,7 +228,7 @@
                    (?- (hfs-seqfile adjusted-series-path)
                        (forma/dynamic-filter (hfs-seqfile ndvi-path)
                                              (hfs-seqfile reli-path)
-                                             (hfs-seqfile rain-path)))))
+                                             (hfs-seqfile rain-stretch-path)))))
               
               cleanseries
               ([:tmp-dirs clean-series]
