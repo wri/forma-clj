@@ -91,7 +91,26 @@
      ["h-p filter parameter" "h" "p-value"])))
 
 (defn presentation-view
-  "Wrapper function to show the presentation"
+  "Wrapper function to examine trend analysis of the NDVI timeseries.
+  Acceptable keyword arguments include:
+
+    :hp-filter - NDVI timeseries with slider to control temporal
+    smoothing parameter in the HP-filter.
+
+    :deseas - deseasonalized NDVI timeseries with slider to control
+    temporal smoothing parameter in the HP-filter.
+
+    :harmonic-plot - NDVI timeseries with slider to control temporal
+    smoothing parameter in the HP-filter, with the target series for
+    the HP-filter being the NDVI, deseasonalized by harmonic
+    decomposition.
+
+    :break-plot - NDVI timeseries with break detection overlay, along
+    with three sliders that control three parameters: p-value, window
+    length, and HP-filter parameter.
+
+  Example usage:
+    (presentation-view :harmonic-plot)"
   [k]
   (let [hp-plot (series-plot hp-ndvi)
         harmonic-plot (series-plot decomp-ndvi)]
