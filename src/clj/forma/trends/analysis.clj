@@ -71,14 +71,17 @@
   [ts]
   (let [ts-mat (i/matrix ts)
         foc (first-order-conditions ts-mat)
-        foc-mat (i/mmult foc (i/trans foc))]
-    (try
-      (let [focsum (map i/cumulative-sum foc)
-            focsum-mat (i/mmult focsum (i/trans focsum))]
-        (-> (i/solve (i/mult foc-mat (i/nrow ts-mat)))
-            (i/mmult focsum-mat)
-            (i/trace)))
-      (catch Exception e))))
+        foc-mat (i/mmult foc (i/trans foc))
+        output (try
+                 (let [focsum (map i/cumulative-sum foc)
+                       focsum-mat (i/mmult focsum (i/trans focsum))]
+                   (-> (i/solve (i/mult foc-mat (i/nrow ts-mat)))
+                       (i/mmult focsum-mat)
+                       (i/trace)))
+                 (catch Exception e))]
+    (if (string? output)
+      nil
+      output)))
 
 ;; Long-term trend characteristic; supporting functions 
 
@@ -123,10 +126,14 @@
   (let [time-step (utils/idx ts)
         X (if (empty? cofactors)
             (i/matrix time-step)
-            (apply i/bind-columns time-step cofactors))]
-    (try (map second (trend-characteristics ts X))
-         (catch Throwable e
-           (error (str "TIMESERIES ISSUES: " ts ", " cofactors) e)))))
+            (apply i/bind-columns time-step cofactors))
+        output (try (map second (trend-characteristics ts X))
+                    (catch Throwable e
+                      (error (str "TIMESERIES ISSUES: " ts ", "
+                                  cofactors) e)))]
+    (if (string? output)
+      [nil nil]
+      output)))
 
 ;; Short-term trend characteristic; supporting functions
 
