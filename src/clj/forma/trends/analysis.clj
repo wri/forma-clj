@@ -81,7 +81,7 @@
                  (catch Exception e))]
     (if (string? output)
       nil
-      output)))
+      (vec output))))
 
 ;; Long-term trend characteristic; supporting functions 
 
@@ -133,7 +133,7 @@
                                   cofactors) e)))]
     (if (string? output)
       [nil nil]
-      output)))
+      (vec output))))
 
 ;; Short-term trend characteristic; supporting functions
 
