@@ -78,10 +78,11 @@
                    (-> (i/solve (i/mult foc-mat (i/nrow ts-mat)))
                        (i/mmult focsum-mat)
                        (i/trace)))
-                 (catch Exception e))]
-    (if (string? output)
-      nil
-      (vec output))))
+                 (catch Throwable e
+                      (error (str "TIMESERIES ISSUES: " ts) e)))]
+    (if-not (and (nil? output)
+                 (string? output))
+      [output])))
 
 ;; Long-term trend characteristic; supporting functions 
 
@@ -131,7 +132,8 @@
                     (catch Throwable e
                       (error (str "TIMESERIES ISSUES: " ts ", "
                                   cofactors) e)))]
-    (if (string? output)
+    (if (or (nil? output)
+            (string? output))
       [nil nil]
       (vec output))))
 
