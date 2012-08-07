@@ -71,14 +71,15 @@
   [ts]
   (let [ts-mat (i/matrix ts)
         foc (first-order-conditions ts-mat)
-        foc-mat (i/mmult foc (i/trans foc))]
-    (try
-      (let [focsum (map i/cumulative-sum foc)
-            focsum-mat (i/mmult focsum (i/trans focsum))]
-        (-> (i/solve (i/mult foc-mat (i/nrow ts-mat)))
-            (i/mmult focsum-mat)
-            (i/trace)))
-      (catch Exception e))))
+        foc-mat (i/mmult foc (i/trans foc))
+        focsum (map i/cumulative-sum foc)
+        focsum-mat (i/mmult focsum (i/trans focsum))
+        scaled-foc (i/mult foc-mat (i/nrow ts-mat))]
+    (if-not (singular? scaled-foc)
+      (-> (i/solve scaled-foc)
+          (i/mmult focsum-mat)
+          (i/trace))
+      nil)))
 
 ;; Long-term trend characteristic; supporting functions 
 
@@ -98,16 +99,18 @@
   [y x & {:keys [intercept] :or {intercept true}}]
   (let [_x (if intercept (i/bind-columns (replicate (i/nrow x) 1) x) x)
         xt (i/trans _x)
-        xtx (i/mmult xt _x)
-        coefs (i/mmult (i/solve xtx) xt y)
-        fitted (i/mmult _x coefs)
-        resid (i/to-list (i/minus y fitted))
-        sse (i/sum-of-squares resid)
-        mse (/ sse (- (i/nrow y) (i/ncol _x)))
-        coef-var (i/mult mse (i/solve xtx))
-        std-errors (i/sqrt (i/diag coef-var))
-        t-tests (i/div coefs std-errors)]
-    [coefs t-tests]))
+        xtx (i/mmult xt _x)]
+    (if-not (singular? xtx)
+      (let [coefs (i/mmult (i/solve xtx) xt y)
+            fitted (i/mmult _x coefs)
+            resid (i/to-list (i/minus y fitted))
+            sse (i/sum-of-squares resid)
+            mse (/ sse (- (i/nrow y) (i/ncol _x)))
+            coef-var (i/mult mse (i/solve xtx))
+            std-errors (i/sqrt (i/diag coef-var))
+            t-tests (i/div coefs std-errors)]
+        [coefs t-tests])
+      [nil nil])))
 
 (defn long-stats
   "returns a tuple with the trend coefficient and associated
@@ -124,9 +127,7 @@
         X (if (empty? cofactors)
             (i/matrix time-step)
             (apply i/bind-columns time-step cofactors))]
-    (try (map second (trend-characteristics ts X))
-         (catch Throwable e
-           (error (str "TIMESERIES ISSUES: " ts ", " cofactors) e)))))
+    (map second (trend-characteristics ts X))))
 
 ;; Short-term trend characteristic; supporting functions
 
