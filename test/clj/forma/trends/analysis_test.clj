@@ -16,7 +16,12 @@
   ;; the trends change slightly.
   (let [[coeff t-test] (long-stats ndvi rain)]
     coeff  => (roughly -1.23824)
-    t-test => (roughly -0.99763)))
+    t-test => (roughly -0.99763))
+
+  ;; Returns a pair of nil values in the presence of an exception
+  (let [[coeff t-test] (long-stats [0])]
+    coeff  => nil
+    t-test => nil))
 
 (fact "Test first-order conditions."
   (ffirst
