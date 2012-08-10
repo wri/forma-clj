@@ -107,9 +107,8 @@
                                           [est-start est-end])
         tele-start-idx (inc start-idx)
         tele-end-idx (inc end-idx)]
-    (vec (map
-          (comp vector vec)
-          (f/tele-ts tele-start-idx tele-end-idx val-ts)))))
+    (map (comp vector vec)
+         (f/tele-ts tele-start-idx tele-end-idx val-ts))))
 
 (defn dynamic-clean
   "Accepts an est-map, and sources for ndvi and rain timeseries and
