@@ -97,11 +97,19 @@
       [[nil]])))
 
 (defmapcatop telescope-ts
+  "Telescope a timeseries. Note that `start` and `end` must be
+  incremented before use, as they are used subsequently as the final
+  argument to `subvec`, which slices a subvector up to but not
+  including the final argument."
   [{:keys [est-start est-end t-res]}
-   start-period val-ts]
-  (let [[start-idx end-idx] (date/relative-period t-res start-period
-                                                  [est-start est-end])]
-    (vec (map (comp vector vec) (f/tele-ts start-idx end-idx val-ts)))))
+  ts-start-period val-ts]
+  (let [[start-idx end-idx] (date/relative-period t-res ts-start-period
+                                          [est-start est-end])
+        tele-start-idx (inc start-idx)
+        tele-end-idx (inc end-idx)]
+    (vec (map
+          (comp vector vec)
+          (f/tele-ts tele-start-idx tele-end-idx val-ts)))))
 
 (defn dynamic-clean
   "Accepts an est-map, and sources for ndvi and rain timeseries and
