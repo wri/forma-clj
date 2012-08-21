@@ -40,9 +40,16 @@
            (to-pail pail-path)))))
 
 (defmain PreprocessStatic
-  "See project wiki for example usage."
+  "Use to process all static datasets, other than Hansen and VCF. See the
+   project wiki for details on getting the correct files in place on HDFS.
+
+   Usage: hadoop jar forma-0.2.0-SNAPSHOT-standalone.jar
+                 forma.hadoop.jobs.preprocess.PreprocessStatic \\
+                 \"gadm\" \" /user/hadoop/border.txt\" \\
+                 \"s3n://bucketname/pail-loc/\" \"500\" :VEN"
   [dataset ascii-path output-path s-res & countries]
-  {:pre [(string? s-res)]}
+  {:pre [(string? s-res)
+         (not (contains? #{"vcf" "hansen"} dataset))]}
   (static-chunker s-res
                   static/chunk-size
                   (->> countries
@@ -53,12 +60,16 @@
                   ascii-path
                   output-path))
 
-(defmain PreprocessAscii
-  "TODO: This is only good for hansen datasets looking to be combined
-  Tidy up. This needs to be combined with PreprocessStatic."
+(defmain PreprocessHansenVCF
+  "Use to process static Hansen and VCF datasets.
+
+  These are processed separately because they 1) line up perfectly
+  with the MODIS tiling system, and 2) at non-native resolution (these
+  come in 500m resolution) we aggregate them differently from the
+  other static datsets."
   [dataset ascii-path pail-path s-res & countries]
-  {:pre [(#{"hansen" "vcf"} dataset)
-         (string? s-res)]}
+  {:pre [(string? s-res)
+         (#{"hansen" "vcf"} dataset)]}
   (with-fs-tmp [_ tmp-dir]
     (let [line-tap (hfs-textline ascii-path)
           pix-tap  (->> countries
