@@ -85,7 +85,7 @@
               :long-block 15
               :window 5}
    "500-16" {:est-start "2005-12-31"
-             :est-end "2012-04-22"
+             :est-end "2012-06-25"
              :s-res "500"
              :t-res "16"
              :neighbors 1
