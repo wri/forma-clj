@@ -91,3 +91,26 @@
                :est-end "2006-01-01"
                :t-res t-res} src)) => (produces [[s-res 28 8 0 0 (sample-fire-series 827 2)]]))
 
+(tabular
+ (fact
+   "Check that pixel telescoping works as expected, avoiding any
+    potential one-off errors lurking in the period indices.
+
+    Note that period 693 represents 2000-02-18, and 827 represents
+    2005-12-19, the end of the training period. A timeseries from 693
+    to 827 should be 135 elements long - hence the use of `(range
+    135)`."
+   (let [src [[(vec (range 284))]]
+         
+         est-map (assoc-in test-map [:est-end] ?date)]
+     (<- [?tele-ndvi]
+         (src ?ndvi)
+         (telescope-ts est-map 693 ?ndvi :> ?tele-ndvi))) => (produces ?result))
+ ?date        ?result
+ "2005-12-19" [[(vec (range 135))]]
+ "2006-01-01" [[(vec (range 135))]
+               [(vec (range 136))]]
+ "2006-01-17" [[(vec (range 135))]
+               [(vec (range 136))]
+               [(vec (range 137))]])
+

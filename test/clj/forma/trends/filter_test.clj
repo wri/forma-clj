@@ -119,6 +119,10 @@ final compositions of functions."
  (vec (repeat 10 10)) (vec (repeat 10 3)) nil)
 
 (fact
+  "Checks `tele-ts` to ensure that indexing is correct. Plenty of room
+   for confusion and one-off errors if you forget that under the hood
+   this is calling `subvec` and using the provided start/end indices
+   as the final index with `subvec`. The other value is always 0."
   (tele-ts 3 5 [0 1 2 3 4 5 6 7]) => [[0 1 2] [0 1 2 3] [0 1 2 3 4]])
 
 (fact
@@ -127,3 +131,4 @@ final compositions of functions."
 (fact
   "Make sure rain is shortened to length of input ts"
   (shorten-ts [1 2 3] [1 2 3 4 5]) => [[1 2 3]])
+
