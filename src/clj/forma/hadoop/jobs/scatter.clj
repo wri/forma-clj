@@ -74,29 +74,30 @@
 
 ;; ## Forma
 
-(def forma-run-parameters
-  {"1000-32" {:est-start "2005-12-31"
-              :est-end "2011-08-01" ;; I KEEP FUCKING THIS UP
-              :s-res "1000"
-              :t-res "32"
-              :neighbors 1
-              :window-dims [600 600]
-              :vcf-limit 25
-              :long-block 15
-              :window 5}
-   "500-16" {:est-start "2005-12-31"
-             :est-end "2012-04-22"
-             :s-res "500"
-             :t-res "16"
-             :neighbors 1
-             :window-dims [600 600]
-             :vcf-limit 25
-             :long-block 30
-             :window 10
-             :ridge-const 1e-8
-             :convergence-thresh 1e-6
-             :max-iterations 500
-             :min-coast-dist 3}})
+(defn forma-run-parameters [k est-end]
+  (-> {"1000-32" {:est-start "2005-12-31"
+                  :est-end est-end
+                  :s-res "1000"
+                  :t-res "32"
+                  :neighbors 1
+                  :window-dims [600 600]
+                  :vcf-limit 25
+                  :long-block 15
+                  :window 5}
+       "500-16" {:est-start "2005-12-31"
+                 :est-end est-end
+                 :s-res "500"
+                 :t-res "16"
+                 :neighbors 1
+                 :window-dims [600 600]
+                 :vcf-limit 25
+                 :long-block 30
+                 :window 10
+                 :ridge-const 1e-8
+                 :convergence-thresh 1e-6
+                 :max-iterations 500
+                 :min-coast-dist 3}}
+      (get k)))
 
 (defn constrained-tap
   [ts-pail-path dataset s-res t-res]
@@ -121,14 +122,14 @@
           (:distinct false))))
 
 (defmain formarunner
-  [tmp-root pail-path ts-pail-path fire-pail-path out-path run-key]
-  (let [{:keys [s-res t-res est-end] :as est-map} (forma-run-parameters run-key)
+  [tmp-root pail-path ts-pail-path fire-pail-path out-path run-key est-end]
+  (let [{:keys [s-res t-res est-end] :as est-map} (forma-run-parameters run-key est-end)
         mk-filter (fn [static-path ts-src]
                     (forma/filter-query (hfs-seqfile static-path)
                                         (:vcf-limit est-map)
                                         ts-src))]
     (assert est-map (str run-key " is not a valid run key!"))
- 
+
     (workflow [tmp-root]
 
               vcf-step
@@ -199,7 +200,7 @@
               ndvi-filter
               ([:tmp-dirs ndvi-path]
                  "Filters out NDVI with VCF < 25"
-                 (?- (hfs-seqfile ndvi-path) 
+                 (?- (hfs-seqfile ndvi-path)
                      (mk-filter static-path (hfs-seqfile ndvi-seq-path))))
 
               reli-filter
@@ -207,7 +208,7 @@
                  "Filters out reliability with VCF < 25"
                  (?- (hfs-seqfile reli-path)
                      (mk-filter static-path (hfs-seqfile reli-seq-path))))
-              
+
               rain-filter
               ([:tmp-dirs rain-path]
                  "Filters out rain with VCF < 25, before stretching rain ts"
@@ -229,7 +230,7 @@
                        (forma/dynamic-filter (hfs-seqfile ndvi-path)
                                              (hfs-seqfile reli-path)
                                              (hfs-seqfile rain-stretch-path)))))
-              
+
               cleanseries
               ([:tmp-dirs clean-series]
                  "Screen out extremely cloudy pixels. Currently doesn't
@@ -246,14 +247,14 @@
                      (forma/analyze-trends
                       est-map
                       (hfs-seqfile clean-series))))
-              
+
               trends-cleanup
               ([:tmp-dirs cleanup-path]
                  "Clean up data after trends to improve join performance. Joins
                   kill us with lots of observations"
                  (?- (hfs-seqfile cleanup-path)
                      (forma/trends-cleanup (hfs-seqfile trends-path))))
-              
+
               fire-step
               ([:tmp-dirs fire-path]
                  "Create fire series"
@@ -280,7 +281,7 @@
                                       est-map
                                       (hfs-seqfile cleanup-path)
                                       (hfs-seqfile adjusted-fire-path))))
-              
+
               final-forma
               ([:tmp-dirs final-path]
                  "Process neighbors"
@@ -324,8 +325,8 @@
                      (hfs-seqfile "/mnt/hgfs/Dropbox/yikestimes"))))))
 
 (defmain simplerunner
-  [tmp-root pail-path ts-pail-path out-path run-key]
-  (let [{:keys [s-res t-res est-end] :as est-map} (forma-run-parameters run-key)
+  [tmp-root pail-path ts-pail-path out-path run-key est-end]
+  (let [{:keys [s-res t-res est-end] :as est-map} (forma-run-parameters run-key est-end)
         mk-filter (fn [vcf-path ts-src]
                     (forma/filter-query (hfs-seqfile vcf-path)
                                         (:vcf-limit est-map)
@@ -338,12 +339,10 @@
                      (<- [?subpail ?data-chunk]
                          ((constrained-tap pail-path "vcf" s-res "00") ?subpail ?data-chunk))))
 
-              
+
               ndvi-step
               ([:tmp-dirs ndvi-path]
                  (?- (hfs-seqfile ndvi-path)
                      (mk-filter vcf-path
                                 (constrained-tap
-                                 ts-pail-path "ndvi" s-res t-res))))
-
-              )))
+                                 ts-pail-path "ndvi" s-res t-res)))))))
