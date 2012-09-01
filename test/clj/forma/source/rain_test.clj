@@ -19,7 +19,20 @@
   (to-datestring "precl.2002.gri0.5m" 12) => "2002-12-01"
   (to-datestring "precl.YYYY.gri0.5m" 12) => (throws AssertionError))
 
-(future-fact "to-rows test.")
+(fact
+  "Test `to-rows`."
+  (let [step 0.5
+      src [[(vec (range (* 2 720)))]]]
+  (<- [?row ?row-data]
+      (src ?rain-data)
+      (to-rows [step] ?rain-data :> ?row ?row-data))) => (produces-some [[0 (vec (range 720))]]))
+
+(facts
+  "Test that `all-nodata?` correctly identifies collections with no valid values"
+  (all-nodata? -999 [1.0 2.0 -999.0]) => false
+  (all-nodata? -999 [1.0 2.0 3.0]) => false
+  (all-nodata? -999 [-999.0 -999.0 -999.0]) => true)
+
 (future-fact "rain-values test.")
 (future-fact "rain-chunks test.")
 

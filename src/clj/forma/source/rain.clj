@@ -118,16 +118,28 @@
          (partition row-length)
          (map-indexed vector))))
 
+(defn all-nodata?
+  "Check whether every element in a collection is a nodata value.
+
+  Used to identify and ignore months in the rain data where there are
+  no useful values. This happens when, for example, the raw file is
+  updated in May and there is obviously no useful data for the rest of
+  the year. Those months should be dropped until they become available
+  later."
+  [nodata coll]
+  (every? (partial == nodata) coll))
+
 (defn rain-values
   "Generates a cascalog subquery from the supplied WGS84 step size and
   source of `?filename` and `?file` tiles; this subquery returns
   individual rain values, marked by `?row`, `?col` and `?val` from the
   original WGS84 matrix. A date field is also included."
-  [step source]
+  [step nodata source]
   (let [unpack (rain-months step)]
     (<- [?date ?row ?col ?val]
         (source ?filename ?file)
         (unpack ?filename ?file :> ?date ?raindata)
+        (all-nodata? nodata ?raindata :> false)
         (to-rows [step] ?raindata :> ?row ?row-data)
         (p/index ?row-data :> ?col ?val))))
 
@@ -178,11 +190,10 @@
             (resample-rain m-res ascii-map file-tap pix-tap test-rain-data)))"
   [m-res {:keys [step nodata] :as ascii-map} file-tap pix-tap & args]
   (let [[test-rain-vals] args
-        rain-vals (if (not test-rain-vals) (rain-values step file-tap) test-rain-vals)
+        rain-vals (if (not test-rain-vals) (rain-values step nodata file-tap) test-rain-vals)
         mod-coords ["?mod-h" "?mod-v" "?sample" "?line"]]    
     (<- [?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val]
         (rain-vals !date ?row ?col ?float-val)
-        (== ?float-val nodata :> false)
         (double ?float-val :> ?val)
         (pix-tap :>> mod-coords)
         (p/add-fields "precl" "32" m-res :> ?dataset ?t-res ?m-res)
