@@ -47,6 +47,11 @@
 (def gadm-src   [(conj loc-vec 40132)])
 (def border-src [(conj loc-vec 4)])
 
+(def sample-ts-dc-src
+  (let [ts (thrift/TimeSeries* 693 [1 2 3])]
+    [["pailpath" (thrift/DataChunk* "ndvi" pixel-loc ts "16")]
+     ["pailpath" (thrift/DataChunk* "ndvi" (thrift/ModisPixelLocation* "500" 28 9 0 0) ts "16")]]))
+
 (def sample-hansen-dc
   (thrift/DataChunk* "hansen" pixel-loc 100 t-res))
 
@@ -90,6 +95,21 @@
     (fire-tap {:est-start "2005-12-31"
                :est-end "2006-01-01"
                :t-res t-res} src)) => (produces [[s-res 28 8 0 0 (sample-fire-series 827 2)]]))
+
+(fact
+  "Check that `filter-query` properly screens out the pixel with VCF < 25, and keeps the one with VCF >= 25."
+  (let [vcf-limit 25
+        static-src [["500" 28 8 0 0 25 0 0 0 0]
+                    ["500" 28 9 0 0 10 0 0 0 0]]
+        ts-src sample-ts-dc-src]
+    (filter-query static-src vcf-limit ts-src)) => (produces [["500" 28 8 0 0 693 [1 2 3]]]))
+
+(fact
+  "Check that `dynamic-filter` properly truncates values where timeseries lengths don't line up."
+  (let [ndvi-src [["500" 28 8 0 0 693 [1 2 3]]]
+        reli-src [["500" 28 8 0 0 693 [0 0 3]]]
+        rain-src [["500" 28 8 0 0 693 [0.1 0.2]]]]
+    (dynamic-filter ndvi-src reli-src rain-src)) => (produces [["500" 28 8 0 0 693 [1 2] [0.1 0.2] [0 0]]]))
 
 (tabular
  (fact
