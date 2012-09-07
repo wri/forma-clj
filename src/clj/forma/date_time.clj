@@ -275,3 +275,46 @@ in which `string` lies (according to the supplied resolution, `res`)."
   [res-in res-out period]
   (->> (period->datetime res-in period)
        (datetime->period res-out)))
+
+(defn date-str->vec-idx
+  "Return the index of a vector that corresponds to a given date.
+   Returns `nil` if date does not correspond to a period in the vector.
+
+   Note: Because this function uses the period and date conversion
+         functions, it will snap any date to the initial date of the
+         period that contains it, given a temporal resolution.
+
+   Usage:
+     (date-str->vec-idx \"16\" \"2000-01-01\" [1 2 3] \"2000-01-18\")
+     => 1
+
+     (date-str->vec-idx \"16\" \"2000-01-01\" [1 2 3] \"2000-12-01\")
+     => nil"
+  [t-res v-start-dt v dt]
+  (let [start-idx (datetime->period t-res v-start-dt)
+        end-idx (dec (+ start-idx (count v)))
+        end-date (period->datetime t-res end-idx)]
+    (if (within-dates? v-start-dt end-date dt)
+      (- (datetime->period t-res dt) start-idx)
+      nil)))
+
+(defn get-val-at-date
+  "Returns the value of a vector at the index corresponding to a given
+   date. Returns `nil` if date falls outside the range of dates implied
+   by the length of the vector
+
+   Note: Because this function uses the period and date conversion
+         functions, it will snap any date to the initial date of the
+         period that contains it, given a temporal resolution.
+
+   Usage:
+     (date-str->vec-idx \"16\" \"2000-01-01\" [2 4 6] \"2000-01-18\")
+     => 4
+   
+     (date-str->vec-idx \"16\" \"2000-01-01\" [2 4 6] \"2012-05-01\")
+     => nil"
+  [t-res v-start-dt v dt]
+  (let [idx (date-str->vec-idx t-res v-start-dt v dt)]
+    (if idx
+    (nth v idx)
+    nil)))

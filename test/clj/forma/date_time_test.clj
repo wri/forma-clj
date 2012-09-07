@@ -107,3 +107,13 @@ month    1       12)
   (msecs-from-epoch (date-time 2002 12)) => 1038700800000
   (monthly-msec-range (date-time 2005 11)
                       (date-time 2005 12)) => [1130803200000 1133395200000])
+
+(facts
+  "Check that `date-str->vec-idx` outputs the correct index for a date"
+  (date-str->vec-idx "16" "2000-01-01" [2 4 6] "2000-01-17") => 1
+  (date-str->vec-idx "16" "2000-01-01" [1 2 3] "2001-01-01") => nil)
+
+(facts
+  "Check that `get-val-at-date` outputs the correct index for a date"
+  (get-val-at-date "16" "2000-01-01" [2 4 6] "2000-01-17") => 4
+  (get-val-at-date "16" "2000-01-01" [1 2 3] "2001-01-01") => nil)
