@@ -31,4 +31,5 @@
                                   [midje-cascalog "0.4.0"]
                                   [incanter/incanter-charts "1.3.0"]]
                    :plugins [[lein-swank "1.4.4"]
-                             [lein-midje "2.0.0-SNAPSHOT"]]}})
+                             [lein-midje "2.0.0-SNAPSHOT"]
+                             [lein-emr "0.1.0-SNAPSHOT"]]}})
