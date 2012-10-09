@@ -116,4 +116,6 @@ month    1       12)
 (facts
   "Check that `get-val-at-date` outputs the correct index for a date"
   (get-val-at-date "16" "2000-01-01" [2 4 6] "2000-01-17") => 4
-  (get-val-at-date "16" "2000-01-01" [1 2 3] "2001-01-01") => nil)
+  (get-val-at-date "16" "2000-01-01" [1 2 3] "2001-01-01") => nil
+  (get-val-at-date "16" "2000-01-01" [2 4 6] "2005-01-01" :out-of-bounds-val 5) => 5
+  (get-val-at-date "16" "2000-01-01" [2 4 6] "2005-01-01" :out-of-bounds-idx 0) => 2)
