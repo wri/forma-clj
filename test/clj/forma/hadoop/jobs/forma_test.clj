@@ -77,7 +77,7 @@
     (within-tileset? tile-set 29 8)))
 
 (fact
-  "Checks that query correctly screens out pixels not in tile-set"
+  "Checks that `screen-by-tileset` correctly screens out pixels not in tile-set"
   (let [tile-set #{[28 8]}
         bad-h 29
         src [["fake-path" sample-hansen-dc]
@@ -134,3 +134,8 @@
                [(vec (range 136))]
                [(vec (range 137))]])
 
+(fact
+  "Check that `max-nested-vec` returns maximum no matter the level of nesting"
+  (max-nested-vec [1 2 3]) => 3
+  (max-nested-vec [[1 2 3]]) => 3
+  (max-nested-vec [[[1 2 3]]]) => 3)
