@@ -159,9 +159,14 @@
     [(vec (map #(nth % 3) (sort-by first tuples)))]
     [(vec (map #(nth % 4) (sort-by first tuples)))]]])
 
-(defn get-max-period
-  [series]
-  (reduce max (first series)))
+(defn max-nested-vec
+  "Return the maximum value in a nested vector (as in a Cascalog query).
+
+   Usage:
+     (max-nested-vec [[[1 2 3]]])
+     ;=> 3"
+  [v]
+  (reduce max (flatten v)))
 
 (defn consolidate-trends
   [trends-src]
@@ -186,7 +191,7 @@
     (<- [?s-res ?mh ?mv ?s ?l ?start ?end ?short-v ?long-v ?t-stat-v ?break-v]
         (consolidated-tap ?s-res ?mh ?mv ?s ?l ?start ?end-seq ?short ?long ?t-stat ?break)
         (unnest-all ?short ?long ?t-stat ?break :> ?short-v ?long-v ?t-stat-v ?break-v)
-        (get-max-period ?end-seq :> ?end))))
+        (max-nested-vec ?end-seq :> ?end))))
 
 (defn forma-tap
   "Accepts an est-map and sources for 
