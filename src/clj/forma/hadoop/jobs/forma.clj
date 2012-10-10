@@ -147,10 +147,6 @@
         (series-end ?ndvi ?start :> ?end)
         (:distinct false))))
 
-(defn count-series
-  [series]
-  (count (first series)))
-
 (defbufferop consolidator
   [tuples]
   [[[(vec (map first tuples))]
