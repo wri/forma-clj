@@ -139,3 +139,15 @@
   (max-nested-vec [1 2 3]) => 3
   (max-nested-vec [[1 2 3]]) => 3
   (max-nested-vec [[[1 2 3]]]) => 3)
+
+(tabular
+ (fact
+   "Check `series-end`"
+   (let [src [[[1 2 3]]]]
+     (<- [?end]
+         (src ?series)
+         (series-end ?series ?start-idx :> ?end))) => (produces ?res))
+?start-idx ?res
+ 2            [[4]]
+ 0            [[2]]
+ 50           [[52]])
