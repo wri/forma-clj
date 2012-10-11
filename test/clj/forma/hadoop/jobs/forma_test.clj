@@ -151,3 +151,13 @@
  2            [[4]]
  0            [[2]]
  50           [[52]])
+
+(fact
+  "Check `unnest-series`"
+  (unnest-series [[[1 2 3]]]) => [1 2 3]
+  (unnest-series [1 2 3]) => [1 2 3])
+
+(fact
+  "Check `unnest-all`"
+  (unnest-all [[1 2 3]] [[4 5 6]] [7 8 9]) => [[1 2 3] [4 5 6] [7 8 9]])
+
