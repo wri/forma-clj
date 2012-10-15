@@ -12,6 +12,7 @@
             [forma.ops.classify :as log]
             [forma.trends.filter :as f]
             [forma.utils :as u]))
+            [forma.source.humidtropics :as humid]))
 
 (defn consolidate-static
   "Due to an issue with Pail, we consolidate separate sequence files
@@ -23,7 +24,8 @@
       (ecoid-src  ?s-res ?mod-h ?mod-v ?sample ?line ?ecoid)
       (gadm-src   ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
       (border-src ?s-res ?mod-h ?mod-v ?sample ?line ?coast-dist)
-      (>= ?vcf vcf-limit)))
+      (>= ?vcf vcf-limit)
+      (humid/in-humid-tropics? ?ecoid)))
 
 (defn within-tileset?
   [tile-set h v]
