@@ -124,9 +124,20 @@
       (:distinct false)))
 
 (defmapop series-end
-  [series start]
+  "Return the relative index of the final element of a collection
+  given a series and a starting index.
+
+  Usage:
+    (let [src [[[1 2 3]]]
+          start-idx 4]
+      (??<- [?end]
+        (src ?series)
+        (series-end ?series start-idx :> ?end))
+    ;=> 6
+"
+  [series start-idx]
   (let [length (count series)]
-    (dec (+ start length))))
+    (dec (+ start-idx length))))
 
 (defn analyze-trends
   "Accepts an est-map, and sources for ndvi and rain timeseries and
