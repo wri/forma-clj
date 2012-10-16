@@ -200,19 +200,20 @@
 
               ndvi-filter
               ([:tmp-dirs ndvi-path]
-                 "Filters out NDVI with VCF < 25"
+                 "Filters out NDVI with VCF < 25 or outside humid tropics"
                  (?- (hfs-seqfile ndvi-path)
                      (mk-filter static-path (hfs-seqfile ndvi-seq-path))))
 
               reli-filter
               ([:tmp-dirs reli-path]
-                 "Filters out reliability with VCF < 25"
+                 "Filters out reliability with VCF < 25 or outside humid tropics"
                  (?- (hfs-seqfile reli-path)
                      (mk-filter static-path (hfs-seqfile reli-seq-path))))
 
               rain-filter
               ([:tmp-dirs rain-path]
-                 "Filters out rain with VCF < 25, before stretching rain ts"
+                 "Filters out rain with VCF < 25 or outside humid tropics,
+                  before stretching rain ts"
                  (?- (hfs-seqfile rain-path)
                      (mk-filter static-path (hfs-seqfile rain-seq-path))))
 
