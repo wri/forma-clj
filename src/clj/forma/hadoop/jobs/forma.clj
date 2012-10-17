@@ -10,7 +10,8 @@
             [forma.hadoop.predicate :as p]
             [forma.trends.analysis :as a]
             [forma.ops.classify :as log]
-            [forma.trends.filter :as f]))
+            [forma.trends.filter :as f]
+            [forma.utils :as u]))
 
 (defn consolidate-static
   "Due to an issue with Pail, we consolidate separate sequence files
@@ -118,10 +119,12 @@
   occur before the analysis. Note that all variable names within this
   query are TIMESERIES, not individual values."
   [est-map dynamic-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?tele-ndvi ?precl]
+  (let [nodata (:nodata est-map)]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?tele-ndvi ?precl]
       (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl _)
-      (telescope-ts est-map ?start ?ndvi :> ?tele-ndvi)
-      (:distinct false)))
+      (u/replace-from-left* nodata ?ndvi :> ?clean-ndvi)
+      (telescope-ts est-map ?start ?clean-ndvi :> ?tele-ndvi)
+      (:distinct false))))
 
 (defmapop series-end
   "Return the relative index of the final element of a collection

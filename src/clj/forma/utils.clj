@@ -225,3 +225,8 @@
       (if (contains? (set (keys replace-map)) i)
         (get replace-map i)
         (coll i)))))
+
+(defn replace-from-left*
+  "Nest `replace-from-left` for use with Cascalog"
+  [bad-val coll & {:keys [default] :or {default nil}}]
+  [(vec (replace-from-left bad-val coll :default default))])
