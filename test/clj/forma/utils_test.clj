@@ -115,3 +115,19 @@
 
 (fact "Check windowed-map"
   (windowed-map average 2 [1 2 50]) => [3/2 26])
+
+(tabular
+ "Check get-replace-vals-locs"
+ (fact
+   (get-replace-vals-locs -9999 ?coll -1) => ?result)
+ ?coll                           ?result
+ [1 -9999 -9999 2 3 4 -9999 5]  {1 1, 2 1, 6 4}
+ [-9999 -9999 -9999 2 3 4 -9999 5]  {0 -1, 1 -1, 2 -1, 6 4})
+
+(facts
+  "Check replace-from-left"
+  (replace-from-left -9999 [1 2 -9999 3 -9999 5]) => [1 2 2 3 3 5]
+  (replace-from-left -9999 [-9999 2 -9999 3 -9999 5]) => [nil 2 2 3 3 5]
+  (replace-from-left -9999 [-9999 2 -9999 3 -9999 5] :default -1)
+   => [-1 2 2 3 3 5]
+   (replace-from-left -9999 [-9999 -9999 -9999 3 -9999 5]) => [nil nil nil  3 3 5])
