@@ -178,3 +178,50 @@
 
 (def byte-array-type
   (class (make-array Byte/TYPE 0)))
+
+(defn get-replace-vals-locs
+  "Search collection for the location of bad values, and find replacement values.
+   Replacements are found to the left of a bad value, starting to the immediate
+   left of each bad value and ending at the first element of the collection.
+   Returns a map of replacement indices and replacement values.
+
+  If there are no good values to the left of a given bad value,
+  `default` will be returned for that value."
+  [bad-val coll default]
+  (let [bad-locs (positions (partial = bad-val) coll)]
+    (zipmap bad-locs
+            (for [i bad-locs]
+                (if (zero? i) ;; avoids out of bounds exception of idx -1
+                  default
+                  (loop [j i]
+                    (cond
+                     (not= bad-val (coll j)) (coll j)
+                     (zero? j) default ;; all bad values from start to j
+                     :else (recur (dec j)))))))))
+
+(defn replace-from-left
+  "Replace all instances of `bad-val` in a collection with good
+   replacement values, defined as the first good value to the left of
+   a given element. The value given with the `:default`
+   keyword (defaults to `nil` is used in case a suitable replacement
+   cannot be found to the left (e.g. the first or first several
+   elements of the vector is \"bad\").
+
+   Usage:
+     (replace-from-left -9999 [1 -9999 3])
+     ;=> (1 nil 3)
+
+     (replace-from-left -9999 [1 -9999 -9999 3])
+     ;=> (1 1 1 3)
+
+     (replace-from-left -9999 [1 -9999 3] :default -1)
+     ;=> (1 -1 3)
+
+     (replace-from-left -9999 [-9999 -9999 3] :default -1)
+     ;=> (-1 -1 3)"
+  [bad-val coll & {:keys [default] :or {default nil}}]
+  (let [replace-map (get-replace-vals-locs bad-val coll default)]
+    (for [i (range (count coll))]
+      (if (contains? (set (keys replace-map)) i)
+        (get replace-map i)
+        (coll i)))))
