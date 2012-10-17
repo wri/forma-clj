@@ -227,7 +227,8 @@
                   time spans."
                  (with-job-conf {"mapred.min.split.size" 805306368}
                    (?- (hfs-seqfile adjusted-series-path)
-                       (forma/dynamic-filter (hfs-seqfile ndvi-path)
+                       (forma/dynamic-filter est-map
+                                             (hfs-seqfile ndvi-path)
                                              (hfs-seqfile reli-path)
                                              (hfs-seqfile rain-stretch-path)))))
 

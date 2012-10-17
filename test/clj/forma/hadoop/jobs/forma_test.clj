@@ -105,11 +105,26 @@
     (filter-query static-src vcf-limit ts-src)) => (produces [["500" 28 8 0 0 693 [1 2 3]]]))
 
 (fact
-  "Check that `dynamic-filter` properly truncates values where timeseries lengths don't line up."
-  (let [ndvi-src [["500" 28 8 0 0 693 [1 2 3]]]
-        reli-src [["500" 28 8 0 0 693 [0 0 3]]]
-        rain-src [["500" 28 8 0 0 693 [0.1 0.2]]]]
-    (dynamic-filter ndvi-src reli-src rain-src)) => (produces [["500" 28 8 0 0 693 [1 2] [0.1 0.2] [0 0]]]))
+  "Check `training-3000s?`"
+  (training-3000s? "16" 826 "2005-12-31" [1 2 3 4]) => false
+  (training-3000s? "16" 826 "2005-12-31" [-3000 2 3 4]) => false
+  (training-3000s? "16" 826 "2005-12-31" [-3000 -3000 3 4]) => true
+  (training-3000s? "16" 826 "2005-12-31" [-3000 -3000 -3000 4]) => true)
+
+(fact
+  "Check that `dynamic-filter` properly truncates values where timeseries
+   lengths don't line up, and drops pixel with ."
+  (let [ndvi-src [["500" 28 8 0 0 826 [1 2 3]]
+                  ["500" 28 8 0 1 826 [-3000 -3000 3]]
+                  ["500" 28 8 0 2 826 [-3000 2 3]]]
+        reli-src [["500" 28 8 0 0 826 [0 0 3]]
+                  ["500" 28 8 0 1 826 [0 0 3]]
+                  ["500" 28 8 0 2 826 [0 0 3]]]
+        rain-src [["500" 28 8 0 0 826 [0.1 0.2]]
+                  ["500" 28 8 0 1 826 [0.1 0.2]]
+                  ["500" 28 8 0 2 826 [0.1 0.2]]]]
+    (dynamic-filter test-map ndvi-src reli-src rain-src)) => (produces [["500" 28 8 0 0 826 [1 2] [0.1 0.2] [0 0]]
+                                                                        ["500" 28 8 0 2 826 [-3000 2] [0.1 0.2] [0 0]]]))
 
 (tabular
  (fact
