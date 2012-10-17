@@ -123,3 +123,10 @@ function, as per the documentation."
 (facts "matrix-of test."
   (matrix-of 2 1 4) => [2 2 2 2]
   (matrix-of 0 2 2) => [[0 0] [0 0]])
+
+(facts
+  (replace-from-left -9999 [1 2 -9999 3 -9999 5]) => [1 2 2 3 3 5]
+  (replace-from-left -9999 [-9999 2 -9999 3 -9999 5]) => [nil 2 2 3 3 5]
+  (replace-from-left -9999 [-9999 2 -9999 3 -9999 5] :default -1)
+   => [-1 2 2 3 3 5]
+   (replace-from-left -9999 [-9999 -9999 -9999 3 -9999 5]) => [nil nil nil  3 3 5])
