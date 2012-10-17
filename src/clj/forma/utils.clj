@@ -186,7 +186,11 @@
    Returns a map of replacement indices and replacement values.
 
   If there are no good values to the left of a given bad value,
-  `default` will be returned for that value."
+  `default` will be returned for that value.
+
+  Note that the check for bad values is type-dependent. That is, looking for
+  -9999 will not pick up -9999.0.
+  "
   [bad-val coll default]
   (let [bad-locs (positions (partial = bad-val) coll)]
     (zipmap bad-locs
@@ -205,7 +209,9 @@
    a given element. The value given with the `:default`
    keyword (defaults to `nil` is used in case a suitable replacement
    cannot be found to the left (e.g. the first or first several
-   elements of the vector is \"bad\").
+   elements of the vector is \"bad\"). Note that the comparison with the bad
+   value is type dependent, and a -9999 will not be replaced if you search
+   -9999.0.
 
    Usage:
      (replace-from-left -9999 [1 -9999 3])
@@ -218,10 +224,21 @@
      ;=> (1 -1 3)
 
      (replace-from-left -9999 [-9999 -9999 3] :default -1)
-     ;=> (-1 -1 3)"
+     ;=> (-1 -1 3)
+
+     (replace-from-left -9999 [1 -9999 -9999.0 3] :default -1)
+     ;=> (1 1 -9999.0 3)
+
+     (replace-from-left -9999 [1 -9999.0 -9999 3] :default -1)
+     ;=> (1 -9999.0 -9999.0 3)"
   [bad-val coll & {:keys [default] :or {default nil}}]
   (let [replace-map (get-replace-vals-locs bad-val coll default)]
     (for [i (range (count coll))]
       (if (contains? (set (keys replace-map)) i)
         (get replace-map i)
         (coll i)))))
+
+(defn replace-from-left*
+  "Nest `replace-from-left` for use with Cascalog"
+  [bad-val coll & {:keys [default] :or {default nil}}]
+  [(vec (replace-from-left bad-val coll :default default))])

@@ -161,3 +161,12 @@
   "Check `unnest-all`"
   (unnest-all [[1 2 3]] [[4 5 6]] [7 8 9]) => [[1 2 3] [4 5 6] [7 8 9]])
 
+(fact
+  "Check that dynamic-clean actually replaces nodata value."
+  (let [est-map {:est-start "2005-12-31"
+                 :est-end "2006-02-03"
+                 :t-res "16"
+                 :nodata -9999}
+        ts [["500" 28 8 0 0 826 [1 -9999 2 3 4] [1 1 1 1 1] [2 2 2 2 2]]]
+        out-ts [["500" 28 8 0 0 826 [1 1 2 3 4] [1 1 1 1 1]]]]
+    (dynamic-clean est-map ts) => (produces-some out-ts)))
