@@ -115,6 +115,7 @@
   (let [ct (count coll)]
     (->> coll cycle (partition ct 1) (take ct))))
 
+
 (defn sparse-expander
   "Accepts a sequence of 2-tuples of the form `<idx, val>` and
   generates a sparse expansion with each `val` inserted at its
@@ -127,7 +128,7 @@
   Example usage:
     (sparse-expander 0 [[10 1] [13 8]]) => [1 0 0 8]
     (sparse-expander 0 [[10 1] [13 8]] :start 9) => [0 1 0 0 8]"
-  [placeholder tuples & {:keys [start length]}]   
+  [placeholder tuples & {:keys [start length]}]
   (let [start (or start (ffirst tuples))
         halt? (fn [idx tup-seq]
                 (if length

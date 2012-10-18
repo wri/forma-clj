@@ -150,12 +150,6 @@
                [(vec (range 136))]
                [(vec (range 137))]])
 
-(fact
-  "Check that `max-nested-vec` returns maximum no matter the level of nesting"
-  (max-nested-vec [1 2 3]) => 3
-  (max-nested-vec [[1 2 3]]) => 3
-  (max-nested-vec [[[1 2 3]]]) => 3)
-
 (tabular
  (fact
    "Check `series-end`"
@@ -169,13 +163,10 @@
  50           [[52]])
 
 (fact
-  "Check `unnest-series`"
-  (unnest-series [[[1 2 3]]]) => [1 2 3]
-  (unnest-series [1 2 3]) => [1 2 3])
-
-(fact
-  "Check `unnest-all`"
-  (unnest-all [[1 2 3]] [[4 5 6]] [7 8 9]) => [[1 2 3] [4 5 6] [7 8 9]])
+  "Check `sparse-prep`"
+  (sparse-prep [[3 2]] [[1 1]]) => [[3 1] [2 1]]
+  (sparse-prep [3 2] [1 1]) => [[3 1] [2 1]]
+  (sparse-prep [[3 2]] [[1 1 1]]) => (throws AssertionError))
 
 (fact
   "Check that dynamic-clean actually replaces nodata value."
@@ -186,6 +177,32 @@
         ts [["500" 28 8 0 0 826 [1 -9999 2 3 4] [1 1 1 1 1] [2 2 2 2 2]]]
         out-ts [["500" 28 8 0 0 826 [1 1 2 3 4] [1 1 1 1 1]]]]
     (dynamic-clean est-map ts) => (produces-some out-ts)))
+
+(fact
+  "Check `sparsify`"
+  (sparsify 1 -9999 [3 5] [[-9999 3 4 5] [-9999 5 5 6]]) => [3 -9999 5]
+  (sparsify 2 -9999 [3 5] [[-9999 3 4 5] [-9999 5 5 6]]) => [4 -9999 5])
+
+(fact
+  "Check `consolidate-timeseries`"
+  (let [nodata -9999
+        src [[1 827 1 2 3]
+             [1 829 2 3 4]]]
+    (<- [?id ?per-ts ?f1-ts ?f2-ts ?f3-ts]
+        (src ?id ?period ?f1 ?f2 ?f3)
+        (consolidate-timeseries nodata ?period ?f1 ?f2 ?f3 :> ?per-ts ?f1-ts ?f2-ts ?f3-ts))
+    => (produces [[1 [827 -9999 829] [1 -9999 2] [2 -9999 3] [3 -9999 4]]])))
+
+(fact
+  "Check `trends-cleanup`"
+  (let [src [["500" 28 8 0 0 827 827 1 2 3 4]
+             ["500" 28 8 0 0 827 829 2 3 4 5]]
+        nodata -9999]
+    (trends-cleanup {:nodata nodata} src))
+  => (produces [["500" 28 8 0 0 827 829 [1 -9999 2]
+                                     [2 -9999 3]
+                                     [3 -9999 4]
+                                     [4 -9999 5]]]))
 
 (def good-val
   (thrift/FormaValue* (thrift/FireValue* 1. 1. 1. 1.) 1. 1. 1. 1.))

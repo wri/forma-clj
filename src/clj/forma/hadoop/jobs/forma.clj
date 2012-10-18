@@ -11,8 +11,9 @@
             [forma.trends.analysis :as a]
             [forma.ops.classify :as log]
             [forma.trends.filter :as f]
-            [forma.utils :as u]))
-            [forma.source.humidtropics :as humid]))
+            [forma.utils :as u]
+            [forma.source.humidtropics :as humid]
+            [forma.matrix.utils :as mu]))
 
 (defn consolidate-static
   "Due to an issue with Pail, we consolidate separate sequence files
@@ -150,8 +151,7 @@
       (??<- [?end]
         (src ?series)
         (series-end ?series start-idx :> ?end))
-    ;=> 6
-"
+    ;=> 6"
   [series start-idx]
   (let [length (count series)]
     (dec (+ start-idx length))))
@@ -161,8 +161,11 @@
   vcf values split up by pixel.
 
   We break this apart from dynamic-filter to force the filtering to
-  occur before the analysis. Note that all variable names within this
-  query are TIMESERIES, not individual values."
+  occur before the analysis. Note that the NDVI and PRECL variables are
+  timeseries.
+
+  Note that if any of the trends statistics functions return `nil` (e.g.
+  for a singular matrix), the pixel will be dropped for that period."
   [est-map clean-src]
   (let [long-block (:long-block est-map)
         short-block (:window est-map)]
@@ -175,47 +178,84 @@
         (series-end ?ndvi ?start :> ?end)
         (:distinct false))))
 
-(defbufferop consolidator
-  [tuples]
-  [[[(vec (map first tuples))]
-    [(vec (map #(nth % 1) (sort-by first tuples)))]
-    [(vec (map #(nth % 2) (sort-by first tuples)))]
-    [(vec (map #(nth % 3) (sort-by first tuples)))]
-    [(vec (map #(nth % 4) (sort-by first tuples)))]]])
+(defn sparse-prep
+  "Cleans up data for use with `sparse-expander`, removing Cascalog
+   nesting and weaving separate index and value fields into
+   index-value tuples.
 
-(defn max-nested-vec
-  "Return the maximum value in a nested vector (as in a Cascalog query).
+  Usage:
+    (sparse-prep [3 2] [1 1]])
+    ;=> ([3 1] [2 1])
+
+    (sparse-prep [[3 2]] [[1 1]]])
+    ;=> ([3 1] [2 1])
+
+    Timeseries with mismatched lengths like (sparse-prep [[3 2]] [[1 1 1]])
+    are caught by a precondition."
+  [idxs vals]
+  {:pre [(= (count (flatten idxs))
+            (count (flatten vals)))]}
+  (let [idxs (flatten idxs)
+        vals (flatten vals)]
+    (map vec (partition 2 2 (interleave idxs vals)))))
+
+(defn sparsify
+  "Wrapper for `sparse-expander` handles data coming in via a
+   `defbufferop`. `sparse-expander` then makes a complete timeseries by
+   inserting a nodata value when a period is missing.
+
+  Usage:
+    (sparsify 1 -9999 [3 5] [[-9999 3 4 5] [-9999 5 5 6]])
+    ;=> [3 -9999 5]
+
+    (sparsify 2 -9999 [3 5] [[-9999 3 4 5] [-9999 5 5 6]])
+    ;=> [4 -9999 5]"
+  [field-idx nodata idxs sorted-tuples]
+  (->> (vec (map #(nth % field-idx) sorted-tuples))
+       (sparse-prep idxs)
+       (mu/sparse-expander nodata)))
+
+(defbufferop consolidate-timeseries
+  "Orders tuples by the second incoming field, inserting a supplied
+   nodata value (first incoming field) where there are holes in the
+   timeseries.
 
    Usage:
-     (max-nested-vec [[[1 2 3]]])
-     ;=> 3"
-  [v]
-  (reduce max (flatten v)))
-
-(defn consolidate-trends
-  [trends-src]
-  (<- [?s-res ?mh ?mv ?s ?l ?start ?end-seq ?short-ts ?long-ts ?t-stat-ts ?break-ts]
-      (trends-src ?s-res ?mh ?mv ?s ?l ?start ?end ?short ?long ?t-stat ?break)
-      (consolidator ?end ?short ?long ?t-stat ?break :> ?end-seq ?short-ts ?long-ts ?t-stat-ts ?break-ts)))
-
-(defn unnest-series
-  "Remove extraneous vectors from around a series"
-  [series]
-  (vec (flatten series)))
-
-(defn unnest-all
-  "Unnest series coming out of trends-cleanup of form
-   [[\"500\" 28 8 0 0 693 694 [[0.1 0.1]] [[0.2 0.2]] [[0.3 0.3]] [[0.4 0.4]]]]"
-  [& series]
-  (map unnest-series series))
+     (let [nodata -9999
+           src [[1 827 1 2 3]
+                [1 829 2 3 4]]]
+      (??- (<- [?id ?per-ts ?f1-ts ?f2-ts ?f3-ts]
+        (src ?id ?period ?f1 ?f2 ?f3)
+        (consolidate-timeseries nodata ?period ?f1 ?f2 ?f3 :> ?per-ts ?f1-ts ?f2-ts ?f3-ts))))
+     ;=> (([1 [827 -9999 829] [1 -9999 2] [2 -9999 3] [3 -9999 4]]))"
+  [tuples]
+  (let [nodata (ffirst tuples)
+        field-count (count (first tuples))
+        sorted-tuples (sort-by second tuples)
+        idxs (vec (map second sorted-tuples))]
+    [(vec (map #(sparsify % nodata idxs sorted-tuples)
+               (range 1 field-count)))]))
 
 (defn trends-cleanup
-  [trends-src]
-  (let [consolidated-tap (consolidate-trends trends-src)]
-    (<- [?s-res ?mh ?mv ?s ?l ?start ?end ?short-v ?long-v ?t-stat-v ?break-v]
-        (consolidated-tap ?s-res ?mh ?mv ?s ?l ?start ?end-seq ?short ?long ?t-stat ?break)
-        (unnest-all ?short ?long ?t-stat ?break :> ?short-v ?long-v ?t-stat-v ?break-v)
-        (max-nested-vec ?end-seq :> ?end))))
+  "Take a source of period-level trends output, turn each trends stat
+   into a timeseries, replacing missing periods with a nodata value.
+
+   Usage:
+     (let [src [[\"500\" 28 8 0 0 827 827 1 2 3 4]
+                [\"500\" 28 8 0 0 827 829 2 3 4 5]]]
+             (??- (trends-cleanup {:nodata -9999} src)))
+     ;=> (([\"500\" 28 8 0 0 827 829 [1 -9999 2]
+                                     [2 -9999 3]
+                                     [3 -9999 4]
+                                     [4 -9999 5]]))
+     Note how values for missing period 828 are replaced with -9999"
+  [est-map src]
+  (let [nodata (:nodata est-map)]
+    (<- [?s-res ?mh ?mv ?s ?l ?start ?max-end ?short-v ?long-v ?t-stat-v ?break-v]
+        (src ?s-res ?mh ?mv ?s ?l ?start ?end ?short ?long ?t-stat ?break)
+        (consolidate-timeseries nodata ?end ?short ?long ?t-stat ?break :>
+                                ?end-v ?short-v ?long-v ?t-stat-v ?break-v)
+        (reduce max ?end-v :> ?max-end))))
 
 (defn forma-tap
   "Accepts an est-map and sources for 
