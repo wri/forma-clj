@@ -132,3 +132,8 @@
           (downsample-modis m-res dataset pix-tap line-tap agg))
         (agg-chunks m-res chunk-size -9999))))
 
+(defn static-modis-chunks
+  "TODO: DESTROY. Replace with a better system."
+  [chunk-size dataset agg line-tap pix-tap]
+  (-> (absorb-modis "500" dataset pix-tap line-tap agg)
+      (agg-chunks "500" chunk-size -9999)))
