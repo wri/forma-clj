@@ -44,7 +44,7 @@
    (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) 2. 3. 4. 5.)
    (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) 3. 4. -9999.0 6.)])
 
-(fact
+(facts
   "Checks that `combine-neighbors` functions properly,
    even with a `nodata` value embedded in the neighbor values."
   (let [nodata (double -9999)]
@@ -53,7 +53,11 @@
                                                  1.5 1.
                                                  2.5 2.
                                                  3.5 3.
-                                                 4.5 4.))
+                                                 4.5 4.)
+  (let [neighbors [(thrift/FormaValue* (thrift/FireValue* 2 1 1 2) -9999.0 4. -9999.0 6.)
+                   (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) -9999.0 4. -9999.0 6.)]
+        nodata (double -9999)]
+    (combine-neighbors nodata neighbors)) => empty-neighbor-val)
 
 (fact "boundaries testing."
   (boundaries [ 0 [1 2 3 4] 1 [2 3 4 5]]) => [1 4]
