@@ -40,7 +40,8 @@
   "Create a small vector of FormaValues indicating that they are
   neighbors; used for testing that the neighbor values are
   appropriately merged and combined."
-  [(thrift/FormaValue* (thrift/FireValue* 1 1 1 1) 1. 2. 3. 4.)
+  [(thrift/FormaValue* (thrift/FireValue* 2 1 1 2) -9999.0 4. -9999.0 6.)
+   (thrift/FormaValue* (thrift/FireValue* 1 1 1 1) 1. 2. 3. 4.)
    (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) 2. 3. 4. 5.)
    (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) 3. 4. -9999.0 6.)])
 

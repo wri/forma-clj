@@ -76,11 +76,16 @@
        (apply map +)
        (apply thrift/FireValue*)))
 
+(defn forma-val->neighbor-val
+  [forma-val]
+  (let [[fire short long t-stat param] (thrift/unpack forma-val)]
+    (thrift/NeighborValue* fire 1 short short long long
+                           t-stat t-stat param param)))
+
 (defn neighbor-value
   "Accepts either a forma value or a sequence of sub-values."
   ([forma-val]
-     (let [[fire short long t-stat param] (thrift/unpack forma-val)]
-       (thrift/NeighborValue* fire 1 short short long long t-stat t-stat param param)))
+     (forma-val->neighbor-val forma-val))
   ([fire neighbors avg-short
     min-short avg-long min-long avg-stat min-stat avg-param min-param]
      (thrift/NeighborValue* fire neighbors avg-short min-short avg-long min-long
@@ -100,9 +105,6 @@
   [nodata neighbor-val forma-val]
   {:pre [(instance? forma.schema.NeighborValue neighbor-val)]}
   (cond
-   (and (contains? (set (thrift/unpack neighbor-val)) nodata)
-        (contains? (set (thrift/unpack forma-val)) nodata))
-      empty-neighbor-val
    (contains? (set (thrift/unpack neighbor-val)) nodata)
               (forma-val->neighbor-val forma-val)
    (contains? (set (thrift/unpack forma-val)) nodata)
