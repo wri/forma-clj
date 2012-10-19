@@ -19,8 +19,8 @@
   "Create a small vector of FormaValues indicating that they are
   neighbors; used for testing that the neighbor values are
   appropriately merged and combined."
-  [(thrift/FormaValue* (thrift/FireValue* 1 1 1 1) 1. 1. 1. 1.)
-   (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) 2. 2. 2. 2.)])
+  [(thrift/FormaValue* (thrift/FireValue* 1 1 1 1) 1. 2. 3. 4.)
+   (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) 2. 3. 4. 5.)])
 
 (defn- f-series
   "Returns a fire series of length 10 with starting index `start-idx`
@@ -44,12 +44,11 @@
 
 (fact "Checks that neighbors are being combined properly."
   (combine-neighbors neighbors)
-  => (neighbor-value (thrift/FireValue* 3 2 2 3)
-                     2
-                     1.5 1.
-                     1.5 1.
-                     1.5 1.
-                     1.5 1.))
+  => (neighbor-value (thrift/FireValue* 3 2 2 3) 2
+                                                 1.5 1.
+                                                 2.5 2.
+                                                 3.5 3.
+                                                 4.5 4.))
 
 (fact "boundaries testing."
   (boundaries [ 0 [1 2 3 4] 1 [2 3 4 5]]) => [1 4]
