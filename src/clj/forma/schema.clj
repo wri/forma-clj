@@ -146,6 +146,29 @@
     fire-series
     (thrift/unpack (thrift/get-series fire-series))))
 
+(defn forma-seq-prep
+  "Prepare data for creating sequence of `FormaValues`, replacing `nil` values with float `nodata` values. Given the use of `min` and `max` for some series, `nils` are handled appropriately so that the `nodata` value does not find its way into the series used to create `FormaValues`."
+  [est-map fire-series short-series long-series t-stat-series break-series]
+  (let [fires (fires-cleanup fire-series)
+        big-val 1000000
+        small-val -1000000
+        nodata-float (float (:nodata est-map))
+
+        ;; replace nil with large number, won't be min
+        clean-shorts (u/replace-from-left nil short-series :default big-val)
+        almost-shorts (vec (reductions min clean-shorts))
+        shorts (u/replace-all big-val nodata-float almost-shorts)
+
+        ;; replace nil with small number, won't be max
+        clean-breaks (u/replace-from-left nil break-series :default small-val)
+        almost-breaks (vec (reductions max clean-breaks))
+        breaks (u/replace-all small-val nodata-float almost-breaks)
+
+        longs (u/replace-all nil nodata-float long-series)
+        t-stats (u/replace-all nil nodata-float t-stat-series)
+        ]
+    [fires shorts longs t-stats breaks]))
+
 (defn forma-seq
   "Accepts 5 timeseries of equal length and starting position, each
    representing a time-indexed series of features for a given pixel.
@@ -156,11 +179,15 @@
    `forma-seq` as nil (i.e. no fires for a given pixel) per the
    forma-tap query in forma.clj; fires is an ungrounded variable in
    the cascalog query, forma-tap"
-  [fire-series short-series long-series t-stat-series break-series]
-  (let [fire-clean (fires-cleanup fire-series)
-        shorts (vec (reductions min short-series))
-        breaks (vec (reductions max break-series))]
-    [(->> (concat [fire-clean] [shorts] [long-series] [t-stat-series] [breaks])
-          (map #(or % (repeat %)))
-          (apply map forma-value)
-          (vec))]))
+  [est-map fire-series short-series long-series t-stat-series break-series]
+  (let [[fires
+         shorts
+         longs
+         t-stats
+         breaks] (forma-seq-prep est-map fire-series short-series
+                                 long-series t-stat-series
+                                 break-series)]
+         [(->> (concat [fires] [shorts] [longs] [t-stats] [breaks])
+               (map #(or % (repeat %)))
+               (apply map forma-value)
+               (vec))]))

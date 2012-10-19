@@ -71,24 +71,47 @@
  2   [9 8 7]   0   [1 2 3 4] 2      [9 8]   [3 4]
  10  [2 3 4]   1   [1 2 3]   10     []      [])
 
+(fact
+  "Check that `forma-seq-prep` correctly handles `nil` at head of timeseries and in the middle."
+  (let [nodata -9999
+        est-map {:nodata nodata}
+        fire-1 (thrift/FireValue* 1 1 1 1)
+        fires (thrift/TimeSeries* 826 (repeat 5 fire-1))
+        shorts  [nil 1. nil 3. 4.]
+        longs   [1. 3. nil 7. 9.]
+        t-stats [2. 4. nil 8. 10.]
+        breaks  [10. 11. nil 14. 13.]]
+    (forma-seq-prep est-map fires shorts longs t-stats breaks)) =>
+    [[(thrift/FireValue* 1 1 1 1)
+      (thrift/FireValue* 1 1 1 1)
+      (thrift/FireValue* 1 1 1 1)
+      (thrift/FireValue* 1 1 1 1)
+      (thrift/FireValue* 1 1 1 1)]
+     [-9999.0 1.0 1.0 1.0 1.0]
+     [1.0 3.0 -9999.0 7.0 9.0]
+     [2.0 4.0 -9999.0 8.0 10.0]
+     [10.0 11.0 11.0 14.0 14.0]])
+
 (fact "Test that the first element of each of the supplied timeseries
   to `forma-seq` are appropriately bundled into the first FormaValue
   of the output timeseries (consisting of FormaValues for each
   period)."
-  (let [fire-1 (thrift/FireValue* 1 1 1 1)
+  (let [nodata -9999
+        est-map {:nodata nodata}
+        fire-1 (thrift/FireValue* 1 1 1 1)
         fire-0 (thrift/FireValue* 0 0 0 0)
         fire-series (thrift/TimeSeries* 826 (repeat 5 fire-1))
-        short-series  [0. 1. 2. 3. 4.]
+        short-series  [-9999.0 1. 2. 3. 4.]
         long-series   [1. 3. 5. 7. 9.]
         t-stat-series [2. 4. 6. 8. 10.]
         break-series  [10. 11. 12. 13. 14.]]
 
     ;; Test for an existing fire
     (ffirst
-     (forma-seq fire-series short-series long-series t-stat-series break-series))
-    => (thrift/FormaValue* fire-1 0. 1. 2. 10.)
-
+     (forma-seq est-map fire-series short-series long-series t-stat-series break-series))
+    => (thrift/FormaValue* fire-1 -9999.0 1. 2. 10.)
+    
     ;; Test for the case when there are no fires
     (ffirst
-     (forma-seq nil short-series long-series t-stat-series break-series))
-    => (thrift/FormaValue* fire-0 0. 1. 2. 10.)))
+     (forma-seq est-map nil short-series long-series t-stat-series break-series))
+    => (thrift/FormaValue* fire-0 -9999.0 1. 2. 10.)))

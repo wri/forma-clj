@@ -189,9 +189,8 @@
   If there are no good values to the left of a given bad value,
   `default` will be returned for that value.
 
-  Note that the check for bad values is type-dependent. That is, looking for
-  -9999 will not pick up -9999.0.
-  "
+  Note that the check for bad values is type-dependent because of use of `=`
+  with positions. For example, looking for -9999 will not pick up -9999.0."
   [bad-val coll default]
   (let [bad-locs (positions (partial = bad-val) coll)]
     (zipmap bad-locs
@@ -251,3 +250,39 @@
       (thrift/unpack)
       (set)
       (contains? nodata)))
+
+(defn filter*
+  "Wrapper for `filter` to make it safe for use with vectors in Cascalog.
+
+   Usage:
+     (let [src [[1 [2 3 2]] [3 [5 nil 6]]]]
+       (??<- [?a ?all-twos]
+         (src ?a ?b)
+         (filter* (partial = 2) ?b :> ?all-twos)))
+     ;=> ([1 [2 2]] [3 []])"
+  [pred coll]
+  [(vec (filter pred coll))])
+
+(defn replace-all
+  "Replace all instances of a value in a collection with a supplied replacement
+   value.
+
+  Usage:
+    (replace-all nil -9999 [1 nil 3])
+    ;=> [1 -9999 3]
+
+    (replace-all -9999 nil [1 -9999 3])
+    ;=> [1 nil 3]
+
+    (replace-all -9999.0 nil [1 -9999 3])
+    ;=> [1 -9999 3]"
+  [to-replace replacement coll]
+  (let [idxs (positions (partial = to-replace) coll)]
+    (if (empty? idxs)
+      coll
+      (apply assoc coll (interleave idxs (repeat (count idxs) replacement))))))
+
+(defn replace-all*
+  "Wrapper for `replace-all` to make it safe for use with vectors in Cascalog"
+  [to-replace replacement coll]
+  [(vec (replace-all to-replace replacement coll))])

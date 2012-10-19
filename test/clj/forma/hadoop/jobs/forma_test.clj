@@ -163,12 +163,6 @@
  50           [[52]])
 
 (fact
-  "Check `sparse-prep`"
-  (sparse-prep [[3 2]] [[1 1]]) => [[3 1] [2 1]]
-  (sparse-prep [3 2] [1 1]) => [[3 1] [2 1]]
-  (sparse-prep [[3 2]] [[1 1 1]]) => (throws AssertionError))
-
-(fact
   "Check that dynamic-clean actually replaces nodata value."
   (let [est-map {:est-start "2005-12-31"
                  :est-end "2006-02-03"
@@ -177,11 +171,6 @@
         ts [["500" 28 8 0 0 826 [1 -9999 2 3 4] [1 1 1 1 1] [2 2 2 2 2]]]
         out-ts [["500" 28 8 0 0 826 [1 1 2 3 4] [1 1 1 1 1]]]]
     (dynamic-clean est-map ts) => (produces-some out-ts)))
-
-(fact
-  "Check `sparsify`"
-  (sparsify 1 -9999 [3 5] [[-9999 3 4 5] [-9999 5 5 6]]) => [3 -9999 5]
-  (sparsify 2 -9999 [3 5] [[-9999 3 4 5] [-9999 5 5 6]]) => [4 -9999 5])
 
 (fact
   "Check `consolidate-timeseries`"
@@ -196,13 +185,12 @@
 (fact
   "Check `trends-cleanup`"
   (let [src [["500" 28 8 0 0 827 827 1 2 3 4]
-             ["500" 28 8 0 0 827 829 2 3 4 5]]
-        nodata -9999]
-    (trends-cleanup {:nodata nodata} src))
-  => (produces [["500" 28 8 0 0 827 829 [1 -9999 2]
-                                     [2 -9999 3]
-                                     [3 -9999 4]
-                                     [4 -9999 5]]]))
+             ["500" 28 8 0 0 827 829 2 3 4 5]]]
+    (trends-cleanup src))
+  => (produces [["500" 28 8 0 0 827 829 [1 nil 2]
+                                        [2 nil 3]
+                                        [3 nil 4]
+                                        [4 nil 5]]]))
 
 (def good-val
   (thrift/FormaValue* (thrift/FireValue* 1. 1. 1. 1.) 1. 1. 1. 1.))

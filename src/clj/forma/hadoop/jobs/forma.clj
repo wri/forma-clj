@@ -169,51 +169,14 @@
   [est-map clean-src]
   (let [long-block (:long-block est-map)
         short-block (:window est-map)]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end !short !long !t-stat !break]
         (clean-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl)
         (f/shorten-ts ?ndvi ?precl :> ?short-precl)
-        (a/short-stat long-block short-block ?ndvi :> ?short)
-        (a/long-stats ?ndvi ?short-precl :> ?long ?t-stat)
-        (a/hansen-stat ?ndvi :> ?break)
+        (a/short-stat long-block short-block ?ndvi :> !short)
+        (a/long-stats ?ndvi ?short-precl :> !long !t-stat)
+        (a/hansen-stat ?ndvi :> !break)
         (series-end ?ndvi ?start :> ?end)
         (:distinct false))))
-
-(defn sparse-prep
-  "Cleans up data for use with `sparse-expander`, removing Cascalog
-   nesting and weaving separate index and value fields into
-   index-value tuples.
-
-  Usage:
-    (sparse-prep [3 2] [1 1]])
-    ;=> ([3 1] [2 1])
-
-    (sparse-prep [[3 2]] [[1 1]]])
-    ;=> ([3 1] [2 1])
-
-    Timeseries with mismatched lengths like (sparse-prep [[3 2]] [[1 1 1]])
-    are caught by a precondition."
-  [idxs vals]
-  {:pre [(= (count (flatten idxs))
-            (count (flatten vals)))]}
-  (let [idxs (flatten idxs)
-        vals (flatten vals)]
-    (map vec (partition 2 2 (interleave idxs vals)))))
-
-(defn sparsify
-  "Wrapper for `sparse-expander` handles data coming in via a
-   `defbufferop`. `sparse-expander` then makes a complete timeseries by
-   inserting a nodata value when a period is missing.
-
-  Usage:
-    (sparsify 1 -9999 [3 5] [[-9999 3 4 5] [-9999 5 5 6]])
-    ;=> [3 -9999 5]
-
-    (sparsify 2 -9999 [3 5] [[-9999 3 4 5] [-9999 5 5 6]])
-    ;=> [4 -9999 5]"
-  [field-idx nodata idxs sorted-tuples]
-  (->> (vec (map #(nth % field-idx) sorted-tuples))
-       (sparse-prep idxs)
-       (mu/sparse-expander nodata)))
 
 (defbufferop consolidate-timeseries
   "Orders tuples by the second incoming field, inserting a supplied
@@ -233,29 +196,30 @@
         field-count (count (first tuples))
         sorted-tuples (sort-by second tuples)
         idxs (vec (map second sorted-tuples))]
-    [(vec (map #(sparsify % nodata idxs sorted-tuples)
+    [(vec (map #(mu/sparsify % nodata idxs sorted-tuples)
                (range 1 field-count)))]))
 
 (defn trends-cleanup
   "Take a source of period-level trends output, turn each trends stat
-   into a timeseries, replacing missing periods with a nodata value.
+   into a timeseries, replacing missing periods with nil.
 
    Usage:
      (let [src [[\"500\" 28 8 0 0 827 827 1 2 3 4]
                 [\"500\" 28 8 0 0 827 829 2 3 4 5]]]
-             (??- (trends-cleanup {:nodata -9999} src)))
-     ;=> (([\"500\" 28 8 0 0 827 829 [1 -9999 2]
-                                     [2 -9999 3]
-                                     [3 -9999 4]
-                                     [4 -9999 5]]))
-     Note how values for missing period 828 are replaced with -9999"
-  [est-map src]
-  (let [nodata (:nodata est-map)]
+             (??- (trends-cleanup src)))
+     ;=> (([\"500\" 28 8 0 0 827 829 [1 nil 2]
+                                     [2 nil 3]
+                                     [3 nil 4]
+                                     [4 nil 5]]))
+     Note how values for missing period 828 are replaced with `nil`"
+  [src]
+  (let [nodata nil]
     (<- [?s-res ?mh ?mv ?s ?l ?start ?max-end ?short-v ?long-v ?t-stat-v ?break-v]
-        (src ?s-res ?mh ?mv ?s ?l ?start ?end ?short ?long ?t-stat ?break)
-        (consolidate-timeseries nodata ?end ?short ?long ?t-stat ?break :>
+        (src ?s-res ?mh ?mv ?s ?l ?start ?end !short !long !t-stat !break)
+        (consolidate-timeseries nodata ?end !short !long !t-stat !break :>
                                 ?end-v ?short-v ?long-v ?t-stat-v ?break-v)
-        (reduce max ?end-v :> ?max-end))))
+        (u/filter* (partial not= nil) ?end-v :> ?end-v-good)
+        (reduce max ?end-v-good :> ?max-end))))
 
 (defn forma-tap
   "Accepts an est-map and sources for 

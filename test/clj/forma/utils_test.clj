@@ -1,9 +1,11 @@
 (ns forma.utils-test
   (:use forma.utils :reload)
   (:use forma.trends.analysis
-        midje.sweet)
+        [midje sweet cascalog]
+        cascalog.api)
   (:require [forma.testing :as t]
             [forma.thrift :as thrift])
+  (:require [forma.testing :as t])
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]))
 
@@ -136,7 +138,7 @@
    (replace-from-left -9999 [1 -9999 -9999.0 3]) => [1 1 -9999.0 3]
    (replace-from-left -9999 [1 -9999.0 -9999 3]) => [1 -9999.0 -9999.0 3])
 
-(facts
+(fact
   "Check nested replace-from-left*"
   (replace-from-left* -9999 [1 2 -9999 3 -9999 5]) => [[1 2 2 3 3 5]])
 
@@ -148,3 +150,25 @@
   (obj-contains-nodata? -9999. (thrift/FormaValue*
                                   (thrift/FireValue* 1 1 1 1)
                                   1. 1. 1. 1.)) => false)
+
+(fact
+  "Check `filter*`"
+  (let [src [[1 [2 3 2]] [3 [5 nil 6]]]]
+       (<- [?a ?all-twos]
+           (src ?a ?b)
+           (filter* (partial = 2) ?b :> ?all-twos))) => (produces [[1 [2 2]] [3 []]]))
+
+(fact
+  "Check `replace-all`"
+  (replace-all nil -9999 [1 nil 3]) => [1 -9999 3]
+  (replace-all -9999 nil [1 -9999 3]) => [1 nil 3]
+  (replace-all -9999.0 nil [1 -9999 3]) => [1 -9999 3])
+
+(fact
+  "Check `replace-all*`"
+  (let [to-replace 2
+        replacement nil
+        src [[[1 2 3]]]]
+    (<- [?new-series]
+        (src ?series)
+        (replace-all* to-replace replacement ?series :> ?new-series))) => (produces [[[1 nil 3]]]))

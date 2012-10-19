@@ -143,6 +143,43 @@
               (when pos (> idx pos)) (recur (inc idx) more (conj! v placeholder))
               :else (recur (inc idx) tup-seq (conj! v placeholder)))))))
 
+(defn sparse-prep
+  "Cleans up data for use with `sparse-expander`, removing Cascalog
+   nesting and weaving separate index and value fields into
+   index-value tuples.
+
+  Usage:
+    (sparse-prep [3 2] [1 1]])
+    ;=> ([3 1] [2 1])
+
+    (sparse-prep [[3 2]] [[1 1]]])
+    ;=> ([3 1] [2 1])
+
+    Timeseries with mismatched lengths like (sparse-prep [[3 2]] [[1 1 1]])
+    are caught by a precondition."
+  [idxs vals]
+  {:pre [(= (count (flatten idxs))
+            (count (flatten vals)))]}
+  (let [idxs (flatten idxs)
+        vals (flatten vals)]
+    (map vec (partition 2 2 (interleave idxs vals)))))
+
+(defn sparsify
+  "Wrapper for `sparse-expander` handles data coming in via a
+   `defbufferop`. `sparse-expander` then makes a complete timeseries by
+   inserting a nodata value when a period is missing.
+
+  Usage:
+    (sparsify 1 -9999 [3 5] [[-9999 3 4 5] [-9999 5 5 6]])
+    ;=> [3 -9999 5]
+
+    (sparsify 2 -9999 [3 5] [[-9999 3 4 5] [-9999 5 5 6]])
+    ;=> [4 -9999 5]"
+  [field-idx nodata idxs sorted-tuples]
+  (->> (vec (map #(nth % field-idx) sorted-tuples))
+       (sparse-prep idxs)
+       (sparse-expander nodata)))
+
 (defn idx->rowcol
   "Takes an index within a row vector, and returns the appropriate row
   and column within a matrix with the supplied dimensions. If only one

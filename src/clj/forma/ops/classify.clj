@@ -33,7 +33,7 @@
                             r c m)]]))
 
 (defn logistic-prob-wrap
-  "Accepts the approrpiate coefficient (beta) vector for a given
+  "Accepts the appropriate coefficient (beta) vector for a given
   pixel, along with that pixel's features (within-pixel and
   neighboring values); returns the probability of deforestation."
   [beta-vec val neighbor-val]
