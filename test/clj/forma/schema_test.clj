@@ -15,22 +15,16 @@
             NeighborValue]
            [org.apache.thrift TBase TUnion]))
 
-(def neighbors
-  "Create a small vector of FormaValues indicating that they are
-  neighbors; used for testing that the neighbor values are
-  appropriately merged and combined."
-  [(thrift/FormaValue* (thrift/FireValue* 1 1 1 1) 1. 2. 3. 4.)
-   (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) 2. 3. 4. 5.)])
-
 (defn- f-series
   "Returns a fire series of length 10 with starting index `start-idx`
   for testing."
   [start-idx]
   (thrift/TimeSeries* start-idx (repeat 10 (thrift/FireValue* 0 0 0 0))))
 
-(facts "Test that fire sequence is appropriately trimmed. Note that
-  the interval length defined by :est-start and :est-end amounts to 5
-  periods."
+(facts
+  "Test that fire sequence is appropriately trimmed by
+ `adjust-fires`.  Note that the interval length defined by :est-start
+ and :est-end amounts to 5 periods."
 
   ;; Test for appropriate trimming over both ends of the interval
   (let [est-map {:est-start "2005-12-31" :est-end "2006-03-01" :t-res "16"}
@@ -42,8 +36,19 @@
         [_ _ arr] (apply thrift/unpack (adjust-fires est-map (f-series 830)))]
     (count (thrift/unpack arr)) => 2))
 
-(fact "Checks that neighbors are being combined properly."
-  (combine-neighbors neighbors)
+(def neighbors
+  "Create a small vector of FormaValues indicating that they are
+  neighbors; used for testing that the neighbor values are
+  appropriately merged and combined."
+  [(thrift/FormaValue* (thrift/FireValue* 1 1 1 1) 1. 2. 3. 4.)
+   (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) 2. 3. 4. 5.)
+   (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) 3. 4. -9999.0 6.)])
+
+(fact
+  "Checks that `combine-neighbors` functions properly,
+   even with a `nodata` value embedded in the neighbor values."
+  (let [nodata (double -9999)]
+    (combine-neighbors nodata neighbors))
   => (neighbor-value (thrift/FireValue* 3 2 2 3) 2
                                                  1.5 1.
                                                  2.5 2.
