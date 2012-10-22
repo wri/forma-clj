@@ -36,6 +36,26 @@
         [_ _ arr] (apply thrift/unpack (adjust-fires est-map (f-series 830)))]
     (count (thrift/unpack arr)) => 2))
 
+(def good-neighbor
+  (neighbor-value (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) 3. 4. 5. 6.)))
+
+(def bad-neighbor
+  (neighbor-value (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) -9999.0 4. -9999.0 6.)))
+
+(def good-forma
+  (thrift/FormaValue* (thrift/FireValue* 1 1 1 1) 1. 2. 3. 4.))
+
+(def bad-forma
+  (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) -9999.0 4. -9999.0 6.))
+
+(facts
+  "Check `merge-neighbors`"
+  (merge-neighbors -9999.0 bad-neighbor bad-neighbor) => empty-neighbor-val
+  (merge-neighbors -9999.0 bad-neighbor good-forma) => (neighbor-value good-forma)
+  (merge-neighbors -9999.0 good-neighbor bad-forma) => good-neighbor
+  (merge-neighbors -9999.0 good-neighbor good-forma)
+  => (neighbor-value (thrift/FireValue* 3 2 2 3) 2 2. 1. 3. 2. 4. 3. 5. 4.))
+
 (def neighbors
   "Create a small vector of FormaValues indicating that they are
   neighbors; used for testing that the neighbor values are
