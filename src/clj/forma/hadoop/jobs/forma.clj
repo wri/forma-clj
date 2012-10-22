@@ -16,7 +16,11 @@
 
 (defn consolidate-static
   "Due to an issue with Pail, we consolidate separate sequence files
-   of static data with one big join"
+   of static data with one big join.
+
+   We'll screen out border pixels later - doing it here will remove non-water
+   but nearly water pixels before they can be included as neighbors
+"
   [vcf-limit vcf-src gadm-src hansen-src ecoid-src border-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?vcf ?gadm ?ecoid ?hansen ?coast-dist]
       (vcf-src    ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
