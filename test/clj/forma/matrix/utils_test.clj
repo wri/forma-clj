@@ -66,6 +66,17 @@ function, as per the documentation."
  [[10 1] [12 4] [8 1] [15 9] [16 1]] [1 0 4 0 0 9 1]
  [[10 1] [12 4] [8 1] [15 9]]        [1 0 4 0 0 9])
 
+(fact
+  "Check `sparse-prep`"
+  (sparse-prep [[3 2]] [[1 1]]) => [[3 1] [2 1]]
+  (sparse-prep [3 2] [1 1]) => [[3 1] [2 1]]
+  (sparse-prep [[3 2]] [[1 1 1]]) => (throws AssertionError))
+
+(fact
+  "Check `sparsify`"
+  (sparsify 1 -9999 [3 5] [[-9999 3 4 5] [-9999 5 5 6]]) => [3 -9999 5]
+  (sparsify 2 -9999 [3 5] [[-9999 3 4 5] [-9999 5 5 6]]) => [4 -9999 5])
+
 (tabular
  (fact "Sparse expansion can take custom start and length."
    (apply sparse-expander 0 ?matrix ?opts) => ?result)

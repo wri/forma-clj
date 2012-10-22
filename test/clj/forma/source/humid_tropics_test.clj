@@ -1,4 +1,4 @@
-(ns forma.source.humidtropics-test
+(ns forma.source.humid-tropics-test
   (:use [forma.source.humidtropics] :reload)
   (:use [midje.sweet]))
 

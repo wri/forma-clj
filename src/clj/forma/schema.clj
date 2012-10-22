@@ -85,6 +85,7 @@
     min-short avg-long min-long avg-stat min-stat avg-param min-param]
      (thrift/NeighborValue* fire neighbors avg-short min-short avg-long min-long
                             avg-stat min-stat avg-param min-param)))
+
 (def empty-neighbor-val
   "Returns a NeighborValue object with values for a pixel that should
   have an empty or nil value without breaking the process.  TODO:
@@ -135,16 +136,47 @@
   parametrized break, long-term drop and t-stat of the short-term
   drop."
   [fire short param-break long t-stat]
-  (let [fire (or fire (thrift/FireValue* 0 0 0 0))]
+  (let [fire (or fire
+                 (thrift/FireValue* 0 0 0 0))]
     (thrift/FormaValue* fire short param-break long t-stat)))
 
 (defn fires-cleanup
-  "If the fire-series is nil, leave it be - it'll be handled in
-   `forma-seq-non-thrift`. Else, unpack it"
+  "If the fire-series is nil, leave it be, else, unpack it. fire-series
+   is a TimeSeries object"
   [fire-series]
   (if (nil? fire-series)
     fire-series
     (thrift/unpack (thrift/get-series fire-series))))
+
+(defn forma-seq-prep
+  "Prepare data for creating sequence of `FormaValues`, replacing
+  `nil` values with `nodata` values. Given the use of `min` and `max`
+  for some series, `nils` are handled appropriately so that the
+  `nodata` value does not find its way into the series used to create
+  `FormaValues`."
+  [nodata fire-series short-series long-series
+  t-stat-series break-series]
+  (let [fires (fires-cleanup fire-series)
+        big-val 1000000
+        small-val -1000000
+
+        ;; replace nil with large number, won't be min
+        ;; handle leading nodata; replace from left ok b/c using
+        ;; reductions - value from left will be used anyway
+        clean-shorts (u/replace-from-left nil short-series :default big-val)
+        almost-shorts (vec (reductions min clean-shorts))
+        shorts (u/replace-all big-val nodata almost-shorts)
+
+        ;; replace nil with small number, won't be max
+        ;; handle leading nodata; replace from left ok b/c using
+        ;; reductions - value from left will be used anyway
+        clean-breaks (u/replace-from-left nil break-series :default small-val)
+        almost-breaks (vec (reductions max clean-breaks))
+        breaks (u/replace-all small-val nodata almost-breaks)
+
+        longs (u/replace-all nil nodata long-series)
+        t-stats (u/replace-all nil nodata t-stat-series)]
+    [fires shorts longs t-stats breaks]))
 
 (defn forma-seq
   "Accepts 5 timeseries of equal length and starting position, each
@@ -156,11 +188,15 @@
    `forma-seq` as nil (i.e. no fires for a given pixel) per the
    forma-tap query in forma.clj; fires is an ungrounded variable in
    the cascalog query, forma-tap"
-  [fire-series short-series long-series t-stat-series break-series]
-  (let [fire-clean (fires-cleanup fire-series)
-        shorts (vec (reductions min short-series))
-        breaks (vec (reductions max break-series))]
-    [(->> (concat [fire-clean] [shorts] [long-series] [t-stat-series] [breaks])
+  [nodata fire-series short-series long-series t-stat-series break-series]
+  (let [[fires
+         shorts
+         longs
+         t-stats
+         breaks] (forma-seq-prep nodata fire-series short-series
+                                 long-series t-stat-series
+                                 break-series)]
+    [(->> (concat [fires] [shorts] [longs] [t-stats] [breaks])
           (map #(or % (repeat %)))
           (apply map forma-value)
           (vec))]))
