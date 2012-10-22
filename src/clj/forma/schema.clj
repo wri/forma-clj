@@ -79,7 +79,7 @@
 (defn neighbor-value
   "Accepts either a forma value or a sequence of sub-values."
   ([forma-val]
-     (let [[fire short param long t-stat] (thrift/unpack forma-val)]
+     (let [[fire short long t-stat param] (thrift/unpack forma-val)]
        (thrift/NeighborValue* fire 1 short short long long t-stat t-stat param param)))
   ([fire neighbors avg-short
     min-short avg-long min-long avg-stat min-stat avg-param min-param]
@@ -99,9 +99,9 @@
   Returns a new neighbor value object representing the merged values."
   [neighbor-val forma-val]
   {:pre [(instance? forma.schema.NeighborValue neighbor-val)]}
-  (let [[fire short param long t] (thrift/unpack forma-val)        
+  (let [[fire short long t param] (thrift/unpack forma-val)        
         [n-fire ncount avg-short min-short avg-long
-         min-long avg-stat min-stat ave-break min-break] (thrift/unpack neighbor-val)]
+         min-long avg-stat min-stat avg-break min-break] (thrift/unpack neighbor-val)]
     (thrift/NeighborValue* (add-fires n-fire fire)
                            (inc ncount)
                            (u/weighted-mean avg-short ncount short 1)
@@ -110,7 +110,7 @@
                            (min min-long long)
                            (u/weighted-mean avg-stat ncount t 1)
                            (min min-stat t)
-                           (u/weighted-mean ave-break ncount param 1)
+                           (u/weighted-mean avg-break ncount param 1)
                            (min min-break param))))
 
 (defn combine-neighbors
