@@ -236,7 +236,7 @@
 (defmapcatop [process-neighbors [num-neighbors]]
   "Processes all neighbors... Returns the index within the chunk, the
   value, and the aggregate of the neighbors."
-  [window]
+  [window nodata]
   (for [[idx [val neighbors]]
         (->> (w/neighbor-scan num-neighbors window)
              (map-indexed vector))
@@ -244,12 +244,13 @@
     [idx val (->> neighbors
                   (apply concat)
                   (filter identity)
-                  (schema/combine-neighbors))]))
+                  (schema/combine-neighbors nodata))]))
 
 (defn forma-query
   "final query that walks the neighbors and spits out the values."
   [est-map forma-val-src]
-  (let [{:keys [neighbors window-dims]} est-map
+  (let [{:keys [neighbors window-dims nodata]} est-map
+        nodata (double nodata)
         [rows cols] window-dims
         src (p/sparse-windower forma-val-src
                                ["?sample" "?line"]
@@ -258,7 +259,7 @@
                                nil)]
     (<- [?s-res ?period ?mod-h ?mod-v ?sample ?line ?val ?neighbor-val]
         (src ?s-res ?period ?mod-h ?mod-v ?win-col ?win-row ?window)
-        (process-neighbors [neighbors] ?window :> ?win-idx ?val ?neighbor-val)
+        (process-neighbors [neighbors] ?window nodata :> ?win-idx ?val ?neighbor-val)
         (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line))))
 
 (defn beta-data-prep
