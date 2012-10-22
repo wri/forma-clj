@@ -43,7 +43,7 @@
 (def pixel-loc (apply thrift/ModisPixelLocation* loc-vec))
 (def vcf-src    [(conj loc-vec 26)]) 
 (def hansen-src [(conj loc-vec 100)])
-(def ecoid-src  [(conj loc-vec 15000)])
+(def ecoid-src  [(conj loc-vec 10101)])
 (def gadm-src   [(conj loc-vec 40132)])
 (def border-src [(conj loc-vec 4)])
 
@@ -68,7 +68,7 @@
   "Checks that consolidate-static correctly merges static datasets."
   (consolidate-static (:vcf-limit test-map)
                       vcf-src gadm-src hansen-src ecoid-src border-src)
-  => (produces [(conj loc-vec 26 40132 15000 100 4)]))
+  => (produces [(conj loc-vec 26 40132 10101 100 4)]))
 
 (fact
   "Checks that `within-tileset?` correctly handles data inside and outside the given tile-set"
