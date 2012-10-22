@@ -12,6 +12,7 @@
             [forma.ops.classify :as log]
             [forma.trends.filter :as f]
             [forma.utils :as u]))
+            [forma.source.humidtropics :as humid]))
 
 (defn consolidate-static
   "Due to an issue with Pail, we consolidate separate sequence files
@@ -23,7 +24,8 @@
       (ecoid-src  ?s-res ?mod-h ?mod-v ?sample ?line ?ecoid)
       (gadm-src   ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
       (border-src ?s-res ?mod-h ?mod-v ?sample ?line ?coast-dist)
-      (>= ?vcf vcf-limit)))
+      (>= ?vcf vcf-limit)
+      (humid/in-humid-tropics? ?ecoid)))
 
 (defn within-tileset?
   [tile-set h v]
@@ -49,8 +51,9 @@
       (schema/adjust-fires est-map ?ts :> ?adjusted-ts)))
 
 (defn filter-query
-  "Use a join with `static-src` - already filtered by VCF - to keep only
-   pixels from `chunk-src` where VCF >= 25.
+  "Use a join with `static-src` - already filtered by VCF and
+  ecoregion - to keep only pixels from `chunk-src` where VCF >= 25 and
+  which fall inside the humid tropics.
 
    Arguments:
      static-src: source of tuples of static data
