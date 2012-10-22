@@ -11,8 +11,9 @@
             [forma.trends.analysis :as a]
             [forma.ops.classify :as log]
             [forma.trends.filter :as f]
-            [forma.utils :as u]))
-            [forma.source.humidtropics :as humid]))
+            [forma.utils :as u]
+            [forma.source.humidtropics :as humid]
+            [forma.matrix.utils :as mu]))
 
 (defn consolidate-static
   "Due to an issue with Pail, we consolidate separate sequence files
@@ -150,8 +151,7 @@
       (??<- [?end]
         (src ?series)
         (series-end ?series start-idx :> ?end))
-    ;=> 6
-"
+    ;=> 6"
   [series start-idx]
   (let [length (count series)]
     (dec (+ start-idx length))))
@@ -161,75 +161,88 @@
   vcf values split up by pixel.
 
   We break this apart from dynamic-filter to force the filtering to
-  occur before the analysis. Note that all variable names within this
-  query are TIMESERIES, not individual values."
+  occur before the analysis. Note that the NDVI and PRECL variables are
+  timeseries.
+
+  Note that if any of the trends statistics functions return `nil` (e.g.
+  for a singular matrix), the pixel will be dropped for that period."
   [est-map clean-src]
   (let [long-block (:long-block est-map)
         short-block (:window est-map)]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end !short !long !t-stat !break]
         (clean-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl)
         (f/shorten-ts ?ndvi ?precl :> ?short-precl)
-        (a/short-stat long-block short-block ?ndvi :> ?short)
-        (a/long-stats ?ndvi ?short-precl :> ?long ?t-stat)
-        (a/hansen-stat ?ndvi :> ?break)
+        (a/short-stat long-block short-block ?ndvi :> !short)
+        (a/long-stats ?ndvi ?short-precl :> !long !t-stat)
+        (a/hansen-stat ?ndvi :> !break)
         (series-end ?ndvi ?start :> ?end)
         (:distinct false))))
 
-(defbufferop consolidator
-  [tuples]
-  [[[(vec (map first tuples))]
-    [(vec (map #(nth % 1) (sort-by first tuples)))]
-    [(vec (map #(nth % 2) (sort-by first tuples)))]
-    [(vec (map #(nth % 3) (sort-by first tuples)))]
-    [(vec (map #(nth % 4) (sort-by first tuples)))]]])
-
-(defn max-nested-vec
-  "Return the maximum value in a nested vector (as in a Cascalog query).
+(defbufferop consolidate-timeseries
+  "Orders tuples by the second incoming field, inserting a supplied
+   nodata value (first incoming field) where there are holes in the
+   timeseries.
 
    Usage:
-     (max-nested-vec [[[1 2 3]]])
-     ;=> 3"
-  [v]
-  (reduce max (flatten v)))
-
-(defn consolidate-trends
-  [trends-src]
-  (<- [?s-res ?mh ?mv ?s ?l ?start ?end-seq ?short-ts ?long-ts ?t-stat-ts ?break-ts]
-      (trends-src ?s-res ?mh ?mv ?s ?l ?start ?end ?short ?long ?t-stat ?break)
-      (consolidator ?end ?short ?long ?t-stat ?break :> ?end-seq ?short-ts ?long-ts ?t-stat-ts ?break-ts)))
-
-(defn unnest-series
-  "Remove extraneous vectors from around a series"
-  [series]
-  (vec (flatten series)))
-
-(defn unnest-all
-  "Unnest series coming out of trends-cleanup of form
-   [[\"500\" 28 8 0 0 693 694 [[0.1 0.1]] [[0.2 0.2]] [[0.3 0.3]] [[0.4 0.4]]]]"
-  [& series]
-  (map unnest-series series))
+     (let [nodata -9999
+           src [[1 827 1 2 3]
+                [1 829 2 3 4]]]
+      (??- (<- [?id ?per-ts ?f1-ts ?f2-ts ?f3-ts]
+        (src ?id ?period ?f1 ?f2 ?f3)
+        (consolidate-timeseries nodata ?period ?f1 ?f2 ?f3 :> ?per-ts ?f1-ts ?f2-ts ?f3-ts))))
+     ;=> (([1 [827 -9999 829] [1 -9999 2] [2 -9999 3] [3 -9999 4]]))"
+  [tuples]
+  (let [nodata (ffirst tuples)
+        field-count (count (first tuples))
+        sorted-tuples (sort-by second tuples)
+        idxs (vec (map second sorted-tuples))]
+    [(vec (map #(mu/sparsify % nodata idxs sorted-tuples)
+               (range 1 field-count)))]))
 
 (defn trends-cleanup
-  [trends-src]
-  (let [consolidated-tap (consolidate-trends trends-src)]
-    (<- [?s-res ?mh ?mv ?s ?l ?start ?end ?short-v ?long-v ?t-stat-v ?break-v]
-        (consolidated-tap ?s-res ?mh ?mv ?s ?l ?start ?end-seq ?short ?long ?t-stat ?break)
-        (unnest-all ?short ?long ?t-stat ?break :> ?short-v ?long-v ?t-stat-v ?break-v)
-        (max-nested-vec ?end-seq :> ?end))))
+  "Take a source of period-level trends output, turn each trends stat
+   into a timeseries, replacing missing periods with `nil`.
+
+   We use `nil` instead of the project-wide `nodata` value here for
+   the internal consistency of this query. The trends analysis could
+   produce `nil` values if singular matrices are detected, so the
+   trend statistic fields are nullable. The `consolidate-timeseries`
+   could uncover periods where data are simply missing for some
+   reason (e.g. see issue #184), and needs to fill in the hole with
+   something. The `nil` values will be handled in `forma-tap`,
+   specifically within the `schema/forma-seq` function.
+
+   Usage:
+     (let [src [[\"500\" 28 8 0 0 827 827 1 2 3 4]
+                [\"500\" 28 8 0 0 827 829 2 3 4 5]]]
+             (??- (trends-cleanup src)))
+     ;=> (([\"500\" 28 8 0 0 827 829 [1 nil 2]
+                                     [2 nil 3]
+                                     [3 nil 4]
+                                     [4 nil 5]]))
+     Note how values for missing period 828 are replaced with `nil`"
+  [src]
+  (let [nodata nil] ;; nils will be handled in `forma-tap`
+    (<- [?s-res ?mh ?mv ?s ?l ?start ?max-end ?short-v ?long-v ?t-stat-v ?break-v]
+        (src ?s-res ?mh ?mv ?s ?l ?start ?end !short !long !t-stat !break)
+        (consolidate-timeseries nodata ?end !short !long !t-stat !break :>
+                                ?end-v ?short-v ?long-v ?t-stat-v ?break-v)
+        (u/filter* (partial not= nodata) ?end-v :> ?end-v-good)
+        (reduce max ?end-v-good :> ?max-end))))
 
 (defn forma-tap
-  "Accepts an est-map and sources for 
+  "Accepts an est-map and sources for dynamic and fires data.
 
   Note that all values internally discuss timeseries.
 
   Also note that !!fire is an ungrounding variable, and triggers a
   left join with the trend result variables."
-  [t-res est-map dynamic-src fire-src]
-  (let [start (date/datetime->period t-res (:est-start est-map))]
+  [{:keys [t-res est-start nodata]} dynamic-src fire-src]
+  (let [start (date/datetime->period t-res est-start)]
     (<- [?s-res ?period ?mh ?mv ?s ?l ?forma-val]
         (fire-src ?s-res ?mh ?mv ?s ?l !!fire)
-        (dynamic-src ?s-res ?mh ?mv ?s ?l _ ?end ?short ?long ?t-stat ?break)
-        (schema/forma-seq !!fire ?short ?long ?t-stat ?break :> ?forma-seq)
+        (dynamic-src ?s-res ?mh ?mv ?s ?l _ ?end-s ?short-s ?long-s ?t-stat-s ?break-s)
+        (schema/forma-seq nodata !!fire ?short-s ?long-s ?t-stat-s ?break-s :> ?forma-seq)
         (p/index ?forma-seq :zero-index start :> ?period ?forma-val)
         (:distinct false))))
 
@@ -292,15 +305,6 @@
   (let [beta (((comp keyword str) eco) betas)]
     (log/logistic-prob-wrap beta val neighbor-val)))
 
-(defbufferop mk-timeseries
-  "A very specific function that accepts all probabilities for a given
-  pixel for all time series, sorts them by the observed period and
-  then returns a single series of probabilities; used only in the
-  `forma-estimate` query below."
-  [tuples]
-  [[(map second
-         (sort-by first tuples))]])
-
 (defn forma-estimate
   "query to end all queries: estimate the probabilities for each
   period after the training period."
@@ -312,5 +316,5 @@
         (u/obj-contains-nodata? nodata ?neighbor-val :> false)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _ _)
         (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
-        (mk-timeseries ?pd ?prob :> ?prob-series)
+        (consolidate-timeseries nodata ?pd ?prob :> ?prob-series)
         (:distinct false))))
