@@ -1,7 +1,8 @@
 (ns forma.hadoop.jobs.scatter-test
   (:use cascalog.api
         forma.hadoop.jobs.scatter
-        [midje sweet cascalog]))
+        [midje sweet cascalog]
+        [forma.thrift :as thrift]))
 
 ;; Rain Testing
 
@@ -38,3 +39,6 @@
                    (static-tap ..gadm-src..) => test-gadm
                    (rain-tap ..rain-src..) => test-rain)))
 
+(fact
+  "Test for `map-round`"
+  (map-round (thrift/TimeSeries* 0 3 [1.1 2.6 3.4 4.0])) => [0 [1 3 3 4]])
