@@ -115,7 +115,6 @@
   (let [ct (count coll)]
     (->> coll cycle (partition ct 1) (take ct))))
 
-
 (defn sparse-expander
   "Accepts a sequence of 2-tuples of the form `<idx, val>` and
   generates a sparse expansion with each `val` inserted at its
