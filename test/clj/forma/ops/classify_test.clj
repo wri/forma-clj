@@ -33,3 +33,8 @@
         (logistic-beta-wrap [ridge-const convergence-thresh max-iterations]
                                 ?hansen ?val ?neighbor-val :> ?beta)
         (:distinct false))))
+
+(fact
+  "Check beta-dict"
+  (let [beta-src [["500" "1" 10]]]
+    (beta-dict beta-src)) => {:1 10})

@@ -263,13 +263,16 @@
         (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line))))
 
 (defn beta-data-prep
-  "for example, static-path can equal this on dan's local machine:
-   \"/mnt/hgfs/Dropbox/local/static-out\""
-  [{:keys [t-res est-start min-coast-dist]} dynamic-src static-src]
+  "Prep data for generating betas, retaining only data for the training
+   period and dropping coastal pixels and pixels with nodata values in
+   thrift objects"
+  [{:keys [nodata t-res est-start min-coast-dist]} dynamic-src static-src]
   (let [first-idx (date/datetime->period t-res est-start)]
     (<- [?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?eco ?hansen]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen ?coast-dist)
+        (u/obj-contains-nodata? nodata ?val :> false)
+        (u/obj-contains-nodata? nodata ?neighbor-val :> false)        
         (= ?pd first-idx)
         (>= ?coast-dist min-coast-dist)
         (:distinct false))))
@@ -301,10 +304,12 @@
 (defn forma-estimate
   "query to end all queries: estimate the probabilities for each
   period after the training period."
-  [beta-src dynamic-src static-src]
+  [{:keys [nodata]} beta-src dynamic-src static-src]
   (let [betas (log/beta-dict beta-src)]
     (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
+        (u/obj-contains-nodata? nodata ?val :> false)
+        (u/obj-contains-nodata? nodata ?neighbor-val :> false)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _ _)
         (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
         (mk-timeseries ?pd ?prob :> ?prob-series)

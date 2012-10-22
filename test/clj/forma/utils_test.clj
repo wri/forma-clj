@@ -2,7 +2,8 @@
   (:use forma.utils :reload)
   (:use forma.trends.analysis
         midje.sweet)
-  (:require [forma.testing :as t])
+  (:require [forma.testing :as t]
+            [forma.thrift :as thrift])
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]))
 
@@ -138,3 +139,12 @@
 (facts
   "Check nested replace-from-left*"
   (replace-from-left* -9999 [1 2 -9999 3 -9999 5]) => [[1 2 2 3 3 5]])
+
+(facts
+  "Check `objs-contains-nodata?"
+  (obj-contains-nodata? -9999. (thrift/FormaValue*
+                                  (thrift/FireValue* 1 1 1 1)
+                                  -9999. 1. 1. 1.)) => true
+  (obj-contains-nodata? -9999. (thrift/FormaValue*
+                                  (thrift/FireValue* 1 1 1 1)
+                                  1. 1. 1. 1.)) => false)

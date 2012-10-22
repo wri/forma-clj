@@ -1,6 +1,7 @@
 (ns forma.utils
   (:use [clojure.math.numeric-tower :only (round expt)])
-  (:require [clojure.java.io :as io])
+  (:require [clojure.java.io :as io]
+            [forma.thrift :as thrift])
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]))
 
@@ -242,3 +243,11 @@
   "Nest `replace-from-left` for use with Cascalog"
   [bad-val coll & {:keys [default] :or {default nil}}]
   [(vec (replace-from-left bad-val coll :default default))])
+
+(defn obj-contains-nodata?
+  "Check whether any fields in thrift object contain nodata value"
+  [nodata obj]
+  (-> obj
+      (thrift/unpack)
+      (set)
+      (contains? nodata)))

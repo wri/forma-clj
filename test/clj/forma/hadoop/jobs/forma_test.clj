@@ -35,7 +35,8 @@
    :ridge-const 1e-8
    :convergence-thresh 1e-6
    :max-iterations 500
-   :min-coast-dist 3})
+   :min-coast-dist 3
+   :nodata -9999.0})
 
 (def t-res "16")
 (def s-res "500")
@@ -185,3 +186,35 @@
         ts [["500" 28 8 0 0 826 [1 -9999 2 3 4] [1 1 1 1 1] [2 2 2 2 2]]]
         out-ts [["500" 28 8 0 0 826 [1 1 2 3 4] [1 1 1 1 1]]]]
     (dynamic-clean est-map ts) => (produces-some out-ts)))
+
+(def good-val
+  (thrift/FormaValue* (thrift/FireValue* 1. 1. 1. 1.) 1. 1. 1. 1.))
+
+(def bad-val
+  (thrift/FormaValue* (thrift/FireValue* 1. 1. 1. 1.) -9999. 1. 1. 1.))
+
+(def static-src
+  [["500" 28 8 0 0 25 0 1 100 20]   ;; all good
+   ["500" 28 8 0 1 25 0 1 100 0]    ;; drop b/c of coast-dist
+   ["500" 28 8 0 2 25 0 1 100 20]   ;; dyn. has nodata in forma-val
+   ["500" 28 8 0 3 25 0 1 100 20]]) ;; dyn. has nodata in neighbor-val
+
+(def dynamic-src
+  [["500" 827 28 8 0 0 good-val good-val]  ;; ok
+   ["500" 828 28 8 0 0 good-val good-val]  ;; not training
+   ["500" 827 28 8 0 1 good-val good-val]  ;; bad static
+   ["500" 827 28 8 0 2 bad-val good-val]   ;; forma-val has nodata
+   ["500" 827 28 8 0 3 good-val bad-val]]) ;; neighbor-val has nodata
+
+(fact
+  "Check `beta-data-prep`.
+
+   This query only checks that the correct pixels are returned. This
+   is because midje doesn't seem to be able to do comparisons between
+   thrift objects coming out of a Cascalog query - the `paramBreak`
+   field appears to be missing from the thrift objects, but it is
+   actually there."
+  (let [prepped-src (beta-data-prep test-map dynamic-src static-src)
+        result [["500" 827 28 8 0 0]]]
+    (<- [?s-res ?pd ?mod-h ?mod-v ?s ?l]
+     (prepped-src ?s-res ?pd ?mod-h ?mod-v ?s ?l _ _ _ _)) => (produces result)))
