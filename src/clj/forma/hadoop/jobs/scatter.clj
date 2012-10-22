@@ -52,7 +52,7 @@
                  :convergence-thresh 1e-6
                  :max-iterations 500
                  :min-coast-dist 3
-                 :nodata -9999}}
+                 :nodata -9999.0}}
       (get k)))
 
 (defn constrained-tap
@@ -210,8 +210,8 @@
 
               trends-cleanup
               ([:tmp-dirs cleanup-path]
-                 "Clean up data after trends to improve join performance. Joins
-                  kill us with lots of observations"
+                 "Clean up data after trends to improve join
+                  performance. Joins kill us with lots of observations"
                  (?- (hfs-seqfile cleanup-path)
                      (forma/trends-cleanup (hfs-seqfile trends-path))))
 

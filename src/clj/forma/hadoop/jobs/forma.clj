@@ -201,7 +201,16 @@
 
 (defn trends-cleanup
   "Take a source of period-level trends output, turn each trends stat
-   into a timeseries, replacing missing periods with nil.
+   into a timeseries, replacing missing periods with `nil`.
+
+   We use `nil` instead of the project-wide `nodata` value here for
+   the internal consistency of this query. The trends analysis could
+   produce `nil` values if singular matrices are detected, so the
+   trend statistic fields are nullable. The `consolidate-timeseries`
+   could uncover periods where data are simply missing for some
+   reason (e.g. see issue #184), and needs to fill in the hole with
+   something. The `nil` values will be handled in `forma-tap`,
+   specifically within the `schema/forma-seq` function.
 
    Usage:
      (let [src [[\"500\" 28 8 0 0 827 827 1 2 3 4]
@@ -213,27 +222,27 @@
                                      [4 nil 5]]))
      Note how values for missing period 828 are replaced with `nil`"
   [src]
-  (let [nodata nil]
+  (let [nodata nil] ;; nils will be handled in `forma-tap`
     (<- [?s-res ?mh ?mv ?s ?l ?start ?max-end ?short-v ?long-v ?t-stat-v ?break-v]
         (src ?s-res ?mh ?mv ?s ?l ?start ?end !short !long !t-stat !break)
         (consolidate-timeseries nodata ?end !short !long !t-stat !break :>
                                 ?end-v ?short-v ?long-v ?t-stat-v ?break-v)
-        (u/filter* (partial not= nil) ?end-v :> ?end-v-good)
+        (u/filter* (partial not= nodata) ?end-v :> ?end-v-good)
         (reduce max ?end-v-good :> ?max-end))))
 
 (defn forma-tap
-  "Accepts an est-map and sources for 
+  "Accepts an est-map and sources for dynamic and fires data.
 
   Note that all values internally discuss timeseries.
 
   Also note that !!fire is an ungrounding variable, and triggers a
   left join with the trend result variables."
-  [t-res est-map dynamic-src fire-src]
-  (let [start (date/datetime->period t-res (:est-start est-map))]
+  [{:keys [t-res est-start nodata]} dynamic-src fire-src]
+  (let [start (date/datetime->period t-res est-start)]
     (<- [?s-res ?period ?mh ?mv ?s ?l ?forma-val]
         (fire-src ?s-res ?mh ?mv ?s ?l !!fire)
-        (dynamic-src ?s-res ?mh ?mv ?s ?l _ ?end ?short ?long ?t-stat ?break)
-        (schema/forma-seq !!fire ?short ?long ?t-stat ?break :> ?forma-seq)
+        (dynamic-src ?s-res ?mh ?mv ?s ?l _ ?end-s ?short-s ?long-s ?t-stat-s ?break-s)
+        (schema/forma-seq nodata !!fire ?short-s ?long-s ?t-stat-s ?break-s :> ?forma-seq)
         (p/index ?forma-seq :zero-index start :> ?period ?forma-val)
         (:distinct false))))
 
@@ -296,15 +305,6 @@
   (let [beta (((comp keyword str) eco) betas)]
     (log/logistic-prob-wrap beta val neighbor-val)))
 
-(defbufferop mk-timeseries
-  "A very specific function that accepts all probabilities for a given
-  pixel for all time series, sorts them by the observed period and
-  then returns a single series of probabilities; used only in the
-  `forma-estimate` query below."
-  [tuples]
-  [[(map second
-         (sort-by first tuples))]])
-
 (defn forma-estimate
   "query to end all queries: estimate the probabilities for each
   period after the training period."
@@ -316,5 +316,5 @@
         (u/obj-contains-nodata? nodata ?neighbor-val :> false)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _ _)
         (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
-        (mk-timeseries ?pd ?prob :> ?prob-series)
+        (consolidate-timeseries nodata ?pd ?prob :> ?prob-series)
         (:distinct false))))
