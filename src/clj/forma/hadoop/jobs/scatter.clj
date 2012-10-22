@@ -16,9 +16,6 @@
             [forma.classify.logistic :as log]
             [forma.thrift :as thrift]))
 
-(def convert-line-src
-  (hfs-textline "s3n://modisfiles/ascii/admin-map.csv"))
-
 (defn static-tap
   "Accepts a source of DataChunks containing vectors as values, and
   returns a new query with all relevant spatial information plus the
@@ -29,48 +26,6 @@
       (thrift/unpack ?chunk :> _ ?loc ?data _ _)
       (thrift/get-field-value ?data :> ?val)
       (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
-
-(defn country-tap
-  [gadm-src convert-src]
-  (let [gadm-tap (static-tap gadm-src)]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?country]
-        (gadm-tap ?s-res ?mod-h ?mod-v ?sample ?line ?admin)
-        (convert-src ?textline)
-        (p/converter ?textline :> ?country ?admin))))
-
-(defmain GetStatic
-  [pail-path out-path]
-  (let [[vcf hansen ecoid gadm border]
-        (map (comp static-tap (partial split-chunk-tap pail-path))
-             [["vcf"] ["hansen"] ["ecoid"] ["gadm"] ["border"]])]
-    (?<- (hfs-textline out-path
-                       :sinkparts 3
-                       :sink-template "%s/")
-         [?country ?lat ?lon ?mod-h ?mod-v
-          ?sample ?line ?hansen ?ecoid ?vcf ?gadm ?border]
-         (vcf    ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
-         (hansen ?s-res ?mod-h ?mod-v ?sample ?line ?hansen)
-         (ecoid  ?s-res ?mod-h ?mod-v ?sample ?line ?ecoid)
-         (gadm   ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
-         (border ?s-res ?mod-h ?mod-v ?sample ?line ?border)
-         (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
-         (convert-line-src ?textline)
-         (p/converter ?textline :> ?country ?gadm)
-         (>= ?vcf 25))))
-
-(defn static-src [{:keys [vcf-limit]} pail-path]
-  ;; screen out border pixels later - doing it here will remove non-
-  ;; but nearly water pixels before they can be included as neighbors
-  (let [[vcf hansen ecoid gadm border]
-        (map (comp static-tap (partial split-chunk-tap pail-path))
-             [["vcf"] ["hansen"] ["ecoid"] ["gadm"] ["border"]])]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?gadm ?vcf ?ecoid ?hansen ?coast-dist]
-        (vcf    ?s-res ?mod-h ?mod-v ?sample ?line ?vcf)
-        (hansen ?s-res ?mod-h ?mod-v ?sample ?line ?hansen)
-        (ecoid  ?s-res ?mod-h ?mod-v ?sample ?line ?ecoid)
-        (gadm   ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
-        (border ?s-res ?mod-h ?mod-v ?sample ?line ?coast-dist)
-        (>= ?vcf vcf-limit))))
 
 ;; ## Forma
 
