@@ -17,7 +17,8 @@
         [clojure.string :only (join)]
         [forma.hadoop.pail :only (to-pail split-chunk-tap)])
   (:require [forma.testing :as t]
-            [forma.thrift :as thrift]))
+            [forma.thrift :as thrift]
+            [forma.utils :as u]))
 
 (def test-map
   "Define estimation map for testing based on 500m-16day resolution.
@@ -192,10 +193,6 @@
                                         [3 nil 4]
                                         [4 nil 5]]]))
 
-(defn rest*
-  [coll]
-  (vector (vec (rest coll))))
-
 (fact
   "Check forma-tap. This test got crazy because it seems that comparing
    thrift objects to one another doesn't work for checking a result."
@@ -209,7 +206,7 @@
     (<- [?s-res ?period ?mh ?mv ?s ?l ?fire-vec ?trends-stats]
         (forma-src ?s-res ?period ?mh ?mv ?s ?l ?forma-val)
         (thrift/unpack* ?forma-val :> ?forma-vec)
-        (rest* ?forma-vec :> ?trends-stats)
+        (u/rest* ?forma-vec :> ?trends-stats)
         (first ?forma-vec :> ?fire-val)
         (thrift/unpack* ?fire-val :> ?fire-vec))
     => (produces [["500" 827 28 8 0 0 [0 0 0 0] first-period]

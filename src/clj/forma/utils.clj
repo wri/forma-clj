@@ -286,3 +286,8 @@
   "Wrapper for `replace-all` to make it safe for use with vectors in Cascalog"
   [to-replace replacement coll]
   [(vec (replace-all to-replace replacement coll))])
+
+(defn rest*
+  "Wrapper for `rest` is safe for use with Cascalog"
+  [coll]
+  (vector (vec (rest coll))))
