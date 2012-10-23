@@ -231,12 +231,12 @@
         (reduce max ?end-v-good :> ?max-end))))
 
 (defn forma-tap
-  "Accepts an est-map and sources for dynamic and fires data.
+  "Accepts an est-map and sources for dynamic and fires data,
+  spits out FormaValues for each period.
 
-  Note that all values internally discuss timeseries.
-
-  Also note that !!fire is an ungrounding variable, and triggers a
-  left join with the trend result variables."
+  Note that all values internally discuss timeseries, and that !!fire
+  is an ungrounding variable. This triggers a left join with the trend
+  result variables, even when there are no fires for a particular pixel."
   [{:keys [t-res est-start nodata]} dynamic-src fire-src]
   (let [start (date/datetime->period t-res est-start)]
     (<- [?s-res ?period ?mh ?mv ?s ?l ?forma-val]

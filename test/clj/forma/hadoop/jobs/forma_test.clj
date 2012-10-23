@@ -17,7 +17,8 @@
         [clojure.string :only (join)]
         [forma.hadoop.pail :only (to-pail split-chunk-tap)])
   (:require [forma.testing :as t]
-            [forma.thrift :as thrift]))
+            [forma.thrift :as thrift]
+            [forma.utils :as u]))
 
 (def test-map
   "Define estimation map for testing based on 500m-16day resolution.
@@ -191,6 +192,27 @@
                                         [2 nil 3]
                                         [3 nil 4]
                                         [4 nil 5]]]))
+
+(fact
+  "Check forma-tap. This test got crazy because it seems that comparing
+   thrift objects to one another doesn't work for checking a result."
+  (let [dynamic-src [["500" 28 8 0 0 827 [827 828] [1. 2.] [3. 4.] [5. 6.] [7. 8.]]
+                     ["500" 28 8 0 1 827 [827 828] [1. 2.] [3. 4.] [5. 6.] [7. 8.]]]
+        fire-src [["500" 28 8 0 0 (sample-fire-series 827 2)]]
+        first-period [1. 3. 5. 7.]
+        second-period [1. 4. 6. 8.]
+        empty-fire (thrift/FireValue* 0 0 0 0)
+        forma-src (forma-tap test-map dynamic-src fire-src)]
+    (<- [?s-res ?period ?mh ?mv ?s ?l ?fire-vec ?trends-stats]
+        (forma-src ?s-res ?period ?mh ?mv ?s ?l ?forma-val)
+        (thrift/unpack* ?forma-val :> ?forma-vec)
+        (u/rest* ?forma-vec :> ?trends-stats)
+        (first ?forma-vec :> ?fire-val)
+        (thrift/unpack* ?fire-val :> ?fire-vec))
+    => (produces [["500" 827 28 8 0 0 [0 0 0 0] first-period]
+                  ["500" 828 28 8 0 0 [0 0 0 0] second-period]
+                  ["500" 827 28 8 0 1 [0 0 0 0] first-period]
+                  ["500" 828 28 8 0 1 [0 0 0 0] second-period]])))
 
 (def good-val
   (thrift/FormaValue* (thrift/FireValue* 1. 1. 1. 1.) 1. 1. 1. 1.))
