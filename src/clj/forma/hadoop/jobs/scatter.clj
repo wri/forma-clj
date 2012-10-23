@@ -53,9 +53,11 @@
       (thrift/get-field-value ?data :> ?val)
       (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
 
-(defn constrained-tap
-  [ts-pail-path dataset s-res t-res]
-  (split-chunk-tap ts-pail-path [dataset (format "%s-%s" s-res t-res)]))
+(defn pail-tap
+  "Creates tap for a pail given the pail path, dataset name, and spatial
+   and temporal resolution."
+  [pail-path dataset s-res t-res]
+  (split-chunk-tap pail-path [dataset (format "%s-%s" s-res t-res)]))
 
 (defn map-round
   "Round the values of a timeseries in a TimeSeries object, returning
@@ -91,27 +93,27 @@
               vcf-step
               ([:tmp-dirs vcf-path]
                  (?- (hfs-seqfile vcf-path)
-                     (static-tap (constrained-tap pail-path "vcf" s-res "00"))))
+                     (static-tap (pail-tap pail-path "vcf" s-res "00"))))
 
               gadm-step
               ([:tmp-dirs gadm-path]
                  (?- (hfs-seqfile gadm-path)
-                     (static-tap (constrained-tap pail-path "gadm" s-res "00"))))
+                     (static-tap (pail-tap pail-path "gadm" s-res "00"))))
 
               hansen-step
               ([:tmp-dirs hansen-path]
                  (?- (hfs-seqfile hansen-path)
-                     (static-tap (constrained-tap pail-path "hansen" s-res "00"))))
+                     (static-tap (pail-tap pail-path "hansen" s-res "00"))))
 
               ecoid-step
               ([:tmp-dirs ecoid-path]
                  (?- (hfs-seqfile ecoid-path)
-                     (static-tap (constrained-tap pail-path "ecoid" s-res "00"))))
+                     (static-tap (pail-tap pail-path "ecoid" s-res "00"))))
 
               border-step
               ([:tmp-dirs border-path]
                  (?- (hfs-seqfile border-path)
-                     (static-tap (constrained-tap pail-path "border" s-res "00"))))
+                     (static-tap (pail-tap pail-path "border" s-res "00"))))
 
               static-step
               ([:tmp-dirs static-path]
@@ -128,7 +130,7 @@
                  "Convert ndvi pail to sequence files"
                  (?- (hfs-seqfile ndvi-seq-path)
                      (<- [?pail-path ?data-chunk]
-                         ((constrained-tap ts-pail-path
+                         ((pail-tap ts-pail-path
                                            "ndvi"
                                            s-res
                                            t-res) ?pail-path ?data-chunk))))
@@ -138,7 +140,7 @@
                  "Convert reliability pail to sequence files"
                  (?- (hfs-seqfile reli-seq-path)
                      (<- [?pail-path ?data-chunk]
-                         ((constrained-tap ts-pail-path
+                         ((pail-tap ts-pail-path
                                            "reli"
                                            s-res
                                            t-res) ?pail-path ?data-chunk))))
@@ -148,7 +150,7 @@
                  "Convert rain pail to sequence files"
                  (?- (hfs-seqfile rain-seq-path)
                      (<- [?pail-path ?data-chunk]
-                         ((constrained-tap ts-pail-path
+                         ((pail-tap ts-pail-path
                                            "precl"
                                            s-res
                                            "32") ?pail-path ?data-chunk))))
@@ -295,12 +297,12 @@
               ([:tmp-dirs vcf-path]
                  (?- (hfs-seqfile vcf-path)
                      (<- [?subpail ?data-chunk]
-                         ((constrained-tap pail-path "vcf" s-res "00") ?subpail ?data-chunk))))
+                         ((pail-tap pail-path "vcf" s-res "00") ?subpail ?data-chunk))))
 
 
               ndvi-step
               ([:tmp-dirs ndvi-path]
                  (?- (hfs-seqfile ndvi-path)
                      (mk-filter vcf-path
-                                (constrained-tap
+                                (pail-tap
                                  ts-pail-path "ndvi" s-res t-res)))))))
