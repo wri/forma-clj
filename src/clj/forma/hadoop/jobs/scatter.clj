@@ -17,9 +17,8 @@
             [forma.thrift :as thrift]))
 
 (defn static-tap
-  "Accepts a source of DataChunks containing vectors as values, and
-  returns a new query with all relevant spatial information plus the
-  actual value."
+  "Accepts a source of DataChunks, and returns a new query with all
+   relevant spatial information plus the actual, unpacked data value."
   [chunk-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?val]
       (chunk-src _ ?chunk)

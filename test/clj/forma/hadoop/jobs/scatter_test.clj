@@ -42,3 +42,9 @@
 (fact
   "Test for `map-round`"
   (map-round (thrift/TimeSeries* 0 3 [1.1 2.6 3.4 4.0])) => [0 [1 3 3 4]])
+
+(fact
+  "Test `static-tap`"
+  (let [pixel-loc (thrift/ModisPixelLocation* "500" 28 8 0 0)
+      dc-src [["pail-path" (thrift/DataChunk* "vcf" pixel-loc 25 "00")]]]
+  (static-tap dc-src)) => (produces [["500" 28 8 0 0 25]]))
