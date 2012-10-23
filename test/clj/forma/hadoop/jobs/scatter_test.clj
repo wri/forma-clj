@@ -2,7 +2,8 @@
   (:use cascalog.api
         forma.hadoop.jobs.scatter
         [midje sweet cascalog]
-        [forma.thrift :as thrift]))
+        [forma.thrift :as thrift]
+        [forma.hadoop.pail :only (to-pail)]))
 
 (fact
   "Test for `map-round`"
@@ -13,6 +14,16 @@
   (let [pixel-loc (thrift/ModisPixelLocation* "500" 28 8 0 0)
       dc-src [["pail-path" (thrift/DataChunk* "vcf" pixel-loc 25 "00")]]]
   (static-tap dc-src)) => (produces [["500" 28 8 0 0 25]]))
+
+(fact
+  "Test `pail-tap`"
+  (let [s-res "500"
+        t-res "00"
+        pixel-loc (thrift/ModisPixelLocation* s-res 28 8 0 0)
+        data-chunk (thrift/DataChunk* "vcf" pixel-loc 25 t-res)
+        pail-path "/tmp/pail-tap-test/"]
+    (to-pail pail-path [[data-chunk]])
+    (pail-tap pail-path "vcf" s-res t-res) => (produces-some [["" data-chunk]])))
 
 (fact
   "Test `adjusted-precl-tap`"
