@@ -18,7 +18,8 @@
 
 (defn static-tap
   "Accepts a source of DataChunks, and returns a new query with all
-   relevant spatial information plus the actual, unpacked data value."
+   relevant spatial information (resolution, MODIS tile info, pixel
+   sample & line) plus the actual, unpacked data value."
   [chunk-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?val]
       (chunk-src _ ?chunk)
