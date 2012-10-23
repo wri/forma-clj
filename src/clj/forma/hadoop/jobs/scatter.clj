@@ -16,19 +16,6 @@
             [forma.classify.logistic :as log]
             [forma.thrift :as thrift]))
 
-(defn static-tap
-  "Accepts a source of DataChunks, and returns a new query with all
-   relevant spatial information (resolution, MODIS tile info, pixel
-   sample & line) plus the actual, unpacked data value."
-  [chunk-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?val]
-      (chunk-src _ ?chunk)
-      (thrift/unpack ?chunk :> _ ?loc ?data _ _)
-      (thrift/get-field-value ?data :> ?val)
-      (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
-
-;; ## Forma
-
 (defn forma-run-parameters [k est-end]
   (-> {"1000-32" {:est-start "2005-12-31"
                   :est-end est-end
@@ -55,6 +42,17 @@
                  :nodata -9999.0}}
       (get k)))
 
+(defn static-tap
+  "Accepts a source of DataChunks, and returns a new query with all
+   relevant spatial information (resolution, MODIS tile info, pixel
+   sample & line) plus the actual, unpacked data value."
+  [chunk-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?val]
+      (chunk-src _ ?chunk)
+      (thrift/unpack ?chunk :> _ ?loc ?data _ _)
+      (thrift/get-field-value ?data :> ?val)
+      (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
+
 (defn constrained-tap
   [ts-pail-path dataset s-res t-res]
   (split-chunk-tap ts-pail-path [dataset (format "%s-%s" s-res t-res)]))
@@ -67,15 +65,15 @@
     [start (vec (map round (thrift/unpack series)))]))
 
 (defn adjusted-precl-tap
-  "Document... returns a tap that adjusts for the incoming
-  resolution."
-  [s-res base-t-res t-res src]
-  (if (= t-res base-t-res)
-      src ;;(constrained-tap ts-path "precl" s-res base-t-res)
+  "Given a base temporal resolution, a target temporal resolution and a
+   source of rain data, stretches rain to new resolution and rounds it."
+  [base-t-res target-t-res src]
+  (if (= target-t-res base-t-res)
+      src
       (<- [?s-res ?mod-h ?mod-v ?sample ?line ?new-start-idx ?rounded-ts]
           (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ts)
           (thrift/TimeSeries* ?start-idx ?ts :> ?ts-obj)
-          (stretch/ts-expander base-t-res t-res ?ts-obj :> ?expanded-ts)
+          (stretch/ts-expander base-t-res target-t-res ?ts-obj :> ?expanded-ts)
           (map-round ?expanded-ts :> ?new-start-idx ?rounded-ts)
           (:distinct false))))
 
@@ -178,7 +176,7 @@
               ([:tmp-dirs rain-stretch-path]
                  "Stretch rain timeseries to match MODIS timeseries resolution"
                  (?- (hfs-seqfile rain-stretch-path)
-                     (adjusted-precl-tap s-res "32" t-res (hfs-seqfile rain-path))))
+                     (adjusted-precl-tap "32" t-res (hfs-seqfile rain-path))))
 
               adjustseries
               ([:tmp-dirs adjusted-series-path]
