@@ -69,19 +69,17 @@ error."
  48000   30
  96000   15)
 
-(tabular
- (fact "Check on the proper unpacking of the HDF file metadata map."
-   (let [src (io/hfs-wholefile hdf-path)
-         [ks xs] ((juxt keys vals) ?meta-map)]
-     (fact?<- [xs]
-              [?productname ?tileid ?date]
-              (src ?filename ?hdf)
-              (unpack-modis [[:ndvi]] ?hdf :> ?dataset ?freetile)
-              (meta-values [ks] ?freetile :> ?productname ?tileid ?date))))
- ?meta-map
- {"RANGEBEGINNINGDATE" "2000-02-01"
-  "SHORTNAME"          "MOD13A3"
-  "TileID"             "51003011"})
+(fact
+  (let [meta-map {"RANGEBEGINNINGDATE" "2000-02-01"
+                  "SHORTNAME"          "MOD13A3"
+                  "TileID"             "51003011"}
+        [ks xs] (map vec ((juxt keys vals) meta-map))
+        source (io/hfs-wholefile hdf-path)]
+    (<- [?productname ?tileid ?date]
+        (source _ ?hdf)
+        (unpack-modis [[:ndvi]] ?hdf :> ?dataset ?freetile)
+        (meta-values [ks] ?freetile :> ?productname ?tileid ?date))
+    => (produces [xs])))
 
 (fact "split-id tests."
   (split-id "51003011") => [3 11]
@@ -97,7 +95,7 @@ resolution of 1000m; otherwise, the relationship between chunk-size
 and total chunks becomes off."
   (let [subquery (->> (io/hfs-wholefile hdf-path)
                       (modis-chunks [:ndvi] 24000))]
-    (fact?<- [[60]]
+    (fact?<- [[60]] ;; 60 chunks per tile at 1000m resolution
              [?count]
              (subquery ?datachunk)
              (c/count ?count))))
