@@ -16,7 +16,8 @@
         [midje sweet cascalog]
         [clojure.string :only (join)]
         [forma.hadoop.pail :only (to-pail split-chunk-tap)]
-        [forma.hadoop.predicate :as p])
+        [forma.hadoop.predicate :as p]
+        [forma.ops.classify :only (beta-dict)])
   (:require [forma.testing :as t]
             [forma.thrift :as thrift]
             [forma.utils :as u]))
@@ -341,3 +342,19 @@
                           0.3516091392518591 0.07849384810832613
                           0.3908570303909329 0.11774050517175123
                           0.43010312243974663 0.15698786428781983]]]))
+
+(fact
+  "Test `apply-betas`"
+  (let [forma-val (thrift/FormaValue* (thrift/FireValue* 0 0 0 0) 1. 2. 3. 4.)
+        neighbor-val (thrift/NeighborValue* (thrift/FireValue* 1 0 0 1) 1 1. 2. 3. 4. 5. 6. 7. 8.)
+        src [[1 0 forma-val neighbor-val]
+             [2 1 forma-val neighbor-val]]
+        betas (beta-dict [["500" 0 (vec (repeat 21 0.5))]
+                          ["500" 1 (vec (repeat 21 0.75))]])]
+    (<- [?id ?prob]
+        (src ?id ?eco ?forma-val ?neighbor-val)
+        (apply-betas [betas] ?eco ?forma-val ?neighbor-val :> ?prob)))
+  => (produces [[1 0.9999999999771026]
+                [2 1.0]]))
+
+
