@@ -131,9 +131,9 @@
                  (?- (hfs-seqfile ndvi-seq-path)
                      (<- [?pail-path ?data-chunk]
                          ((pail-tap ts-pail-path
-                                           "ndvi"
-                                           s-res
-                                           t-res) ?pail-path ?data-chunk))))
+                                    "ndvi"
+                                    s-res
+                                    t-res) ?pail-path ?data-chunk))))
 
               reli-pail-seq-step
               ([:tmp-dirs reli-seq-path]
@@ -141,9 +141,9 @@
                  (?- (hfs-seqfile reli-seq-path)
                      (<- [?pail-path ?data-chunk]
                          ((pail-tap ts-pail-path
-                                           "reli"
-                                           s-res
-                                           t-res) ?pail-path ?data-chunk))))
+                                    "reli"
+                                    s-res
+                                    t-res) ?pail-path ?data-chunk))))
 
               rain-pail-seq-step
               ([:tmp-dirs rain-seq-path]
@@ -151,9 +151,9 @@
                  (?- (hfs-seqfile rain-seq-path)
                      (<- [?pail-path ?data-chunk]
                          ((pail-tap ts-pail-path
-                                           "precl"
-                                           s-res
-                                           "32") ?pail-path ?data-chunk))))
+                                    "precl"
+                                    s-res
+                                    "32") ?pail-path ?data-chunk))))
 
               ndvi-filter
               ([:tmp-dirs ndvi-path]
@@ -237,8 +237,7 @@
                  "Final step to collect all data for the feature vector -
                  trends + fires data"
                  (?- (hfs-seqfile forma-mid-path)
-                     (forma/forma-tap t-res
-                                      est-map
+                     (forma/forma-tap est-map
                                       (hfs-seqfile cleanup-path)
                                       (hfs-seqfile adjusted-fire-path))))
 
