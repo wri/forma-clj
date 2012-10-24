@@ -19,8 +19,8 @@
 
 (facts "Test `clean-probs`"
   (let [ts [0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4]
-        cleaned-ts (clean-probs ts)]
-
+        cleaned-ts (clean-probs ts -9999.0)]
+    
     cleaned-ts => [[5 8 10 15 20 25 30 35]]
     
     ;; The value of the first cleaned timeseries should equal 100
@@ -29,4 +29,10 @@
 
     ;; Check that the length of the nested vector is equal to the
     ;; length of the original timeseries of probabilities.
-    (count (first cleaned-ts)) => (count ts)))
+    (count (first cleaned-ts)) => (count ts))
+
+  (let [ts [-9999.0 0.1 0.15 -9999.0 0.25 0.3 0.35 0.4]]
+    (clean-probs ts -9999.0)) => [[0 5 8 13 18 23 30 35]]
+
+  (let [ts [0.05 0.1 0.15 -9999.0 0.25 0.3 0.35 0.4]]
+    (clean-probs ts -9999.0))  => [[5 8 10 13 18 23 30 35]])
