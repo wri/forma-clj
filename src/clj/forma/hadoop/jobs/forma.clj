@@ -314,5 +314,5 @@
         (u/obj-contains-nodata? nodata ?neighbor-val :> false)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _ _)
         (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
-        (consolidate-timeseries nodata ?pd ?prob :> ?prob-series)
+        (consolidate-timeseries nodata ?pd ?prob :> _ ?prob-series)
         (:distinct false))))
