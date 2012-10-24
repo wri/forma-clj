@@ -132,9 +132,10 @@
     empty-neighbor-val))
 
 (defn forma-value
-  "Returns a vector containing a FireValue, short-term drop,
-  parametrized break, long-term drop and t-stat of the short-term
-  drop."
+  "Returns a `FormaValue`, given a `FireValue` (or `nil`), short stat,
+   long stat, t-stat and break stat. Exists to handle the case where
+   there are no fires in a given pixel. A `nil` value would normally
+   cause an exception to be thrown by `thrift/FormaValue*`"
   [fire short param-break long t-stat]
   (let [fire (or fire
                  (thrift/FireValue* 0 0 0 0))]
