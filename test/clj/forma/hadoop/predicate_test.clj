@@ -85,3 +85,12 @@
         [[0 0 0 0 [[10 0 0 0 0]
                    [0 0 0 0 0]]]]
         (sparse-windower (pixel-tap [[0 0 0 0 10]]) ["?s" "?l"] [5 2] "?v" 0))
+
+(fact
+  "A simpler test of sparse-windower"
+  (let [val-src (let [src [["500" 28 8 0 0 10]
+                           ["500" 28 8 0 1 20]]]
+                  (<- [?s-res ?modh ?modv ?sample ?line ?val]
+                      (src ?s-res ?modh ?modv ?sample ?line ?val)))]
+    (sparse-windower val-src ["?sample" "?line"] [2 3] "?val" 0))
+  => (produces [["500" 28 8 0 0 [[10 0] [20 0] [0 0]]]]))
