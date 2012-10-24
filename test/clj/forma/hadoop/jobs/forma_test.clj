@@ -357,4 +357,14 @@
   => (produces [[1 0.9999999999771026]
                 [2 1.0]]))
 
-
+(fact
+  "Test `forma-estimate`"
+  (let [beta-src [["500" 0 (vec (repeat 21 0.5))]
+                ["500" 1 (vec (repeat 21 0.75))]]
+      static-src [["500" 28 8 0 0 25 0 1 0 0]]
+      forma-val (thrift/FormaValue* (thrift/FireValue* 0 0 0 0) 1. 2. 3. 4.)
+      neighbor-val (thrift/NeighborValue* (thrift/FireValue* 1 0 0 1) 1 1. 2. 3. 4. 5. 6. 7. 8.)
+      dyn-src [["500" 827 28 8 0 0 forma-val neighbor-val]
+               ["500" 829 28 8 0 0 forma-val neighbor-val]]]
+    (forma-estimate test-map beta-src dyn-src static-src))
+  => (produces [["500" 28 8 0 0 [1.0 -9999.0 1.0]]]))
