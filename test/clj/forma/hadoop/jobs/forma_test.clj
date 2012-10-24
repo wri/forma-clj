@@ -15,7 +15,8 @@
   (:use cascalog.api
         [midje sweet cascalog]
         [clojure.string :only (join)]
-        [forma.hadoop.pail :only (to-pail split-chunk-tap)])
+        [forma.hadoop.pail :only (to-pail split-chunk-tap)]
+        [forma.hadoop.predicate :as p])
   (:require [forma.testing :as t]
             [forma.thrift :as thrift]
             [forma.utils :as u]))
@@ -245,3 +246,73 @@
         result [["500" 827 28 8 0 0]]]
     (<- [?s-res ?pd ?mod-h ?mod-v ?s ?l]
      (prepped-src ?s-res ?pd ?mod-h ?mod-v ?s ?l _ _ _ _)) => (produces result)))
+
+(def val-src
+  (let [forma-val-1 (thrift/FormaValue* (thrift/FireValue* 0 0 0 0) 1. 2. 3. 4.)
+        forma-val-2 (thrift/FormaValue* (thrift/FireValue* 10 0 0 10) 5. 6. 7. 8.)
+        forma-val-3 (thrift/FormaValue* (thrift/FireValue* 0 0 0 0) 9. 10. 11. 12.)
+        forma-val-4 (thrift/FormaValue* (thrift/FireValue* 0 0 0 0) 13. 14. 15. 16.)]
+    (let [src [(conj ["500" 827 28 8 0 0] forma-val-1)
+               (conj ["500" 827 28 8 0 1] forma-val-2)
+               (conj ["500" 827 28 8 1 0] forma-val-3)
+               (conj ["500" 827 28 8 1 1] forma-val-4)]]
+      (<- [?s-res ?period ?modh ?modv ?sample ?line ?forma-val]
+          (src ?s-res ?period ?modh ?modv ?sample ?line ?forma-val)))))
+
+(fact
+  "Check `forma-query`. This is a crazy test in part because of the
+   issue comparing thrift objects with Cascalog mentioned in the test
+   above."
+  (let [output-src (forma-query (assoc test-map :window-dims [4 4]) val-src)]
+    (<- [?s-res ?pd ?modh ?modv ?sample ?line ?unpacked-fire ?neighbor-sans-fire]
+        (output-src ?s-res ?pd ?modh ?modv ?sample ?line ?forma-val ?neighbor-val)
+        (thrift/unpack* ?neighbor-val :> ?unpacked-neighbor)
+        (first ?unpacked-neighbor :> ?fire-val)
+        (thrift/unpack* ?fire-val :> ?unpacked-fire)
+        (u/rest* ?unpacked-neighbor :> ?neighbor-sans-fire)))
+  => (produces ["500" 827 28 8 0 0 [10 0 0 10]
+                [3 9.0 5.0 10.0 6.0 11.0
+                 7.0 12.0 8.0]]
+               ["500" 827 28 8 1 0 [10 0 0 10]
+                [3 6.333333333333333 1.0 7.333333333333333 2.0 8.333333333333334
+                 3.0 9.333333333333334 4.0]]
+               ["500" 827 28 8 0 1 [0 0 0 0]
+                [3 7.666666666666667 1.0 8.666666666666666 2.0 9.666666666666666
+                 3.0 10.666666666666666 4.0]]
+               ["500" 827 28 8 1 1 [10 0 0 10]
+                [3 5.0 1.0 6.0 2.0 7.0
+                 3.0 8.0 4.0]]))
+
+(fact
+  "Check `process-neighbors`"
+  (let [window-dims [4 4]
+        nodata -9999.0
+        neighbors 1
+        src (p/sparse-windower val-src
+                               ["?sample" "?line"]
+                               window-dims
+                               "?forma-val"
+                               nil)]
+    (<- [?win-idx ?unpacked-fire ?neighbor-sans-fire]
+        (src _ _ _ _ _ _ ?window)
+        (process-neighbors [neighbors] ?window nodata :> ?win-idx ?val ?neighbor-val)
+        (thrift/unpack* ?neighbor-val :> ?unpacked-neighbor)
+        (first ?unpacked-neighbor :> ?fire-val)
+        (thrift/unpack* ?fire-val :> ?unpacked-fire)
+        (u/rest* ?unpacked-neighbor :> ?neighbor-sans-fire)))
+  => (produces [ [0 [10 0 0 10]
+                  [3 9.0 5.0 10.0 6.0 11.0
+                   7.0 12.0 8.0]]
+                 [1 [10 0 0 10]
+                  [3 6.333333333333333 1.0 7.333333333333333 2.0 8.333333333333334
+                   3.0 9.333333333333334 4.0]]
+                 [4 [0 0 0 0]
+                  [3 7.666666666666667 1.0 8.666666666666666 2.0 9.666666666666666
+                   3.0 10.666666666666666 4.0]]
+                 [5 [10 0 0 10]
+                  [3 5.0 1.0 6.0 2.0 7.0
+                   3.0 8.0 4.0]]]))
+
+
+
+    

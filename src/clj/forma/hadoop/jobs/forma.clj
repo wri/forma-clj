@@ -261,10 +261,8 @@
 
 (defn forma-query
   "final query that walks the neighbors and spits out the values."
-  [est-map forma-val-src]
-  (let [{:keys [neighbors window-dims nodata]} est-map
-        nodata (double nodata)
-        [rows cols] window-dims
+  [{:keys [neighbors window-dims nodata]} forma-val-src]
+  (let [[rows cols] window-dims
         src (p/sparse-windower forma-val-src
                                ["?sample" "?line"]
                                window-dims
