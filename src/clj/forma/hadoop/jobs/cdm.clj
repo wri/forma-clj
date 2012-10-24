@@ -79,14 +79,14 @@ coordinates."
                 \"32\"
                 \"2005-12-31\"
                 50)"
-  [src gadm-src zoom tres tres-out start thresh]
+  [src gadm-src nodata zoom tres tres-out start thresh]
   (let [epoch (date/datetime->period tres-out "2000-01-01")
         start-period (date/datetime->period tres start)]
     (<- [?x ?y ?z ?p ?iso ?lat ?lon]
         (src ?sres ?modh ?modv ?s ?l ?prob-series)
         (gadm-src _ ?modh ?modv ?s ?l ?gadm)
         (gadm->iso ?gadm :> ?iso)
-        (o/clean-probs ?prob-series :> ?clean-series)
+        (o/clean-probs ?prob-series nodata :> ?clean-series)
         (first-hit thresh ?clean-series :> ?first-hit-idx)
         (+ start-period ?first-hit-idx :> ?period)
         (date/convert-period-res tres tres-out ?period :> ?period-new-res)
