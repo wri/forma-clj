@@ -86,15 +86,22 @@
     (every? (partial = -3000) training-vals)))
 
 (defn dynamic-filter
-  "Filters out all NDVI pixels where timeseries is all -3000s. Trims ndvi, reli
-   and rain timeseries so that they are the same length"
-  [est-map ndvi-src reli-src rain-src]
+  "Filters out all NDVI pixels where timeseries is all -3000s. Trims
+   ndvi, reli and rain timeseries so that they are the same length,
+   and replaces any nodata values with the value to their left. Leaves
+   nodata value if at the start of the timeseries"
+  [{:keys [t-res nodata est-start]} ndvi-src reli-src rain-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ndvi-ts ?precl-ts ?reli-ts]
       (ndvi-src ?s-res ?mod-h ?mod-v ?sample ?line ?n-start ?ndvi)
       (reli-src ?s-res ?mod-h ?mod-v ?sample ?line ?r-start ?reli)
       (rain-src ?s-res ?mod-h ?mod-v ?sample ?line ?p-start ?precl)
-      (training-3000s? (:t-res est-map) ?n-start (:est-start est-map) ?ndvi :> false)
-      (schema/adjust ?p-start ?precl ?n-start ?ndvi ?r-start ?reli
+      (training-3000s? t-res ?n-start est-start ?ndvi :> false)
+      (u/replace-from-left* nodata ?ndvi :default nodata :> ?ndvi-clean)
+      (u/replace-from-left* nodata ?reli :default nodata :> ?reli-clean)
+      (u/replace-from-left* nodata ?precl :default nodata :> ?precl-clean)
+      (schema/adjust ?p-start ?precl-clean
+                     ?n-start ?ndvi-clean
+                     ?r-start ?reli-clean
                      :> ?start-idx ?precl-ts ?ndvi-ts ?reli-ts)))
 
 (defmapcatop tele-clean
