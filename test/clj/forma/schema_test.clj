@@ -21,6 +21,35 @@
   [start-idx]
   (thrift/TimeSeries* start-idx (repeat 10 (thrift/FireValue* 0 0 0 0))))
 
+(def good-neighbor
+  (neighbor-value (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) 3. 4. 5. 6.)))
+
+(def bad-neighbor
+  (neighbor-value (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) -9999.0 4. -9999.0 6.)))
+
+(def good-forma
+  (thrift/FormaValue* (thrift/FireValue* 1 1 1 1) 1. 2. 3. 4.))
+
+(def bad-forma
+  (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) -9999.0 4. -9999.0 6.))
+
+(def neighbors
+  "Create a small vector of FormaValues indicating that they are
+  neighbors; used for testing that the neighbor values are
+  appropriately merged and combined."
+  [(thrift/FormaValue* (thrift/FireValue* 2 1 1 2) -9999.0 4. -9999.0 6.)
+   (thrift/FormaValue* (thrift/FireValue* 1 1 1 1) 1. 2. 3. 4.)
+   (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) 2. 3. 4. 5.)
+   (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) 3. 4. -9999.0 6.)])
+
+(fact
+ "Test for `create-timeseries"
+ (let [series [1 2 3]
+       start-idx 1
+       end-idx 3]
+   (create-timeseries start-idx series) => (thrift/TimeSeries* start-idx end-idx series)
+   (create-timeseries start-idx end-idx series) => (thrift/TimeSeries* start-idx end-idx series)))
+
 (fact "boundaries testing."
   (boundaries [ 0 [1 2 3 4] 1 [2 3 4 5]]) => [1 4]
   (boundaries [ 0 [1 2 3 4] [2 3 4 5]]) => (throws AssertionError))
@@ -48,46 +77,27 @@
         [_ _ arr] (apply thrift/unpack (adjust-fires est-map (f-series 830)))]
     (count (thrift/unpack arr)) => 2))
 
-(def good-neighbor
-  (neighbor-value (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) 3. 4. 5. 6.)))
+(fact
+ "Test for `add-fires`"
+ (let []
+   (add-fires (thrift/FireValue* 1 0 0 1)
+              (thrift/FireValue* 0 1 0 1)
+              (thrift/FireValue* 1 1 1 2)
+              ;; edge case with two fires in a day, one above both
+              ;; thresholds, one above only temp-330 threshold
+              (thrift/FireValue* 2 1 1 2)) => (thrift/FireValue* 4 3 2 6)))
 
-(def bad-neighbor
-  (neighbor-value (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) -9999.0 4. -9999.0 6.)))
+(fact
+  "Test for `neighbor-value`"
+  (neighbor-value (thrift/FormaValue* (thrift/FireValue* 0 0 0 0) 1. 2. 3. 4.))
+  => (thrift/NeighborValue* (thrift/FireValue* 0 0 0 0) 1 1. 1. 2. 2. 3. 3. 4. 4.)
+  (neighbor-value (thrift/FireValue* 0 0 0 0) 1 1. 1. 2. 2. 3. 3. 4. 4.)
+  => (thrift/NeighborValue* (thrift/FireValue* 0 0 0 0) 1 1. 1. 2. 2. 3. 3. 4. 4.))
 
-(def good-forma
-  (thrift/FormaValue* (thrift/FireValue* 1 1 1 1) 1. 2. 3. 4.))
-
-(def bad-forma
-  (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) -9999.0 4. -9999.0 6.))
-
-(facts
-  "Check `merge-neighbors`"
-  (merge-neighbors -9999.0 bad-neighbor bad-neighbor) => empty-neighbor-val
-  (merge-neighbors -9999.0 bad-neighbor good-forma) => (neighbor-value good-forma)
-  (merge-neighbors -9999.0 good-neighbor bad-forma) => good-neighbor
-  (merge-neighbors -9999.0 good-neighbor good-forma)
-  => (neighbor-value (thrift/FireValue* 3 2 2 3) 2 2. 1. 3. 2. 4. 3. 5. 4.))
-
-(def neighbors
-  "Create a small vector of FormaValues indicating that they are
-  neighbors; used for testing that the neighbor values are
-  appropriately merged and combined."
-  [(thrift/FormaValue* (thrift/FireValue* 2 1 1 2) -9999.0 4. -9999.0 6.)
-   (thrift/FormaValue* (thrift/FireValue* 1 1 1 1) 1. 2. 3. 4.)
-   (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) 2. 3. 4. 5.)
-   (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) 3. 4. -9999.0 6.)])
-
-(def good-neighbor
-  (neighbor-value (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) 3. 4. 5. 6.)))
-
-(def bad-neighbor
-  (neighbor-value (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) -9999.0 4. -9999.0 6.)))
-
-(def good-forma
-  (thrift/FormaValue* (thrift/FireValue* 1 1 1 1) 1. 2. 3. 4.))
-
-(def bad-forma
-  (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) -9999.0 4. -9999.0 6.))
+(fact
+  "Test for `empty-neighbor-val`"
+  empty-neighbor-val => (thrift/NeighborValue* (thrift/FireValue* 0 0 0 0)
+                                               0 0. 0. 0. 0. 0. 0. 0. 0.))
 
 (facts
   "Check `merge-neighbors`"
@@ -111,6 +121,18 @@
         neighbors [(thrift/FormaValue* (thrift/FireValue* 2 1 1 2) nodata 4. nodata 6.)
                    (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) nodata 4. nodata 6.)]]
     (combine-neighbors nodata neighbors)) => empty-neighbor-val)
+
+(fact
+  "Test for `forma-value`"
+  (forma-value nil 1. 2. 3. 4.) => (thrift/FormaValue*
+                                    (thrift/FireValue* 0 0 0 0) 1. 2. 3. 4.)
+  (forma-value (thrift/FireValue* 1 0 0 1) 1. 2. 3. 4.)
+  => (thrift/FormaValue* (thrift/FireValue* 1 0 0 1) 1. 2. 3. 4.))
+
+(fact
+  "Test for `fires-cleanup`"
+  (fires-cleanup nil) => nil
+  (fires-cleanup (f-series 0)) => (thrift/unpack (thrift/get-series (f-series 0))))
 
 (fact
   "Check that `forma-seq-prep` correctly handles `nil` at head of timeseries and in the middle."
