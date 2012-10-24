@@ -249,13 +249,13 @@ as a 1-tuple."
   before running any sort of data analysis, as seqs require linear
   time for lookups."
   [datasets chunk-size source]
-  (let [keys ["SHORTNAME" "TileID" "RANGEBEGINNINGDATE"]
+  (let [ks ["SHORTNAME" "TileID" "RANGEBEGINNINGDATE"]
         chunkifier (p/chunkify chunk-size)]
     (<- [?datachunk]
         (source _ ?hdf)
         (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
         (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk)
-        (meta-values [keys] ?freetile :> ?productname ?tileid ?date)
+        (meta-values [ks] ?freetile :> ?productname ?tileid ?date)
         (split-id ?tileid :> ?mod-h ?mod-v)
         ((c/juxt #'spatial-res #'temporal-res) ?productname :> ?s-res ?t-res)
         (chunkifier ?dataset ?date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk))))
