@@ -6,7 +6,7 @@
         [forma.reproject :only (modis->latlon)]
         [forma.date-time :only (period->datetime datetime->period)]
         [clojure.string :only (split join)]
-        [forma.utils :only (moving-average average)]
+        [forma.utils :as u]
         [clojure.math.numeric-tower :only (round)]))
 
 (defn backward-looking-mavg
@@ -50,11 +50,12 @@
 
   Example usage:
     (clean-probs [0.1 0.2 0.3 0.4 0.5]) => [[10 15 20 30 40]]"
-  [ts]
+  [ts nodata]
   {:post [(= (count (flatten %)) (count ts))]}
-  [(vec (->> (backward-looking-mavg 3 ts)
+  (let [no-nodata-ts (u/replace-from-left nodata ts :default 0)]
+    [(vec (->> (backward-looking-mavg 3 no-nodata-ts)
              (reductions max)
-             (map #(round (* % 100)))))])
+             (map #(round (* % 100)))))]))
 
 (defn error-map
   "returns a vector indicating one of four possiblities: false
