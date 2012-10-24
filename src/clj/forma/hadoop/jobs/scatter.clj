@@ -273,7 +273,8 @@
               ([]
                  "Apply beta vector"
                  (?- (hfs-seqfile out-path :sinkmode :replace)
-                     (forma/forma-estimate (hfs-seqfile beta-path)
+                     (forma/forma-estimate est-map
+                                           (hfs-seqfile beta-path)
                                            (hfs-seqfile final-path)
                                            (hfs-seqfile static-path))))
 
