@@ -170,6 +170,14 @@
  50           [[52]])
 
 (fact
+  "Test `analyze-trends` query - math is tested elsewhere"
+  (let [clean-src [["500" 28 8 0 0 693 (vec (range 250))
+                                       (vec (map #(/ % 100.) (range 1 251)))]]]
+    (analyze-trends test-map clean-src))
+  => (produces [["500" 28 8 0 0 693 942 0.999999999999997 0.9490361213684082
+                  1.8584684352609728E-6 163.4244054821448]]))
+
+(fact
   "Check that dynamic-clean actually replaces nodata value."
   (let [est-map {:est-start "2005-12-31"
                  :est-end "2006-02-03"
