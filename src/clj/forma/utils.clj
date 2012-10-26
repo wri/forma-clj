@@ -291,3 +291,4 @@
   "Wrapper for `rest` is safe for use with Cascalog"
   [coll]
   (vector (vec (rest coll))))
+

@@ -104,51 +104,7 @@
                      ?r-start ?reli-clean
                      :> ?start-idx ?precl-ts ?ndvi-ts ?reli-ts)))
 
-(defmapcatop tele-clean
-  "Return clean timeseries with telescoping window, nil if no (or not
-  enough) good training data"
-  [{:keys [est-start est-end t-res]} good-set bad-set start-period val-ts reli-ts]
-  (let [reli-thresh 0.1
-        freq (date/res->period-count t-res)
-        [start-idx end-idx] (date/relative-period t-res start-period
-                                                  [est-start est-end])
-        training-reli     (take start-idx reli-ts)
-        training-reli-set (set training-reli)
-        clean-fn (comp vector (partial f/make-clean freq good-set bad-set))]
-    (if (f/reliable? good-set reli-thresh training-reli)
-      (vec (map vector (f/tele-ts start-idx end-idx val-ts)))
-      [[nil]])))
-
-(defmapcatop telescope-ts
-  "Telescope a timeseries. Note that `start` and `end` must be
-  incremented before use, as they are used subsequently as the final
-  argument to `subvec`, which slices a subvector up to but not
-  including the final argument."
-  [{:keys [est-start est-end t-res]}
-  ts-start-period val-ts]
-  (let [[start-idx end-idx] (date/relative-period t-res ts-start-period
-                                          [est-start est-end])
-        tele-start-idx (inc start-idx)
-        tele-end-idx (inc end-idx)]
-    (map (comp vector vec)
-         (f/tele-ts tele-start-idx tele-end-idx val-ts))))
-
-(defn dynamic-clean
-  "Accepts an est-map, and sources for ndvi and rain timeseries and
-  vcf values split up by pixel.
-
-  We break this apart from dynamic-filter to force the filtering to
-  occur before the analysis. Note that all variable names within this
-  query are TIMESERIES, not individual values."
-  [est-map dynamic-src]
-  (let [nodata (:nodata est-map)]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?tele-ndvi ?precl]
-      (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl _)
-      (u/replace-from-left* nodata ?ndvi :> ?clean-ndvi)
-      (telescope-ts est-map ?start ?clean-ndvi :> ?tele-ndvi)
-      (:distinct false))))
-
-(defmapop series-end
+(defn series-end
   "Return the relative index of the final element of a collection
   given a series and a starting index.
 
@@ -163,79 +119,56 @@
   (let [length (count series)]
     (dec (+ start-idx length))))
 
+(defn calculate-trends
+  "Calculates all trend statistics for a timeseries, also returns the
+   period index of the last element of the series"
+  [window long-block start-idx ts rain-ts]
+  (let [end-idx (series-end ts start-idx)
+        short-rain (first (f/shorten-ts ts rain-ts))]
+    (flatten [end-idx
+              (a/short-stat long-block window ts)
+              (a/long-stats ts short-rain)      
+              (a/hansen-stat ts)])))
+
+(defmapcatop telescoping-trends
+  "Maps `calculate-trends` onto each part of an ever-lengthening subset
+   of the input timeseries, from `est-start` to `est-end`. Returns
+   timeseries for each of the trend statistics."
+  [{:keys [est-start est-end t-res window long-block]}
+   ts-start-period val-ts rain-ts]
+  (let [[start-idx end-idx] (date/relative-period t-res ts-start-period
+                                          [est-start est-end])
+        tele-start-idx (inc start-idx)
+        tele-end-idx (inc end-idx)
+        calculate #(calculate-trends window long-block
+                                     ts-start-period % rain-ts)]
+    [(mu/transpose
+      (map (comp vec calculate)
+           (f/tele-ts tele-start-idx tele-end-idx val-ts)))]))
+
 (defn analyze-trends
-  "Accepts an est-map, and sources for ndvi and rain timeseries and
-  vcf values split up by pixel.
+  "Accepts an est-map and a source for both ndvi and rain timeseries.
+  Does some simple cleaining of `nodata` values and hands off
+  telescoping to `telescoping-trends`. The trend statistics are returned
+  as timeseries.
 
   We break this apart from dynamic-filter to force the filtering to
   occur before the analysis. Note that the NDVI and PRECL variables are
   timeseries.
 
-  Note that if any of the trends statistics functions return `nil` (e.g.
-  for a singular matrix), the pixel will be dropped for that period."
-  [est-map clean-src]
-  (let [long-block (:long-block est-map)
-        short-block (:window est-map)]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end !short !long !t-stat !break]
-        (clean-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl)
-        (f/shorten-ts ?ndvi ?precl :> ?short-precl)
-        (a/short-stat long-block short-block ?ndvi :> !short)
-        (a/long-stats ?ndvi ?short-precl :> !long !t-stat)
-        (a/hansen-stat ?ndvi :> !break)
-        (series-end ?ndvi ?start :> ?end)
+  Note that if the trend statistics are `nil` (e.g. for a singular
+  matrix), the pixel will _not_ be dropped for that period."
+  [est-map dynamic-src]
+  (let [nodata (:nodata est-map)
+        long-block (:long-block est-map)
+        short-block (:window est-map)
+        t-res (:t-res est-map)]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break]
+        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl _)
+        (u/replace-from-left* nodata ?ndvi :> ?clean-ndvi)
+        (telescoping-trends est-map ?start ?clean-ndvi ?precl :> ?end-idx ?short ?long ?t-stat ?break)
+        (reduce max ?end-idx :> ?end)
         (:distinct false))))
-
-(defbufferop consolidate-timeseries
-  "Orders tuples by the second incoming field, inserting a supplied
-   nodata value (first incoming field) where there are holes in the
-   timeseries.
-
-   Usage:
-     (let [nodata -9999
-           src [[1 827 1 2 3]
-                [1 829 2 3 4]]]
-      (??- (<- [?id ?per-ts ?f1-ts ?f2-ts ?f3-ts]
-        (src ?id ?period ?f1 ?f2 ?f3)
-        (consolidate-timeseries nodata ?period ?f1 ?f2 ?f3 :> ?per-ts ?f1-ts ?f2-ts ?f3-ts))))
-     ;=> (([1 [827 -9999 829] [1 -9999 2] [2 -9999 3] [3 -9999 4]]))"
-  [tuples]
-  (let [nodata (ffirst tuples)
-        field-count (count (first tuples))
-        sorted-tuples (sort-by second tuples)
-        idxs (vec (map second sorted-tuples))]
-    [(vec (map #(mu/sparsify % nodata idxs sorted-tuples)
-               (range 1 field-count)))]))
-
-(defn trends-cleanup
-  "Take a source of period-level trends output, turn each trends stat
-   into a timeseries, replacing missing periods with `nil`.
-
-   We use `nil` instead of the project-wide `nodata` value here for
-   the internal consistency of this query. The trends analysis could
-   produce `nil` values if singular matrices are detected, so the
-   trend statistic fields are nullable. The `consolidate-timeseries`
-   could uncover periods where data are simply missing for some
-   reason (e.g. see issue #184), and needs to fill in the hole with
-   something. The `nil` values will be handled in `forma-tap`,
-   specifically within the `schema/forma-seq` function.
-
-   Usage:
-     (let [src [[\"500\" 28 8 0 0 827 827 1 2 3 4]
-                [\"500\" 28 8 0 0 827 829 2 3 4 5]]]
-             (??- (trends-cleanup src)))
-     ;=> (([\"500\" 28 8 0 0 827 829 [1 nil 2]
-                                     [2 nil 3]
-                                     [3 nil 4]
-                                     [4 nil 5]]))
-     Note how values for missing period 828 are replaced with `nil`"
-  [src]
-  (let [nodata nil] ;; nils will be handled in `forma-tap`
-    (<- [?s-res ?mh ?mv ?s ?l ?start ?max-end ?short-v ?long-v ?t-stat-v ?break-v]
-        (src ?s-res ?mh ?mv ?s ?l ?start ?end !short !long !t-stat !break)
-        (consolidate-timeseries nodata ?end !short !long !t-stat !break :>
-                                ?end-v ?short-v ?long-v ?t-stat-v ?break-v)
-        (u/filter* (partial not= nodata) ?end-v :> ?end-v-good)
-        (reduce max ?end-v-good :> ?max-end))))
 
 (defn forma-tap
   "Accepts an est-map and sources for dynamic and fires data,
@@ -309,6 +242,27 @@
   [eco val neighbor-val]
   (let [beta (((comp keyword str) eco) betas)]
     (log/logistic-prob-wrap beta val neighbor-val)))
+
+(defbufferop consolidate-timeseries
+  "Orders tuples by the second incoming field, inserting a supplied
+   nodata value (first incoming field) where there are holes in the
+   timeseries.
+
+   Usage:
+     (let [nodata -9999
+           src [[1 827 1 2 3]
+                [1 829 2 3 4]]]
+      (??- (<- [?id ?per-ts ?f1-ts ?f2-ts ?f3-ts]
+        (src ?id ?period ?f1 ?f2 ?f3)
+        (consolidate-timeseries nodata ?period ?f1 ?f2 ?f3 :> ?per-ts ?f1-ts ?f2-ts ?f3-ts))))
+     ;=> (([1 [827 -9999 829] [1 -9999 2] [2 -9999 3] [3 -9999 4]]))"
+  [tuples]
+  (let [nodata (ffirst tuples)
+        field-count (count (first tuples))
+        sorted-tuples (sort-by second tuples)
+        idxs (vec (map second sorted-tuples))]
+    [(vec (map #(mu/sparsify % nodata idxs sorted-tuples)
+               (range 1 field-count)))]))
 
 (defn forma-estimate
   "query to end all queries: estimate the probabilities for each
