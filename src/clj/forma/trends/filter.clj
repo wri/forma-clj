@@ -270,5 +270,7 @@
 (defn shorten-ts
   "Shorten timeseries to length of model timeseries"
   [model-ts ts]
+  {:pre [(and (< 0 (count model-ts))
+              (< 0 (count ts)))]}
   [(vec (take (count model-ts) ts))])
 

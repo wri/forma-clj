@@ -131,5 +131,7 @@ final compositions of functions."
 (fact
   "Make sure rain is shortened to length of input ts"
   (shorten-ts [1 2 3] [1 2 3 4 5]) => [[1 2 3]]
-  (shorten-ts [1 2 3] [1 2 3]) => [[1 2 3]])
+  (shorten-ts [1 2 3] [1 2 3]) => [[1 2 3]]
+  (shorten-ts [1] [1]) => [[1]]
+  (shorten-ts [] []) => (throws AssertionError))
 
