@@ -166,17 +166,17 @@
         ;; reductions - value from left will be used anyway
         clean-shorts (u/replace-from-left nil short-series :default big-val :all-types true)
         almost-shorts (vec (reductions min clean-shorts))
-        shorts (u/replace-all big-val nodata almost-shorts)
+        shorts (u/replace-all big-val nodata almost-shorts :all-types true)
 
         ;; replace nil with small number, won't be max
         ;; handle leading nodata; replace from left ok b/c using
         ;; reductions - value from left will be used anyway
         clean-breaks (u/replace-from-left nil break-series :default small-val :all-types true)
         almost-breaks (vec (reductions max clean-breaks))
-        breaks (u/replace-all small-val nodata almost-breaks)
+        breaks (u/replace-all small-val nodata almost-breaks :all-types true)
 
-        longs (u/replace-all nil nodata long-series)
-        t-stats (u/replace-all nil nodata t-stat-series)]
+        longs (u/replace-all nil nodata long-series :all-types true)
+        t-stats (u/replace-all nil nodata t-stat-series :all-types true)]
     [fires shorts longs t-stats breaks]))
 
 (defn forma-seq

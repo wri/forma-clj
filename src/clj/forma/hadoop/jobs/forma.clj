@@ -98,11 +98,11 @@
       (training-3000s? t-res ?n-start est-start ?ndvi :> false)
       (u/replace-from-left* nodata ?ndvi :default nodata :all-types true :> ?ndvi-clean)
       (u/replace-from-left* nodata ?reli :default nodata :all-types true :> ?reli-clean)
-      (u/replace-from-left* nodata ?precl :default nodata :all-types true :> ?precl-clean))
-  (schema/adjust ?p-start ?precl-clean
-                 ?n-start ?ndvi-clean
-                 ?r-start ?reli-clean
-                 :> ?start-idx ?precl-ts ?ndvi-ts ?reli-ts))
+      (u/replace-from-left* nodata ?precl :default nodata :all-types true :> ?precl-clean)
+      (schema/adjust ?p-start ?precl-clean
+                     ?n-start ?ndvi-clean
+                     ?r-start ?reli-clean
+                     :> ?start-idx ?precl-ts ?ndvi-ts ?reli-ts)))
 
 (defn series-end
   "Return the relative index of the final element of a collection

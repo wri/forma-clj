@@ -259,8 +259,9 @@
 
 (defn replace-from-left*
   "Nest `replace-from-left` for use with Cascalog"
-  [bad-val coll & {:keys [default] :or {default nil}}]
-  [(vec (replace-from-left bad-val coll :default default))])
+  [bad-val coll & {:keys [default all-types]
+                   :or {default nil all-types false}}]
+  [(vec (replace-from-left bad-val coll :default default :all-types all-types))])
 
 (defn obj-contains-nodata?
   "Check whether any fields in thrift object contain nodata value"
@@ -305,19 +306,21 @@
   [to-replace replacement coll & {:keys [all-types]
                                   :or {all-types false}}]
   (let [compare-func (cond
-                      (or (nil? to-replace)
-                          (nil? replacement)) (partial = to-replace)
+                      (nil? to-replace) (partial = to-replace)
                       all-types (partial == to-replace)
                       :else (partial = to-replace))
-        idxs (positions compare-func coll)]
+        idxs (positions compare-func coll)
+        replacements (repeat (count idxs) replacement)]
     (if (empty? idxs)
       coll
-      (apply assoc coll (interleave idxs (repeat (count idxs) replacement))))))
+      (apply assoc coll
+             (interleave idxs replacements)))))
 
 (defn replace-all*
   "Wrapper for `replace-all` to make it safe for use with vectors in Cascalog"
-  [to-replace replacement coll]
-  [(vec (replace-all to-replace replacement coll))])
+  [to-replace replacement coll & {:keys [all-types]
+                                  :or {all-types false}}]
+  [(vec (replace-all to-replace replacement coll :all-types all-types))])
 
 (defn rest*
   "Wrapper for `rest` is safe for use with Cascalog"

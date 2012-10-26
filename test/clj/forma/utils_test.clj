@@ -176,6 +176,7 @@
   (replace-all nil -9999 [1 nil 3]) => [1 -9999 3]
   (replace-all -9999 nil [1 -9999 3]) => [1 nil 3]
   (replace-all -9999.0 nil [1 -9999 3]) => [1 -9999 3]
+  (replace-all -9999.0 nil [1 -9999 3] :all-types false) => [1 -9999 3]
 
   ;; type-independent checking
   (replace-all nil -9999 [1 nil 3] :all-types true) => [1 -9999 3]
