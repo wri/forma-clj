@@ -122,11 +122,19 @@
 (tabular
  "Check get-replace-vals-locs"
  (fact
-   (get-replace-vals-locs -9999 ?coll -1) => ?result)
+   (get-replace-vals-locs -9999 ?coll -1 false) => ?result)
  ?coll                           ?result
  [1 -9999 -9999 2 3 4 -9999 5]  {1 1, 2 1, 6 4}
  [-9999 -9999 -9999 2 3 4 -9999 5]  {0 -1, 1 -1, 2 -1, 6 4}
  [-9999 -9999.0 -9999 2 3 4 -9999 5] {0 -1, 2 -9999.0, 6 4})
+
+(tabular
+ "Check type-independent get-replace-vals-locs"
+ (fact
+   (get-replace-vals-locs -9999.0 ?coll -1 true) => ?result)
+ ?coll                           ?result
+ [1 -9999 -9999. 2 3 4 -9999 5]  {1 1, 2 1, 6 4}
+ [-9999 -9999.0 -9999 2 3 4 -9999 5] {0 -1, 1 -1, 2 -1, 6 4})
 
 (facts
   "Check replace-from-left"
@@ -136,7 +144,12 @@
    => [-1 2 2 3 3 5]
    (replace-from-left -9999 [-9999 -9999 -9999 3 -9999 5]) => [nil nil nil  3 3 5]
    (replace-from-left -9999 [1 -9999 -9999.0 3]) => [1 1 -9999.0 3]
-   (replace-from-left -9999 [1 -9999.0 -9999 3]) => [1 -9999.0 -9999.0 3])
+   (replace-from-left -9999 [1 -9999.0 -9999 3]) => [1 -9999.0 -9999.0 3]
+   ;; type-independent checking
+   (replace-from-left -9999 [1 -9999.0 -9999 3] :all-types true)
+   => [1 1 1 3]
+   (replace-from-left -9999.0 [1 -9999.0 -9999 3] :all-types true)
+   => [1 1 1 3])
 
 (fact
   "Check nested replace-from-left*"
@@ -162,7 +175,12 @@
   "Check `replace-all`"
   (replace-all nil -9999 [1 nil 3]) => [1 -9999 3]
   (replace-all -9999 nil [1 -9999 3]) => [1 nil 3]
-  (replace-all -9999.0 nil [1 -9999 3]) => [1 -9999 3])
+  (replace-all -9999.0 nil [1 -9999 3]) => [1 -9999 3]
+
+  ;; type-independent checking
+  (replace-all nil -9999 [1 nil 3] :all-types true) => [1 -9999 3]
+  (replace-all -9999.0 nil [1 -9999 3] :all-types true) => [1 nil 3]
+  (replace-all -9999.0 nil [1 -9999.0 3] :all-types true) => [1 nil 3])
 
 (fact
   "Check `replace-all*`"

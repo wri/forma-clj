@@ -189,17 +189,24 @@
   If there are no good values to the left of a given bad value,
   `default` will be returned for that value.
 
-  Note that the check for bad values is type-dependent because of use of `=`
-  with positions. For example, looking for -9999 will not pick up -9999.0."
-  [bad-val coll default]
-  (let [bad-locs (positions (partial = bad-val) coll)]
+  If `all-types` is true, equality checking will be type independent,
+  using `==` instead of `=`. So a `bad-val` of -9999 will be
+  functionally equivalent to -9999.0."
+  [bad-val coll default all-types]
+  (let [bad-locs (if all-types
+                   (positions (partial == bad-val) coll)
+                   (positions (partial = bad-val) coll))]
     (zipmap bad-locs
             (for [i bad-locs]
                 (if (zero? i) ;; avoids out of bounds exception of idx -1
                   default
                   (loop [j i]
                     (cond
-                     (not= bad-val (coll j)) (coll j)
+                     (if (if all-types
+                           (not (== bad-val (coll j)))
+                           (not (=  bad-val (coll j))))
+                       true
+                       false) (coll j)                     
                      (zero? j) default ;; all bad values from start to j
                      :else (recur (dec j)))))))))
 
@@ -209,9 +216,10 @@
    a given element. The value given with the `:default`
    keyword (defaults to `nil` is used in case a suitable replacement
    cannot be found to the left (e.g. the first or first several
-   elements of the vector is \"bad\"). Note that the comparison with the bad
-   value is type dependent, and a -9999 will not be replaced if you search
-   -9999.0.
+   elements of the vector is \"bad\"). Providing the `:all-types`
+   keyword (defaults to `false`) will make the comparison with the bad
+   value type dependent. In that case, -9999 and -9999.0 would be
+   functionally equivalent.
 
    Usage:
      (replace-from-left -9999 [1 -9999 3])
@@ -221,7 +229,7 @@
      ;=> (1 1 1 3)
 
      (replace-from-left -9999 [1 -9999 3] :default -1)
-     ;=> (1 -1 3)
+     ;=> (1 1 3)
 
      (replace-from-left -9999 [-9999 -9999 3] :default -1)
      ;=> (-1 -1 3)
@@ -230,9 +238,20 @@
      ;=> (1 1 -9999.0 3)
 
      (replace-from-left -9999 [1 -9999.0 -9999 3] :default -1)
-     ;=> (1 -9999.0 -9999.0 3)"
-  [bad-val coll & {:keys [default] :or {default nil}}]
-  (let [replace-map (get-replace-vals-locs bad-val coll default)]
+     ;=> (1 -9999.0 -9999.0 3)
+
+     ;; type-independent equality checking
+     (replace-from-left -9999 [1 -9999.0 -9999 3] :default -1 :all-types true)
+     ;=> (1 1 1 3)
+
+     (replace-from-left -9999.0 [1 -9999.0 -9999 3] :default -1 :all-types true)
+     ;=> (1 -9999.0 -9999.0 3)
+
+     (replace-from-left -9999.0 [-9999 -9999.0 -9999 3] :default -1 :all-types true)
+     ;=> (-1 -1 -1 3)"
+  [bad-val coll & {:keys [default all-types] :or {default nil
+                                                  all-types false}}]
+  (let [replace-map (get-replace-vals-locs bad-val coll default all-types)]
     (for [i (range (count coll))]
       (if (contains? (set (keys replace-map)) i)
         (get replace-map i)
@@ -264,8 +283,9 @@
   [(vec (filter pred coll))])
 
 (defn replace-all
-  "Replace all instances of a value in a collection with a supplied replacement
-   value.
+  "Replace all instances of a value in a collection with a supplied
+   replacement value. The `:all-types` keyword makes equality checking
+   type independent.
 
   Usage:
     (replace-all nil -9999 [1 nil 3])
@@ -275,9 +295,21 @@
     ;=> [1 nil 3]
 
     (replace-all -9999.0 nil [1 -9999 3])
-    ;=> [1 -9999 3]"
-  [to-replace replacement coll]
-  (let [idxs (positions (partial = to-replace) coll)]
+    ;=> [1 -9999 3]
+
+    (replace-all -9999.0 nil [1 -9999 3] :all-types true)
+    ;=> [1 nil 3]
+
+    (replace-all -9999 nil [1 -9999.0 3] :all-types true)
+    ;=> [1 nil 3]"
+  [to-replace replacement coll & {:keys [all-types]
+                                  :or {all-types false}}]
+  (let [compare-func (cond
+                      (or (nil? to-replace)
+                          (nil? replacement)) (partial = to-replace)
+                      all-types (partial == to-replace)
+                      :else (partial = to-replace))
+        idxs (positions compare-func coll)]
     (if (empty? idxs)
       coll
       (apply assoc coll (interleave idxs (repeat (count idxs) replacement))))))

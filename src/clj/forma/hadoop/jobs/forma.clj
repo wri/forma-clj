@@ -96,13 +96,13 @@
       (reli-src ?s-res ?mod-h ?mod-v ?sample ?line ?r-start ?reli)
       (rain-src ?s-res ?mod-h ?mod-v ?sample ?line ?p-start ?precl)
       (training-3000s? t-res ?n-start est-start ?ndvi :> false)
-      (u/replace-from-left* nodata ?ndvi :default nodata :> ?ndvi-clean)
-      (u/replace-from-left* nodata ?reli :default nodata :> ?reli-clean)
-      (u/replace-from-left* nodata ?precl :default nodata :> ?precl-clean)
-      (schema/adjust ?p-start ?precl-clean
-                     ?n-start ?ndvi-clean
-                     ?r-start ?reli-clean
-                     :> ?start-idx ?precl-ts ?ndvi-ts ?reli-ts)))
+      (u/replace-from-left* nodata ?ndvi :default nodata :all-types true :> ?ndvi-clean)
+      (u/replace-from-left* nodata ?reli :default nodata :all-types true :> ?reli-clean)
+      (u/replace-from-left* nodata ?precl :default nodata :all-types true :> ?precl-clean))
+  (schema/adjust ?p-start ?precl-clean
+                 ?n-start ?ndvi-clean
+                 ?r-start ?reli-clean
+                 :> ?start-idx ?precl-ts ?ndvi-ts ?reli-ts))
 
 (defn series-end
   "Return the relative index of the final element of a collection
@@ -165,7 +165,7 @@
         t-res (:t-res est-map)]
     (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break]
         (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl _)
-        (u/replace-from-left* nodata ?ndvi :> ?clean-ndvi)
+        (u/replace-from-left* nodata ?ndvi :all-types true :> ?clean-ndvi)
         (telescoping-trends est-map ?start ?clean-ndvi ?precl :> ?end-idx ?short ?long ?t-stat ?break)
         (reduce max ?end-idx :> ?end)
         (:distinct false))))
