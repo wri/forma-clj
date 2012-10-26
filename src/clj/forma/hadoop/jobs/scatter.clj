@@ -197,7 +197,7 @@
                  (?- (hfs-seqfile trends-path)
                      (forma/analyze-trends
                       est-map
-                      (hfs-seqfile clean-series))))
+                      (hfs-seqfile adjusted-series-path))))
 
               fire-step
               ([:tmp-dirs fire-path]
@@ -222,7 +222,7 @@
                  trends + fires data"
                  (?- (hfs-seqfile forma-mid-path)
                      (forma/forma-tap est-map
-                                      (hfs-seqfile cleanup-path)
+                                      (hfs-seqfile trends-path)
                                       (hfs-seqfile adjusted-fire-path))))
 
               final-forma
