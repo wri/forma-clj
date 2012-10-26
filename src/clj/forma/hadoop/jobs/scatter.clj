@@ -191,15 +191,6 @@
                                              (hfs-seqfile reli-path)
                                              (hfs-seqfile rain-stretch-path)))))
 
-              cleanseries
-              ([:tmp-dirs clean-series]
-                 "Screen out extremely cloudy pixels. Currently doesn't
-                  actually run the timeseries cleaning function"
-                 (?- (hfs-seqfile clean-series)
-                     (forma/dynamic-clean
-                      est-map
-                      (hfs-seqfile adjusted-series-path))))
-
               trends
               ([:tmp-dirs trends-path]
                  "Runs the trends processing."
@@ -207,13 +198,6 @@
                      (forma/analyze-trends
                       est-map
                       (hfs-seqfile clean-series))))
-
-              trends-cleanup
-              ([:tmp-dirs cleanup-path]
-                 "Clean up data after trends to improve join
-                  performance. Joins kill us with lots of observations"
-                 (?- (hfs-seqfile cleanup-path)
-                     (forma/trends-cleanup (hfs-seqfile trends-path))))
 
               fire-step
               ([:tmp-dirs fire-path]
