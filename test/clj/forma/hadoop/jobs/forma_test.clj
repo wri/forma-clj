@@ -136,29 +136,6 @@
 
 (tabular
  (fact
-   "Check that pixel telescoping works as expected, avoiding any
-    potential one-off errors lurking in the period indices.
-
-    Note that period 693 represents 2000-02-18, and 827 represents
-    2005-12-19, the end of the training period. A timeseries from 693
-    to 827 should be 135 elements long - hence the use of `(range
-    135)`."
-   (let [src [[(vec (range 284))]]
-         
-         est-map (assoc-in test-map [:est-end] ?date)]
-     (<- [?tele-ndvi]
-         (src ?ndvi)
-         (telescope-ts est-map 693 ?ndvi :> ?tele-ndvi))) => (produces ?result))
- ?date        ?result
- "2005-12-19" [[(vec (range 135))]]
- "2006-01-01" [[(vec (range 135))]
-               [(vec (range 136))]]
- "2006-01-17" [[(vec (range 135))]
-               [(vec (range 136))]
-               [(vec (range 137))]])
-
-(tabular
- (fact
    "Check `series-end`"
    (let [src [[[1 2 3]]]]
      (<- [?end]
@@ -170,32 +147,43 @@
  50           [[52]])
 
 (fact
+ "Test `calculate-trends` mechanics - math is checked elsewhere"
+  (let [{:keys [window long-block]} test-map]
+    (calculate-trends window long-block 693 (range 300 600) (range 800 499 -1)))
+  => (list 992 0.9999999999999906 nil nil 201.353677896894))
+
+(fact
+  "Test `telescoping-trends` defmapcatop - math is tested elsewhere"
+  (let [src [["500" 28 8 0 0 693 (vec (range 300))
+                    (vec (map #(/ % 100.) (range 1 301)))
+                    (range 300)]]]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end-l ?short-l ?long-l ?t-stat-l ?break-l]
+        (src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl _)
+        (telescoping-trends test-map 693 ?ndvi ?precl :> ?end-idx ?short ?long ?t-stat ?break)
+        (last ?end-idx :> ?end-l)
+        (last ?short :> ?short-l)
+        (last ?long :> ?long-l)
+        (last ?t-stat :> ?t-stat-l)
+        (last ?break :> ?break-l)))
+  => (produces [["500" 28 8 0 0 693 973
+                 0.9999999999999959 0.6468022465705872
+                 6.0531753194685895E-6 136.1034297586291]]))
+
+(fact
   "Test `analyze-trends` query - math is tested elsewhere"
-  (let [clean-src [["500" 28 8 0 0 693 (vec (range 250))
-                                       (vec (map #(/ % 100.) (range 1 251)))]]]
-    (analyze-trends test-map clean-src))
-  => (produces [["500" 28 8 0 0 693 942 0.999999999999997 0.9490361213684082
-                  1.8584684352609728E-6 163.4244054821448]]))
-
-(fact
-  "Check that dynamic-clean actually replaces nodata value."
-  (let [est-map {:est-start "2005-12-31"
-                 :est-end "2006-02-03"
-                 :t-res "16"
-                 :nodata -9999}
-        ts [["500" 28 8 0 0 826 [1 -9999 2 3 4] [1 1 1 1 1] [2 2 2 2 2]]]
-        out-ts [["500" 28 8 0 0 826 [1 1 2 3 4] [1 1 1 1 1]]]]
-    (dynamic-clean est-map ts) => (produces-some out-ts)))
-
-(fact
-  "Check `consolidate-timeseries`"
-  (let [nodata -9999
-        src [[1 827 1 2 3]
-             [1 829 2 3 4]]]
-    (<- [?id ?per-ts ?f1-ts ?f2-ts ?f3-ts]
-        (src ?id ?period ?f1 ?f2 ?f3)
-        (consolidate-timeseries nodata ?period ?f1 ?f2 ?f3 :> ?per-ts ?f1-ts ?f2-ts ?f3-ts))
-    => (produces [[1 [827 -9999 829] [1 -9999 2] [2 -9999 3] [3 -9999 4]]])))
+  (let [src [["500" 28 8 0 0 693 (vec (range 300))
+                    (vec (map #(/ % 100.) (range 1 301)))
+                    (range 300)]]
+        trends-src (analyze-trends test-map src)]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short-l ?long-l ?t-stat-l ?break-l]
+        (trends-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break)
+        (last ?short :> ?short-l)
+        (last ?long :> ?long-l)
+        (last ?t-stat :> ?t-stat-l)
+        (last ?break :> ?break-l)))
+  => (produces [["500" 28 8 0 0 693 973
+                 0.9999999999999959 0.6468022465705872
+                 6.0531753194685895E-6 136.1034297586291]]))
 
 (fact
   "Check `trends-cleanup`"
@@ -368,6 +356,16 @@
         (apply-betas [betas] ?eco ?forma-val ?neighbor-val :> ?prob)))
   => (produces [[1 0.9999999999771026]
                 [2 1.0]]))
+
+(fact
+  "Check `consolidate-timeseries`"
+  (let [nodata -9999
+        src [[1 827 1 2 3]
+             [1 829 2 3 4]]]
+    (<- [?id ?per-ts ?f1-ts ?f2-ts ?f3-ts]
+        (src ?id ?period ?f1 ?f2 ?f3)
+        (consolidate-timeseries nodata ?period ?f1 ?f2 ?f3 :> ?per-ts ?f1-ts ?f2-ts ?f3-ts))
+    => (produces [[1 [827 -9999 829] [1 -9999 2] [2 -9999 3] [3 -9999 4]]])))
 
 (fact
   "Test `forma-estimate`"
