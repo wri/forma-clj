@@ -143,6 +143,47 @@
         (to-rows [step] ?raindata :> ?row ?row-data)
         (p/index ?row-data :> ?col ?val))))
 
+(defn rain-rowcol->modispos
+  "Accepts the row and column of a rain pixel (strangely defined
+  according to the PREC/L data set) and returns the MODIS tile and
+  position within the tile of the rain pixel.  Note that there are 20
+  rain pixels on each side of a modis tile, so that the rain grid is
+  of dimension 360x720."
+  [r c]
+  {:pre [(< r 360) (< c 720)]
+   :post [(< (last %) 20)]}
+  (let [v (- 17 (floor (/ r 20)))
+        h (mod (+ 18 (floor (/ c 20))) 36)
+        global-r (- 359 r)
+        global-c (mod (+ 360 c) 720)
+        tile-row (- global-r (* 20 v))
+        tile-col (- global-c (* 20 h))]
+    [h v tile-col tile-row]))
+
+(defn rainpos->modis-range
+  "Accepts a pixel-level spatial resolution (string: e.g., \"500\")
+  and a row and column position of a rain pixel within a MODIS tile,
+  and returns the horizontal and vertical extents of the MODIS pixels
+  that fall within the rain pixel."
+  [s-res tile-row tile-col]
+  (let [num-pix ((keyword s-res) {:500 120 :1000 60 :250 240})
+        init-col (* num-pix tile-col)
+        init-row (* num-pix tile-row)]
+    [[init-row (+ num-pix init-row)]
+     [init-col (+ num-pix init-col)]]))
+
+(defn fill-rect
+  "accepts two tuples of length 2 that define the extent of a
+  rectangle.  returns all integer pairs within the rectangle.  The
+  ranges should be zero-indexed."
+  [row-range col-range]
+  {:pre [(= (count col-range) 2)]}
+  (let [[rs cs] (map (partial apply range) [row-range col-range])]
+    (cartesian-product rs cs)))
+
+
+
+
 (defn resample-rain
   "A Cascalog query that takes a tap emitting rain tuples and a tap emitting
   MODIS pixels for a set of MODIS tiles and emits the same rain tuples
