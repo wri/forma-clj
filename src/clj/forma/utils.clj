@@ -292,3 +292,9 @@
   [coll]
   (vector (vec (rest coll))))
 
+(defn map-round
+  "Round the values of a timeseries in a TimeSeries object, returning
+   the starting period and the rounded timeseries."
+  [series-obj]
+  (let [[start _ series] (thrift/unpack series-obj)]
+    [start (vec (map round (thrift/unpack series)))]))

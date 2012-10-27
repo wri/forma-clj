@@ -13,7 +13,19 @@
             [forma.trends.filter :as f]
             [forma.utils :as u]
             [forma.source.humidtropics :as humid]
-            [forma.matrix.utils :as mu]))
+            [forma.matrix.utils :as mu]
+            [forma.trends.stretch :as stretch]))
+
+(defn static-tap
+  "Accepts a source of DataChunks, and returns a new query with all
+   relevant spatial information (resolution, MODIS tile info, pixel
+   sample & line) plus the actual, unpacked data value."
+  [chunk-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?val]
+      (chunk-src _ ?chunk)
+      (thrift/unpack ?chunk :> _ ?loc ?data _ _)
+      (thrift/get-field-value ?data :> ?val)
+      (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
 
 (defn consolidate-static
   "Due to an issue with Pail, we consolidate separate sequence files
@@ -44,6 +56,19 @@
       (thrift/unpack ?pixel-chunk :> _ ?pixel-loc _ _ _)
       (thrift/unpack ?pixel-loc :> _ ?h ?v _ _)
       (within-tileset? tile-set ?h ?v)))
+
+(defn adjust-precl
+  "Given a base temporal resolution, a target temporal resolution and a
+   source of rain data, stretches rain to new resolution and rounds it."
+  [base-t-res target-t-res src]
+  (if (= target-t-res base-t-res)
+      src
+      (<- [?s-res ?mod-h ?mod-v ?sample ?line ?new-start-idx ?rounded-ts]
+          (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ts)
+          (thrift/TimeSeries* ?start-idx ?ts :> ?ts-obj)
+          (stretch/ts-expander base-t-res target-t-res ?ts-obj :> ?expanded-ts)
+          (u/map-round ?expanded-ts :> ?new-start-idx ?rounded-ts)
+          (:distinct false))))
 
 (defn fire-tap
   "Accepts an est-map and a query source of fire timeseries. Note that
