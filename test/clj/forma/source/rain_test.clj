@@ -3,12 +3,8 @@
   (:use cascalog.api
         [midje sweet cascalog]
         [forma.static :only (static-datasets)]
-        [clojure.contrib.math :only (floor)]
-        [clojure.contrib.combinatorics :only (cartesian-product)])
-  (:require [forma.testing :as t]
-            [forma.hadoop.io :as io]
-            [forma.reproject :as r]
-            [forma.matrix.utils :as mu])
+        [forma.hadoop.io :only (hfs-wholefile)])
+  (:require [forma.testing :as t])
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]))
 
@@ -74,13 +70,6 @@
 ;;            (c/count ?count)))
 
 
-;; (defn tester []
-;;   (let [ascii-map {:corner [0 -90] :travel [+ +] :step 0.5 :nodata -999}
-;;         src (io/hfs-wholefile precl-path)
-;;         a (rain-values (:step ascii-map) (:nodata ascii-map) src)]
-;;     (??<- [?date ?row ?col ?val]
-;;          (a ?date ?row ?col ?val))))
-
 (facts "rain position to modis tile position tests"
   ;; first rain pixel
   (rain-rowcol->modispos 0 0) => [18 17 0 19]
@@ -108,5 +97,20 @@ returns the range of MODIS pixels that fall within the rain pixel"
   ;; bottom right rain pixel within the MODIS tile
   (rainpos->modis-range "500" 19 19) => [[2280 2400] [2280 2400]])
 
-(facts "fill-rect test"
+(fact "fill-rect test"
   (fill-rect [0 2] [4 6]) => [[0 4] [0 5] [1 4] [1 5]])
+
+(fact "tests that the rain series source is appropriately expanded
+into the space of MODIS pixels. Two rain pixels should return 28,800
+MODIS pixels (2 x 120^2).  This test only produces the first five
+results."
+  (let [src [[0 0 [1 2 3]]
+             [0 1 [2 3 4]]]
+        tap (cascalog.ops/first-n (rain-tap src "500") 5)]
+    (<- [ ?h ?v ?s ?l ?series] (tap ?h ?v ?s ?l ?series)))
+  => (produces
+      [[18 17 0 2280 [1 2 3]]
+       [18 17 0 2281 [1 2 3]]
+       [18 17 0 2282 [1 2 3]]
+       [18 17 0 2283 [1 2 3]]
+       [18 17 0 2284 [1 2 3]]]))

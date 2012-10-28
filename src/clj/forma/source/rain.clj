@@ -8,7 +8,10 @@
 ;;     [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk-pix]
 
 (ns forma.source.rain
-  (:use cascalog.api)
+  (:use cascalog.api
+        [clojure.contrib.math :only (floor)]
+        [clojure.contrib.combinatorics :only (cartesian-product)]
+        [forma.hadoop.io :only (hfs-wholefile)])
   (:require [forma.reproject :as r]
             [forma.utils :as u]
             [cascalog.io :as io]
@@ -181,8 +184,26 @@
   (let [[rs cs] (map (partial apply range) [row-range col-range])]
     (cartesian-product rs cs)))
 
+(defmapcatop explode-rain
+  "Accepts the row and column of a rain pixel, as defined by the
+  PRECL data set, along with the rain time series associated with
+  that pixel.  Returns the series and coordinates (h, v, s, l) for all
+  MODIS pixels within the rain pixel.  Note that this also depends on
+  the spatial resolution, which should be supplied as a string."
+  [rain-row rain-col series [s-res]]
+  (let [[h v tile-row tile-col] (rain-rowcol->modispos rain-row rain-col)]
+    (map (partial apply conj [h v series])
+         (apply fill-rect (rainpos->modis-range s-res tile-row tile-col)))))
 
-
+(defn rain-tap
+  "Accepts a source of rain pixels and their associated rain time
+  series, along with a spatial resolution, and returns a tap that
+  assigns the series to all MODIS pixels within the rain pixel."
+  [series-src s-res]
+  (<- [?h ?v ?s ?l ?series]
+      (series-src ?row ?col ?series)
+      (explode-rain ?row ?col ?series [s-res] :> ?h ?v ?series ?s ?l)
+      (:distinct false)))
 
 (defn resample-rain
   "A Cascalog query that takes a tap emitting rain tuples and a tap emitting
