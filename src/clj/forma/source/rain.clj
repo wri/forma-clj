@@ -11,12 +11,14 @@
   (:use cascalog.api
         [clojure.contrib.math :only (floor)]
         [clojure.contrib.combinatorics :only (cartesian-product)]
-        [forma.hadoop.io :only (hfs-wholefile)])
+        [forma.hadoop.io :only (hfs-wholefile)]
+        [forma.hadoop.jobs.forma :only (consolidate-timeseries)])
   (:require [forma.reproject :as r]
             [forma.utils :as u]
             [cascalog.io :as io]
             [forma.source.static :as static]
             [forma.hadoop.predicate :as p]
+            [forma.date-time :as date]
             [clojure.string :as s])
   (:import  [java.nio ByteBuffer ByteOrder]))
 
@@ -195,15 +197,28 @@
     (map (partial apply conj [h v series])
          (apply fill-rect (rainpos->modis-range s-res tile-row tile-col)))))
 
+(defn mk-rain-series
+  "Given a source of semi-raw rain data (date, row, column and value),
+   plus a nodata value, returns a timeseries of values for each rain
+   pixel."
+  [src nodata]
+  (let [t-res "32"]
+    (<- [?row ?col ?series]
+        (src ?date ?row ?col ?val)
+        (date/datetime->period t-res ?date :> ?period)
+        (double ?val :> ?val-dbl)
+        (consolidate-timeseries nodata ?period ?val-dbl :> _ ?series))))
+
 (defn rain-tap
   "Accepts a source of rain pixels and their associated rain time
   series, along with a spatial resolution, and returns a tap that
   assigns the series to all MODIS pixels within the rain pixel."
-  [series-src s-res]
-  (<- [?mod-h ?mod-v ?series ?sample ?line]
-      (series-src ?row ?col ?series)
-      (explode-rain ?row ?col ?series [s-res] :> ?mod-h ?mod-v ?series ?sample ?line)
-      (:distinct false)))
+  [rain-src s-res]
+  (let [series-src (mk-rain-series rain-src -9999.0)]
+    (<- [?mod-h ?mod-v ?sample ?line ?series]
+        (series-src ?row ?col ?series)
+        (explode-rain ?row ?col ?series [s-res] :> ?mod-h ?mod-v ?series ?sample ?line)
+        (:distinct false))))
 
 (defn resample-rain
   "A Cascalog query that takes a tap emitting rain tuples and a tap emitting

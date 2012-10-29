@@ -100,17 +100,22 @@ returns the range of MODIS pixels that fall within the rain pixel"
 (fact "fill-rect test"
   (fill-rect [0 2] [4 6]) => [[0 4] [0 5] [1 4] [1 5]])
 
+
 (fact "tests that the rain series source is appropriately expanded
 into the space of MODIS pixels. Two rain pixels should return 28,800
 MODIS pixels (2 x 120^2).  This test only produces the first five
 results."
-  (let [src [[0 0 [1 2 3]]
-             [0 1 [2 3 4]]]
+  (let [src [["2000-01-01" 0 0 1.25]
+             ["2000-02-01" 0 0 2.25]
+             ["2000-05-01" 0 0 5.25]
+             ["2000-01-01" 0 1 7.25]
+             ["2000-02-01" 0 1 8.25]
+             ["2000-05-01" 0 1 9.25]]
         tap (cascalog.ops/first-n (rain-tap src "500") 5)]
-    (<- [ ?h ?v ?s ?l ?series] (tap ?h ?v ?s ?l ?series)))
-  => (produces
-      [[18 17 0 2280 [1 2 3]]
-       [18 17 0 2281 [1 2 3]]
-       [18 17 0 2282 [1 2 3]]
-       [18 17 0 2283 [1 2 3]]
-       [18 17 0 2284 [1 2 3]]]))
+    (<- [?h ?v ?s ?l ?series] (tap ?h ?v ?s ?l ?series)))
+  => (produces [18 17 0 2280 [1.25 2.25 -9999.0 -9999.0 5.25]]
+               [18 17 0 2281 [1.25 2.25 -9999.0 -9999.0 5.25]]
+               [18 17 0 2282 [1.25 2.25 -9999.0 -9999.0 5.25]]
+               [18 17 0 2283 [1.25 2.25 -9999.0 -9999.0 5.25]]
+               [18 17 0 2284 [1.25 2.25 -9999.0 -9999.0 5.25]]))
+
