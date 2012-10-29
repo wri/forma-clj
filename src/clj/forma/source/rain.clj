@@ -200,9 +200,9 @@
   series, along with a spatial resolution, and returns a tap that
   assigns the series to all MODIS pixels within the rain pixel."
   [series-src s-res]
-  (<- [?h ?v ?s ?l ?series]
+  (<- [?mod-h ?mod-v ?series ?sample ?line]
       (series-src ?row ?col ?series)
-      (explode-rain ?row ?col ?series [s-res] :> ?h ?v ?series ?s ?l)
+      (explode-rain ?row ?col ?series [s-res] :> ?mod-h ?mod-v ?series ?sample ?line)
       (:distinct false)))
 
 (defn resample-rain
