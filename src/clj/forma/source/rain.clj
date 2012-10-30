@@ -12,14 +12,18 @@
         [clojure.contrib.math :only (floor)]
         [clojure.contrib.combinatorics :only (cartesian-product)]
         [forma.hadoop.io :only (hfs-wholefile)]
-        [forma.hadoop.jobs.forma :only (consolidate-timeseries)])
+        [forma.hadoop.jobs.forma :only (consolidate-timeseries)]
+        [forma.thrift :as thrift]
+        [forma.hadoop.io :as fio]
+        [clojure.math.numeric-tower :only (round)])
   (:require [forma.reproject :as r]
             [forma.utils :as u]
             [cascalog.io :as io]
             [forma.source.static :as static]
             [forma.hadoop.predicate :as p]
             [forma.date-time :as date]
-            [clojure.string :as s])
+            [clojure.string :as s]
+            [forma.trends.stretch :as stretch])
   (:import  [java.nio ByteBuffer ByteOrder]))
 
 ;; ## Dataset Information
@@ -147,6 +151,12 @@
         (all-nodata? nodata ?raindata :> false)
         (to-rows [step] ?raindata :> ?row ?row-data)
         (p/index ?row-data :> ?col ?val))))
+  
+(defn read-rain
+  [ascii-map path]
+  (let [file-tap (fio/hfs-wholefile path)
+        {:keys [step nodata]} ascii-map]
+    (rain-values step nodata file-tap)))
 
 (defn rain-rowcol->modispos
   "Accepts the row and column of a rain pixel (strangely defined
@@ -186,16 +196,16 @@
   (let [[rs cs] (map (partial apply range) [row-range col-range])]
     (cartesian-product rs cs)))
 
-(defmapcatop explode-rain
+(defmapcatop [explode-rain [s-res]]
   "Accepts the row and column of a rain pixel, as defined by the
   PRECL data set, along with the rain time series associated with
   that pixel.  Returns the series and coordinates (h, v, s, l) for all
   MODIS pixels within the rain pixel.  Note that this also depends on
   the spatial resolution, which should be supplied as a string."
-  [rain-row rain-col series [s-res]]
+  [rain-row rain-col]
   (let [[h v tile-row tile-col] (rain-rowcol->modispos rain-row rain-col)]
-    (map (partial apply conj [h v series])
-         (apply fill-rect (rainpos->modis-range s-res tile-row tile-col)))))
+    (vec (map (partial apply conj [h v])
+         (apply fill-rect (rainpos->modis-range s-res tile-row tile-col))))))
 
 (defn mk-rain-series
   "Given a source of semi-raw rain data (date, row, column and value),
@@ -203,21 +213,37 @@
    pixel."
   [src nodata]
   (let [t-res "32"]
-    (<- [?row ?col ?series]
+    (<- [?row ?col ?start-period ?series]
         (src ?date ?row ?col ?val)
         (date/datetime->period t-res ?date :> ?period)
         (double ?val :> ?val-dbl)
-        (consolidate-timeseries nodata ?period ?val-dbl :> _ ?series))))
+        (consolidate-timeseries nodata ?period ?val-dbl :> ?periods ?series)
+        (first ?periods :> ?start-period))))
+
+(defn stretch-rain
+  "Given a base temporal resolution, a target temporal resolution and a
+   source of rain data, stretches rain to new resolution and rounds it."
+  [base-t-res target-t-res start-idx series]
+  (if (= target-t-res base-t-res)
+    [start-idx series]
+    (let [stretched (stretch/ts-expander base-t-res
+                                         target-t-res
+                                         (thrift/TimeSeries* start-idx series))
+          [new-start _ new-series] (thrift/unpack stretched)]
+      [new-start (vec (map round (thrift/unpack new-series)))])))
 
 (defn rain-tap
   "Accepts a source of rain pixels and their associated rain time
   series, along with a spatial resolution, and returns a tap that
   assigns the series to all MODIS pixels within the rain pixel."
-  [rain-src s-res]
-  (let [series-src (mk-rain-series rain-src -9999.0)]
-    (<- [?mod-h ?mod-v ?sample ?line ?series]
-        (series-src ?row ?col ?series)
-        (explode-rain ?row ?col ?series [s-res] :> ?mod-h ?mod-v ?series ?sample ?line)
+  [rain-src tiles s-res nodata rain-t-res out-t-res]
+  (let [series-src (mk-rain-series rain-src nodata)]
+    (<- [?mod-h ?mod-v ?sample ?line ?new-start ?stretched]
+        (series-src ?row ?col ?start ?series)
+        (u/replace-from-left* nodata ?series :default 0 :> ?clean-series)
+        (stretch-rain rain-t-res out-t-res ?start ?clean-series :> ?new-start ?stretched)
+        (explode-rain [s-res] ?row ?col :> ?mod-h ?mod-v ?sample ?line)
+        (u/within-tileset? tiles ?mod-h ?mod-v)
         (:distinct false))))
 
 (defn resample-rain

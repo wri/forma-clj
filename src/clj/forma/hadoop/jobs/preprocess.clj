@@ -20,15 +20,16 @@
 ;;           ascii-map (:precl static/static-datasets)]
 ;;       (->> (r/rain-chunks m-res ascii-map chunk-size file-tap pix-tap)
 ;;            (to-pail sink-path)))))
-
-;; (defmain PreprocessRain
-;;   "The locations can be ISO keywords or [h v] tuples."
-;;   [source-path sink-path s-res & locations]
-;;   {:pre [(string? s-res)
-;;          locations]}
-;;   (let [tiles (apply tile-set (map read-string locations))
-;;         chunk-size static/chunk-size]
-;;     (rain-chunker s-res chunk-size tiles source-path sink-path)))
+ 
+(defmain PreprocessRain
+  [source-path output-path s-res & locations]
+  {:pre [(string? s-res)
+         locations]}
+  (let [nodata -9999.0
+        tiles (apply tile-set (map read-string locations))
+        rain-src (r/read-rain (static/static-datasets :precl) source-path)]
+    (?- (hfs-seqfile output-path :sinkmode :replace)
+        (r/rain-tap rain-src tiles s-res nodata))))
 
 (defn static-chunker
   "m-res - MODIS resolution. "

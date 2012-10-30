@@ -3,8 +3,7 @@
   (:use cascalog.api
         [forma.source.tilesets :only (tile-set country-tiles)]
         [forma.hadoop.pail :only (to-pail ?pail- split-chunk-tap)]
-        [cascalog.checkpoint :only (workflow)]
-        [clojure.math.numeric-tower :only (round)])
+        [cascalog.checkpoint :only (workflow)])
   (:require [cascalog.ops :as c]
             [forma.reproject :as r]
             [forma.schema :as schema]
@@ -142,12 +141,6 @@
                  (?- (hfs-seqfile rain-path)
                      (mk-filter static-path (hfs-seqfile rain-seq-path))))
 
-              rain-stretcher
-              ([:tmp-dirs rain-stretch-path]
-                 "Stretch rain timeseries to match MODIS timeseries resolution"
-                 (?- (hfs-seqfile rain-stretch-path)
-                     (forma/adjust-precl "32" t-res (hfs-seqfile rain-path))))
-
               adjustseries
               ([:tmp-dirs adjusted-series-path]
                  "Adjusts lengths of all timeseries so they all cover the same
@@ -157,7 +150,7 @@
                        (forma/dynamic-filter est-map
                                              (hfs-seqfile ndvi-path)
                                              (hfs-seqfile reli-path)
-                                             (hfs-seqfile rain-stretch-path)))))
+                                             (hfs-seqfile rain-path)))))
 
               trends
               ([:tmp-dirs trends-path]

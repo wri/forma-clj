@@ -81,12 +81,6 @@
   => (produces [(conj loc-vec 26 40132 10101 100 4)]))
 
 (fact
-  "Checks that `within-tileset?` correctly handles data inside and outside the given tile-set"
-  (let [tile-set #{[28 8]}]
-    (within-tileset? tile-set 28 8)
-    (within-tileset? tile-set 29 8)))
-
-(fact
   "Checks that `screen-by-tileset` correctly screens out pixels not in tile-set"
   (let [tile-set #{[28 8]}
         bad-h 29
@@ -198,16 +192,6 @@
   => (produces [["500" 28 8 0 0 693 973
                  0.9999999999999959 0.6468022465705872
                  6.0531753194685895E-6 136.1034297586291]]))
-
-(fact
-  "Check `trends-cleanup`"
-  (let [src [["500" 28 8 0 0 827 827 1 2 3 4]
-             ["500" 28 8 0 0 827 829 2 3 4 5]]]
-    (trends-cleanup src))
-  => (produces [["500" 28 8 0 0 827 829 [1 nil 2]
-                                        [2 nil 3]
-                                        [3 nil 4]
-                                        [4 nil 5]]]))
 
 (fact
   "Check forma-tap. This test got crazy because it seems that comparing
