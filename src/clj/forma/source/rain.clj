@@ -236,14 +236,12 @@
   "Accepts a source of rain pixels and their associated rain time
   series, along with a spatial resolution, and returns a tap that
   assigns the series to all MODIS pixels within the rain pixel."
-  [rain-src tiles s-res nodata rain-t-res out-t-res]
+  [rain-src s-res nodata rain-t-res out-t-res]
   (let [series-src (mk-rain-series rain-src nodata)]
-    (<- [?mod-h ?mod-v ?sample ?line ?new-start ?stretched]
+    (<- [?row ?col ?new-start ?stretched]
         (series-src ?row ?col ?start ?series)
         (u/replace-from-left* nodata ?series :default 0 :> ?clean-series)
         (stretch-rain rain-t-res out-t-res ?start ?clean-series :> ?new-start ?stretched)
-        (explode-rain [s-res] ?row ?col :> ?mod-h ?mod-v ?sample ?line)
-        (u/within-tileset? tiles ?mod-h ?mod-v)
         (:distinct false))))
 
 (defn resample-rain

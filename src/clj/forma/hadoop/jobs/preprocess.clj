@@ -22,14 +22,13 @@
 ;;            (to-pail sink-path)))))
  
 (defmain PreprocessRain
-  [source-path output-path s-res & locations]
-  {:pre [(string? s-res)
-         locations]}
+  [source-path output-path s-res target-t-res]
+  {:pre [(string? s-res)]}
   (let [nodata -9999.0
-        tiles (apply tile-set (map read-string locations))
+        t-res "32"
         rain-src (r/read-rain (static/static-datasets :precl) source-path)]
     (?- (hfs-seqfile output-path :sinkmode :replace)
-        (r/rain-tap rain-src tiles s-res nodata))))
+        (r/rain-tap rain-src s-res nodata t-res target-t-res))))
 
 (defn static-chunker
   "m-res - MODIS resolution. "
