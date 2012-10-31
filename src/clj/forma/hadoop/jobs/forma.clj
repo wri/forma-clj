@@ -44,18 +44,13 @@
       (>= ?vcf vcf-limit)
       (humid/in-humid-tropics? ?ecoid)))
 
-(defn within-tileset?
-  [tile-set h v]
-  (let [tile [h v]]
-    (contains? tile-set tile)))
-
 (defn screen-by-tileset
   [src tile-set]
   (<- [?pail-path ?pixel-chunk]
       (src ?pail-path ?pixel-chunk)
       (thrift/unpack ?pixel-chunk :> _ ?pixel-loc _ _ _)
       (thrift/unpack ?pixel-loc :> _ ?h ?v _ _)
-      (within-tileset? tile-set ?h ?v)))
+      (u/within-tileset? tile-set ?h ?v)))
 
 (defn adjust-precl
   "Given a base temporal resolution, a target temporal resolution and a

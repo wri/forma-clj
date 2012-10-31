@@ -11,24 +11,24 @@
             [forma.static :as static]
             [cascalog.ops :as c]))
 
-(defn rain-chunker
-  "Like `modis-chunker`, for NOAA PRECL data files."
-  [m-res chunk-size tiles source-path sink-path]
-  (with-fs-tmp [fs tmp-dir]
-    (let [file-tap (io/hfs-wholefile source-path)
-          pix-tap (p/pixel-generator tmp-dir m-res tiles)
-          ascii-map (:precl static/static-datasets)]
-      (->> (r/rain-chunks m-res ascii-map chunk-size file-tap pix-tap)
-           (to-pail sink-path)))))
-
+;; (defn rain-chunker
+;;   "Like `modis-chunker`, for NOAA PRECL data files."
+;;   [m-res chunk-size tiles source-path sink-path]
+;;   (with-fs-tmp [fs tmp-dir]
+;;     (let [file-tap (io/hfs-wholefile source-path)
+;;           pix-tap (p/pixel-generator tmp-dir m-res tiles)
+;;           ascii-map (:precl static/static-datasets)]
+;;       (->> (r/rain-chunks m-res ascii-map chunk-size file-tap pix-tap)
+;;            (to-pail sink-path)))))
+ 
 (defmain PreprocessRain
-  "The locations can be ISO keywords or [h v] tuples."
-  [source-path sink-path s-res & locations]
-  {:pre [(string? s-res)
-         locations]}
-  (let [tiles (apply tile-set (map read-string locations))
-        chunk-size static/chunk-size]
-    (rain-chunker s-res chunk-size tiles source-path sink-path)))
+  [source-path output-path s-res target-t-res]
+  {:pre [(string? s-res)]}
+  (let [nodata -9999.0
+        t-res "32"
+        rain-src (r/read-rain (static/static-datasets :precl) source-path)]
+    (?- (hfs-seqfile output-path :sinkmode :replace)
+        (r/rain-tap rain-src s-res nodata t-res target-t-res))))
 
 (defn static-chunker
   "m-res - MODIS resolution. "
