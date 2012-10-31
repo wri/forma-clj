@@ -104,3 +104,18 @@
                (country-tiles %)
                #{%}))
        (apply union)))
+
+(defn remove-tiles-by-iso
+  "Remove tiles from set of tiles for given `iso-codes`. Useful for
+   avoiding re-processing tiles unnecessarily.
+
+   Usage:
+     (tile-set :PER)
+     ;=> #{[10 9] [11 10] [9 9] [10 10] [11 9]}
+
+     (let [ts (tile-set :PER)]
+       (remove-tiles-by-iso ts :BRA))
+     ;=> #{[9 9] [10 10]}"
+  [t-s & iso-codes]
+  (let [remove-set (apply tile-set iso-codes)]
+    (apply disj t-s remove-set)))
