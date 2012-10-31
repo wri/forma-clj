@@ -234,8 +234,14 @@
 
 (defn rain-tap
   "Accepts a source of rain pixels and their associated rain time
-  series, along with a spatial resolution, and returns a tap that
-  assigns the series to all MODIS pixels within the rain pixel."
+  series, along with a spatial resolution, nodata value, base temporal 
+  resolution and target resolution. Returns a tap that contains the 
+  rain row and column, as well as the stretched and rounded series. 
+  
+  Nodata values are replaced by the immediately preceeding good value 
+  so that they don't interfere with the stretching process (which includes 
+  averaging values where periods span months). A default of 0 is used in 
+  the case of a missing value at the beginning of the rain timeseries."
   [rain-src s-res nodata rain-t-res out-t-res]
   (let [series-src (mk-rain-series rain-src nodata)]
     (<- [?row ?col ?new-start ?stretched]

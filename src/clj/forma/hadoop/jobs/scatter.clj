@@ -138,8 +138,14 @@
               ([:tmp-dirs rain-path]
                  "Filters out rain with VCF < 25 or outside humid tropics,
                   before stretching rain ts"
-                 (?- (hfs-seqfile rain-path)
-                     (mk-filter static-path (hfs-seqfile rain-seq-path))))
+                 (let [rain-src (hfs-seqfile rain-seq-path)
+                       static-src (hfs-seqfile static-path)
+                       vcf-limit (est-map :vcf-limit)]
+                   (?<- (hfs-seqfile rain-path)
+                        [?mod-h ?mod-v ?sample ?line ?start ?series]
+                        (rain-src ?mod-h ?mod-v ?sample ?line ?start ?series)
+                        (static-src _ ?mod-h ?mod-v ?sample ?line ?vcf _ _ _ _)
+                        (>= ?vcf vcf-limit))))
 
               adjustseries
               ([:tmp-dirs adjusted-series-path]
