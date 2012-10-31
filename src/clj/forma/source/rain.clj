@@ -8,13 +8,22 @@
 ;;     [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk-pix]
 
 (ns forma.source.rain
-  (:use cascalog.api)
+  (:use cascalog.api
+        [clojure.contrib.math :only (floor)]
+        [clojure.contrib.combinatorics :only (cartesian-product)]
+        [forma.hadoop.io :only (hfs-wholefile)]
+        [forma.hadoop.jobs.forma :only (consolidate-timeseries)]
+        [forma.thrift :as thrift]
+        [forma.hadoop.io :as fio]
+        [clojure.math.numeric-tower :only (round)])
   (:require [forma.reproject :as r]
             [forma.utils :as u]
             [cascalog.io :as io]
             [forma.source.static :as static]
             [forma.hadoop.predicate :as p]
-            [clojure.string :as s])
+            [forma.date-time :as date]
+            [clojure.string :as s]
+            [forma.trends.stretch :as stretch])
   (:import  [java.nio ByteBuffer ByteOrder]))
 
 ;; ## Dataset Information
@@ -142,6 +151,104 @@
         (all-nodata? nodata ?raindata :> false)
         (to-rows [step] ?raindata :> ?row ?row-data)
         (p/index ?row-data :> ?col ?val))))
+  
+(defn read-rain
+  [ascii-map path]
+  (let [file-tap (fio/hfs-wholefile path)
+        {:keys [step nodata]} ascii-map]
+    (rain-values step nodata file-tap)))
+
+(defn rain-rowcol->modispos
+  "Accepts the row and column of a rain pixel (strangely defined
+  according to the PREC/L data set) and returns the MODIS tile and
+  position within the tile of the rain pixel.  Note that there are 20
+  rain pixels on each side of a modis tile, so that the rain grid is
+  of dimension 360x720."
+  [r c]
+  {:pre [(< r 360) (< c 720)]
+   :post [(< (last %) 20)]}
+  (let [v (- 17 (floor (/ r 20)))
+        h (mod (+ 18 (floor (/ c 20))) 36)
+        global-r (- 359 r)
+        global-c (mod (+ 360 c) 720)
+        tile-row (- global-r (* 20 v))
+        tile-col (- global-c (* 20 h))]
+    [h v tile-col tile-row]))
+
+(defn rainpos->modis-range
+  "Accepts a pixel-level spatial resolution (string: e.g., \"500\")
+  and a row and column position of a rain pixel within a MODIS tile,
+  and returns the horizontal and vertical extents of the MODIS pixels
+  that fall within the rain pixel."
+  [s-res tile-row tile-col]
+  (let [num-pix ((keyword s-res) {:500 120 :1000 60 :250 240})
+        init-col (* num-pix tile-col)
+        init-row (* num-pix tile-row)]
+    [[init-row (+ num-pix init-row)]
+     [init-col (+ num-pix init-col)]]))
+
+(defn fill-rect
+  "accepts two tuples of length 2 that define the extent of a
+  rectangle.  returns all integer pairs within the rectangle.  The
+  ranges should be zero-indexed."
+  [row-range col-range]
+  {:pre [(= (count col-range) 2)]}
+  (let [[rs cs] (map (partial apply range) [row-range col-range])]
+    (cartesian-product rs cs)))
+
+(defmapcatop [explode-rain [s-res]]
+  "Accepts the row and column of a rain pixel, as defined by the
+  PRECL data set, along with the rain time series associated with
+  that pixel.  Returns the series and coordinates (h, v, s, l) for all
+  MODIS pixels within the rain pixel.  Note that this also depends on
+  the spatial resolution, which should be supplied as a string."
+  [rain-row rain-col]
+  (let [[h v tile-row tile-col] (rain-rowcol->modispos rain-row rain-col)]
+    (vec (map (partial apply conj [h v])
+         (apply fill-rect (rainpos->modis-range s-res tile-row tile-col))))))
+
+(defn mk-rain-series
+  "Given a source of semi-raw rain data (date, row, column and value),
+   plus a nodata value, returns a timeseries of values for each rain
+   pixel."
+  [src nodata]
+  (let [t-res "32"]
+    (<- [?row ?col ?start-period ?series]
+        (src ?date ?row ?col ?val)
+        (date/datetime->period t-res ?date :> ?period)
+        (double ?val :> ?val-dbl)
+        (consolidate-timeseries nodata ?period ?val-dbl :> ?periods ?series)
+        (first ?periods :> ?start-period))))
+
+(defn stretch-rain
+  "Given a base temporal resolution, a target temporal resolution and a
+   source of rain data, stretches rain to new resolution and rounds it."
+  [base-t-res target-t-res start-idx series]
+  (if (= target-t-res base-t-res)
+    [start-idx series]
+    (let [stretched (stretch/ts-expander base-t-res
+                                         target-t-res
+                                         (thrift/TimeSeries* start-idx series))
+          [new-start _ new-series] (thrift/unpack stretched)]
+      [new-start (vec (map round (thrift/unpack new-series)))])))
+
+(defn rain-tap
+  "Accepts a source of rain pixels and their associated rain time
+  series, along with a spatial resolution, nodata value, base temporal 
+  resolution and target resolution. Returns a tap that contains the 
+  rain row and column, as well as the stretched and rounded series. 
+  
+  Nodata values are replaced by the immediately preceeding good value 
+  so that they don't interfere with the stretching process (which includes 
+  averaging values where periods span months). A default of 0 is used in 
+  the case of a missing value at the beginning of the rain timeseries."
+  [rain-src s-res nodata rain-t-res out-t-res]
+  (let [series-src (mk-rain-series rain-src nodata)]
+    (<- [?row ?col ?new-start ?stretched]
+        (series-src ?row ?col ?start ?series)
+        (u/replace-from-left* nodata ?series :default 0 :> ?clean-series)
+        (stretch-rain rain-t-res out-t-res ?start ?clean-series :> ?new-start ?stretched)
+        (:distinct false))))
 
 (defn resample-rain
   "A Cascalog query that takes a tap emitting rain tuples and a tap emitting

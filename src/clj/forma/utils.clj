@@ -333,3 +333,9 @@
   [series-obj]
   (let [[start _ series] (thrift/unpack series-obj)]
     [start (vec (map round (thrift/unpack series)))]))
+
+(defn within-tileset?
+  [tile-set h v]
+  (let [tile [h v]]
+    (contains? tile-set tile)))
+

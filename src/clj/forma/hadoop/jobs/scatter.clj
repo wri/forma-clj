@@ -3,8 +3,7 @@
   (:use cascalog.api
         [forma.source.tilesets :only (tile-set country-tiles)]
         [forma.hadoop.pail :only (to-pail ?pail- split-chunk-tap)]
-        [cascalog.checkpoint :only (workflow)]
-        [clojure.math.numeric-tower :only (round)])
+        [cascalog.checkpoint :only (workflow)])
   (:require [cascalog.ops :as c]
             [forma.reproject :as r]
             [forma.schema :as schema]
@@ -139,14 +138,14 @@
               ([:tmp-dirs rain-path]
                  "Filters out rain with VCF < 25 or outside humid tropics,
                   before stretching rain ts"
-                 (?- (hfs-seqfile rain-path)
-                     (mk-filter static-path (hfs-seqfile rain-seq-path))))
-
-              rain-stretcher
-              ([:tmp-dirs rain-stretch-path]
-                 "Stretch rain timeseries to match MODIS timeseries resolution"
-                 (?- (hfs-seqfile rain-stretch-path)
-                     (forma/adjust-precl "32" t-res (hfs-seqfile rain-path))))
+                 (let [rain-src (hfs-seqfile rain-seq-path)
+                       static-src (hfs-seqfile static-path)
+                       vcf-limit (est-map :vcf-limit)]
+                   (?<- (hfs-seqfile rain-path)
+                        [?mod-h ?mod-v ?sample ?line ?start ?series]
+                        (rain-src ?mod-h ?mod-v ?sample ?line ?start ?series)
+                        (static-src _ ?mod-h ?mod-v ?sample ?line ?vcf _ _ _ _)
+                        (>= ?vcf vcf-limit))))
 
               adjustseries
               ([:tmp-dirs adjusted-series-path]
@@ -157,7 +156,7 @@
                        (forma/dynamic-filter est-map
                                              (hfs-seqfile ndvi-path)
                                              (hfs-seqfile reli-path)
-                                             (hfs-seqfile rain-stretch-path)))))
+                                             (hfs-seqfile rain-path)))))
 
               trends
               ([:tmp-dirs trends-path]

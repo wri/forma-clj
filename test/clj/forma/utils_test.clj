@@ -190,8 +190,15 @@
         src [[[1 2 3]]]]
     (<- [?new-series]
         (src ?series)
-        (replace-all* to-replace replacement ?series :> ?new-series))) => (produces [[[1 nil 3]]]))
+        (replace-all* to-replace replacement ?series :> ?new-series)))
+  => (produces [[[1 nil 3]]]))
 
 (fact
   "Test for `map-round`"
   (map-round (thrift/TimeSeries* 0 3 [1.1 2.6 3.4 4.0])) => [0 [1 3 3 4]])
+
+(fact
+  "Checks that `within-tileset?` correctly handles data inside and outside the given tile-set"
+  (let [tile-set #{[28 8]}]
+    (within-tileset? tile-set 28 8)
+    (within-tileset? tile-set 29 8))))
