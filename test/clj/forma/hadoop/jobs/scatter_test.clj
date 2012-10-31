@@ -6,16 +6,6 @@
         [forma.hadoop.pail :only (to-pail)]))
 
 (fact
-  "Test for `map-round`"
-  (map-round (thrift/TimeSeries* 0 3 [1.1 2.6 3.4 4.0])) => [0 [1 3 3 4]])
-
-(fact
-  "Test `static-tap`"
-  (let [pixel-loc (thrift/ModisPixelLocation* "500" 28 8 0 0)
-      dc-src [["pail-path" (thrift/DataChunk* "vcf" pixel-loc 25 "00")]]]
-  (static-tap dc-src)) => (produces [["500" 28 8 0 0 25]]))
-
-(fact
   "Test `pail-tap`"
   (let [s-res "500"
         t-res "00"
@@ -24,11 +14,3 @@
         pail-path "/tmp/pail-tap-test/"]
     (to-pail pail-path [[data-chunk]])
     (pail-tap pail-path "vcf" s-res t-res) => (produces-some [["" data-chunk]])))
-
-(fact
-  "Test `adjusted-precl-tap`"
-  (let [base-t-res "32"
-        target-t-res "16"
-        precl-src [["500" 28 8 0 0 360 [1.5 2.5 3.4 4.7]]]]
-    (adjusted-precl-tap base-t-res target-t-res precl-src))
-  => (produces [["500" 28 8 0 0 690 [2 2 3 3 3 4 5]]]))

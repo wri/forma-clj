@@ -8,7 +8,6 @@
   (:require [cascalog.ops :as c]
             [forma.reproject :as r]
             [forma.schema :as schema]
-            [forma.trends.stretch :as stretch]
             [forma.hadoop.predicate :as p]
             [forma.hadoop.jobs.forma :as forma]
             [forma.hadoop.jobs.timeseries :as tseries]
@@ -42,42 +41,11 @@
                  :nodata -9999.0}}
       (get k)))
 
-(defn static-tap
-  "Accepts a source of DataChunks, and returns a new query with all
-   relevant spatial information (resolution, MODIS tile info, pixel
-   sample & line) plus the actual, unpacked data value."
-  [chunk-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?val]
-      (chunk-src _ ?chunk)
-      (thrift/unpack ?chunk :> _ ?loc ?data _ _)
-      (thrift/get-field-value ?data :> ?val)
-      (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
-
 (defn pail-tap
   "Creates tap for a pail given the pail path, dataset name, and spatial
    and temporal resolution."
   [pail-path dataset s-res t-res]
   (split-chunk-tap pail-path [dataset (format "%s-%s" s-res t-res)]))
-
-(defn map-round
-  "Round the values of a timeseries in a TimeSeries object, returning
-   the starting period and the rounded timeseries."
-  [series-obj]
-  (let [[start _ series] (thrift/unpack series-obj)]
-    [start (vec (map round (thrift/unpack series)))]))
-
-(defn adjusted-precl-tap
-  "Given a base temporal resolution, a target temporal resolution and a
-   source of rain data, stretches rain to new resolution and rounds it."
-  [base-t-res target-t-res src]
-  (if (= target-t-res base-t-res)
-      src
-      (<- [?s-res ?mod-h ?mod-v ?sample ?line ?new-start-idx ?rounded-ts]
-          (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ts)
-          (thrift/TimeSeries* ?start-idx ?ts :> ?ts-obj)
-          (stretch/ts-expander base-t-res target-t-res ?ts-obj :> ?expanded-ts)
-          (map-round ?expanded-ts :> ?new-start-idx ?rounded-ts)
-          (:distinct false))))
 
 (defmain formarunner
   [tmp-root pail-path ts-pail-path fire-pail-path out-path run-key est-end]
@@ -93,27 +61,27 @@
               vcf-step
               ([:tmp-dirs vcf-path]
                  (?- (hfs-seqfile vcf-path)
-                     (static-tap (pail-tap pail-path "vcf" s-res "00"))))
+                     (forma/static-tap (pail-tap pail-path "vcf" s-res "00"))))
 
               gadm-step
               ([:tmp-dirs gadm-path]
                  (?- (hfs-seqfile gadm-path)
-                     (static-tap (pail-tap pail-path "gadm" s-res "00"))))
+                     (forma/static-tap (pail-tap pail-path "gadm" s-res "00"))))
 
               hansen-step
               ([:tmp-dirs hansen-path]
                  (?- (hfs-seqfile hansen-path)
-                     (static-tap (pail-tap pail-path "hansen" s-res "00"))))
+                     (forma/static-tap (pail-tap pail-path "hansen" s-res "00"))))
 
               ecoid-step
               ([:tmp-dirs ecoid-path]
                  (?- (hfs-seqfile ecoid-path)
-                     (static-tap (pail-tap pail-path "ecoid" s-res "00"))))
+                     (forma/static-tap (pail-tap pail-path "ecoid" s-res "00"))))
 
               border-step
               ([:tmp-dirs border-path]
                  (?- (hfs-seqfile border-path)
-                     (static-tap (pail-tap pail-path "border" s-res "00"))))
+                     (forma/static-tap (pail-tap pail-path "border" s-res "00"))))
 
               static-step
               ([:tmp-dirs static-path]
@@ -178,7 +146,7 @@
               ([:tmp-dirs rain-stretch-path]
                  "Stretch rain timeseries to match MODIS timeseries resolution"
                  (?- (hfs-seqfile rain-stretch-path)
-                     (adjusted-precl-tap "32" t-res (hfs-seqfile rain-path))))
+                     (forma/adjust-precl "32" t-res (hfs-seqfile rain-path))))
 
               adjustseries
               ([:tmp-dirs adjusted-series-path]

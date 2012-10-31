@@ -69,6 +69,12 @@
      [(thrift/DataChunk* "hansen" bad-loc 100 t-res)]]))
 
 (fact
+  "Test `static-tap`"
+  (let [pixel-loc (thrift/ModisPixelLocation* "500" 28 8 0 0)
+      dc-src [["pail-path" (thrift/DataChunk* "vcf" pixel-loc 25 "00")]]]
+    (static-tap dc-src)) => (produces [["500" 28 8 0 0 25]]))
+
+(fact
   "Checks that consolidate-static correctly merges static datasets."
   (consolidate-static (:vcf-limit test-map)
                       vcf-src gadm-src hansen-src ecoid-src border-src)
@@ -99,6 +105,14 @@
     (fire-tap {:est-start "2005-12-31"
                :est-end "2006-01-01"
                :t-res t-res} src)) => (produces [[s-res 28 8 0 0 (sample-fire-series 827 2)]]))
+
+(fact
+  "Test `adjust-precl`"
+  (let [base-t-res "32"
+        target-t-res "16"
+        precl-src [["500" 28 8 0 0 360 [1.5 2.5 3.4 4.7]]]]
+    (adjust-precl base-t-res target-t-res precl-src))
+  => (produces [["500" 28 8 0 0 690 [2 2 3 3 3 4 5]]]))
 
 (fact
   "Check that `filter-query` properly screens out the pixel with VCF < 25, and keeps the one with VCF >= 25."
