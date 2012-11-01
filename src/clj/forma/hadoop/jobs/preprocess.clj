@@ -20,7 +20,7 @@
 ;;           ascii-map (:precl static/static-datasets)]
 ;;       (->> (r/rain-chunks m-res ascii-map chunk-size file-tap pix-tap)
 ;;            (to-pail sink-path)))))
- 
+
 (defmain PreprocessRain
   [source-path output-path s-res target-t-res]
   {:pre [(string? s-res)]}
@@ -29,6 +29,18 @@
         rain-src (r/read-rain (static/static-datasets :precl) source-path)]
     (?- (hfs-seqfile output-path :sinkmode :replace)
         (r/rain-tap rain-src s-res nodata t-res target-t-res))))
+
+(defmain ExplodePRECL
+  "Process PRECL timeseries observations at native 0.5 degree resolution
+   and expand each pixel into MODIS pixels at the supplied resolution"
+  [in-path out-path s-res & iso-keys]
+  (let [task-multiple 7 ;; rule of thumb based on experience
+        tiles (apply tile-set iso-keys)
+        num-tasks (* task-multiple (count tiles))
+        src (hfs-seqfile in-path)
+        out-loc (hfs-seqfile out-path :sinkmode :replace)]
+    (with-job-conf {"mapred.map.tasks" 500}
+      (r/exploder s-res tiles src))))
 
 (defn static-chunker
   "m-res - MODIS resolution. "
