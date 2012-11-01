@@ -123,22 +123,27 @@
         (explode-rain "500" ?row ?col :> ?mod-h ?mod-v ?sample ?line))
     => (produces-some [[18 17 120 2283]])))
 
-(fact "tests that the rain series source is appropriately expanded
-into the space of MODIS pixels. Two rain pixels should return 28,800
-MODIS pixels (2 x 120^2).  This test only produces the first five
-results."
-  (let [src [["2000-01-01" 100 0 1.25]
-             ["2000-01-01" 0 0 1.25]
+(fact
+  "Test `exploder` query"
+  (let [src [[0 0 690 [1 1 2 2 2 2 2 4 5]]]
+        s-res "500"
+        tiles #{[18 17]}]
+    (exploder s-res tiles src))
+  => (produces-some [["500" 18 17 119 2399 690 [1 1 2 2 2 2 2 4 5]]]))
+
+(fact
+  "tests that the rain series is appropriately transformed into a
+   vector of values. Two rain pixels should return 28,800 MODIS
+   pixels (2 x 120^2).  This test only produces the first five
+   results."
+  (let [src [["2000-01-01" 0 0 1.25]
              ["2000-02-01" 0 0 2.25]
              ["2000-05-01" 0 0 5.25]
              ["2000-01-01" 0 1 7.25]
              ["2000-02-01" 0 1 8.25]
              ["2000-05-01" 0 1 9.25]]
         tiles #{[18 17]}
-        tap (cascalog.ops/first-n (rain-tap src tiles "500" -9999.0 "32" "16") 5)]
-    (<- [?h ?v ?s ?l ?start ?series] (tap ?h ?v ?s ?l ?start ?series)))
-  => (produces [[18 17 0 2280 690 [1 1 2 2 2 2 2 4 5]]
-                [18 17 0 2281 690 [1 1 2 2 2 2 2 4 5]]
-                [18 17 0 2282 690 [1 1 2 2 2 2 2 4 5]]
-                [18 17 0 2283 690 [1 1 2 2 2 2 2 4 5]]
-                [18 17 0 2284 690 [1 1 2 2 2 2 2 4 5]]]))
+        tap (cascalog.ops/first-n (rain-tap src "500" -9999.0 "32" "16") 5)]
+    (<- [?row ?col ?start ?series] (tap ?row ?col ?start ?series)))
+  => (produces [[0 0 690 [1 1 2 2 2 2 2 4 5]]
+                [0 1 690 [7 7 8 8 8 8 8 9 9]]])))
