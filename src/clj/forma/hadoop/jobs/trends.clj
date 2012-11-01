@@ -86,34 +86,13 @@
                    :min-coast-dist 3
                    :nodata -9999.0})
 
-(defn calc-trends
-  "Calculates all trend statistics for a timeseries, also returns the
-   period index of the last element of the series"
-  [window long-block rain-ts ts]
-  (let [short-rain (first (f/shorten-ts ts rain-ts))]
-    (flatten [(a/short-stat long-block window ts)
-              (a/long-stats ts short-rain)      
-              (a/hansen-stat ts)])))
 
-(defn telescoping-trends-t
-  [{:keys [t-res window long-block est-end incremental-start]} start-pd rain-ts spectral-ts]
-  (let [[start end] (date/relative-period t-res start-pd [incremental-start est-end])]
-    (map (partial calc-trends window long-block rain-ts)
-         (f/tele-ts start end spectral-ts))))
 
-(defmapcatop trends-map
-  [{:keys [incremental-start t-res] :as est-map} start-pd spectral-ts rain-ts]
-  (let [start-key (keyword incremental-start)
-        res (mu/transpose (telescoping-trends-t est-map start-pd rain-ts spectral-ts))]
-    [(map (partial vec->ordered-map start-key t-res) res)]))
 
-(defn analyze-trends-tester
-  [{:keys [nodata long-block short-block t-res] :as est-map} dynamic-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?short ?long ?t-stat ?break]
-      (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl _)
-      (u/replace-from-left* nodata ?ndvi :all-types true :> ?clean-ndvi)
-      (trends-map est-map ?start ?clean-ndvi ?precl :> ?short ?long ?t-stat ?break)
-      (:distinct false)))
+
+
+
+
 
 (defn no []
   (let [src (analyze-trends-tester test-est-map dyn-src)]
