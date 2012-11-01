@@ -180,8 +180,6 @@
       (trends-map est-map ?start ?clean-ndvi ?precl :> ?short ?long ?t-stat ?break)
       (:distinct false)))
 
-
-
 (defn forma-tap
   "Accepts an est-map and sources for dynamic and fires data,
   spits out FormaValues for each period.

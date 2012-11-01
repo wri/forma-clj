@@ -3,7 +3,6 @@
         [incanter.stats]
         [midje sweet cascalog]
         [forma.trends.analysis :as a]
-        [forma.hadoop.jobs.forma]
         [forma.matrix.utils :as mu]
         [forma.trends.filter :as f]
         [forma.matrix.utils :only (sparse-expander)])
@@ -86,7 +85,7 @@
                    :min-coast-dist 3
                    :nodata -9999.0})
 
-(defn no []
-  (let [src (analyze-trends test-est-map dyn-src)]
-    (??<- [?sample ?line ?long]
-          (src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?short ?long ?t-stat ?break))))
+;; (defn no []
+;;   (let [src (analyze-trends test-est-map dyn-src)]
+;;     (??<- [?sample ?line ?long]
+;;           (src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?short ?long ?t-stat ?break))))
