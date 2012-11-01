@@ -178,17 +178,13 @@
 
   Note that if the trend statistics are `nil` (e.g. for a singular
   matrix), the pixel will _not_ be dropped for that period."
-  [est-map dynamic-src]
-  (let [nodata (:nodata est-map)
-        long-block (:long-block est-map)
-        short-block (:window est-map)
-        t-res (:t-res est-map)]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break]
-        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl _)
-        (u/replace-from-left* nodata ?ndvi :all-types true :> ?clean-ndvi)
-        (telescoping-trends est-map ?start ?clean-ndvi ?precl :> ?end-idx ?short ?long ?t-stat ?break)
-        (reduce max ?end-idx :> ?end)
-        (:distinct false))))
+  [{:keys [nodata long-block short-block t-res] :as est-map} dynamic-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break]
+      (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl _)
+      (u/replace-from-left* nodata ?ndvi :all-types true :> ?clean-ndvi)
+      (telescoping-trends est-map ?start ?clean-ndvi ?precl :> ?end-idx ?short ?long ?t-stat ?break)
+      (reduce max ?end-idx :> ?end)
+      (:distinct false)))
 
 (defn forma-tap
   "Accepts an est-map and sources for dynamic and fires data,

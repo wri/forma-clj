@@ -224,15 +224,12 @@
 (defn tele-ts
   "Create a telescoping sequence of sequences, where each incremental
   sequence is one element longer than the last, pinned to the same
-  initial subsequence. `start-index` is interpreted such that the
-  first output sequence includes all values up to but not including
-  the value at `start-index`. `end-index` is interpreted similarly
-  for the final output sequence. `start-index` <= 0 will throw an
-  exception to avoid returning empty vector"
+  initial subsequence. The default behavior is that the series are
+  inclusive of both the start and end index."
   [start-index end-index base-seq]
   {:pre [(> start-index 0)]}
   (let [base-vec (vec base-seq)]
-    (for [x (range start-index (inc end-index))]
+    (for [x (range (inc start-index) (+ 2 end-index))]
       (subvec base-vec 0 x))))
 
 (defn make-clean
