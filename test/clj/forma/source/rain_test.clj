@@ -146,4 +146,4 @@
         tap (cascalog.ops/first-n (rain-tap src "500" -9999.0 "32" "16") 5)]
     (<- [?row ?col ?start ?series] (tap ?row ?col ?start ?series)))
   => (produces [[0 0 690 [1 1 2 2 2 2 2 4 5]]
-                [0 1 690 [7 7 8 8 8 8 8 9 9]]])))
+                [0 1 690 [7 7 8 8 8 8 8 9 9]]]))
