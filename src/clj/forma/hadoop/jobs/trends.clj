@@ -86,15 +86,7 @@
                    :min-coast-dist 3
                    :nodata -9999.0})
 
-
-
-
-
-
-
-
-
 (defn no []
-  (let [src (analyze-trends-tester test-est-map dyn-src)]
+  (let [src (analyze-trends test-est-map dyn-src)]
     (??<- [?sample ?line ?long]
           (src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?short ?long ?t-stat ?break))))

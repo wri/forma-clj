@@ -166,6 +166,15 @@
                       est-map
                       (hfs-seqfile adjusted-series-path))))
 
+              assemble-trends
+              ([:tmp-dirs assemble-trends-path]
+                 "Assemble trends, old and new."
+                 (?- (hfs-seqfile assemble-trends-path)
+                     (forma/merge-trends
+                      est-map
+                      (hfs-seqfile trends-path)
+                      (hfs-seqfile old-trends-path))))
+
               fire-step
               ([:tmp-dirs fire-path]
                  "Create fire series"
@@ -189,7 +198,7 @@
                  trends + fires data"
                  (?- (hfs-seqfile forma-mid-path)
                      (forma/forma-tap est-map
-                                      (hfs-seqfile trends-path)
+                                      (hfs-seqfile assemble-trends-path)
                                       (hfs-seqfile adjusted-fire-path))))
 
               final-forma

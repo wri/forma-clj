@@ -8,6 +8,7 @@
             [forma.schema :as schema]
             [forma.thrift :as thrift]
             [forma.hadoop.predicate :as p]
+            [forma.hadoop.jobs.trends :as tr]
             [forma.trends.analysis :as a]
             [forma.ops.classify :as log]
             [forma.trends.filter :as f]
@@ -158,7 +159,7 @@
   [{:keys [incremental-start t-res] :as est-map} start-pd spectral-ts rain-ts]
   (let [start-key (keyword incremental-start)
         res (mu/transpose (telescoping-trends est-map start-pd rain-ts spectral-ts))]
-    [(map (partial vec->ordered-map start-key t-res) res)]))
+    [(map (partial tr/vec->ordered-map start-key t-res) res)]))
 
 (defn analyze-trends
   "Accepts an est-map and a source for both ndvi and rain timeseries.
@@ -178,6 +179,7 @@
       (u/replace-from-left* nodata ?ndvi :all-types true :> ?clean-ndvi)
       (trends-map est-map ?start ?clean-ndvi ?precl :> ?short ?long ?t-stat ?break)
       (:distinct false)))
+
 
 
 (defn forma-tap
