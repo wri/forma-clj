@@ -207,6 +207,16 @@
     (vec (map (partial apply conj [h v])
          (apply fill-rect (rainpos->modis-range s-res tile-row tile-col))))))
 
+(defn exploder
+  "Explodes rain pixel timeseries at native resolution and returns a
+   tap of MODIS coordinates and the timeseries."
+  [s-res tiles src]
+  (<- [?s-res ?modh ?modv ?sample ?line ?start ?rain]
+      (src ?row ?col ?start ?rain)
+      (explode-rain [s-res] ?row ?col :> ?modh ?modv ?sample ?line)
+      (p/add-fields s-res :> ?s-res)
+      (u/within-tileset? tiles ?modh ?modv)))
+
 (defn mk-rain-series
   "Given a source of semi-raw rain data (date, row, column and value),
    plus a nodata value, returns a timeseries of values for each rain
