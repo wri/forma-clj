@@ -33,3 +33,22 @@
         (->> (hfs-textline monthly-fires-path)
              fire-source-monthly
              (reproject-fires "1000")))
+
+(future-fact
+ "Test `fire-source`. Source mimics formatting of an input file.
+
+  Test should pass, currently fails despite output seeming to be
+  identical to the test result."
+  (let [src
+        [[(str "latitude,longitude,brightness,scan,track,acq_date"
+               ",acq_time,satellite,confidence,version,bright_t31,frp")]
+         ["-16.701,137.752,338.2,1.7,1.3,2012-11-04, 01:25,T,89,5.0       ,298.1,63"]
+         ["-16.163,133.733,338.2,1,1,2012-11-04, 01:25,T,89,5.0       ,306.5,27.8"]
+         ["-16.164,133.743,336.1,1,1,2012-11-04, 01:25,T,87,5.0       ,306.3,24.1"]]        
+        fire-src (fire-source src)]
+    (<- [?name ?date ?t-res ?lat ?lon ?temp ?conf ?both ?count]
+        (fire-src ?name ?date ?t-res ?lat ?lon ?fv)
+        (thrift/unpack ?fv :> ?temp ?conf ?both ?count)))
+  => (produces [["fire" "2012-11-04" "01" -16.701 137.752 1 1 1 1]
+                ["fire" "2012-11-04" "01" -16.164 133.743 1 1 1 1]
+                ["fire" "2012-11-04" "01" -16.163 133.733 1 1 1 1]]))

@@ -179,6 +179,29 @@
       (daily-datestring ?datestring :> ?date)
       (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)))
 
+(defn fire-source
+  "Returns a Cascalog query that creates tuples for new fire format.
+
+  Source:
+    src - An hfs-textline of daily fires
+          (lat lon kelvin _ _ date _ _ conf _ _ _).
+          Header line is dropped
+
+  Output variables:
+    ?dataset - The dataset name (fires).
+    ?date - The fire date formatted as YYYY-MM-DD.
+    ?t-res - The fire temporal resolution (1).
+    ?lat - The fire latitude as a float.
+    ?lon - The fire longitude as a float.
+    ?tuple - The FireTuple Thrift object representing the fire."
+  [src]
+  (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
+      (src ?line)
+      (p/mangle [#","] ?line
+                :> ?s-lat ?s-lon ?s-kelvin _ _ ?date _ _ ?s-conf _ _ _)
+      (= ?s-lat "latitude" :> false)
+      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)))
+
 (defn reproject-fires
   "Returns a Cascalog query that creates DataChunk Thrift objects for fires."
   [m-res src]
