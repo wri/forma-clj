@@ -137,6 +137,15 @@
  [-9999 -9999.0 -9999 2 3 4 -9999 5] {0 -1, 1 -1, 2 -1, 6 4})
 
 (facts
+  "Can't use type-independent check if nil is involved"
+  (get-replace-vals-locs nil [1 -9999.0 -9999 3] 0 true)
+  => (throws AssertionError)
+  (get-replace-vals-locs 5 [1 nil -9999 3] 0 true)
+  => (throws AssertionError)
+  (get-replace-vals-locs nil [1 nil -9999 3] 0 true)
+  => (throws AssertionError))
+
+(facts
   "Check replace-from-left"
   (replace-from-left -9999 [1 2 -9999 3 -9999 5]) => [1 2 2 3 3 5]
   (replace-from-left -9999 [-9999 2 -9999 3 -9999 5]) => [nil 2 2 3 3 5]
@@ -149,7 +158,14 @@
    (replace-from-left -9999 [1 -9999.0 -9999 3] :all-types true)
    => [1 1 1 3]
    (replace-from-left -9999.0 [1 -9999.0 -9999 3] :all-types true)
-   => [1 1 1 3])
+   => [1 1 1 3]
+   ;; can't do type-independent check if nil is involved
+   (replace-from-left nil [1 -9999.0 -9999 3] :all-types true)
+   => (throws AssertionError)
+   (replace-from-left 5 [1 nil -9999 3] :all-types true)
+   => (throws AssertionError)
+   (replace-from-left nil [1 nil -9999 3] :all-types true)
+   => (throws AssertionError))
 
 (fact
   "Check nested replace-from-left*"
@@ -179,9 +195,18 @@
   (replace-all -9999.0 nil [1 -9999 3] :all-types false) => [1 -9999 3]
 
   ;; type-independent checking
-  (replace-all nil -9999 [1 nil 3] :all-types true) => [1 -9999 3]
+  (replace-all -1 -9999 [1 -1.0 3] :all-types true) => [1 -9999 3]
   (replace-all -9999.0 nil [1 -9999 3] :all-types true) => [1 nil 3]
-  (replace-all -9999.0 nil [1 -9999.0 3] :all-types true) => [1 nil 3])
+  (replace-all -9999.0 nil [1 -9999.0 3] :all-types true) => [1 nil 3]
+
+  ;; type-independent checking with nils hits precondition
+  (replace-all nil -9999 [1 -1.0 3] :all-types true)
+  => (throws AssertionError)
+  (replace-all nil -1 [1 nil 3] :all-types true)
+  => (throws AssertionError)
+  (replace-all -9999.0 -1 [1 nil 3] :all-types true)
+  => (throws AssertionError)
+  (replace-all -9999.0 nil [1 -9999 3] :all-types true) => [1 nil 3])
 
 (fact
   "Check `replace-all*`"
