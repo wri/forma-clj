@@ -181,6 +181,18 @@
 (def byte-array-type
   (class (make-array Byte/TYPE 0)))
 
+(defn nils-ok?
+  "Checks whether one can use `to-replace` and `coll` with all types
+   flag in replacement functions. False if `to-replace` is `nil` or
+   `coll` contains `nil`. `==` cannot be used with `nil`."
+  [to-replace coll all-types]
+  (if (not all-types)
+    true
+    (let [total-nil (count (positions nil? coll))]
+      (if (or (nil? to-replace) (pos? total-nil))
+        false
+        true))))
+
 (defn get-replace-vals-locs
   "Search collection for the location of bad values, and find replacement values.
    Replacements are found to the left of a bad value, starting to the immediate
@@ -198,10 +210,7 @@
    containing `nil` or a `bad-val` of `nil` will trip a precondition
    Using `==` with `nil` causes a null pointer exception."
   [bad-val coll default all-types]
-  {:pre [(if (or (nil? bad-val)
-                 (< 0 (count (positions nil? coll))))
-            (false? all-types)
-            true)]}
+  {:pre [(nils-ok? bad-val coll all-types)]}
   (let [bad-locs (if all-types
                    (positions (partial == bad-val) coll)
                    (positions (partial = bad-val) coll))]
@@ -264,10 +273,7 @@
      ;=> (-1 -1 -1 3)"
   [bad-val coll & {:keys [default all-types] :or {default nil
                                                   all-types false}}]
-  {:pre [(if (or (nil? bad-val)
-                 (< 0 (count (positions nil? coll))))
-            (false? all-types)
-            true)]}
+  {:pre [(nils-ok? bad-val coll all-types)]}
   (let [replace-map (get-replace-vals-locs bad-val coll default all-types)]
     (for [i (range (count coll))]
       (if (contains? (set (keys replace-map)) i)
@@ -326,10 +332,7 @@
     ;=> [1 nil 3]"
   [to-replace replacement coll & {:keys [all-types]
                                   :or {all-types false}}]
-  {:pre [(if (or (nil? to-replace)
-                 (< 0 (count (positions nil? coll))))
-           (false? all-types)
-           true)]}
+  {:pre [(nils-ok? to-replace coll all-types)]}
   (let [compare-func (cond
                       (nil? to-replace) (partial = to-replace)
                       all-types (partial == to-replace)

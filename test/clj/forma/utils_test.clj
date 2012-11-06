@@ -119,6 +119,12 @@
 (fact "Check windowed-map"
   (windowed-map average 2 [1 2 50]) => [3/2 26])
 
+(facts
+  "Check `nils-ok?`"
+  (nils-ok? -9999.0 [1 2 3] true) => true
+  (nils-ok? -9999.0 [1 nil 3] true) => false
+  (nils-ok? nil [1 -9999.0 3] true) => false)
+
 (tabular
  "Check get-replace-vals-locs"
  (fact
