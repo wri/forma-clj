@@ -99,7 +99,8 @@
   "maps an input function across a sequence of windows onto a vector
   `v` of length `window-len` and offset by 1.
 
-  Note that this does not work with some functions, such as +. Not sure why"
+  Note that this does not work with some functions, such as +.
+  Not sure why"
   [f window-len v]
   (pmap f (partition window-len 1 v)))
 
@@ -180,6 +181,18 @@
 (def byte-array-type
   (class (make-array Byte/TYPE 0)))
 
+(defn nils-ok?
+  "Checks whether one can use `to-replace` and `coll` with all types
+   flag in replacement functions. False if `to-replace` is `nil` or
+   `coll` contains `nil`. `==` cannot be used with `nil`."
+  [to-replace coll all-types]
+  (if (not all-types)
+    true
+    (let [total-nil (count (positions nil? coll))]
+      (if (or (nil? to-replace) (pos? total-nil))
+        false
+        true))))
+
 (defn get-replace-vals-locs
   "Search collection for the location of bad values, and find replacement values.
    Replacements are found to the left of a bad value, starting to the immediate
@@ -191,8 +204,13 @@
 
   If `all-types` is true, equality checking will be type independent,
   using `==` instead of `=`. So a `bad-val` of -9999 will be
-  functionally equivalent to -9999.0."
+  functionally equivalent to -9999.0.
+
+   Note that using the `:all-types` true keyword with a collection
+   containing `nil` or a `bad-val` of `nil` will trip a precondition
+   Using `==` with `nil` causes a null pointer exception."
   [bad-val coll default all-types]
+  {:pre [(nils-ok? bad-val coll all-types)]}
   (let [bad-locs (if all-types
                    (positions (partial == bad-val) coll)
                    (positions (partial = bad-val) coll))]
@@ -220,6 +238,10 @@
    keyword (defaults to `false`) will make the comparison with the bad
    value type dependent. In that case, -9999 and -9999.0 would be
    functionally equivalent.
+
+   Note that using the `:all-types` true keyword with a collection
+   containing `nil` or a `bad-val` of `nil` will trip a precondition
+   Using `==` with `nil` causes a null pointer exception.
 
    Usage:
      (replace-from-left -9999 [1 -9999 3])
@@ -251,6 +273,7 @@
      ;=> (-1 -1 -1 3)"
   [bad-val coll & {:keys [default all-types] :or {default nil
                                                   all-types false}}]
+  {:pre [(nils-ok? bad-val coll all-types)]}
   (let [replace-map (get-replace-vals-locs bad-val coll default all-types)]
     (for [i (range (count coll))]
       (if (contains? (set (keys replace-map)) i)
@@ -288,6 +311,10 @@
    replacement value. The `:all-types` keyword makes equality checking
    type independent.
 
+   Note that using the `:all-types` true keyword with a collection
+   containing `nil` or a `bad-val` of `nil` will trip a precondition
+   Using `==` with `nil` causes a null pointer exception.
+
   Usage:
     (replace-all nil -9999 [1 nil 3])
     ;=> [1 -9999 3]
@@ -305,6 +332,7 @@
     ;=> [1 nil 3]"
   [to-replace replacement coll & {:keys [all-types]
                                   :or {all-types false}}]
+  {:pre [(nils-ok? to-replace coll all-types)]}
   (let [compare-func (cond
                       (nil? to-replace) (partial = to-replace)
                       all-types (partial == to-replace)
