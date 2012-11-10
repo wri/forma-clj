@@ -95,3 +95,20 @@ coordinates."
         (r/modis->latlon ?sres ?modh ?modv ?s ?l :> ?lat ?lon)
         (latlon-valid? ?lat ?lon)
         (latlon->tile ?lat ?lon zoom :> ?x ?y ?z))))
+
+(defn forma->kali
+  [src gadm-src nodata tres tres-out start thresh]
+  (let [epoch (date/datetime->period tres-out "2000-01-01")
+        start-period (date/datetime->period tres start)]
+    (<- [?modh ?modv ?sample ?line ?iso ?gadm ?p ?lat ?lon]
+        (src ?sres ?modh ?modv ?s ?l ?prob-series)
+        (gadm-src _ ?modh ?modv ?s ?l ?gadm)
+        (gadm->iso ?gadm :> ?iso)
+        (o/clean-probs ?prob-series nodata :> ?clean-series)
+        (first-hit thresh ?clean-series :> ?first-hit-idx)
+        (+ start-period ?first-hit-idx :> ?period)
+        (date/convert-period-res tres tres-out ?period :> ?period-new-res)
+        (- ?period-new-res epoch :> ?rp)
+        (min-period ?rp :> ?p)
+        (r/modis->latlon ?sres ?modh ?modv ?s ?l :> ?lat ?lon)
+        (latlon-valid? ?lat ?lon))))

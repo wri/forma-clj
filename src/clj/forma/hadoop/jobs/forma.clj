@@ -141,25 +141,34 @@
     (dec (+ start-idx length))))
 
 (defn calc-trends
-  "Calculates all trend statistics for a timeseries, also returns the
-   period index of the last element of the series"
-  [window long-block rain-ts ts]
-  (let [short-rain (first (f/shorten-ts ts rain-ts))]
-    (flatten [(a/short-stat long-block window ts)
-              (a/long-stats ts short-rain)      
-              (a/hansen-stat ts)])))
+  "Calculates all trend statistics for a the supplied timeseries
+  `spectral-ts`.  The arguments `window` and `long-block` are used for
+  the short-stat characteristic, while the `rain-ts` is used to
+  condition the supplied (spectral) time series for the long-stat
+  characteristic."
+  [window long-block rain-ts spectral-ts]
+  (let [short-rain (first (f/shorten-ts spectral-ts rain-ts))]
+    (flatten [(a/short-stat long-block window spectral-ts)
+              (a/long-stats spectral-ts short-rain)      
+              (a/hansen-stat spectral-ts)])))
 
 (defn telescoping-trends
-  [{:keys [t-res window long-block est-end incremental-start]} start-pd rain-ts spectral-ts]
-  (let [[start end] (date/relative-period t-res start-pd [incremental-start est-end])]
+  "Applies the trend calculation to a progressively increasing time
+  series that runs through the end dates between `incremental-start`
+  and `est-end`"
+  [{:keys [t-res window long-block data-start est-end incremental-start] :as est-map}
+   rain-ts spectral-ts]
+  (let [start-idx (date/datetime->period t-res data-start)
+        [start end] (date/relative-period t-res start-idx [incremental-start est-end])]
     (map (partial calc-trends window long-block rain-ts)
          (f/tele-ts start end spectral-ts))))
 
 (defmapcatop trends-map
-  [{:keys [incremental-start t-res] :as est-map} start-pd spectral-ts rain-ts]
+  ""
+  [{:keys [incremental-start t-res] :as est-map} spectral-ts rain-ts]
   (let [start-key (keyword incremental-start)
-        res (mu/transpose (telescoping-trends est-map start-pd rain-ts spectral-ts))]
-    [(map (partial tr/vec->ordered-map start-key t-res) res)]))
+        res (mu/transpose (telescoping-trends est-map rain-ts spectral-ts))]
+    [(map (partial date/vec->ordered-map start-key t-res) res)]))
 
 (defn analyze-trends
   "Accepts an est-map and a source for both ndvi and rain timeseries.
@@ -175,10 +184,21 @@
   matrix), the pixel will _not_ be dropped for that period."
   [{:keys [nodata long-block short-block t-res] :as est-map} dynamic-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?short ?long ?t-stat ?break]
-      (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl _)
+      (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line _ ?ndvi ?precl _)
       (u/replace-from-left* nodata ?ndvi :all-types true :> ?clean-ndvi)
-      (trends-map est-map ?start ?clean-ndvi ?precl :> ?short ?long ?t-stat ?break)
+      (trends-map est-map ?clean-ndvi ?precl :> ?short ?long ?t-stat ?break)
       (:distinct false)))
+
+(defn merge-trends
+  ""
+  [{:keys [nodata long-block short-block t-res] :as est-map} old-src new-src]
+  (<- [?s-res ?h ?v ?s ?l ?short ?long ?t-stat ?break]
+      (new-src ?s-res ?h ?v ?s ?l _ ?short-new ?long-new ?t-stat-new ?break-new)
+      (old-src ?s-res ?h ?v ?s ?l _ ?short-old ?long-old ?t-stat-old ?break-old)
+      (merge ?t-stat-new ?t-stat-old :> ?t-stat)
+      (merge ?break-new ?break-old :> ?break)
+      (merge ?short-new ?short-old :> ?short)
+      (merge ?long-new ?long-old :> ?long)))
 
 (defn forma-tap
   "Accepts an est-map and sources for dynamic and fires data,
