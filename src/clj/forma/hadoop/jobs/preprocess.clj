@@ -95,9 +95,10 @@
   "Path for running FORMA fires processing. See the forma-clj wiki for
 more details. m-res is the resolution of the other MODIS data we are
 using, likely \"500\""
-  [type path pail-path m-res]
-  (->> (case type
-             "daily" (f/fire-source-daily     (hfs-textline path))
-             "monthly" (f/fire-source-monthly (hfs-textline path)))
-       (f/reproject-fires m-res)
-       (to-pail pail-path)))
+  ([path pail-path m-res & [type]]
+     (->> (case type
+            nil (f/fire-source               (hfs-textline path))
+            "daily" (f/fire-source-daily     (hfs-textline path))
+            "monthly" (f/fire-source-monthly (hfs-textline path)))
+          (f/reproject-fires m-res)
+          (to-pail pail-path))))
