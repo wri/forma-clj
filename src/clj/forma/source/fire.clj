@@ -188,11 +188,9 @@
    19, instead of the expected 12)."
   [line field-count]
   (let [fire-fields (seq (.split line ","))]
-      (if (and
-           (number? (read-string (first fire-fields)))
-           (= field-count (count fire-fields)))
-        true
-        false)))
+      (and
+       (number? (read-string (first fire-fields)))
+       (= field-count (count fire-fields)))))
 
 (defn fire-source
   "Returns a Cascalog query that creates tuples for new fire format.

@@ -35,7 +35,8 @@
              (reproject-fires "1000")))
 
 (facts
-  "Test `valid-fire?`"
+  "Test `valid-fire?`. Note that the gap in the fire observations is
+   seen in the actual data."
   (let [expected-length 12]
     (valid-fire?
      (str "latitude,longitude,brightness,scan,track,acq_date"
@@ -48,7 +49,9 @@
  "Test `fire-source`. Source mimics formatting of an input file.
 
   Test should pass, currently fails despite output seeming to be
-  identical to the test result."
+  identical to the test result.
+
+  Note that the gap in the fire is seen in the actual data."
   (let [src
         [[(str "latitude,longitude,brightness,scan,track,acq_date"
                ",acq_time,satellite,confidence,version,bright_t31,frp")]
