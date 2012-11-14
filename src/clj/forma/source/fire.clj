@@ -179,6 +179,43 @@
       (daily-datestring ?datestring :> ?date)
       (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)))
 
+(defn valid-fire?
+  "Check whether a fire observation is valid. A valid observation starts
+   with a float value, and has `field-count` fields.
+
+   A handful of observations don't meet this standard. Header rows do
+   not, nor do a handful of observations that have extra fields (14 or
+   19, instead of the expected 12)."
+  [line field-count]
+  (let [fire-fields (seq (.split line ","))]
+      (and
+       (number? (read-string (first fire-fields)))
+       (= field-count (count fire-fields)))))
+
+(defn fire-source
+  "Returns a Cascalog query that creates tuples for new fire format.
+
+  Source:
+    src - An hfs-textline of daily fires
+          (lat lon kelvin _ _ date _ _ conf _ _ _).
+          Header line is dropped
+
+  Output variables:
+    ?dataset - The dataset name (fires).
+    ?date - The fire date formatted as YYYY-MM-DD.
+    ?t-res - The fire temporal resolution (1).
+    ?lat - The fire latitude as a float.
+    ?lon - The fire longitude as a float.
+    ?tuple - The FireTuple Thrift object representing the fire."
+  [src]
+  (let [expected-fields 12]
+    (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
+        (src ?line)
+        (valid-fire? ?line expected-fields)
+        (p/mangle [#","] ?line
+                  :> ?s-lat ?s-lon ?s-kelvin _ _ ?date _ _ ?s-conf _ _ _)
+        (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple))))
+
 (defn reproject-fires
   "Returns a Cascalog query that creates DataChunk Thrift objects for fires."
   [m-res src]

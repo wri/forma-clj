@@ -33,3 +33,35 @@
         (->> (hfs-textline monthly-fires-path)
              fire-source-monthly
              (reproject-fires "1000")))
+
+(facts
+  "Test `valid-fire?`. Note that the gap in the fire observations is
+   seen in the actual data."
+  (let [expected-length 12]
+    (valid-fire?
+     (str "latitude,longitude,brightness,scan,track,acq_date"
+          ",acq_time,satellite,confidence,version,bright_t31,frp"))
+    => false
+    (valid-fire? "-16.701,137.752,338.2,1.7,1.3,2012-11-04, 01:25,T,89,5.0       ,298.1,63" expected-length) => true
+    (valid-fire? "0.585,100.415,331.3,1.2,1.1,2012-09-18, 06:40,A,84,5.0A,75,5.0       ,302.4,26.3" expected-length) => false))
+
+(future-fact
+ "Test `fire-source`. Source mimics formatting of an input file.
+
+  Test should pass, currently fails despite output seeming to be
+  identical to the test result.
+
+  Note that the gap in the fire is seen in the actual data."
+  (let [src
+        [[(str "latitude,longitude,brightness,scan,track,acq_date"
+               ",acq_time,satellite,confidence,version,bright_t31,frp")]
+         ["-16.701,137.752,338.2,1.7,1.3,2012-11-04, 01:25,T,89,5.0       ,298.1,63"]
+         ["-16.163,133.733,338.2,1,1,2012-11-04, 01:25,T,89,5.0       ,306.5,27.8"]
+         ["-16.164,133.743,336.1,1,1,2012-11-04, 01:25,T,87,5.0       ,306.3,24.1"]]        
+        fire-src (fire-source src)]
+    (<- [?name ?date ?t-res ?lat ?lon ?temp ?conf ?both ?count]
+        (fire-src ?name ?date ?t-res ?lat ?lon ?fv)
+        (thrift/unpack ?fv :> ?temp ?conf ?both ?count)))
+  => (produces [["fire" "2012-11-04" "01" -16.701 137.752 1 1 1 1]
+                ["fire" "2012-11-04" "01" -16.164 133.743 1 1 1 1]
+                ["fire" "2012-11-04" "01" -16.163 133.733 1 1 1 1]]))
