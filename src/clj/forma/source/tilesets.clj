@@ -98,9 +98,15 @@
   "set of unique MODIS tiles for the specified
   countries (union). Example usage:
 
-    (tile-set [8 6] :IDN :MYS :PHL)"
+    (tile-set [8 6] :PHL)
+    ;=> #{[30 7] [29 7] [30 8] [29 8] [8 6]}
+
+    (count (tile-set :all))
+    ;=> 77"
   [& inputs]
-  (->> inputs
+  (->> (if (contains? (set inputs) :all)
+         (keys country-tiles)
+         inputs)
        (map #(if (keyword? %)
                (country-tiles %)
                #{%}))
