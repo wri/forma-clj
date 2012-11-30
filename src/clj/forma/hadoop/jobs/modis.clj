@@ -13,6 +13,7 @@
   sinks them into a custom directory structure inside of
   `output-dir`."
   [subsets chunk-size in-path pattern pail-path]
+  {:pre (seq subsets)}
   (let [source (io/hfs-wholefile in-path :source-pattern pattern)]
     (->> (h/modis-chunks subsets chunk-size source)
          (to-pail pail-path))))

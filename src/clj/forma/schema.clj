@@ -58,7 +58,7 @@
   TODO: preconditions to test that the supplied series matches the
   description above.  Then adjust the description to be shorter, more
   understandable."
-  [{:keys [est-start est-end t-res]} f-series]
+  [est-start est-end t-res f-series]
   (let [[f-start f-end arr-val] (thrift/unpack f-series)
         series (thrift/unpack arr-val)
         [start end] (map (partial date/datetime->period t-res)

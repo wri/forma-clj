@@ -35,6 +35,7 @@
   given `?chunk`, `?temporal-resolution` and `?date`. Currently only
   functions when `?chunk` is a vector."
   [missing-val]
+  {:pre [(number? missing-val)]}
   (<- [?temporal-res ?date ?chunk :> ?pix-idx ?t-start ?t-end ?tseries]
       (date/datetime->period ?temporal-res ?date :> ?tperiod)
       (:sort ?tperiod)
@@ -100,7 +101,7 @@
   temporal resolution."
   [src t-res]
   (<- [?name ?datestring ?s-res ?h ?v ?sample ?line ?agg-fire-val]
-      (src _ ?pixel-chunk)
+      (src ?pixel-chunk)
       (thrift/unpack ?pixel-chunk :> ?name ?pixel-loc ?data _ ?date)
       (thrift/unpack ?data :> ?temp-330 ?conf-50 ?bothPreds ?count)
       (thrift/FireValue* ?temp-330 ?conf-50 ?bothPreds ?count :> ?fire-val)
@@ -110,8 +111,8 @@
 
 (defn create-fire-series
   "Aggregates fires into timeseries."
-  [src t-res start end]
-  (let [[start end] (map (partial date/datetime->period t-res) [start end])
+  [src t-res fires-start est-start est-end]
+  (let [[start end] (map (partial date/datetime->period t-res) [fires-start est-end])
         length (inc (- end start))
         mk-fire-tseries (p/vals->sparsevec start length (thrift/FireValue* 0 0 0 0))
         series-src (aggregate-fires src t-res)
@@ -123,14 +124,14 @@
                   (:distinct true))]
     (<- [?pixel-chunk]
         (query ?name ?s-res ?h ?v ?sample ?line ?fire-series)
+        (schema/adjust-fires est-start est-end t-res ?fire-series :> ?adjusted)
         (thrift/ModisPixelLocation* ?s-res ?h ?v ?sample ?line :> ?pixel-loc)
-        (thrift/DataChunk* ?name ?pixel-loc ?fire-series t-res :> ?pixel-chunk)
+        (thrift/DataChunk* ?name ?pixel-loc ?adjusted t-res :> ?pixel-chunk)
         (:distinct false))))
 
 (defn fire-query
   "Returns a source of fire timeseries data chunk objects."
-  [source-pail-path m-res t-res start end]
-  (-> source-pail-path
-      (pail/split-chunk-tap ["fire" (str m-res "-01")])
-      (create-fire-series t-res start end)))
-
+  [src m-res t-res fires-start est-start est-end]
+  (-> src
+      ;;(pail/split-chunk-tap ["fire" (str m-res "-01")])
+      (create-fire-series t-res fires-start est-start est-end)))

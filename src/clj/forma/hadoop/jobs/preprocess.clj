@@ -8,18 +8,15 @@
             [forma.source.rain :as r]
             [forma.source.fire :as f]
             [forma.source.static :as s]
+            [forma.hadoop.jobs.modis :as modis]
+            [forma.hadoop.jobs.timeseries :as tseries]
             [forma.static :as static]
             [cascalog.ops :as c]))
 
-;; (defn rain-chunker
-;;   "Like `modis-chunker`, for NOAA PRECL data files."
-;;   [m-res chunk-size tiles source-path sink-path]
-;;   (with-fs-tmp [fs tmp-dir]
-;;     (let [file-tap (io/hfs-wholefile source-path)
-;;           pix-tap (p/pixel-generator tmp-dir m-res tiles)
-;;           ascii-map (:precl static/static-datasets)]
-;;       (->> (r/rain-chunks m-res ascii-map chunk-size file-tap pix-tap)
-;;            (to-pail sink-path)))))
+(defn parser [v]
+  (if (string? v)
+    (read-string v)
+    v))
 
 (defmain PreprocessRain
   [source-path output-path s-res target-t-res]
@@ -30,17 +27,17 @@
     (?- (hfs-seqfile output-path :sinkmode :replace)
         (r/rain-tap rain-src s-res nodata t-res target-t-res))))
 
-(defmain ExplodePRECL
+(defmain ExplodeRain
   "Process PRECL timeseries observations at native 0.5 degree resolution
    and expand each pixel into MODIS pixels at the supplied resolution"
-  [in-path out-path s-res & iso-keys]
-  (let [task-multiple 7 ;; rule of thumb based on experience
-        tiles (apply tile-set iso-keys)
+  [in-path out-path s-res iso-keys]
+  (let [task-multiple 15 ;; rule of thumb based on experience
+        tiles (apply tile-set (parser iso-keys))
         num-tasks (* task-multiple (count tiles))
         src (hfs-seqfile in-path)
         out-loc (hfs-seqfile out-path :sinkmode :replace)]
-    (with-job-conf {"mapred.map.tasks" 500}
-      (r/exploder s-res tiles src))))
+    (with-job-conf {"mapred.map.tasks" num-tasks}
+      (?- out-loc (r/exploder s-res tiles src)))))
 
 (defn static-chunker
   "m-res - MODIS resolution. "
@@ -95,10 +92,22 @@
   "Path for running FORMA fires processing. See the forma-clj wiki for
 more details. m-res is the resolution of the other MODIS data we are
 using, likely \"500\""
-  ([path pail-path m-res & [type]]
-     (->> (case type
-            nil (f/fire-source               (hfs-textline path))
-            "daily" (f/fire-source-daily     (hfs-textline path))
-            "monthly" (f/fire-source-monthly (hfs-textline path)))
-          (f/reproject-fires m-res)
-          (to-pail pail-path))))
+  ([path out-path m-res out-t-res start-date est-start est-end]
+     (let [fire-src (f/fire-source (hfs-textline path))
+           reproject-query (f/reproject-fires m-res fire-src)
+           ts-query (tseries/fire-query reproject-query m-res out-t-res start-date est-start est-end)]
+       (?- (hfs-seqfile out-path) ts-query))))
+
+(defmain PreprocessModis
+  ""
+  [input-path pail-path date tiles-or-isos subsets]  
+  (let [subsets (->> (parser subsets)
+                     (filter (partial contains? (set static/forma-subsets))))
+        tiles (->> (parser tiles-or-isos)
+                   (apply tile-set))
+        pattern (->> tiles
+                     (apply io/tiles->globstring)
+                     (str date "/"))]
+    (modis/modis-chunker subsets static/chunk-size input-path pattern pail-path)))
+
+
