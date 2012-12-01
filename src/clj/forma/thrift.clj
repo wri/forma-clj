@@ -26,7 +26,6 @@
   Example usage for unpacking a TimeSeries:
 
     > (def ts (TimeSeries* 0 1 [1.0 2.0 3.0]))
-
     > (unpack ts)
     [0 1 #<ArrayValue <ArrayValue doubles:DoubleArray(doubles:[1.0, 2.0, 3.0])>>]
 
