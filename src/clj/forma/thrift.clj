@@ -370,7 +370,6 @@
 (extend-protocol IPackable
   java.lang.Iterable
   (pack [[v :as xs]]
-    (prn "v" (integer?  v) "xs" (type xs))
     (cond (= forma.schema.FormaValue (type v)) (forma-array xs)
           (= forma.schema.FireValue (type v)) (fire-array xs)
           (integer? v) (int-struct xs)
