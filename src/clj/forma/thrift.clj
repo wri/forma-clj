@@ -26,6 +26,7 @@
   Example usage for unpacking a TimeSeries:
 
     > (def ts (TimeSeries* 0 1 [1.0 2.0 3.0]))
+
     > (unpack ts)
     [0 1 #<ArrayValue <ArrayValue doubles:DoubleArray(doubles:[1.0, 2.0, 3.0])>>]
 
@@ -143,11 +144,17 @@
                 (try (f x)
                      (catch Exception e nil)))))
 
+(defn box-int
+  "Clojure automatically coerces primitive ints to longs. For Thrift, we need
+  ints, so this helper function boxes an integer value to avoid that coercion."
+  [x]
+  (Integer. (.intValue x)))
+
 (defn int-struct
   "Return a IntArray that contains all numbers in the supplied sequence cast
   to ints."
   [xs]
-  (let [ints (list-of int xs)]
+  (let [ints (map box-int xs)]
     (doto (IntArray.)
       (.setInts ints))))
 
@@ -180,7 +187,8 @@
                forma.schema.FireValue forma.schema.FormaArray
                forma.schema.FormaValue forma.schema.IntArray
                forma.schema.LongArray forma.schema.TimeSeries
-               java.lang.Double java.lang.Integer java.lang.Long]
+               java.lang.Double java.lang.Integer java.lang.Long
+               java.lang.Short]
         vals (if (coll? x) x (vector x))]
     (some (fn [val] (some #(= (type val) %) types)) vals)))
 
@@ -362,6 +370,7 @@
 (extend-protocol IPackable
   java.lang.Iterable
   (pack [[v :as xs]]
+    (prn "v" (integer?  v) "xs" (type xs))
     (cond (= forma.schema.FormaValue (type v)) (forma-array xs)
           (= forma.schema.FireValue (type v)) (fire-array xs)
           (integer? v) (int-struct xs)
