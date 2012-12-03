@@ -11,12 +11,8 @@
             [forma.hadoop.jobs.modis :as modis]
             [forma.hadoop.jobs.timeseries :as tseries]
             [forma.static :as static]
-            [cascalog.ops :as c]))
-
-(defn parser [v]
-  (if (string? v)
-    (read-string v)
-    v))
+            [cascalog.ops :as c]
+            [forma.utils :as utils]))
 
 (defmain PreprocessRain
   [source-path output-path s-res target-t-res]
@@ -32,7 +28,7 @@
    and expand each pixel into MODIS pixels at the supplied resolution"
   [in-path out-path s-res iso-keys]
   (let [task-multiple 15 ;; rule of thumb based on experience
-        tiles (apply tile-set (parser iso-keys))
+        tiles (apply tile-set (utils/arg-parser iso-keys))
         num-tasks (* task-multiple (count tiles))
         src (hfs-seqfile in-path)
         out-loc (hfs-seqfile out-path :sinkmode :replace)]
@@ -101,13 +97,11 @@ using, likely \"500\""
 (defmain PreprocessModis
   ""
   [input-path pail-path date tiles-or-isos subsets]  
-  (let [subsets (->> (parser subsets)
+  (let [subsets (->> (utils/arg-parser subsets)
                      (filter (partial contains? (set static/forma-subsets))))
-        tiles (->> (parser tiles-or-isos)
+        tiles (->> (utils/arg-parser tiles-or-isos)
                    (apply tile-set))
         pattern (->> tiles
                      (apply io/tiles->globstring)
                      (str date "/"))]
     (modis/modis-chunker subsets static/chunk-size input-path pattern pail-path)))
-
-

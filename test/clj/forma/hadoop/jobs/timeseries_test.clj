@@ -25,11 +25,12 @@
   int-array is sized to `chunk-size`; the returned sequence contains
   tuples equal to the supplied value for `periods`."
   [sample periods]
-  (for [period (range periods)
+  (let [pd 13111] ;; 2005-12-03 at daily resolution
+    (for [period (range pd (+ pd periods))
         :let [date (d/period->datetime "1" period)
-              location (thrift/ModisPixelLocation* "1000" sample 6 10 10)
+              location (thrift/ModisPixelLocation* "500" sample 6 10 10)
               tuple (thrift/FireValue* 1 1 1 1)]]
-    ["path" (thrift/DataChunk* "fire" location tuple "32" date)]))
+    [(thrift/DataChunk* "fire" location tuple "16" :date date)])))
 
 (future-fact?-
  "Add in test for results, here! Add another test for the usual
@@ -51,16 +52,6 @@
                    (??-)
                    (first))]
    (second results) =not=> "something about not containing -9999."))
-
-(fact
-  "Test running-fire-sum"
-  (let [fires-src [[[(thrift/FireValue* 0 0 0 10)
-                     (thrift/FireValue* 1 0 0 33)]]]
-        result [(thrift/TimeSeries* 0 [(thrift/FireValue* 0 0 0 10)
-                                       (thrift/FireValue* 1 0 0 43)])]]
-    (??<- [?vals]
-        (fires-src ?fire-vals)
-        (running-fire-sum 0 ?fire-vals :> ?vals)) => [result]))
 
 (fact
   "Test `timeseries` query"
@@ -108,3 +99,32 @@
         (thrift/unpack ?data-val :> ?start ?end ?series-arr)
         (thrift/unpack* ?series-arr :> ?series)))
   => (produces-some [["ndvi" "500" 28 8 2399 9 690 692 "16" [23999 -9999 23999]]]))
+
+(fact
+  "Test running-fire-sum"
+  (let [fires-src [[[(thrift/FireValue* 0 0 0 10)
+                     (thrift/FireValue* 1 0 0 33)]]]
+        result [[(thrift/TimeSeries* 0 [(thrift/FireValue* 0 0 0 10)
+                                       (thrift/FireValue* 1 0 0 43)])]]]
+    (<- [?vals]
+        (fires-src ?fire-vals)
+        (running-fire-sum 0 ?fire-vals :> ?vals)) => (produces result)))
+
+(fact
+  "Test aggregate-fires"
+  (let [src (test-fires 1 30)]
+    (aggregate-fires src "16"))
+  => (let []
+       (produces [["fire" "2005-12-03" "500" 1 6 10 10 (thrift/FireValue* 16 16 16 16)]
+                  ["fire" "2005-12-19" "500" 1 6 10 10 (thrift/FireValue* 13 13 13 13)]
+                  ["fire" "2006-01-01" "500" 1 6 10 10 (thrift/FireValue* 1 1 1 1)]])))
+
+(fact
+  "Test create-fire-series. Should return a monotonically increasing
+   series truncated to 2006-01-01"
+  (let [src (test-fires 1 100)]
+    (create-fire-series src "16" "2000-11-01" "2005-12-19" "2006-01-01"))
+  => (let [loc (thrift/ModisPixelLocation* "500" 1 6 10 10)
+           FS (thrift/TimeSeries* 827 [(thrift/FireValue* 29 29 29 29)
+                                       (thrift/FireValue* 30 30 30 30)])]
+       (produces [[(thrift/DataChunk* "fire" loc FS "16")]])))

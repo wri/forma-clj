@@ -367,3 +367,9 @@
   (let [tile [h v]]
     (contains? tile-set tile)))
 
+(defn arg-parser
+  "Parse arg as string if appropriate, otherwise return arg"
+  [arg]
+  (if (string? arg)
+    (read-string arg)
+    arg))

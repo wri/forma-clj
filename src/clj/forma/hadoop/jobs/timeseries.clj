@@ -133,5 +133,4 @@
   "Returns a source of fire timeseries data chunk objects."
   [src m-res t-res fires-start est-start est-end]
   (-> src
-      ;;(pail/split-chunk-tap ["fire" (str m-res "-01")])
       (create-fire-series t-res fires-start est-start est-end)))
