@@ -8,7 +8,7 @@
             [forma.source.rain :as r]
             [forma.source.fire :as f]
             [forma.source.static :as s]
-            [forma.hadoop.jobs.modis :as modis]
+            [forma.source.hdf :as hdf]
             [forma.hadoop.jobs.timeseries :as tseries]
             [forma.static :as static]
             [cascalog.ops :as c]
@@ -95,7 +95,11 @@ using, likely \"500\""
        (?- (hfs-seqfile out-path) ts-query))))
 
 (defmain PreprocessModis
-  ""
+  "Preprocess MODIS data from raw HDF files to pail.
+
+   Usage:
+     hadoop jar target/forma-0.2.0-SNAPSHOT-standalone.jar s3n://formastaging/MOD13A1 \\
+     s3n://pailbucket/all-master \"{2012}*\" \"[:all]\""
   [input-path pail-path date tiles-or-isos subsets]  
   (let [subsets (->> (utils/arg-parser subsets)
                      (filter (partial contains? (set static/forma-subsets))))
@@ -104,4 +108,4 @@ using, likely \"500\""
         pattern (->> tiles
                      (apply io/tiles->globstring)
                      (str date "/"))]
-    (modis/modis-chunker subsets static/chunk-size input-path pattern pail-path)))
+    (hdf/modis-chunker subsets static/chunk-size input-path pattern pail-path)))
