@@ -59,5 +59,52 @@
         result [(thrift/TimeSeries* 0 [(thrift/FireValue* 0 0 0 10)
                                        (thrift/FireValue* 1 0 0 43)])]]
     (??<- [?vals]
-          (fires-src ?fire-vals)
-          (running-fire-sum 0 ?fire-vals :> ?vals)) => [result]))
+        (fires-src ?fire-vals)
+        (running-fire-sum 0 ?fire-vals :> ?vals)) => [result]))
+
+(fact
+  "Test `timeseries` query"
+  (let [src [[1 (thrift/pack (range 10))] [3 (thrift/pack (range 10))]] 
+        src (<- [?pix-idx ?t-start ?t-end ?series]
+                (src ?date ?ts)
+                (timeseries [-9999.0] ?date ?ts :> ?pix-idx ?t-start ?t-end ?series))]
+    (<- [?pix-idx ?t-start ?t-end ?ts-vec]
+        (src ?pix-idx ?t-start ?t-end ?series)
+        (thrift/unpack* ?series :> ?ts-vec)))
+  => (produces [[0 1 3 [0 -9999 0]]
+                [1 1 3 [1 -9999 1]]
+                [2 1 3 [2 -9999 2]]
+                [3 1 3 [3 -9999 3]]
+                [4 1 3 [4 -9999 4]]
+                [5 1 3 [5 -9999 5]]
+                [6 1 3 [6 -9999 6]]
+                [7 1 3 [7 -9999 7]]
+                [8 1 3 [8 -9999 8]]
+                [9 1 3 [9 -9999 9]]]))
+
+(fact
+  "Test form-tseries"
+  (let [mk-ts (form-tseries -9999.0)
+        src [["16" "2000-01-01" (thrift/pack [1 2 3])]
+             ["16" "2000-02-02" (thrift/pack [2 3 4])]]]
+    (<- [?idx ?start ?end ?series]
+          (src ?t-res ?date ?ts)
+          (mk-ts ?t-res ?date ?ts :> ?idx ?start ?end ?series)))
+  => (produces [0 690 692 (thrift/pack [1 -9999 2])]
+               [1 690 692 (thrift/pack [2 -9999 3])]
+               [2 690 692 (thrift/pack [3 -9999 4])]))
+
+(fact
+  "Test extract-tseries"
+  (let [loc (thrift/ModisChunkLocation* "500" 28 8 0 24000)
+        data (range 24000)
+        mk-data #(thrift/DataChunk* "ndvi" loc data "16" :date %)
+        src [["" (mk-data "2000-01-01")]
+             ["" (mk-data "2000-02-02")]]]
+    (<- [?name ?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?t-res ?series]
+        ((extract-tseries src *missing-val*) ?dc)
+        (thrift/unpack ?dc :> ?name ?loc ?data-val ?t-res _)
+        (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
+        (thrift/unpack ?data-val :> ?start ?end ?series-arr)
+        (thrift/unpack* ?series-arr :> ?series)))
+  => (produces-some [["ndvi" "500" 28 8 2399 9 690 692 "16" [23999 -9999 23999]]]))
