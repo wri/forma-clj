@@ -68,14 +68,24 @@
  and :est-end amounts to 5 periods."
 
   ;; Test for appropriate trimming over both ends of the interval
-  (let [est-map {:est-start "2005-12-31" :est-end "2006-03-01" :t-res "16"}
-        [_ _ arr] (apply thrift/unpack (adjust-fires est-map (f-series 826)))]
-    (count (thrift/unpack arr)) => 5)
+  (adjust-fires "2005-12-19" "2006-03-01" "16" (f-series 826))
+  => [(thrift/TimeSeries* 827 [(thrift/FireValue* 0 0 0 0)
+                               (thrift/FireValue* 0 0 0 0)
+                               (thrift/FireValue* 0 0 0 0)
+                               (thrift/FireValue* 0 0 0 0)
+                               (thrift/FireValue* 0 0 0 0)])]
 
   ;; Test for overhang only over the tail-end of the interval
-  (let [est-map {:est-start "2005-12-31" :est-end "2006-03-01" :t-res "16"}
-        [_ _ arr] (apply thrift/unpack (adjust-fires est-map (f-series 830)))]
-    (count (thrift/unpack arr)) => 2))
+  (adjust-fires "2005-12-19" "2006-03-01" "16" (f-series 827))
+  => [(thrift/TimeSeries* 827 [(thrift/FireValue* 0 0 0 0)
+                                (thrift/FireValue* 0 0 0 0)
+                                (thrift/FireValue* 0 0 0 0)
+                                (thrift/FireValue* 0 0 0 0)
+                                (thrift/FireValue* 0 0 0 0)])]
+
+  ;; Test for fires series that starts later than est-start
+  (adjust-fires "2005-12-19" "2006-03-01" "16" (f-series 830))
+  => (throws AssertionError))
 
 (fact
  "Test for `add-fires`"
