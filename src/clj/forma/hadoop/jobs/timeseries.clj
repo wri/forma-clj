@@ -45,7 +45,7 @@
   "Given a source of chunks, this subquery extracts the proper
   position information and outputs new datachunks containing
   timeseries."
-  [tile-chunk-src missing-val]
+  [missing-val tile-chunk-src]
   (let [mk-tseries (form-tseries missing-val)
         val-src (<- [?name ?t-res ?date ?s-res ?h ?v ?id ?size ?data]
                     (tile-chunk-src _ ?tile-chunk)
@@ -66,19 +66,13 @@
 (def ^:dynamic *missing-val*
   -9999)
 
-(defn tseries-query
-  [pail-path datasets]
-  (-> (apply pail/split-chunk-tap pail-path datasets)
-      (extract-tseries *missing-val*)))
-
-(defmain DynamicTimeseries
-  "TODO: Process a pattern, here"
-  [source-pail-path ts-pail-path s-res t-res datasets]
-  {:pre [(vector? (read-string datasets))]}
-  (->> (for [dset  (read-string datasets)]
-         [dset (format "%s-%s" s-res t-res)])
-       (tseries-query source-pail-path)
-       (pail/to-pail ts-pail-path)))
+(defmain ModisTimeseries
+  "Convert unordered MODIS chunks from pail into pixel-level timeseries."
+  [pail-path output-path s-res t-res dataset &
+   {:keys [sinkmode] :or {sinkmode :keep}}]
+  (->> (pail/split-chunk-tap pail-path [dataset (format "%s-%s" s-res t-res)])
+       (extract-tseries *missing-val*)
+       (hfs-seqfile output-path :sinkmode sinkmode)))
 
 ;; #### Fire Time Series Processing
 
@@ -97,33 +91,38 @@
          (thrift/TimeSeries* start))))
 
 (defn aggregate-fires
-  "Converts the datestring into a time period based on the supplied
-  temporal resolution."
+  "Aggregate fires into periods given by `t-res`"
   [src t-res]
   (<- [?name ?datestring ?s-res ?h ?v ?sample ?line ?agg-fire-val]
       (src ?pixel-chunk)
-      (thrift/unpack ?pixel-chunk :> ?name ?pixel-loc ?data _ ?date)
-      (thrift/unpack ?data :> ?temp-330 ?conf-50 ?bothPreds ?count)
+      (thrift/unpack ?pixel-chunk :> ?name ?pixel-loc ?data-val _ ?date)
+      (thrift/unpack ?data-val :> ?temp-330 ?conf-50 ?bothPreds ?count)
       (thrift/FireValue* ?temp-330 ?conf-50 ?bothPreds ?count :> ?fire-val)
       (merge-firevals ?fire-val :> ?agg-fire-val)
       (date/beginning t-res ?date :> ?datestring)
       (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)))
 
+(defn sum-fire-series
+  "Convert fire series into a running sum of fires."
+  [series-src start length t-res]
+  (let [mk-fire-tseries (p/vals->sparsevec start length (thrift/FireValue* 0 0 0 0))]
+    (<- [?name ?s-res ?mod-h ?mod-v ?s ?l ?fire-series]
+        (series-src ?name ?datestring ?s-res ?mod-h ?mod-v ?s ?l ?tuple)
+        (date/datetime->period t-res ?datestring :> ?tperiod)
+        (mk-fire-tseries ?tperiod ?tuple :> _ ?tseries)
+        (running-fire-sum start ?tseries :> ?fire-series)
+        (:distinct true))))
+
 (defn create-fire-series
-  "Aggregates fires into timeseries."
+  "Aggregates fires into running sum timeseries."
   [src t-res fires-start est-start est-end]
   (let [[start end] (map (partial date/datetime->period t-res) [fires-start est-end])
         length (inc (- end start))
         mk-fire-tseries (p/vals->sparsevec start length (thrift/FireValue* 0 0 0 0))
         series-src (aggregate-fires src t-res)
-        query (<- [?name ?s-res ?mod-h ?mod-v ?s ?l ?fire-series]
-                  (series-src ?name ?datestring ?s-res ?mod-h ?mod-v ?s ?l ?tuple)
-                  (date/datetime->period t-res ?datestring :> ?tperiod)
-                  (mk-fire-tseries ?tperiod ?tuple :> _ ?tseries)
-                  (running-fire-sum start ?tseries :> ?fire-series)
-                  (:distinct true))]
+        fire-sum-src (sum-fire-series series-src start length t-res)]
     (<- [?pixel-chunk]
-        (query ?name ?s-res ?h ?v ?sample ?line ?fire-series)
+        (fire-sum-src ?name ?s-res ?h ?v ?sample ?line ?fire-series)
         (schema/adjust-fires est-start est-end t-res ?fire-series :> ?adjusted)
         (thrift/ModisPixelLocation* ?s-res ?h ?v ?sample ?line :> ?pixel-loc)
         (thrift/DataChunk* ?name ?pixel-loc ?adjusted t-res :> ?pixel-chunk)

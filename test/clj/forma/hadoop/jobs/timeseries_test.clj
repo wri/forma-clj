@@ -24,34 +24,12 @@
   sequence of 2-tuples, structured as <period, vector>. Each
   int-array is sized to `chunk-size`; the returned sequence contains
   tuples equal to the supplied value for `periods`."
-  [sample periods]
-  (let [pd 13111] ;; 2005-12-03 at daily resolution
-    (for [period (range pd (+ pd periods))
+  [start-pd periods]
+  (for [period (range start-pd (+ start-pd periods))
         :let [date (d/period->datetime "1" period)
-              location (thrift/ModisPixelLocation* "500" sample 6 10 10)
+              location (thrift/ModisPixelLocation* "500" 1 6 10 10)
               tuple (thrift/FireValue* 1 1 1 1)]]
-    [(thrift/DataChunk* "fire" location tuple "16" :date date)])))
-
-(future-fact?-
- "Add in test for results, here! Add another test for the usual
-  aggregate-fires business.
-
-  Also note that we're testing for truncation after march."
- [[1] [2]]
- (??- (-> (vec (concat (test-fires 4 100)
-                       (test-fires 10 100)))
-          (create-fire-series "32" "1970-01-01" "1970-03-01"))))
-
-(future-fact
-  "Need to update this -- we want to check that the results of this
-  query don't contain -9999."
- (let [results (-> (concat (test-chunks "precl" 10 1200)
-                           (test-chunks "ndvi" 10 1200))
-                   (vec)
-                   (extract-tseries -9999)
-                   (??-)
-                   (first))]
-   (second results) =not=> "something about not containing -9999."))
+    [(thrift/DataChunk* "fire" location tuple "16" :date date)]))
 
 (fact
   "Test `timeseries` query"
@@ -93,7 +71,7 @@
         src [["" (mk-data "2000-01-01")]
              ["" (mk-data "2000-02-02")]]]
     (<- [?name ?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?t-res ?series]
-        ((extract-tseries src *missing-val*) ?dc)
+        ((extract-tseries *missing-val* src) ?dc)
         (thrift/unpack ?dc :> ?name ?loc ?data-val ?t-res _)
         (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
         (thrift/unpack ?data-val :> ?start ?end ?series-arr)
@@ -110,20 +88,50 @@
         (fires-src ?fire-vals)
         (running-fire-sum 0 ?fire-vals :> ?vals)) => (produces result)))
 
+(def START-DAY
+  "2005-12-03 at daily resolution"
+  13111)
+
+(def START-PERIOD
+  "Corresponds to period starting 2005-12-03 at 16-day resolution"
+  826)
+
+(def SERIES-LENGTH
+  "Length of fire series, in days"
+  30)
+
+(def T-RES
+  "Temporal resolution"
+  "16")
+
+(def NUM-PERIODS
+  "Length of fire-series"
+  4)
+
 (fact
   "Test aggregate-fires"
-  (let [src (test-fires 1 30)]
-    (aggregate-fires src "16"))
-  => (let []
-       (produces [["fire" "2005-12-03" "500" 1 6 10 10 (thrift/FireValue* 16 16 16 16)]
-                  ["fire" "2005-12-19" "500" 1 6 10 10 (thrift/FireValue* 13 13 13 13)]
-                  ["fire" "2006-01-01" "500" 1 6 10 10 (thrift/FireValue* 1 1 1 1)]])))
+  (let [src (test-fires START-DAY SERIES-LENGTH)]
+    (aggregate-fires src T-RES))
+  => (produces [["fire" "2005-12-03" "500" 1 6 10 10 (thrift/FireValue* 16 16 16 16)]
+                ["fire" "2005-12-19" "500" 1 6 10 10 (thrift/FireValue* 13 13 13 13)]
+                ["fire" "2006-01-01" "500" 1 6 10 10 (thrift/FireValue* 1 1 1 1)]]))
+
+(fact
+  "Test sum-fire-series"
+  (let [src (test-fires START-DAY SERIES-LENGTH)]
+    (-> (aggregate-fires src T-RES)
+        (sum-fire-series START-PERIOD NUM-PERIODS T-RES)))
+  => (let [TS (thrift/TimeSeries* 826 [(thrift/FireValue* 16 16 16 16)
+                                       (thrift/FireValue* 29 29 29 29)
+                                       (thrift/FireValue* 30 30 30 30)
+                                       (thrift/FireValue* 30 30 30 30)])]
+       (produces [["fire" "500" 1 6 10 10 TS]])))
 
 (fact
   "Test create-fire-series. Should return a monotonically increasing
    series truncated to 2006-01-01"
-  (let [src (test-fires 1 100)]
-    (create-fire-series src "16" "2000-11-01" "2005-12-19" "2006-01-01"))
+  (-> (test-fires START-DAY SERIES-LENGTH)
+      (create-fire-series "16" "2000-11-01" "2005-12-19" "2006-01-01"))
   => (let [loc (thrift/ModisPixelLocation* "500" 1 6 10 10)
            FS (thrift/TimeSeries* 827 [(thrift/FireValue* 29 29 29 29)
                                        (thrift/FireValue* 30 30 30 30)])]
