@@ -69,11 +69,12 @@
   "Accepts an est-map and a query source of fire timeseries. Note that
   this won't work, pulling directly from the pail!"
   [est-map fire-src]
-  (<- [?s-res ?h ?v ?sample ?line ?adjusted-ts]
-      (fire-src ?fire-pixel)
-      (thrift/unpack ?fire-pixel :> _ ?pixel-loc ?ts _ _)
-      (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)
-      (schema/adjust-fires est-map ?ts :> ?adjusted-ts)))
+  (let [{:keys [est-start est-end t-res]} est-map]
+    (<- [?s-res ?h ?v ?sample ?line ?adjusted-ts]
+        (fire-src ?fire-pixel)
+        (thrift/unpack ?fire-pixel :> _ ?pixel-loc ?ts _ _)
+        (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)
+        (schema/adjust-fires est-start est-end t-res ?ts :> ?adjusted-ts))))
 
 (defn filter-query
   "Use a join with `static-src` - already filtered by VCF and
