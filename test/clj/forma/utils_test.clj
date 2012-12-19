@@ -233,3 +233,8 @@
   (let [tile-set #{[28 8]}]
     (within-tileset? tile-set 28 8)
     (within-tileset? tile-set 29 8)))
+
+(fact
+  "Test arg-parser"
+  (arg-parser "ndvi") => (symbol "ndvi")
+  (arg-parser "[\"ndvi\"]") => ["ndvi"])

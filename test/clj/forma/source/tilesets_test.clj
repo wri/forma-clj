@@ -8,7 +8,8 @@
  ?inputs       ?result
  [:MYS]        #{[27 8] [28 8] [29 8]}
  [:MYS [27 8]] #{[27 8] [28 8] [29 8]}
- [:MYS [8 7]]  #{[27 8] [28 8] [29 8] [8 7]})
+ [:MYS [8 7]]  #{[27 8] [28 8] [29 8] [8 7]}
+ [:all]        (apply tile-set (keys country-tiles)))
 
 (fact
   "Test :all keyword with `tile-set`"

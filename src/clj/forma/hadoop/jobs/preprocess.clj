@@ -8,18 +8,11 @@
             [forma.source.rain :as r]
             [forma.source.fire :as f]
             [forma.source.static :as s]
+            [forma.source.hdf :as hdf]
+            [forma.hadoop.jobs.timeseries :as tseries]
             [forma.static :as static]
-            [cascalog.ops :as c]))
-
-;; (defn rain-chunker
-;;   "Like `modis-chunker`, for NOAA PRECL data files."
-;;   [m-res chunk-size tiles source-path sink-path]
-;;   (with-fs-tmp [fs tmp-dir]
-;;     (let [file-tap (io/hfs-wholefile source-path)
-;;           pix-tap (p/pixel-generator tmp-dir m-res tiles)
-;;           ascii-map (:precl static/static-datasets)]
-;;       (->> (r/rain-chunks m-res ascii-map chunk-size file-tap pix-tap)
-;;            (to-pail sink-path)))))
+            [cascalog.ops :as c]
+            [forma.utils :as utils]))
 
 (defmain PreprocessRain
   [source-path output-path s-res target-t-res]
@@ -30,17 +23,24 @@
     (?- (hfs-seqfile output-path :sinkmode :replace)
         (r/rain-tap rain-src s-res nodata t-res target-t-res))))
 
-(defmain ExplodePRECL
+(defmain ExplodeRain
   "Process PRECL timeseries observations at native 0.5 degree resolution
-   and expand each pixel into MODIS pixels at the supplied resolution"
-  [in-path out-path s-res & iso-keys]
-  (let [task-multiple 7 ;; rule of thumb based on experience
-        tiles (apply tile-set iso-keys)
+   and expand each pixel into MODIS pixels at the supplied resolution.
+
+   `task-multiple` and `num-tasks` are used to ensure that output
+    files aren't gigantic. With `task-multiple` set to 15, processing
+    80 tiles results in 1200 map tasks, and output file sizes max out
+    at about 600mb. With a smaller task-multiple, files could reach several
+    gigabytes. Although this size is normally ok with S3, random transfer
+    errors take a while to recover from with files that large."
+  [in-path out-path s-res iso-keys]
+  (let [task-multiple 15
+        tiles (apply tile-set (utils/arg-parser iso-keys))
         num-tasks (* task-multiple (count tiles))
         src (hfs-seqfile in-path)
         out-loc (hfs-seqfile out-path :sinkmode :replace)]
-    (with-job-conf {"mapred.map.tasks" 500}
-      (r/exploder s-res tiles src))))
+    (with-job-conf {"mapred.map.tasks" num-tasks}
+      (?- out-loc (r/exploder s-res tiles src)))))
 
 (defn static-chunker
   "m-res - MODIS resolution. "
@@ -95,10 +95,24 @@
   "Path for running FORMA fires processing. See the forma-clj wiki for
 more details. m-res is the resolution of the other MODIS data we are
 using, likely \"500\""
-  ([path pail-path m-res & [type]]
-     (->> (case type
-            nil (f/fire-source               (hfs-textline path))
-            "daily" (f/fire-source-daily     (hfs-textline path))
-            "monthly" (f/fire-source-monthly (hfs-textline path)))
-          (f/reproject-fires m-res)
-          (to-pail pail-path))))
+  ([path out-path m-res out-t-res start-date est-start est-end]
+     (let [fire-src (f/fire-source (hfs-textline path))
+           reproject-query (f/reproject-fires m-res fire-src)
+           ts-query (tseries/fire-query reproject-query m-res out-t-res start-date est-start est-end)]
+       (?- (hfs-seqfile out-path) ts-query))))
+
+(defmain PreprocessModis
+  "Preprocess MODIS data from raw HDF files to pail.
+
+   Usage:
+     hadoop jar target/forma-0.2.0-SNAPSHOT-standalone.jar s3n://formastaging/MOD13A1 \\
+     s3n://pailbucket/all-master \"{2012}*\" \"[:all]\""
+  [input-path pail-path date tiles-or-isos subsets]  
+  (let [subsets (->> (utils/arg-parser subsets)
+                     (filter (partial contains? (set static/forma-subsets))))
+        tiles (->> (utils/arg-parser tiles-or-isos)
+                   (apply tile-set))
+        pattern (->> tiles
+                     (apply io/tiles->globstring)
+                     (str date "/"))]
+    (hdf/modis-chunker subsets static/chunk-size input-path pattern pail-path)))
