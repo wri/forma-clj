@@ -25,9 +25,16 @@
 
 (defmain ExplodeRain
   "Process PRECL timeseries observations at native 0.5 degree resolution
-   and expand each pixel into MODIS pixels at the supplied resolution"
+   and expand each pixel into MODIS pixels at the supplied resolution.
+
+   `task-multiple` and `num-tasks` are used to ensure that output
+    files aren't gigantic. With `task-multiple` set to 15, processing
+    80 tiles results in 1200 map tasks, and output file sizes max out
+    at about 600mb. With a smaller task-multiple, files could reach several
+    gigabytes. Although this size is normally ok with S3, random transfer
+    errors take a while to recover from with files that large."
   [in-path out-path s-res iso-keys]
-  (let [task-multiple 15 ;; rule of thumb based on experience
+  (let [task-multiple 15
         tiles (apply tile-set (utils/arg-parser iso-keys))
         num-tasks (* task-multiple (count tiles))
         src (hfs-seqfile in-path)
