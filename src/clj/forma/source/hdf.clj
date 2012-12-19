@@ -12,11 +12,13 @@
 (ns forma.source.hdf
   (:use cascalog.api
         [cascalog.util :only (uuid)]
+        [forma.hadoop.pail :only (to-pail)]
         [forma.reproject :only (spatial-res temporal-res tilestring->hv)])
   (:require [clojure.set :as set]
             [forma.utils :as u]
             [forma.thrift :as thrift]
             [forma.hadoop.predicate :as p]
+            [forma.hadoop.io :as fio]
             [cascalog.ops :as c]
             [cascalog.io :as io]
             [clojure.java.io :as java.io])
@@ -259,3 +261,15 @@ as a 1-tuple."
         (split-id ?tileid :> ?mod-h ?mod-v)
         ((c/juxt #'spatial-res #'temporal-res) ?productname :> ?s-res ?t-res)
         (chunkifier ?dataset ?date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk))))
+
+(defn modis-chunker
+  "Cascalog job that takes set of dataset identifiers, a chunk size, a
+  directory containing MODIS HDF files, or a link directly to such a
+  file, and an output dir, harvests tuples out of the HDF files, and
+  sinks them into a custom directory structure inside of
+  `pail-path`."
+  [subsets chunk-size in-path pattern pail-path]
+  {:pre (seq subsets)}
+  (let [source (fio/hfs-wholefile in-path :source-pattern pattern)]
+    (->> (modis-chunks subsets chunk-size source)
+         (to-pail pail-path))))
