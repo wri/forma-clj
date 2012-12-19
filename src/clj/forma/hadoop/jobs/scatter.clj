@@ -102,16 +102,6 @@
                                     s-res
                                     t-res) ?pail-path ?data-chunk))))
 
-              reli-pail-seq-step
-              ([:tmp-dirs reli-seq-path]
-                 "Convert reliability pail to sequence files"
-                 (?- (hfs-seqfile reli-seq-path)
-                     (<- [?pail-path ?data-chunk]
-                         ((pail-tap ts-pail-path
-                                    "reli"
-                                    s-res
-                                    t-res) ?pail-path ?data-chunk))))
-
               rain-pail-seq-step
               ([:tmp-dirs rain-seq-path]
                  "Convert rain pail to sequence files"
@@ -127,12 +117,6 @@
                  "Filters out NDVI with VCF < 25 or outside humid tropics"
                  (?- (hfs-seqfile ndvi-path)
                      (mk-filter static-path (hfs-seqfile ndvi-seq-path))))
-
-              reli-filter
-              ([:tmp-dirs reli-path]
-                 "Filters out reliability with VCF < 25 or outside humid tropics"
-                 (?- (hfs-seqfile reli-path)
-                     (mk-filter static-path (hfs-seqfile reli-seq-path))))
 
               rain-filter
               ([:tmp-dirs rain-path]
@@ -155,7 +139,6 @@
                    (?- (hfs-seqfile adjusted-series-path)
                        (forma/dynamic-filter est-map
                                              (hfs-seqfile ndvi-path)
-                                             (hfs-seqfile reli-path)
                                              (hfs-seqfile rain-path)))))
 
               trends
