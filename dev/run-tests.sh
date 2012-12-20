@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 echo "Starting new cluster for tests"
 lein emr -s 1 -t large -b .25 -bs bsaconfig.xml

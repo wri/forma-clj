@@ -92,47 +92,11 @@
                                                (hfs-seqfile ecoid-path)
                                                (hfs-seqfile border-path))))
 
-              ndvi-pail-seq-step
-              ([:tmp-dirs ndvi-seq-path]
-                 "Convert ndvi pail to sequence files"
-                 (?- (hfs-seqfile ndvi-seq-path)
-                     (<- [?pail-path ?data-chunk]
-                         ((pail-tap ts-pail-path
-                                    "ndvi"
-                                    s-res
-                                    t-res) ?pail-path ?data-chunk))))
-
-              reli-pail-seq-step
-              ([:tmp-dirs reli-seq-path]
-                 "Convert reliability pail to sequence files"
-                 (?- (hfs-seqfile reli-seq-path)
-                     (<- [?pail-path ?data-chunk]
-                         ((pail-tap ts-pail-path
-                                    "reli"
-                                    s-res
-                                    t-res) ?pail-path ?data-chunk))))
-
-              rain-pail-seq-step
-              ([:tmp-dirs rain-seq-path]
-                 "Convert rain pail to sequence files"
-                 (?- (hfs-seqfile rain-seq-path)
-                     (<- [?pail-path ?data-chunk]
-                         ((pail-tap ts-pail-path
-                                    "precl"
-                                    s-res
-                                    "32") ?pail-path ?data-chunk))))
-
               ndvi-filter
               ([:tmp-dirs ndvi-path]
                  "Filters out NDVI with VCF < 25 or outside humid tropics"
                  (?- (hfs-seqfile ndvi-path)
                      (mk-filter static-path (hfs-seqfile ndvi-seq-path))))
-
-              reli-filter
-              ([:tmp-dirs reli-path]
-                 "Filters out reliability with VCF < 25 or outside humid tropics"
-                 (?- (hfs-seqfile reli-path)
-                     (mk-filter static-path (hfs-seqfile reli-seq-path))))
 
               rain-filter
               ([:tmp-dirs rain-path]
@@ -155,7 +119,6 @@
                    (?- (hfs-seqfile adjusted-series-path)
                        (forma/dynamic-filter est-map
                                              (hfs-seqfile ndvi-path)
-                                             (hfs-seqfile reli-path)
                                              (hfs-seqfile rain-path)))))
 
               trends
@@ -165,23 +128,6 @@
                      (forma/analyze-trends
                       est-map
                       (hfs-seqfile adjusted-series-path))))
-
-              fire-step
-              ([:tmp-dirs fire-path]
-                 "Create fire series"
-                 (?- (hfs-seqfile fire-path)
-                     (tseries/fire-query fire-pail-path
-                                         s-res
-                                         t-res
-                                         "2000-11-01"
-                                         est-end)))
-
-              adjustfires
-              ([:tmp-dirs adjusted-fire-path]
-                 "Make sure fires data lines up temporally with our other
-                  timeseries."
-                 (?- (hfs-seqfile adjusted-fire-path)
-                     (forma/fire-tap est-map (hfs-seqfile fire-path))))
 
               mid-forma
               ([:tmp-dirs forma-mid-path]
@@ -200,7 +146,7 @@
                        mid-src (-> (hfs-seqfile forma-mid-path)
                                    (name-vars names))]
                    (?- (hfs-seqfile final-path)
-                       (forma/forma-query est-map mid-src))))
+                       (forma/neighbor-query est-map mid-src))))
 
               beta-data-prep
               ([:tmp-dirs beta-data-path]
@@ -235,25 +181,3 @@
                  (?- (hfs-seqfile "/mnt/hgfs/Dropbox/yikes")
                      (hfs-seqfile "/mnt/hgfs/Dropbox/yikestimes"))))))
 
-(defmain simplerunner
-  [tmp-root pail-path ts-pail-path out-path run-key est-end]
-  (let [{:keys [s-res t-res est-end] :as est-map} (forma-run-parameters run-key est-end)
-        mk-filter (fn [vcf-path ts-src]
-                    (forma/filter-query (hfs-seqfile vcf-path)
-                                        (:vcf-limit est-map)
-                                        ts-src))]
-    (assert est-map (str run-key " is not a valid run key!"))
-    (workflow [tmp-root]
-              vcf-step
-              ([:tmp-dirs vcf-path]
-                 (?- (hfs-seqfile vcf-path)
-                     (<- [?subpail ?data-chunk]
-                         ((pail-tap pail-path "vcf" s-res "00") ?subpail ?data-chunk))))
-
-
-              ndvi-step
-              ([:tmp-dirs ndvi-path]
-                 (?- (hfs-seqfile ndvi-path)
-                     (mk-filter vcf-path
-                                (pail-tap
-                                 ts-pail-path "ndvi" s-res t-res)))))))

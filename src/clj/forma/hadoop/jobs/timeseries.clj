@@ -72,7 +72,7 @@
    {:keys [sinkmode] :or {sinkmode :keep}}]
   (->> (pail/split-chunk-tap pail-path [dataset (format "%s-%s" s-res t-res)])
        (extract-tseries *missing-val*)
-       (hfs-seqfile output-path :sinkmode sinkmode)))
+       (?- (hfs-seqfile output-path :sinkmode sinkmode))))
 
 ;; #### Fire Time Series Processing
 
