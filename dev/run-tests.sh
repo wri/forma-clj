@@ -1,12 +1,15 @@
 #! /bin/sh
+
 echo "Starting new cluster for tests"
 lein emr -s 1 -t large -b .25 -bs bsaconfig.xml
 
 status=$(elastic-mapreduce --list --active | awk '/j/ {print $2}')
 
-while [ $status == "STARTING" ] || [ $status == "BOOTSTRAPPING" ]
+sleep 10
+
+while [ "$status" = "STARTING" ] || [ "$status" = "BOOTSTRAPPING" ]
 do
-    if [ $status == "STARTING" ]
+    if [ "$status" = "STARTING" ]
     then
         echo "Cluster is starting"
     else
