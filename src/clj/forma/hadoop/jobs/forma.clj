@@ -216,7 +216,7 @@
                   (filter identity)
                   (schema/combine-neighbors nodata))]))
 
-(defn forma-query
+(defn neighbor-query
   "final query that walks the neighbors and spits out the values."
   [{:keys [neighbors window-dims nodata]} forma-val-src]
   (let [[rows cols] window-dims
