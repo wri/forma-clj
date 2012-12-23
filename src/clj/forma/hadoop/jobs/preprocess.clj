@@ -96,13 +96,13 @@
 more details. m-res is the resolution of the other MODIS data we are
 using, likely \"500\""
   ([path out-path m-res out-t-res start-date est-start est-end & tiles-or-isos]
-     (let [tiles (->> (if tiles-or-isos tiles-or-isos :all)
+     (let [tiles (->> (if tiles-or-isos tiles-or-isos [:all])
                       (utils/arg-parser)
                       (apply tile-set))
            fire-src (f/fire-source (hfs-textline path) tiles m-res)
            reproject-query (f/reproject-fires m-res fire-src)
            ts-query (tseries/fire-query reproject-query m-res out-t-res start-date est-start est-end)]
-       (?- (hfs-seqfile out-path) ts-query))))
+       (?- (hfs-seqfile out-path :sinkmode :replace) ts-query))))
 
 (defmain PreprocessModis
   "Preprocess MODIS data from raw HDF files to pail.
