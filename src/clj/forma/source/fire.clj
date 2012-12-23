@@ -193,7 +193,11 @@
        (= field-count (count fire-fields)))))
 
 (defn keep-fire?
-  "Returns true if the latlon for the fire falls within a tile in tile-set."
+  "Returns true if the latlon for the fire falls within a tile in tile-set.
+
+   Note that latlons falling on edges of tiles will be assigned to a tile
+   based on the behavior of the forma.reproject namespace. Most fires will
+   have an unambiguous assignment, however."
   [s-res tile-set lat lon]
   (let [[mod-h mod-v _ _] (r/latlon->modis s-res lat lon)]
     (contains? tile-set [mod-h mod-v])))
