@@ -86,7 +86,7 @@
      chunk-src: source of timeseries chunk tuples"
   [static-src vcf-limit chunk-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?series]
-      (chunk-src _ ?ts-chunk)
+      (chunk-src ?ts-chunk)
       (static-src ?s-res ?mod-h ?mod-v ?sample ?line ?vcf _ _ _ _)
       
       ;; unpack ts object

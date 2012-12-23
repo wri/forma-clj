@@ -26,12 +26,14 @@
   (run-params (str s-res "-" t-res) est-end))
 
 (defmain TimeseriesFilter
-  [s-res t-res ts-path static-path output-path & {:keys [thrift] :or [thrift false]}]
+  "Uses thrift-bool as switch instead of {:keys [thrift] ...} because use
+   with defmain seemed unreliable - keyword were not recognized as such."
+  [s-res t-res ts-path static-path output-path thrift-bool]
   (let [vcf-limit (:vcf-limit (get-est-map s-res t-res))
         static-src (hfs-seqfile static-path)
         ts-src (hfs-seqfile ts-path)
         sink (hfs-seqfile output-path :sinkmode :replace)]
-    (if (utils/arg-parser thrift)
+    (if (utils/arg-parser thrift-bool)
       (?- sink (forma/filter-query static-src vcf-limit ts-src))
       (?- sink (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?series]
                    (ts-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?series)

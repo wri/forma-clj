@@ -35,16 +35,14 @@
         ts-src [[(thrift/DataChunk* "ndvi" loc ts s-res)]]
         _ (?- (hfs-seqfile ts-path :sinkmode :replace) ts-src)
         _  (?- (hfs-seqfile static-path :sinkmode :replace) static-src)
-        _ (TimeseriesFilter s-res t-res ts-path static-path output-path
-                            :thrift true)]
+        _ (TimeseriesFilter s-res t-res ts-path static-path output-path true)]
     (hfs-seqfile output-path)
     => (produces  [(vec (concat pix-loc [start-idx] [series]))]))
 
   (let [ts-src [(concat pix-loc [start-idx] [series])]
         _ (?- (hfs-seqfile ts-path :sinkmode :replace) ts-src)
         _ (?- (hfs-seqfile static-path :sinkmode :replace) static-src)]
-    (TimeseriesFilter s-res t-res ts-path static-path output-path
-                      :thrift false)
+    (TimeseriesFilter s-res t-res ts-path static-path output-path false)
     (hfs-seqfile output-path)
     => (produces  [(vec (concat pix-loc [start-idx] [series]))])))
 
@@ -219,7 +217,7 @@
         really-bad-static [0 14000 1000 0 0] ;; low vcf, coast
         ndvi-src [[(thrift/DataChunk* "ndvi" loc (thrift/TimeSeries* start-idx ndvi) t-res)]
                   [(thrift/DataChunk* "ndvi" bad-loc (thrift/TimeSeries* start-idx ndvi) t-res)]
-                  (thrift/DataChunk* "ndvi" really-bad-loc (thrift/TimeSeries* start-idx ndvi) t-res)]
+                  [(thrift/DataChunk* "ndvi" really-bad-loc (thrift/TimeSeries* start-idx ndvi) t-res)]]
         rain-src [(into pix-loc [start-idx rain])
                   (into bad-pix-loc [start-idx rain])
                   (into really-bad-pix-loc [start-idx rain])]
@@ -244,11 +242,11 @@
 
               ndviseries
               ([:tmp-dirs ndvi-series-path]
-                 (TimeseriesFilter s-res t-res ndvi-path static-path ndvi-series-path :thrift true))
+                 (TimeseriesFilter s-res t-res ndvi-path static-path ndvi-series-path true))
 
               rainseries
               ([:tmp-dirs rain-series-path]
-                 (TimeseriesFilter s-res t-res rain-path static-path rain-series-path :thrift false))
+                 (TimeseriesFilter s-res t-res rain-path static-path rain-series-path false))
 
               adjustseries
               ([:tmp-dirs adjust-series-path]

@@ -53,8 +53,8 @@
 
 (def sample-ts-dc-src
   (let [ts (thrift/TimeSeries* 693 [1 2 3])]
-    [["" (thrift/DataChunk* "ndvi" pixel-loc ts "16")]
-     ["" (thrift/DataChunk* "ndvi" (thrift/ModisPixelLocation* "500" 28 9 0 0) ts "16")]]))
+    [[(thrift/DataChunk* "ndvi" pixel-loc ts "16")]
+     [(thrift/DataChunk* "ndvi" (thrift/ModisPixelLocation* "500" 28 9 0 0) ts "16")]]))
 
 (def sample-hansen-dc
   (thrift/DataChunk* "hansen" pixel-loc 100 t-res))
@@ -316,7 +316,7 @@
                     ["500" 28 8 0 1 0 100]
                     ["500" 28 8 1 0 1 100]
                     ["500" 28 8 1 1 1 100]]
-        val-src (forma-query (assoc test-map :window-dims [4 4]) val-src)
+        val-src (neighbor-query (assoc test-map :window-dims [4 4]) val-src)
         src (<- [?s-res ?pd ?modh ?modv ?s ?l ?f-val ?n-val ?eco ?hansen]
                 (static-src ?s-res ?modh ?modv ?s ?l ?eco ?hansen)
                 (val-src ?s-res ?pd ?modh ?modv ?s ?l ?f-val ?n-val))]
