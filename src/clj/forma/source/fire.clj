@@ -192,6 +192,12 @@
        (number? (read-string (first fire-fields)))
        (= field-count (count fire-fields)))))
 
+(defn keep-fire?
+  "Returns true if the latlon for the fire falls within a tile in tile-set."
+  [s-res tile-set lat lon]
+  (let [[mod-h mod-v _ _] (r/latlon->modis s-res lat lon)]
+    (contains? tile-set [mod-h mod-v])))
+
 (defn fire-source
   "Returns a Cascalog query that creates tuples for new fire format.
 
@@ -207,14 +213,15 @@
     ?lat - The fire latitude as a float.
     ?lon - The fire longitude as a float.
     ?tuple - The FireTuple Thrift object representing the fire."
-  [src]
+  [src tile-set s-res]
   (let [expected-fields 12]
     (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
         (src ?line)
         (valid-fire? ?line expected-fields)
         (p/mangle [#","] ?line
                   :> ?s-lat ?s-lon ?s-kelvin _ _ ?date _ _ ?s-conf _ _ _)
-        (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple))))
+        (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
+        (keep-fire? s-res tile-set ?lat ?lon))))
 
 (defn reproject-fires
   "Returns a Cascalog query that creates DataChunk Thrift objects for fires."
