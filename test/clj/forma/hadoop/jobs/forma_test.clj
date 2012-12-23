@@ -53,8 +53,8 @@
 
 (def sample-ts-dc-src
   (let [ts (thrift/TimeSeries* 693 [1 2 3])]
-    [[(thrift/DataChunk* "ndvi" pixel-loc ts "16")]
-     [(thrift/DataChunk* "ndvi" (thrift/ModisPixelLocation* "500" 28 9 0 0) ts "16")]]))
+    [["" (thrift/DataChunk* "ndvi" pixel-loc ts "16")]
+     ["" (thrift/DataChunk* "ndvi" (thrift/ModisPixelLocation* "500" 28 9 0 0) ts "16")]]))
 
 (def sample-hansen-dc
   (thrift/DataChunk* "hansen" pixel-loc 100 t-res))
@@ -160,10 +160,9 @@
 (fact
   "Test `telescoping-trends` defmapcatop - math is tested elsewhere"
   (let [src [["500" 28 8 0 0 693 (vec (range 300))
-                    (vec (map #(/ % 100.) (range 1 301)))
-                    (range 300)]]]
+                    (vec (map #(/ % 100.) (range 1 301)))]]]
     (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end-l ?short-l ?long-l ?t-stat-l ?break-l]
-        (src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl _)
+        (src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl)
         (telescoping-trends test-map 693 ?ndvi ?precl :> ?end-idx ?short ?long ?t-stat ?break)
         (last ?end-idx :> ?end-l)
         (last ?short :> ?short-l)
@@ -177,8 +176,7 @@
 (fact
   "Test `analyze-trends` query - math is tested elsewhere"
   (let [src [["500" 28 8 0 0 693 (vec (range 300))
-                    (vec (map #(/ % 100.) (range 1 301)))
-                    (range 300)]]
+                    (vec (map #(/ % 100.) (range 1 301)))]]
         trends-src (analyze-trends test-map src)]
     (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short-l ?long-l ?t-stat-l ?break-l]
         (trends-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break)
