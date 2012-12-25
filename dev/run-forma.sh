@@ -115,11 +115,11 @@ $LAUNCHER forma.hadoop.jobs.runner.BetaDataPrep $SRES $TRES $dynamic $STATIC $ou
 
 dynamic=$output
 output="$TMP/betas"
-$LAUNCHER forma.hadoop.jobs.runner.GenBetas $SRES $TRES $dynamic $STATIC $output
+$LAUNCHER forma.hadoop.jobs.runner.GenBetas $SRES $TRES $ESTSTART $dynamic $output
 
 # forma-estimate
 
 betas=$output
 dynamic="$TMP/neighbors"
 output="$TMP/estimated"
-$LAUNCHER forma.hadoop.jobs.runner.GenBetas $SRES $TRES $betas $dynamic $STATIC $output
+$LAUNCHER forma.hadoop.jobs.runner.EstimateForma $SRES $TRES $betas $dynamic $STATIC $output
