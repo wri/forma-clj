@@ -21,7 +21,7 @@ STAGING="s3n://formatest/updates"
 STATIC="s3n://pailbucket/all-static-seq/all"
 ARCHIVE="s3n://formatest/updates"
 S3OUT="$TMP"  # "s3n://formatest/output"
-PAILPATH="$TMP/pail"  # "s3n://formatest/output/pail"
+PAILPATH="s3n://formatest/tmp/pail"
 
 #############
 # Constants #
