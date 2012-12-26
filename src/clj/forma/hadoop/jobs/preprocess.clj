@@ -14,6 +14,23 @@
             [cascalog.ops :as c]
             [forma.utils :as utils]))
 
+(defn parse-locations
+  "Parse collection of tile vectors or iso codes into set of tiles. Tiles
+   and iso codes are typically supplied to defmains via the command line,
+   and may therefore be strings."
+  [tiles-or-isos]
+  {:pre [(let [tiles-or-isos (utils/arg-parser tiles-or-isos)] ;; handle str
+           (or (= :all tiles-or-isos) ;; check for :all kw
+               (every? #(or (coll? %) (keyword? %)) tiles-or-isos)))] 
+   :post [(let [not-kw? (comp not keyword? first)] ;; handle incorrect nesting
+            (every? not-kw? %))]}
+  (let [tiles-or-isos (utils/arg-parser tiles-or-isos) ;; handle string colls
+        tiles-or-isos (if (coll? tiles-or-isos) ;; handle single element
+                        tiles-or-isos
+                        [tiles-or-isos])]
+    (->> (utils/arg-parser tiles-or-isos)
+         (apply tile-set))))
+
 (defmain PreprocessRain
   [source-path output-path s-res target-t-res]
   {:pre [(string? s-res)]}
@@ -33,9 +50,9 @@
     at about 600mb. With a smaller task-multiple, files could reach several
     gigabytes. Although this size is normally ok with S3, random transfer
     errors take a while to recover from with files that large."
-  [in-path out-path s-res iso-keys]
+  [in-path out-path s-res tiles-or-isos]
   (let [task-multiple 15
-        tiles (apply tile-set (utils/arg-parser iso-keys))
+        tiles (parse-locations tiles-or-isos)
         num-tasks (* task-multiple (count tiles))
         src (hfs-seqfile in-path)
         out-loc (hfs-seqfile out-path :sinkmode :replace)]
@@ -95,10 +112,8 @@
   "Path for running FORMA fires processing. See the forma-clj wiki for
 more details. m-res is the resolution of the other MODIS data we are
 using, likely \"500\""
-  ([path out-path m-res out-t-res start-date est-start est-end & tiles-or-isos]
-     (let [tiles (->> (if tiles-or-isos tiles-or-isos [:all])
-                      (utils/arg-parser)
-                      (apply tile-set))
+  ([path out-path m-res out-t-res start-date est-start est-end tiles-or-isos]
+     (let [tiles (parse-locations tiles-or-isos)
            fire-src (f/fire-source (hfs-textline path) tiles m-res)
            reproject-query (f/reproject-fires m-res fire-src)
            ts-query (tseries/fire-query reproject-query m-res out-t-res start-date est-start est-end)]
@@ -113,8 +128,7 @@ using, likely \"500\""
   [input-path pail-path date tiles-or-isos subsets]  
   (let [subsets (->> (utils/arg-parser subsets)
                      (filter (partial contains? (set static/forma-subsets))))
-        tiles (->> (utils/arg-parser tiles-or-isos)
-                   (apply tile-set))
+        tiles (parse-locations tiles-or-isos)
         pattern (->> tiles
                      (apply io/tiles->globstring)
                      (str date "/"))]
