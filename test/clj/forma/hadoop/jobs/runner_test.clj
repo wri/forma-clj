@@ -248,7 +248,7 @@
 
               adjustseries
               ([:tmp-dirs adjust-series-path]
-                 (AdjustSeries s-res t-res ndvi-series-path rain-path adjust-series-path ))
+                 (AdjustSeries s-res t-res ndvi-series-path rain-path adjust-series-path))
 
               trends
               ([:tmp-dirs trends-path]

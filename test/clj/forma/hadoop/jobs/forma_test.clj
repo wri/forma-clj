@@ -95,10 +95,10 @@
   "Checks that fire-tap is trimming the fire timeseries correctly.
    Note that 828 is the period corresponding to 2006-01-01.
    Also note that the timeseries is a running sum."
-  (let [src [[(thrift/DataChunk* "fire" pixel-loc (sample-fire-series 825 5) "01")]]]
-    (fire-tap {:est-start "2005-12-31"
-               :est-end "2006-01-01"
-               :t-res t-res} src)) => (produces [[s-res 28 8 0 0 (sample-fire-series 827 2)]]))
+  (let [src [[(thrift/DataChunk* "fire" pixel-loc (sample-fire-series 825 5) "01")]]
+        est-start "2005-12-31"
+        est-end "2006-01-01"]
+    (fire-tap est-start est-end t-res src)) => (produces [[s-res 28 8 0 0 (sample-fire-series 827 2)]]))
 
 (fact
   "Test `adjust-precl`"
