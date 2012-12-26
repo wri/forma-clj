@@ -26,23 +26,14 @@
 (def output-path (.getPath (io/temp-dir "output-sink")))
 
 (fact
-  "Integration test of `TimeseriesFilter` and `:thrift` flag. All
-   queries and functions used are tested elsewhere.
-
-   The first test assumes use of thrift objects, while the second does not."
+  "Integration test of `TimeseriesFilter`. All queries and functions used
+   are tested elsewhere."
   (let [loc (apply thrift/ModisPixelLocation* pix-loc)
         ts (thrift/TimeSeries* start-idx series)
         ts-src [[(thrift/DataChunk* "ndvi" loc ts s-res)]]
         _ (?- (hfs-seqfile ts-path :sinkmode :replace) ts-src)
         _  (?- (hfs-seqfile static-path :sinkmode :replace) static-src)
-        _ (TimeseriesFilter s-res t-res ts-path static-path output-path true)]
-    (hfs-seqfile output-path)
-    => (produces  [(vec (concat pix-loc [start-idx] [series]))]))
-
-  (let [ts-src [(concat pix-loc [start-idx] [series])]
-        _ (?- (hfs-seqfile ts-path :sinkmode :replace) ts-src)
-        _ (?- (hfs-seqfile static-path :sinkmode :replace) static-src)]
-    (TimeseriesFilter s-res t-res ts-path static-path output-path false)
+        _ (TimeseriesFilter s-res t-res ts-path static-path output-path)]
     (hfs-seqfile output-path)
     => (produces  [(vec (concat pix-loc [start-idx] [series]))])))
 
