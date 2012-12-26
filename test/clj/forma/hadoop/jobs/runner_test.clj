@@ -60,19 +60,30 @@
     (hfs-seqfile output-path)
     => (produces [(concat pix-loc [start-idx] [series] [series])])))
 
-(fact
+(facts
   "Integration test of `Trends` defmain. All queries and functions used are
    tested elsewhere"
-  (let [src [[s-res 28 8 0 0 693 series series]]
+  (let [est-end "2006-01-17"
+        est-start "2006-01-17"
+        src [[s-res 28 8 0 0 693 (conj series 140 139 140) (conj series 128 140 128)]]
         adjusted-path (.getPath (io/temp-dir "adjusted-src"))
         output-path (.getPath (io/temp-dir "trends-src"))
-        _ (?- (hfs-seqfile adjusted-path :sinkmode :replace) src)
-        _ (Trends s-res t-res est-end adjusted-path output-path)]
-    (hfs-seqfile output-path))
-  => (produces [[s-res 28 8 0 0 693 828
-                 [0.9999999999999982 0.999999999999998]
-                 [nil nil] [nil nil]
-                 [67.93805204562999 72.56614847949598]]]))
+        _ (?- (hfs-seqfile adjusted-path :sinkmode :replace) src)]
+    (Trends s-res t-res est-end adjusted-path output-path)
+    (hfs-seqfile output-path)
+    => (produces [[s-res 28 8 0 0 693 829
+                   [0.9999999999999982 0.999999999999998 0.999999999999998]
+                   [nil nil 1.4999999999989022]
+                   [nil nil 8.131966242712587E10]
+                   [67.93805204562999 72.56614847949598 17.048905109489304]]])
+
+    (Trends s-res t-res est-end adjusted-path output-path est-start)
+    (hfs-seqfile output-path)
+    => (produces [[s-res 28 8 0 0 693 829
+                   [0.999999999999998]
+                   [1.4999999999989022]
+                   [8.131966242712587E10]
+                   [17.048905109489304]]])))
 
 (defn sample-fire-series
   "Create a sample fire time series. Duplicated from
@@ -242,15 +253,11 @@
 
               ndviseries
               ([:tmp-dirs ndvi-series-path]
-                 (TimeseriesFilter s-res t-res ndvi-path static-path ndvi-series-path true))
-
-              rainseries
-              ([:tmp-dirs rain-series-path]
-                 (TimeseriesFilter s-res t-res rain-path static-path rain-series-path false))
+                 (TimeseriesFilter s-res t-res ndvi-path static-path ndvi-series-path))
 
               adjustseries
               ([:tmp-dirs adjust-series-path]
-                 (AdjustSeries s-res t-res ndvi-series-path rain-series-path adjust-series-path ))
+                 (AdjustSeries s-res t-res ndvi-series-path rain-path adjust-series-path ))
 
               trends
               ([:tmp-dirs trends-path]

@@ -49,8 +49,11 @@
                                    (hfs-seqfile rain-path)))))
 
 (defmain Trends
-  [s-res t-res est-end adjusted-path output-path]
-  (let [est-map (get-est-map s-res t-res est-end)
+  [s-res t-res est-end adjusted-path output-path & [est-start]]
+  (let [est-map (-> (get-est-map s-res t-res est-end)
+                    (#(if est-start
+                        (assoc % :est-start est-start)
+                        %)))
         adjusted-series-src (hfs-seqfile adjusted-path)
         sink (hfs-seqfile output-path :sinkmode :replace)]
     (?- sink (forma/analyze-trends est-map adjusted-series-src))))
