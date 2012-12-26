@@ -9,7 +9,8 @@
             [forma.schema :as schema]
             [forma.thrift :as thrift]
             [forma.hadoop.io :as io]
-            [forma.hadoop.predicate :as p]))
+            [forma.hadoop.predicate :as p]
+            [forma.utils :as utils]))
 
 (defbufferop [timeseries [missing-val]]
   "Takes in a number of `<t-period, modis-chunk>` tuples,
@@ -68,11 +69,10 @@
 
 (defmain ModisTimeseries
   "Convert unordered MODIS chunks from pail into pixel-level timeseries."
-  [pail-path output-path s-res t-res dataset &
-   {:keys [sinkmode] :or {sinkmode :keep}}]
+  [pail-path output-path s-res t-res dataset]
   (->> (pail/split-chunk-tap pail-path [dataset (format "%s-%s" s-res t-res)])
        (extract-tseries *missing-val*)
-       (?- (hfs-seqfile output-path :sinkmode sinkmode))))
+       (?- (hfs-seqfile output-path :sinkmode :replace))))
 
 ;; #### Fire Time Series Processing
 
