@@ -31,7 +31,7 @@ id_file=~/.ssh/id_rsa-forma-keypair
 ssh_cmd="ssh -i $id_file -o StrictHostKeyChecking=no hadoop@$dns"
 
 # send commands to set up testing environment
-$ssh_cmd 'git clone git@github.com:reddmetrics/forma-clj.git;
+$ssh_cmd 'git clone git://github.com:reddmetrics/forma-clj.git;
 cd forma-clj;
 git checkout develop;
 cd ../bin;
