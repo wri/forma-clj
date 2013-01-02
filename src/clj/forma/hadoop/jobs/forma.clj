@@ -108,22 +108,19 @@
 
 (defn dynamic-filter
   "Filters out all NDVI pixels where timeseries is all -3000s. Trims
-   ndvi, reli and rain timeseries so that they are the same length,
+   ndvi and rain timeseries so that they are the same length,
    and replaces any nodata values with the value to their left. Leaves
    nodata value if at the start of the timeseries"
-  [{:keys [t-res nodata est-start]} ndvi-src reli-src rain-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ndvi-ts ?precl-ts ?reli-ts]
+  [{:keys [t-res nodata est-start]} ndvi-src rain-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ndvi-ts ?precl-ts]
       (ndvi-src ?s-res ?mod-h ?mod-v ?sample ?line ?n-start ?ndvi)
-      (reli-src ?s-res ?mod-h ?mod-v ?sample ?line ?r-start ?reli)
       (rain-src ?s-res ?mod-h ?mod-v ?sample ?line ?p-start ?precl)
       (training-3000s? t-res ?n-start est-start ?ndvi :> false)
       (u/replace-from-left* nodata ?ndvi :default nodata :all-types true :> ?ndvi-clean)
-      (u/replace-from-left* nodata ?reli :default nodata :all-types true :> ?reli-clean)
       (u/replace-from-left* nodata ?precl :default nodata :all-types true :> ?precl-clean)
       (schema/adjust ?p-start ?precl-clean
                      ?n-start ?ndvi-clean
-                     ?r-start ?reli-clean
-                     :> ?start-idx ?precl-ts ?ndvi-ts ?reli-ts)))
+                     :> ?start-idx ?precl-ts ?ndvi-ts)))
 
 (defn series-end
   "Return the relative index of the final element of a collection
@@ -185,7 +182,7 @@
         short-block (:window est-map)
         t-res (:t-res est-map)]
     (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break]
-        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl _)
+        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl)
         (u/replace-from-left* nodata ?ndvi :all-types true :> ?clean-ndvi)
         (telescoping-trends est-map ?start ?clean-ndvi ?precl :> ?end-idx ?short ?long ?t-stat ?break)
         (reduce max ?end-idx :> ?end)
@@ -220,7 +217,7 @@
                   (filter identity)
                   (schema/combine-neighbors nodata))]))
 
-(defn forma-query
+(defn neighbor-query
   "final query that walks the neighbors and spits out the values."
   [{:keys [neighbors window-dims nodata]} forma-val-src]
   (let [[rows cols] window-dims
