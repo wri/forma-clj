@@ -6,6 +6,7 @@
   (:require [forma.hadoop.predicate :as p]
             [forma.hadoop.io :as io]
             [forma.source.rain :as r]
+            [forma.hadoop.jobs.forma :as forma]
             [forma.source.fire :as f]
             [forma.source.static :as s]
             [forma.source.hdf :as hdf]
@@ -116,8 +117,9 @@ using, likely \"500\""
      (let [tiles (parse-locations tiles-or-isos)
            fire-src (f/fire-source (hfs-textline path) tiles m-res)
            reproject-query (f/reproject-fires m-res fire-src)
-           ts-query (tseries/fire-query reproject-query m-res out-t-res start-date est-start est-end)]
-       (?- (hfs-seqfile out-path :sinkmode :replace) ts-query))))
+           ts-query (tseries/fire-query reproject-query m-res out-t-res start-date est-start est-end)
+           adjusted-fires (forma/fire-tap est-start est-end out-t-res ts-query)]
+       (?- (hfs-seqfile out-path :sinkmode :replace) adjusted-fires))))
 
 (defmain PreprocessModis
   "Preprocess MODIS data from raw HDF files to pail.
