@@ -143,17 +143,11 @@
                 (try (f x)
                      (catch Exception e nil)))))
 
-(defn box-int
-  "Clojure automatically coerces primitive ints to longs. For Thrift, we need
-  ints, so this helper function boxes an integer value to avoid that coercion."
-  [x]
-  (Integer. (.intValue x)))
-
 (defn int-struct
   "Return a IntArray that contains all numbers in the supplied sequence cast
   to ints."
   [xs]
-  (let [ints (map box-int xs)]
+  (let [ints (map int xs)]
     (doto (IntArray.)
       (.setInts ints))))
 

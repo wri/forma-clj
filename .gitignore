@@ -1,4 +1,6 @@
 credentials.json
+#*.*#
+.#*
 .#
 pom.xml
 .cake
