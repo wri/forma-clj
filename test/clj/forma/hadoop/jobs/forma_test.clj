@@ -53,8 +53,8 @@
 
 (def sample-ts-dc-src
   (let [ts (thrift/TimeSeries* 693 [1 2 3])]
-    [["pailpath" (thrift/DataChunk* "ndvi" pixel-loc ts "16")]
-     ["pailpath" (thrift/DataChunk* "ndvi" (thrift/ModisPixelLocation* "500" 28 9 0 0) ts "16")]]))
+    [[(thrift/DataChunk* "ndvi" pixel-loc ts "16")]
+     [(thrift/DataChunk* "ndvi" (thrift/ModisPixelLocation* "500" 28 9 0 0) ts "16")]]))
 
 (def sample-hansen-dc
   (thrift/DataChunk* "hansen" pixel-loc 100 t-res))
@@ -95,10 +95,10 @@
   "Checks that fire-tap is trimming the fire timeseries correctly.
    Note that 828 is the period corresponding to 2006-01-01.
    Also note that the timeseries is a running sum."
-  (let [src [[(thrift/DataChunk* "fire" pixel-loc (sample-fire-series 825 5) "01")]]]
-    (fire-tap {:est-start "2005-12-31"
-               :est-end "2006-01-01"
-               :t-res t-res} src)) => (produces [[s-res 28 8 0 0 (sample-fire-series 827 2)]]))
+  (let [src [[(thrift/DataChunk* "fire" pixel-loc (sample-fire-series 825 5) "01")]]
+        est-start "2005-12-31"
+        est-end "2006-01-01"]
+    (fire-tap est-start est-end t-res src)) => (produces [[s-res 28 8 0 0 (sample-fire-series 827 2)]]))
 
 (fact
   "Test `adjust-precl`"
@@ -132,15 +132,12 @@
         ndvi-src [["500" 28 8 0 0 826 [1 2 3]]
                   ["500" 28 8 0 1 826 [-3000 -3000 3]]
                   ["500" 28 8 0 2 826 [-3000 2 3]]]
-        reli-src [["500" 28 8 0 0 826 [0 0 3]]
-                  ["500" 28 8 0 1 826 [0 0 3]]
-                  ["500" 28 8 0 2 826 [1 -9999.0 3]]]
         rain-src [["500" 28 8 0 0 826 [0.1 0.2]]
                   ["500" 28 8 0 1 826 [0.1 0.2]]
                   ["500" 28 8 0 2 826 [0.1 0.2]]]]
-    (dynamic-filter test-map ndvi-src reli-src rain-src))
-  => (produces [["500" 28 8 0 0 826 [1 2] [0.1 0.2] [0 0]]
-                ["500" 28 8 0 2 826 [-3000 2] [0.1 0.2] [1 1]]]))
+    (dynamic-filter test-map ndvi-src rain-src))
+  => (produces [["500" 28 8 0 0 826 [1 2] [0.1 0.2]]
+                ["500" 28 8 0 2 826 [-3000 2] [0.1 0.2]]]))
 
 (tabular
  (fact
@@ -163,10 +160,9 @@
 (fact
   "Test `telescoping-trends` defmapcatop - math is tested elsewhere"
   (let [src [["500" 28 8 0 0 693 (vec (range 300))
-                    (vec (map #(/ % 100.) (range 1 301)))
-                    (range 300)]]]
+                    (vec (map #(/ % 100.) (range 1 301)))]]]
     (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end-l ?short-l ?long-l ?t-stat-l ?break-l]
-        (src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl _)
+        (src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl)
         (telescoping-trends test-map 693 ?ndvi ?precl :> ?end-idx ?short ?long ?t-stat ?break)
         (last ?end-idx :> ?end-l)
         (last ?short :> ?short-l)
@@ -180,8 +176,7 @@
 (fact
   "Test `analyze-trends` query - math is tested elsewhere"
   (let [src [["500" 28 8 0 0 693 (vec (range 300))
-                    (vec (map #(/ % 100.) (range 1 301)))
-                    (range 300)]]
+                    (vec (map #(/ % 100.) (range 1 301)))]]
         trends-src (analyze-trends test-map src)]
     (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short-l ?long-l ?t-stat-l ?break-l]
         (trends-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break)
@@ -259,10 +254,13 @@
           (src ?s-res ?period ?modh ?modv ?sample ?line ?forma-val)))))
 
 (fact
-  "Check `forma-query`. This is a crazy test in part because of the
+  "Check `neighbor-query`. Note that the val-src MUST be a query for the
+   predicate macro within `neighbor-query` to work properly.
+
+   Aside from that, this is also a crazy test in part because of the
    issue comparing thrift objects with Cascalog mentioned in the test
    above."
-  (let [output-src (forma-query (assoc test-map :window-dims [4 4]) val-src)]
+  (let [output-src (neighbor-query (assoc test-map :window-dims [4 4]) val-src)]
     (<- [?s-res ?pd ?modh ?modv ?sample ?line ?unpacked-fire ?neighbor-sans-fire]
         (output-src ?s-res ?pd ?modh ?modv ?sample ?line ?forma-val ?neighbor-val)
         (thrift/unpack* ?neighbor-val :> ?unpacked-neighbor)
@@ -318,7 +316,7 @@
                     ["500" 28 8 0 1 0 100]
                     ["500" 28 8 1 0 1 100]
                     ["500" 28 8 1 1 1 100]]
-        val-src (forma-query (assoc test-map :window-dims [4 4]) val-src)
+        val-src (neighbor-query (assoc test-map :window-dims [4 4]) val-src)
         src (<- [?s-res ?pd ?modh ?modv ?s ?l ?f-val ?n-val ?eco ?hansen]
                 (static-src ?s-res ?modh ?modv ?s ?l ?eco ?hansen)
                 (val-src ?s-res ?pd ?modh ?modv ?s ?l ?f-val ?n-val))]
