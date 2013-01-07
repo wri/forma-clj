@@ -1,4 +1,8 @@
 (ns forma.hadoop.jobs.runner
+  "This namespace includes defmains needed for running the various
+   steps in the FORMA workflow. They can be used from the REPL or
+   shell, and arguments are parsed appropriately. See tests for usage
+   examples."
   (:use cascalog.api
         [forma.source.tilesets :only (tile-set country-tiles)])
   (:require [forma.hadoop.jobs.forma :as forma]
