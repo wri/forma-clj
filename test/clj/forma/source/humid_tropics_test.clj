@@ -9,7 +9,7 @@
 
 (fact
   "Check that `humid-tropics-ids` is parsing ecoids into a set"
-  (set? humid-tropics-ids))
+  (set? humid-tropics-ids) => true)
 
 (fact
   "Check `in-humid-tropics?`"

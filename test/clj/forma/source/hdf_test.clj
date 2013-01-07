@@ -52,18 +52,16 @@ error."
  (fact "Test ensuring that raster-chunks can be serialized, and that
  they produce the proper number of chunks for the supplied
  chunk-size. (By pushing raster-chunks down into a subquery, we force
- serialization of tuples before they're utilized inside of the final
- `fact?<-` query.)"
+ serialization of tuples before they're utilized inside of the final query.)"
    (let [src       (io/hfs-wholefile hdf-path)
          chunk-size ?c-size
          subquery  (<- [?dataset ?chunkid ?chunk]
                        (src ?filename ?hdf)
                        (unpack-modis [[:ndvi]] ?hdf :> ?dataset ?freetile)
                        (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk))]
-     (fact?<- [[?num-chunks]]
-              [?count]
-              (subquery ?dataset ?chunkid ?chunk)
-              (c/count ?count))))
+     (<- [?count]
+         (subquery ?dataset ?chunkid ?chunk)
+         (c/count ?count))) => (produces [[?num-chunks]]))
  ?c-size ?num-chunks
  24000   60
  48000   30
@@ -90,12 +88,11 @@ error."
 is used as a source for the final count aggregator. We check that the
 chunk-size makes sense for the supplied dataset.
 
-Note that this only works when the file at hdf-path has a spatial
+Note that this test only works when the file at hdf-path has a spatial
 resolution of 1000m; otherwise, the relationship between chunk-size
 and total chunks becomes off."
   (let [subquery (->> (io/hfs-wholefile hdf-path)
                       (modis-chunks [:ndvi] 24000))]
-    (fact?<- [[60]] ;; 60 chunks per tile at 1000m resolution
-             [?count]
-             (subquery ?datachunk)
-             (c/count ?count))))
+    (<- [?count]
+        (subquery ?datachunk)
+        (c/count ?count))) => (produces [[60]]))
