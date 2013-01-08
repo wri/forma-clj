@@ -15,7 +15,8 @@
         [forma.trends.bfast]
         [clj-time.core :only (date-time)])
   (:require [incanter.charts :as c]
-            [incanter.core :as i]))
+            [incanter.core :as i]
+            [incanter.pdf :as p]))
 
 (def ndvi-range
   "Bound to a range of times that serve as the x-axis for a timeseries
@@ -76,6 +77,12 @@
   [x y plot]
   (c/slider #(i/set-data plot [x (hp-filter % y)]) hp-range "lambda"))
 
+(defn linear-prediction
+  []
+  (let [X (i/bind-columns (i/matrix (repeat (count ndvi-range) 1))
+                          (i/matrix ndvi-range))]
+    (linear-predict (i/matrix bimonth-ndvi) X)))
+
 (defn add-bfast-slider
   "Add three sliders to the specified plot showing the break
   statistic, one for the p-value, one for the window length of the
@@ -113,6 +120,7 @@
     (presentation-view :harmonic-plot)"
   [k]
   (let [hp-plot (series-plot hp-ndvi)
+        linear-plot (series-plot (linear-prediction))
         harmonic-plot (series-plot decomp-ndvi)]
     (cond
      (= k :hp-filter)
@@ -130,4 +138,8 @@
      (= k :break-plot)
      (do (i/view plot-efp)
          (add-ts bimonth-ndvi plot-efp)
-         (add-bfast-slider plot-efp)))))
+         (add-bfast-slider plot-efp))
+     (= k :linear)
+     (do (i/view linear-plot)
+         (add-ts bimonth-ndvi linear-plot)
+         (p/save-pdf linear-plot "/mnt/hgfs/Dropbox/linear.pdf")))))
