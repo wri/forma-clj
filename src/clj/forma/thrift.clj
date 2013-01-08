@@ -147,7 +147,7 @@
   "Return a IntArray that contains all numbers in the supplied sequence cast
   to ints."
   [xs]
-  (let [ints (list-of int xs)]
+  (let [ints (map int xs)]
     (doto (IntArray.)
       (.setInts ints))))
 
@@ -180,7 +180,8 @@
                forma.schema.FireValue forma.schema.FormaArray
                forma.schema.FormaValue forma.schema.IntArray
                forma.schema.LongArray forma.schema.TimeSeries
-               java.lang.Double java.lang.Integer java.lang.Long]
+               java.lang.Double java.lang.Integer java.lang.Long
+               java.lang.Short]
         vals (if (coll? x) x (vector x))]
     (some (fn [val] (some #(= (type val) %) types)) vals)))
 
