@@ -111,8 +111,8 @@
 
 (defmain PreprocessFire
   "Path for running FORMA fires processing. See the forma-clj wiki for
-more details. m-res is the resolution of the other MODIS data we are
-using, likely \"500\""
+   more details. m-res is the desired output resolution, likely the
+   resolution of the other MODIS data we are using (i.e. \"500\")"
   ([path out-path m-res out-t-res start-date est-start est-end tiles-or-isos]
      (let [tiles (parse-locations tiles-or-isos)
            fire-src (f/fire-source (hfs-textline path) tiles m-res)
