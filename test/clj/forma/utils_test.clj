@@ -231,8 +231,8 @@
 (fact
   "Checks that `within-tileset?` correctly handles data inside and outside the given tile-set"
   (let [tile-set #{[28 8]}]
-    (within-tileset? tile-set 28 8)
-    (within-tileset? tile-set 29 8)))
+    (within-tileset? tile-set 28 8) => true
+    (within-tileset? tile-set 29 8) => false))
 
 (fact
   "Test arg-parser"
