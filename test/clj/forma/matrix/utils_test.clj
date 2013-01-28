@@ -3,6 +3,10 @@
         midje.sweet)
   (:require [incanter.core :as i]))
 
+(fact "is-square? tests"
+  (is-square? (i/matrix (range 4) 2)) => true
+  (is-square? (i/matrix (range 6) 2)) => false)
+
 (facts "singular? tests."
   (singular? (i/matrix [[1 0] [1 0]])) => true
   (singular? (i/matrix [[1 0] [0 1]])) => false)
@@ -14,7 +18,7 @@ matrix; test also that the transpose swaps the dimensions."
     (transpose (transpose coll-mat)) => coll-mat
     (count (transpose coll-mat)) => (count (first coll-mat))))
 
-(facts "check the values and dimension of the output."
+(fact "check `outer-product` - verify values and dimension of the output."
   (let [coll [1 2 3]
         outer (outer-product coll)]
     outer => '(1.0 2.0 3.0 2.0 4.0 6.0 3.0 6.0 9.0)
@@ -66,6 +70,15 @@ function, as per the documentation."
  [[10 1] [12 4] [8 1] [15 9] [16 1]] [1 0 4 0 0 9 1]
  [[10 1] [12 4] [8 1] [15 9]]        [1 0 4 0 0 9])
 
+(tabular
+ (fact "Sparse expansion can take custom start and length."
+   (apply sparse-expander 0 ?matrix ?opts) => ?result)
+ ?matrix         ?opts                  ?result
+ [[10 1] [12 9]] []                     [1 0 9]
+ [[10 1] [12 9]] [:start 8]             [0 0 1 0 9]
+ [[10 1] [12 9]] [:start 8 :length 10]  [0 0 1 0 9 0 0 0 0 0]
+ [[10 1] [15 9]] [:start 14 :length 3]  [0 9 0])
+
 (fact
   "Check `sparse-prep`"
   (sparse-prep [[3 2]] [[1 1]]) => [[3 1] [2 1]]
@@ -76,15 +89,6 @@ function, as per the documentation."
   "Check `sparsify`"
   (sparsify 1 -9999 [3 5] [[-9999 3 4 5] [-9999 5 5 6]]) => [3 -9999 5]
   (sparsify 2 -9999 [3 5] [[-9999 3 4 5] [-9999 5 5 6]]) => [4 -9999 5])
-
-(tabular
- (fact "Sparse expansion can take custom start and length."
-   (apply sparse-expander 0 ?matrix ?opts) => ?result)
- ?matrix         ?opts                  ?result
- [[10 1] [12 9]] []                     [1 0 9]
- [[10 1] [12 9]] [:start 8]             [0 0 1 0 9]
- [[10 1] [12 9]] [:start 8 :length 10]  [0 0 1 0 9 0 0 0 0 0]
- [[10 1] [15 9]] [:start 14 :length 3]  [0 9 0])
 
 (tabular
  (fact "idx and rowcol conversion for squares."
