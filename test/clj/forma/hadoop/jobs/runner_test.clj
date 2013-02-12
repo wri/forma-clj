@@ -8,7 +8,8 @@
             [forma.thrift :as thrift]
             [forma.date-time :as date]
             [cascalog.io :as io]
-            [cascalog.ops :as c]))
+            [cascalog.ops :as c]
+            [adgoji.cascalog.graph :as g]))
 
 (def s-res "500")
 (def t-res "16")
@@ -275,3 +276,77 @@
                  (EstimateForma s-res t-res beta-path neighbor-path static-path prob-series-path))))
   1
   => 1)
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; TESTING USE OF CASCALOG GRAPH ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn prep-data []
+      (let [tmp-root "/tmp/run-test"
+        bad-pix-loc [s-res 28 8 0 1]
+        really-bad-pix-loc [s-res 28 8 0 2]
+        loc (apply thrift/ModisPixelLocation* pix-loc)
+        bad-loc (apply thrift/ModisPixelLocation* bad-pix-loc)
+        really-bad-loc (apply thrift/ModisPixelLocation* really-bad-pix-loc)
+        ndvi [6269 3115 3542 4885 3088 5780 1987 4961 5367 5645 6926 6254 8017 1591 9045 3502 6807 3108 95 4808 689 4925 8934 4019 44 3409 5599 31 2240 4185 8251 6402 6610 252 7432 9661 1980 2544 7034 7540 1212 376 1600 8949 8880 7486 5145 6025 173 497 7555 4785 1354 550 796 5020 4757 5558 8664 1940 4127 115 620 1783 9401 2393 2359 1111 3477 2589 3204 4816 7416 5401 3158 1043 4641 9848 500 2122 9168 3335 4193 9417 7676 3272 4024 6537 314 8806 5435 9746 556 7241 5264 6625 92 4602 9264 4009 809 7434 2202 4103 2235 3432 6548 3240 9461 1783 6373 1278 3538 182 8904 805 3605 4440 7370 4471 7609 8296 5302 5591 6353 5599 4204 1903 3855 4386 3672 4837 5486 2533 5451 7380]
+        rain [7 4 7 0 8 4 9 2 0 2 3 5 2 2 8 3 8 5 1 4 8 2 7 4 1 1 4 1 1 5 5 7 9 3 5 9 3 2 2 6 5 3 2 9 8 8 1 3 3 4 1 9 7 2 8 0 2 7 9 8 3 8 7 4 2 6 4 8 9 3 1 6 3 8 3 7 0 6 4 4 2 0 7 0 3 9 9 4 2 0 2 8 1 1 6 7 1 0 1 6 6 6 9 4 6 8 4 1 7 8 8 2 3 2 2 2 3 5 1 4 2 7 6 0 6 9 1 0 5 5 2 9 6 6 8 9]
+        static [25 14000 1000 100 20]
+        bad-static [25 14000 1000 100 0] ;; coast
+        really-bad-static [0 14000 1000 0 0] ;; low vcf, coast
+        ndvi-src [[(thrift/DataChunk* "ndvi" loc (thrift/TimeSeries* start-idx ndvi) t-res)]
+                  [(thrift/DataChunk* "ndvi" bad-loc (thrift/TimeSeries* start-idx ndvi) t-res)]
+                  [(thrift/DataChunk* "ndvi" really-bad-loc (thrift/TimeSeries* start-idx ndvi) t-res)]]
+        rain-src [(into pix-loc [start-idx rain])
+                  (into bad-pix-loc [start-idx rain])
+                  (into really-bad-pix-loc [start-idx rain])]
+        len (count ndvi)
+        fire-src [(conj pix-loc (sample-fire-series start-idx len))
+                  (conj bad-pix-loc (sample-fire-series start-idx len))
+                  (conj really-bad-pix-loc (sample-fire-series start-idx len))]
+        static-src [(vec (concat pix-loc static))
+                    (vec (concat bad-pix-loc bad-static))
+                    (vec (concat really-bad-pix-loc really-bad-static))]
+        ndvi-path (.getPath (io/temp-dir "ndvi-path"))
+        rain-path (.getPath (io/temp-dir "rain-path"))
+        static-path (.getPath (io/temp-dir "static-path"))
+        fire-path (.getPath (io/temp-dir "fire-path"))
+        _ (?- (hfs-seqfile ndvi-path :sinkmode :replace) ndvi-src)
+        _ (?- (hfs-seqfile rain-path :sinkmode :replace) rain-src)
+        _ (?- (hfs-seqfile static-path :sinkmode :replace) static-src)
+        _ (?- (hfs-seqfile fire-path :sinkmode :replace)  fire-src)]
+        {:ndvi-path ndvi-path :rain-path rain-path :static-path static-path :fire-path fire-path}))
+
+;; slightly modified version of the TimeseriesFilter defmain
+(def ndvi-series
+  (g/flow-fn [s-res t-res ndvi-path static-path]
+             (let [vcf-limit (:vcf-limit (get-est-map s-res t-res))
+                   static-src (hfs-seqfile static-path)
+                   ts-src (hfs-seqfile ndvi-path)
+                   sink (hfs-seqfile output-path :sinkmode :replace)]
+               (forma/filter-query static-src vcf-limit ts-src))))
+
+;; slightly modified version of the AdjustSeries defmain
+(def adjust-series
+  (g/flow-fn [s-res t-res ndvi-series rain-path output-tap]
+               (let [est-map (get-est-map s-res t-res nil)]
+               (?- output-tap
+                    (forma/dynamic-filter est-map
+                                          ndvi-series
+                                          (hfs-seqfile rain-path))))))
+
+;; this defines the workflow - you want fewer steps? remove the step
+;; you hate. nothing else has to change.
+(def complete-flow (g/fns-to-flow #'ndvi-series #'adjust-series))
+
+;; this runs the flow. Note that arguments to each of the flow-fns
+;; are simply key-value pairs in a map. args used more than once
+;; (e.g. s-res) don't have to be specified more than once.
+(defn run-flow []
+  (let [{:keys [ndvi-path rain-path static-path]} (prep-data)]
+    ((g/mk-workflow-fn complete-flow)
+     {:output-tap (hfs-seqfile "/tmp/adjusted" :sinkmode :replace)
+      :s-res "500" :t-res "16" :ndvi-path ndvi-path :rain-path rain-path
+      :static-path static-path})))

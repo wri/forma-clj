@@ -24,6 +24,7 @@
                  [cascalog-checkpoint "0.1.1"]
                  [backtype/dfs-datastores "1.1.3"]
                  [backtype/dfs-datastores-cascading "1.2.0"]
+                 [adgoji/cascalog-graph "0.0.1"]
                  [org.apache.thrift/libthrift "0.8.0"
                   :exclusions [org.slf4j/slf4j-api]]]
   :aot [forma.hadoop.pail, forma.schema, #"forma.hadoop.jobs.*"]
