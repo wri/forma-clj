@@ -39,3 +39,6 @@ sudo chown --recursive $USER $native_lib
 echo "export LD_LIBRARY_PATH=/home/$USER/native/Linux-amd64-64/" >> /home/$USER/.bashrc
 echo 'export LD_LIBRARY_PATH=/usr/local/fwtools/usr/lib:$LD_LIBRARY_PATH' >> /home/$USER/.bashrc
 echo 'export JAVA_LIBRARY_PATH=$LD_LIBRARY_PATH:$JAVA_LIBRARY_PATH' >> /home/$USER/.bashrc
+
+# source .bashrc so that LD_LIBRARY_PATH and JAVA_LIBRARY_PATH show up
+source ~/.bashrc
