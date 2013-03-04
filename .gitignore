@@ -1,3 +1,6 @@
+credentials.json
+#*.*#
+.#*
 .#
 pom.xml
 .cake
@@ -7,14 +10,13 @@ native
 logs/
 classes
 docs
-doc
+target/
 autodoc
 .#*
 *#*
 .classpath
 .settings/
 .project
-doc/
 .lein-deps-sum
 .DS_Store
 .repl
@@ -22,3 +24,4 @@ doc/
 *.ipr
 *.iws
 .lein-plugins
+*.crc

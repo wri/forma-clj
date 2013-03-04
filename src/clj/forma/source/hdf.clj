@@ -12,11 +12,13 @@
 (ns forma.source.hdf
   (:use cascalog.api
         [cascalog.util :only (uuid)]
+        [forma.hadoop.pail :only (to-pail)]
         [forma.reproject :only (spatial-res temporal-res tilestring->hv)])
   (:require [clojure.set :as set]
             [forma.utils :as u]
-            [forma.schema :as schema]
+            [forma.thrift :as thrift]
             [forma.hadoop.predicate :as p]
+            [forma.hadoop.io :as fio]
             [cascalog.ops :as c]
             [cascalog.io :as io]
             [clojure.java.io :as java.io])
@@ -184,7 +186,7 @@ as a 1-tuple."
         ret (int-array (* width height))]
     (.ReadRaster band 0 0 width height ret)
     (map-indexed (fn [idx xs]
-                   [idx (schema/to-struct xs)])
+                   [idx (vec xs)])
                  (partition chunk-size ret))))
 
 ;; ### Metadata Parsing
@@ -249,15 +251,25 @@ as a 1-tuple."
   before running any sort of data analysis, as seqs require linear
   time for lookups."
   [datasets chunk-size source]
-  (let [keys ["SHORTNAME" "TileID" "RANGEBEGINNINGDATE"]
+  (let [ks ["SHORTNAME" "TileID" "RANGEBEGINNINGDATE"]
         chunkifier (p/chunkify chunk-size)]
     (<- [?datachunk]
         (source _ ?hdf)
         (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
         (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk)
-        (meta-values [keys] ?freetile :> ?productname ?tileid ?date)
+        (meta-values [ks] ?freetile :> ?productname ?tileid ?date)
         (split-id ?tileid :> ?mod-h ?mod-v)
         ((c/juxt #'spatial-res #'temporal-res) ?productname :> ?s-res ?t-res)
-        (schema/mk-array-value ?chunk :> ?array)
-        (chunkifier ?dataset ?date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?array :> ?datachunk)
-        (:distinct false))))
+        (chunkifier ?dataset ?date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk))))
+
+(defn modis-chunker
+  "Cascalog job that takes set of dataset identifiers, a chunk size, a
+  directory containing MODIS HDF files, or a link directly to such a
+  file, and an output dir, harvests tuples out of the HDF files, and
+  sinks them into a custom directory structure inside of
+  `pail-path`."
+  [subsets chunk-size in-path pattern pail-path]
+  {:pre (seq subsets)}
+  (let [source (fio/hfs-wholefile in-path :source-pattern pattern)]
+    (->> (modis-chunks subsets chunk-size source)
+         (to-pail pail-path))))

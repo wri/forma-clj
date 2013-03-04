@@ -222,14 +222,13 @@
 ;; feature extraction
 
 (defn tele-ts
-  "create a telescoping sequence of sequences, where each incremental sequence
-  is one element longer than the last, pinned to the same initial subsequence.
-
-  `start-index` is interpreted such that the first output sequence
-  includes all values up to but not including the value at `start-index`.
-  `end-index` is interpreted similarly for the final output sequence.
-
-  `start-index` <= 0 will throw an exception to avoid returning empty vector"
+  "Create a telescoping sequence of sequences, where each incremental
+  sequence is one element longer than the last, pinned to the same
+  initial subsequence. `start-index` is interpreted such that the
+  first output sequence includes all values up to but not including
+  the value at `start-index`. `end-index` is interpreted similarly
+  for the final output sequence. `start-index` <= 0 will throw an
+  exception to avoid returning empty vector"
   [start-index end-index base-seq]
   {:pre [(> start-index 0)]}
   (let [base-vec (vec base-seq)]
@@ -269,7 +268,9 @@
                    (count reli-ts)))))
 
 (defn shorten-ts
-  "Shorten timeseries to length of match timeseries"
+  "Shorten timeseries to length of model timeseries"
   [model-ts ts]
+  {:pre [(and (< 0 (count model-ts))
+              (< 0 (count ts)))]}
   [(vec (take (count model-ts) ts))])
 

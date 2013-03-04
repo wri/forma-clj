@@ -1,6 +1,7 @@
 (ns forma.utils
   (:use [clojure.math.numeric-tower :only (round expt)])
-  (:require [clojure.java.io :as io])
+  (:require [clojure.java.io :as io]
+            [forma.thrift :as thrift])
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]))
 
@@ -8,13 +9,6 @@
 
 (defn throw-illegal [s]
   (throw (IllegalArgumentException. s)))
-
-(defn round-places
-  "Rounds the supplied number to the supplied number of decimal
-  points, and returns a float representation."
-  [sig-figs number]
-  (let [factor (expt 10 sig-figs)]
-    (double (/ (round (* factor number)) factor))))
 
 (defn strings->floats
   "Accepts any number of string representations of floats, and
@@ -36,15 +30,15 @@
   value obtained by taking `nth` in turn on each level of the nested
   collection."
   [coll ks]
-  (apply thrush coll (for [k ks]
-                       (fn [xs] (nth xs k)))))
+  (apply thrush coll
+         (for [k ks] (fn [xs] (nth xs k)))))
 
 (defn unweave
   "Splits a sequence with an even number of entries into two sequences
-  by pulling alternating entries. For example:
+  by pulling alternating entries.
 
-    (unweave [0 1 2 3])
-    ;=> [(0 2) (1 3)]"
+  Example usage:
+    (unweave [0 1 2 3]) => [(0 2) (1 3)]"
   [coll]
   {:pre [(seq coll), (even? (count coll))]}
   [(take-nth 2 coll) (take-nth 2 (rest coll))])
@@ -62,11 +56,6 @@
   [factor coll]
   (for [x coll] (* x factor)))
 
-(defn dot-product
-  "returns the dot product of two vectors"
-  [x y]
-  (reduce + (map * x y)))
-
 (defn multiply-rows
   "multiply matrix rows (in place) by a collection"
   [coll mat]
@@ -74,17 +63,19 @@
 
 (defn weighted-mean
   "Accepts a number of `<val, weight>` pairs, and returns the mean of
-  all values with corresponding weights applied. For example:
+  all values with corresponding weights applied.  Preconditions ensure
+  that there are pairs of value and weights, and that all weights are
+  greater than or equal to zero.
 
+  Example usage:
     (weighted-avg 8 3 1 1) => 6.25"
   [& val-weight-pairs]
-  {:pre [(even? (count val-weight-pairs))]}
-  (float (->> (for [[x weight] (partition 2 val-weight-pairs)]
-                (if  (>= weight 0)
-                  [(* x weight) weight]
-                  (throw-illegal "All weights must be positive.")))
-              (reduce (partial map +))
-              (apply /))))
+  {:pre [(even? (count val-weight-pairs))
+         (every? #(>= % 0) (take-nth 2 (rest val-weight-pairs)))]}
+  (double (->> (for [[x weight] (partition 2 val-weight-pairs)]
+                 [(* x weight) weight])
+               (reduce (partial map +))
+               (apply /))))
 
 (defn positions
   "Returns a lazy sequence containing the positions at which pred
@@ -94,10 +85,12 @@
 
 (defn trim-seq
   "Trims a sequence with initial value indexed at x0 to fit within
-  bottom (inclusive) and top (exclusive). For example:
+  bottom (inclusive) and top (exclusive).
 
-    (trim-seq 0 2 0 [1 2 3]) => [0 1 2]"
+  Example usage: 
+    (trim-seq 0 2 0 [4 5 6]) => [4 5]"
   [bottom top x0 seq]
+  {:pre [(not (empty? seq))]}
   (->> seq
        (drop (- bottom x0))
        (drop-last (- (+ x0 (count seq)) top))))
@@ -106,7 +99,8 @@
   "maps an input function across a sequence of windows onto a vector
   `v` of length `window-len` and offset by 1.
 
-  Note that this does not work with some functions, such as +. Not sure why"
+  Note that this does not work with some functions, such as +.
+  Not sure why"
   [f window-len v]
   (pmap f (partition window-len 1 v)))
 
@@ -127,9 +121,9 @@
 
 (defn input-stream
   "Attempts to coerce the given argument to an InputStream, with
-automatic flipping to `GZipInputStream` if appropriate for the
-supplied input. see `clojure.java.io/input-stream` for guidance on
-valid arguments."
+  automatic flipping to `GZipInputStream` if appropriate for the
+  supplied input. see `clojure.java.io/input-stream` for guidance on
+  valid arguments."
   ([arg] (input-stream arg nil))
   ([arg default-bufsize]
      (let [^InputStream stream (io/input-stream arg)]
@@ -186,3 +180,196 @@ valid arguments."
 
 (def byte-array-type
   (class (make-array Byte/TYPE 0)))
+
+(defn nils-ok?
+  "Checks whether one can use `to-replace` and `coll` with all types
+   flag in replacement functions. False if `to-replace` is `nil` or
+   `coll` contains `nil`. `==` cannot be used with `nil`."
+  [to-replace coll all-types]
+  (if (not all-types)
+    true
+    (let [total-nil (count (positions nil? coll))]
+      (if (or (nil? to-replace) (pos? total-nil))
+        false
+        true))))
+
+(defn get-replace-vals-locs
+  "Search collection for the location of bad values, and find replacement values.
+   Replacements are found to the left of a bad value, starting to the immediate
+   left of each bad value and ending at the first element of the collection.
+   Returns a map of replacement indices and replacement values.
+
+  If there are no good values to the left of a given bad value,
+  `default` will be returned for that value.
+
+  If `all-types` is true, equality checking will be type independent,
+  using `==` instead of `=`. So a `bad-val` of -9999 will be
+  functionally equivalent to -9999.0.
+
+   Note that using the `:all-types` true keyword with a collection
+   containing `nil` or a `bad-val` of `nil` will trip a precondition
+   Using `==` with `nil` causes a null pointer exception."
+  [bad-val coll default all-types]
+  {:pre [(nils-ok? bad-val coll all-types)]}
+  (let [bad-locs (if all-types
+                   (positions (partial == bad-val) coll)
+                   (positions (partial = bad-val) coll))]
+    (zipmap bad-locs
+            (for [i bad-locs]
+                (if (zero? i) ;; avoids out of bounds exception of idx -1
+                  default
+                  (loop [j i]
+                    (cond
+                     (if (if all-types
+                           (not (== bad-val (coll j)))
+                           (not (=  bad-val (coll j))))
+                       true
+                       false) (coll j)                     
+                     (zero? j) default ;; all bad values from start to j
+                     :else (recur (dec j)))))))))
+
+(defn replace-from-left
+  "Replace all instances of `bad-val` in a collection with good
+   replacement values, defined as the first good value to the left of
+   a given element. The value given with the `:default`
+   keyword (defaults to `nil` is used in case a suitable replacement
+   cannot be found to the left (e.g. the first or first several
+   elements of the vector is \"bad\"). Providing the `:all-types`
+   keyword (defaults to `false`) will make the comparison with the bad
+   value type dependent. In that case, -9999 and -9999.0 would be
+   functionally equivalent.
+
+   Note that using the `:all-types` true keyword with a collection
+   containing `nil` or a `bad-val` of `nil` will trip a precondition
+   Using `==` with `nil` causes a null pointer exception.
+
+   Usage:
+     (replace-from-left -9999 [1 -9999 3])
+     ;=> (1 nil 3)
+
+     (replace-from-left -9999 [1 -9999 -9999 3])
+     ;=> (1 1 1 3)
+
+     (replace-from-left -9999 [1 -9999 3] :default -1)
+     ;=> (1 1 3)
+
+     (replace-from-left -9999 [-9999 -9999 3] :default -1)
+     ;=> (-1 -1 3)
+
+     (replace-from-left -9999 [1 -9999 -9999.0 3] :default -1)
+     ;=> (1 1 -9999.0 3)
+
+     (replace-from-left -9999 [1 -9999.0 -9999 3] :default -1)
+     ;=> (1 -9999.0 -9999.0 3)
+
+     ;; type-independent equality checking
+     (replace-from-left -9999 [1 -9999.0 -9999 3] :default -1 :all-types true)
+     ;=> (1 1 1 3)
+
+     (replace-from-left -9999.0 [1 -9999.0 -9999 3] :default -1 :all-types true)
+     ;=> (1 -9999.0 -9999.0 3)
+
+     (replace-from-left -9999.0 [-9999 -9999.0 -9999 3] :default -1 :all-types true)
+     ;=> (-1 -1 -1 3)"
+  [bad-val coll & {:keys [default all-types] :or {default nil
+                                                  all-types false}}]
+  {:pre [(nils-ok? bad-val coll all-types)]}
+  (let [replace-map (get-replace-vals-locs bad-val coll default all-types)]
+    (for [i (range (count coll))]
+      (if (contains? (set (keys replace-map)) i)
+        (get replace-map i)
+        (coll i)))))
+
+(defn replace-from-left*
+  "Nest `replace-from-left` for use with Cascalog"
+  [bad-val coll & {:keys [default all-types]
+                   :or {default nil all-types false}}]
+  [(vec (replace-from-left bad-val coll :default default :all-types all-types))])
+
+(defn obj-contains-nodata?
+  "Check whether any fields in thrift object contain nodata value"
+  [nodata obj]
+  (-> obj
+      (thrift/unpack)
+      (set)
+      (contains? nodata)))
+
+(defn filter*
+  "Wrapper for `filter` to make it safe for use with vectors in Cascalog.
+
+   Usage:
+     (let [src [[1 [2 3 2]] [3 [5 nil 6]]]]
+       (??<- [?a ?all-twos]
+         (src ?a ?b)
+         (filter* (partial = 2) ?b :> ?all-twos)))
+     ;=> ([1 [2 2]] [3 []])"
+  [pred coll]
+  [(vec (filter pred coll))])
+
+(defn replace-all
+  "Replace all instances of a value in a collection with a supplied
+   replacement value. The `:all-types` keyword makes equality checking
+   type independent.
+
+   Note that using the `:all-types` true keyword with a collection
+   containing `nil` or a `bad-val` of `nil` will trip a precondition
+   Using `==` with `nil` causes a null pointer exception.
+
+  Usage:
+    (replace-all nil -9999 [1 nil 3])
+    ;=> [1 -9999 3]
+
+    (replace-all -9999 nil [1 -9999 3])
+    ;=> [1 nil 3]
+
+    (replace-all -9999.0 nil [1 -9999 3])
+    ;=> [1 -9999 3]
+
+    (replace-all -9999.0 nil [1 -9999 3] :all-types true)
+    ;=> [1 nil 3]
+
+    (replace-all -9999 nil [1 -9999.0 3] :all-types true)
+    ;=> [1 nil 3]"
+  [to-replace replacement coll & {:keys [all-types]
+                                  :or {all-types false}}]
+  {:pre [(nils-ok? to-replace coll all-types)]}
+  (let [compare-func (cond
+                      (nil? to-replace) (partial = to-replace)
+                      all-types (partial == to-replace)
+                      :else (partial = to-replace))
+        idxs (positions compare-func coll)
+        replacements (repeat (count idxs) replacement)]
+    (if (empty? idxs)
+      coll
+      (apply assoc coll
+             (interleave idxs replacements)))))
+
+(defn replace-all*
+  "Wrapper for `replace-all` to make it safe for use with vectors in Cascalog"
+  [to-replace replacement coll & {:keys [all-types]
+                                  :or {all-types false}}]
+  [(vec (replace-all to-replace replacement coll :all-types all-types))])
+
+(defn rest*
+  "Wrapper for `rest` is safe for use with Cascalog"
+  [coll]
+  (vector (vec (rest coll))))
+
+(defn map-round
+  "Round the values of a timeseries in a TimeSeries object, returning
+   the starting period and the rounded timeseries."
+  [series-obj]
+  (let [[start _ series] (thrift/unpack series-obj)]
+    [start (vec (map round (thrift/unpack series)))]))
+
+(defn within-tileset?
+  [tile-set h v]
+  (let [tile [h v]]
+    (contains? tile-set tile)))
+
+(defn arg-parser
+  "Parse arg as string if appropriate, otherwise return arg."
+  [arg]
+  (if (string? arg)
+    (read-string arg)
+    arg))

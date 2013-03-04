@@ -271,7 +271,64 @@ in which `string` lies (according to the supplied resolution, `res`)."
 (defn convert-period-res
   "Convert a period from in-res to corresponding period at out-res.
 
-   By converting a period to a date, we get the first date within a period. Converting date to period, we get the period in which that first date falls, at the new resolution."
+   By converting a period to a date, we get the first date within a
+   period. Converting date to period, we get the period in which that
+   first date falls, at the new resolution."
   [res-in res-out period]
   (->> (period->datetime res-in period)
        (datetime->period res-out)))
+
+(defn date-str->vec-idx
+  "Return the index of a vector that corresponds to a given date.
+   Returns `nil` if date does not correspond to a period in the vector.
+
+   Note: Because this function uses the period and date conversion
+         functions, it will snap any date to the initial date of the
+         period that contains it, given a temporal resolution.
+
+   Usage:
+     (date-str->vec-idx \"16\" \"2000-01-01\" [1 2 3] \"2000-01-18\")
+     => 1
+
+     (date-str->vec-idx \"16\" \"2000-01-01\" [1 2 3] \"2000-12-01\")
+     => nil"
+  [t-res start-dt v dt]
+  (let [start-idx (datetime->period t-res start-dt)
+        idx (- (datetime->period t-res dt) start-idx)
+        length (count v)]
+    (if (and (<= idx (dec length))
+             (>= idx 0))
+      idx
+      nil)))
+
+(defn get-val-at-date
+  "Returns the value of a vector at the index corresponding to a given
+   date. If there is no corresponding index (e.g. date comes before
+   start of series or after the end), returns `nil` by default.
+
+   Optional arguments:
+     `:out-of-bounds-val`: provide an alternative value to the `nil'
+     default if the date falls outside of the series.
+
+     `:out-of-bounds-idx`: choose a value from the series at the index
+     given, as an alternative to the default `nil' if the date falls
+     outside the series.
+
+   Note: Because this function uses the period and date conversion
+         functions, it will snap any date to the initial date of the
+         period that contains it, given a temporal resolution.
+
+   Usage:
+     (date-str->vec-idx \"16\" \"2000-01-01\" [2 4 6] \"2000-01-18\")
+     => 4
+   
+     (date-str->vec-idx \"16\" \"2000-01-01\" [2 4 6] \"2012-05-01\")
+     => nil"
+  [t-res start-dt v dt & {:keys [out-of-bounds-val out-of-bounds-idx]}]
+  (let [idx (date-str->vec-idx t-res start-dt v dt)]
+    (if idx
+      (nth v idx)
+      (or out-of-bounds-val
+          (if out-of-bounds-idx
+            (nth v out-of-bounds-idx))
+          nil))))

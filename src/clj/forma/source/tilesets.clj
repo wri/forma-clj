@@ -73,6 +73,7 @@
    :PRK #{[27 5]}
    :PRY #{[12 10] [12 11] [13 11]}
    :REU #{[23 11]}
+   :RWA #{[20 9] [21 9]}
    :SDN #{[20 8] [21 8]}
    :SLB #{[33 9] [33 10]}
    :SLE #{[16 8]}
@@ -97,10 +98,31 @@
   "set of unique MODIS tiles for the specified
   countries (union). Example usage:
 
-    (tile-set [8 6] :IDN :MYS :PHL)"
+    (tile-set [8 6] :PHL)
+    ;=> #{[30 7] [29 7] [30 8] [29 8] [8 6]}
+
+    (count (tile-set :all))
+    ;=> 77"
   [& inputs]
-  (->> inputs
+  (->> (if (contains? (set inputs) :all)
+         (keys country-tiles)
+         inputs)
        (map #(if (keyword? %)
                (country-tiles %)
                #{%}))
        (apply union)))
+
+(defn remove-tiles-by-iso
+  "Remove tiles from set of tiles for given `iso-codes`. Useful for
+   avoiding re-processing tiles unnecessarily.
+
+   Usage:
+     (tile-set :PER)
+     ;=> #{[10 9] [11 10] [9 9] [10 10] [11 9]}
+
+     (let [ts (tile-set :PER)]
+       (remove-tiles-by-iso ts :BRA))
+     ;=> #{[9 9] [10 10]}"
+  [t-s & iso-codes]
+  (let [remove-set (apply tile-set iso-codes)]
+    (apply disj t-s remove-set)))
