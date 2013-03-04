@@ -1,129 +1,28 @@
 (ns forma.schema
-  (:require [clojure.string :as s]
+  "A set of functions to structure other queries."
+  (:require [forma.date-time :as date]
             [forma.utils :as u]
-            [forma.reproject :as r]
-            [forma.date-time :as date])
-  (:import [java.util ArrayList]
-           [forma.schema
-            ArrayValue DataChunk DataValue DoubleArray FireArray
-            FireValue FormaValue IntArray LocationProperty
-            LocationPropertyValue LongArray ModisChunkLocation
-            ModisPixelLocation ShortArray TimeSeries FormaArray
-            NeighborValue]
-           [org.apache.thrift TBase TUnion]))
+            [forma.thrift :as thrift]))
 
-;; ## DataValue Generation
-
-;; TODO:
-;;
-;; Fix this up
-;; Add mk-data-value to chunkify
-;;
-(defmulti mk-array-value class)
-(defmethod mk-array-value IntArray [x] (ArrayValue/ints x))
-(defmethod mk-array-value DoubleArray [x] (ArrayValue/doubles x))
-(defmethod mk-array-value LongArray [x] (ArrayValue/longs x))
-(defmethod mk-array-value ShortArray [x] (ArrayValue/shorts x))
-(defmethod mk-array-value FireArray [x] (ArrayValue/fires x))
-(defmethod mk-array-value FormaArray [x] (ArrayValue/formas x))
-
-(defmulti mk-data-value class)
-(defmethod mk-data-value Double [x] (DataValue/doubleVal x))
-(defmethod mk-data-value Integer [x] (DataValue/intVal x))
-(defmethod mk-data-value Long [x] (DataValue/longVal x))
-(defmethod mk-data-value Short [x] (DataValue/shortVal x))
-(defmethod mk-data-value FireValue [x] (DataValue/fireVal x))
-(defmethod mk-data-value TimeSeries [x] (DataValue/timeSeries x))
-(defmethod mk-data-value ArrayValue [x] (DataValue/vals x))
-(defmethod mk-data-value FormaValue [x] (DataValue/forma x))
-
-;; ### Collections
-
-(defn list-of
-  "Maps `f` across all entries in `xs`, and returns the result wrapped
-  in an instance of `java.util.ArrayList`."
-  [f xs]
-  (ArrayList. (for [x xs]
-                (try (f x)
-                     (catch Exception e nil)))))
-
-(defn int-struct
-  "Casts all numbers in the supplied sequence to ints, and returns
-  them wrapped in an instance of `forma.schema.IntArray`."
-  [xs]
-  (let [ints (list-of int xs)]
-    (doto (IntArray.)
-      (.setInts ints))))
-
-(defn double-struct
-  "Casts all numbers in the supplied sequence to doubles, and returns
-  them wrapped in an instance of `forma.schema.DoubleArray`."
-  [xs]
-  (let [doubles (list-of double xs)]
-    (doto (DoubleArray.)
-      (.setDoubles doubles))))
-
-(defn forma-array
-  "Creates a `FormaArray` object from the supplied sequence of
-  `FormaValue` objects."
-  [xs]
-  (doto (FormaArray.)
-    (.setValues (ArrayList. xs))))
-
-(defn fire-array
-  "Creates a `FormaArray` object from the supplied sequence of
-  `FormaValue` objects."
-  [xs]
-  (doto (FireArray.)
-    (.setFires (ArrayList. xs))))
-
-(defprotocol Thriftable
-  (to-struct [x])
-  (get-vals [x]))
-
-(extend-protocol Thriftable
-  java.lang.Iterable
-  (to-struct [[v :as xs]]
-    (def cake xs)
-    (cond (= forma.schema.FormaValue (type v)) (forma-array xs)
-          (= forma.schema.FireValue (type v))  (fire-array xs)
-          (integer? v)                         (int-struct xs)
-          (float? v)                           (double-struct xs)))
-  
-  (get-vals [x] x)
-
-  TimeSeries
-  (get-vals [x] (get-vals (.getFieldValue (.getSeries x))))
-  
-  FormaArray
-  (get-vals [x] (.getValues x))
-
-  ShortArray
-  (get-vals [x] (.getShorts x))
-
-  IntArray
-  (get-vals [x] (.getInts x))
-
-  LongArray
-  (get-vals [x] (.getLongs x))
-
-  DoubleArray
-  (get-vals [x] (.getDoubles x))
-
-  FireArray
-  (get-vals [x] (.getFires x))
-
-  FormaArray
-  (get-vals [x] (.getValues x)))
-
-(defn count-vals [x]
-  (count (get-vals x)))
+(defn create-timeseries
+  "Create a TimeSeries from a period start index and a collection of timeseries
+   values. The period end index is calculated by adding the size of the
+   collection to the period start index."
+  ([start-idx series]
+     {:pre [(> start-idx 0) (coll? series)]}
+     (when series
+       (let [elems (count series)]
+         (create-timeseries start-idx (dec (+ start-idx elems)) series))))
+  ([start-idx end-idx series]
+     {:pre [(> start-idx 0) (<= start-idx end-idx) (coll? series)]}
+     (when series
+       (thrift/TimeSeries* start-idx end-idx series))))
 
 (defn boundaries
   "Accepts a sequence of pairs of <initial time period, collection>
-  and returns the maximum start period and the minimum end period. For
-  example:
+  and returns the maximum start period and the minimum end period.
 
+  Example usage:
     (boundaries [0 [1 2 3 4] 1 [2 3 4 5]]) => [1 4]"
   [pair-seq]
   {:pre [(even? (count pair-seq))]}
@@ -135,10 +34,10 @@
 (defn adjust
   "Appropriately truncates the incoming timeseries values (paired with
   the initial integer period), and outputs a new start and both
-  truncated series. For example:
+  truncated series.
 
-    (adjust 0 [1 2 3 4] 1 [2 3 4 5])
-    ;=> (1 [2 3 4] [2 3 4])"
+  Example usage:
+    (adjust 0 [1 2 3 4] 1 [2 3 4 5]) => (1 [2 3 4] [2 3 4])"
   [& pairs]
   {:pre [(even? (count pairs))]}
   (let [[bottom top] (boundaries pairs)]
@@ -146,286 +45,162 @@
           (for [[x0 seq] (partition 2 pairs)]
             (into [] (u/trim-seq bottom top x0 seq))))))
 
-;; ## Time Series
+(defn adjust-fires
+  "Returns a TimeSeries object of fires that are within the bounds of
+  the interval defined by :est-start, :est-end, and :t-res.  Within
+  the FORMA workflow, this function is applied to a series of
+  FireValues that is longer (on the tail-end or both the tail- and
+  front-end) of the interval based on the info in the estimation
+  parameter map.  This series may not have any actual fire hits in it;
+  but rather is a vector of zero-value fires -- a sort of sparse
+  vector where each element is a FireValue.
 
-(defn timeseries-value
-  "Takes a period index > 0 `start-idx` and a time series `series`,
- outputs same plus `end-idx` calculated by counting the number of
- elements in `series`.
-
-    (timeseries-value 0 [1 2 3])
-    ;=> {:start-idx 0
-         :end-idx 2
-         :series [1 2 3]}"
-  ([start-idx ^ArrayValue series]
-     (when series
-       (let [elems (count-vals (.getFieldValue series))]
-         (timeseries-value start-idx
-                           (dec (+ start-idx elems))
-                           series))))
-  ([start-idx end-idx series]
-     (when series
-       (TimeSeries. start-idx end-idx series))))
-
-;; ### Fire Values -- DONE
-
-(defn fire-value
-  "Creates a `fire-value` object with counts of fires meeting certain criteria:
-    temp >= 330
-    confidence >= 50
-    both temp and confidence
-    total # fires"
-  [t-above-330 c-above-50 both-preds count]
-  (FireValue. t-above-330 c-above-50 both-preds count))
-
-(defn fire-series
-  "Creates a `FireSeries` object from the supplied sequence of
-  `FireValue` objects."
-  ([start xs]
-     (fire-series start
-                  (dec (+ start (count xs)))
-                  xs))
-  ([start end xs]
-     (when (seq xs)
-       (doto (TimeSeries.)
-         (.setSeries (ArrayValue/fires (FireArray. (ArrayList. xs))))
-         (.setStartIdx start)
-         (.setEndIdx end)))))
-
-(defn extract-fire-fields
-  "Returns a vector containing the value of the `temp330`, `conf50`,
-  `bothPreds` and `count` fields of the supplied `FireValue` thrift
-  object."
-  [^FireValue val]
-  [(.getTemp330 val)
-   (.getConf50 val)
-   (.getBothPreds val)
-   (.count val)])
+  TODO: preconditions to test that the supplied series matches the
+  description above.  Then adjust the description to be shorter, more
+  understandable."
+  [est-start est-end t-res f-series]
+  {:pre [(let [fire-start-pd (first (thrift/unpack f-series))
+               est-start-pd (date/datetime->period t-res est-start)]
+           (<= fire-start-pd est-start-pd))]}
+  (let [[f-start f-end arr-val] (thrift/unpack f-series)
+        series (thrift/unpack arr-val)
+        [start end] (map (partial date/datetime->period t-res)
+                         [est-start est-end])]
+    [(->> series
+          (u/trim-seq start (inc end) f-start)
+          (thrift/TimeSeries* start))]))
 
 (defn add-fires
   "Returns a new `FireValue` object generated by summing up the fields
   of each of the supplied `FireValue` objects."
   [& f-tuples]
   (->> f-tuples
-       (map extract-fire-fields)
+       (map thrift/unpack)
        (apply map +)
-       (apply fire-value)))
-
-(defn adjust-fires
-  "Returns the section of fires data found appropriate based on the
-  information in the estimation parameter map."
-  [{:keys [est-start est-end t-res]} ^TimeSeries f-series]
-  (let [f-start (.getStartIdx f-series)
-        [start end] (for [pd [est-start est-end]]
-                      (date/datetime->period t-res pd))]
-    [(->> (get-vals f-series)
-          (u/trim-seq start (inc end) f-start)
-          (fire-series start))]))
-
-;; # Compound Objects
-
-(defn forma-value
-  "Returns a vector containing a FireValue, short-term drop,
-  parametrized break, long-term drop and t-stat of the short-term
-  drop."
-  [fire short param-break long t-stat]
-  (let [fire (or fire (fire-value 0 0 0 0))]
-    [fire short param-break long t-stat]))
-
-;; ## Neighbor Values
+       (apply thrift/FireValue*)))
 
 (defn neighbor-value
   "Accepts either a forma value or a sequence of sub-values."
-  ([[fire short param long t-stat]]
-     (doto (NeighborValue. fire 1 short short long long t-stat t-stat)
-       (.setAvgParamBreak param)
-       (.setMinParamBreak param)))
+  ([forma-val]
+     (let [[fire short long t-stat param] (thrift/unpack forma-val)]
+       (thrift/NeighborValue* fire 1 short short long long t-stat t-stat param param)))
   ([fire neighbors avg-short
     min-short avg-long min-long avg-stat min-stat avg-param min-param]
-     (doto (NeighborValue. fire neighbors avg-short min-short
-                           avg-long min-long avg-stat min-stat)
-       (.setAvgParamBreak avg-param)
-       (.setMinParamBreak min-param))))
+     (thrift/NeighborValue* fire neighbors avg-short min-short avg-long min-long
+                            avg-stat min-stat avg-param min-param)))
 
-(defn unpack-neighbor-val
-  [^NeighborValue neighbor-val]
-  [(.getFireValue neighbor-val)
-   (.getNumNeighbors neighbor-val)
-   (.getAvgShortDrop neighbor-val)
-   (.getMinShortDrop neighbor-val)
-   (.getAvgLongDrop neighbor-val)
-   (.getMinLongDrop neighbor-val)
-   (.getAvgTStat neighbor-val)
-   (.getMinTStat neighbor-val)
-   (.getAvgParamBreak neighbor-val)
-   (.getMinParamBreak neighbor-val)])
+(def empty-neighbor-val
+  "Returns a NeighborValue object with values for a pixel that should
+  have an empty or nil value without breaking the process.  TODO:
+  figure out what values should be inserted for each feature to truly
+  represent the notion of emptiness."
+  (thrift/NeighborValue* (thrift/FireValue* 0 0 0 0)
+                         (long 0) 0. 0. 0. 0. 0. 0. 0. 0.))
 
 (defn merge-neighbors
   "Merges the supplied instance of `FormaValue` into the existing
-  aggregate collection of `FormaValue`s represented by
-  `neighbor-val`. (`neighbor-val` must be an instance of
-  `NeighborValue`."
-  [neighbor-val forma-val]
-  (let [[fire short param long t] forma-val
-        [n-fire ct short-mean short-min
-         long-mean long-min t-mean t-min
-         param-mean param-min]
-        (unpack-neighbor-val neighbor-val)]
-    (neighbor-value (add-fires n-fire fire)
-                    (inc ct)
-                    (u/weighted-mean short-mean ct short 1)
-                    (min short-min short)
-                    (u/weighted-mean long-mean ct long 1)
-                    (min long-min long)
-                    (u/weighted-mean t-mean ct t 1)
-                    (min t-min t)
-                    (u/weighted-mean param-mean ct param 1)
-                    (min param-min param))))
+  aggregate collection of `FormaValue`s represented by `neighbor-val`.
+  Returns a new neighbor value object representing the merged values."
+  [nodata neighbor-val forma-val]
+  {:pre [(instance? forma.schema.NeighborValue neighbor-val)]}
+  (cond
+   (and (u/obj-contains-nodata? nodata neighbor-val)
+        (u/obj-contains-nodata? nodata forma-val))
+              empty-neighbor-val
+   (u/obj-contains-nodata? nodata neighbor-val)
+              (neighbor-value forma-val)
+   (u/obj-contains-nodata? nodata forma-val)
+              neighbor-val
+   :else (let [[fire short-val long-val t-stat break-param] (thrift/unpack forma-val)
+               [n-fire ncount avg-short min-short avg-long
+                min-long avg-stat min-stat avg-break min-break] (thrift/unpack neighbor-val)]
+           (thrift/NeighborValue* (add-fires n-fire fire)
+                                  (inc ncount)
+                                  (u/weighted-mean avg-short ncount short-val 1)
+                                  (min min-short short-val)
+                                  (u/weighted-mean avg-long ncount long-val 1)
+                                  (min min-long long-val)
+                                  (u/weighted-mean avg-stat ncount t-stat 1)
+                                  (min min-stat t-stat)
+                                  (u/weighted-mean avg-break ncount break-param 1)
+                                  (min min-break break-param)))))
 
 (defn combine-neighbors
   "Returns a new forma neighbor value generated by merging together
-   each entry in the supplied sequence of forma values."
-  ;; TODO: come up with an example
-  [[x & more]]
+   each entry in the supplied sequence of forma values.  See tests for
+   example usage."
+  [nodata [x & more]]
   (if x
-    (reduce merge-neighbors (neighbor-value x) more)
-    (neighbor-value (fire-value 0 0 0 0) 0 0 0 0 0 0 0 0 0)))
+    (reduce (partial merge-neighbors nodata) (neighbor-value x) more)
+    empty-neighbor-val))
 
-;; ## Location
+(defn forma-value
+  "Returns a `FormaValue`, given a `FireValue` (or `nil`), short stat,
+   long stat, t-stat and break stat. Exists to handle the case where
+   there are no fires in a given pixel. A `nil` value would normally
+   cause an exception to be thrown by `thrift/FormaValue*`"
+  [fire short param-break long t-stat]
+  (let [fire (or fire
+                 (thrift/FireValue* 0 0 0 0))]
+    (thrift/FormaValue* fire short param-break long t-stat)))
 
-(defn chunk-location
-  [s-res mod-h mod-v idx size]
-  (->> (ModisChunkLocation. s-res mod-h mod-v idx size)
-       LocationPropertyValue/chunkLocation
-       LocationProperty.))
+(defn fires-cleanup
+  "If the fire-series is nil, leave it be, else, unpack it. fire-series
+   is a TimeSeries object"
+  [fire-series]
+  (if (nil? fire-series)
+    fire-series
+    (thrift/unpack (thrift/get-series fire-series))))
 
-(defn chunk-location
-  "Creates a chunk-location object.
+(defn forma-seq-prep
+  "Prepare data for creating sequence of `FormaValues`, replacing
+  `nil` values with `nodata` values. Given the use of `min` and `max`
+  for some series, `nils` are handled appropriately so that the
+  `nodata` value does not find its way into the series used to create
+  `FormaValues`."
+  [nodata fire-series short-series long-series
+  t-stat-series break-series]
+  (let [fires (fires-cleanup fire-series)
+        big-val 1000000
+        small-val -1000000
 
-    (chunk-location \"1000\" 28 9 59 24000)
-    ;=> {:spatial-res \"1000\", :mod-h 28, :mod-v 9, :index 59, :size 24000}"
-  [spatial-res mod-h mod-v idx size]
-  (->> (ModisChunkLocation. spatial-res mod-h mod-v idx size)
-       LocationPropertyValue/chunkLocation
-       LocationProperty.))
+        ;; replace nil with large number, won't be min
+        ;; handle leading nodata; replace from left ok b/c using
+        ;; reductions - value from left will be used anyway
+        clean-shorts (u/replace-from-left nil short-series :default big-val)
+        almost-shorts (vec (reductions min clean-shorts))
+        shorts (u/replace-all big-val nodata almost-shorts)
 
-(defn pixel-location
-  "Creates a pixel-location object.
+        ;; replace nil with small number, won't be max
+        ;; handle leading nodata; replace from left ok b/c using
+        ;; reductions - value from left will be used anyway
+        clean-breaks (u/replace-from-left nil break-series :default small-val)
+        almost-breaks (vec (reductions max clean-breaks))
+        breaks (u/replace-all small-val nodata almost-breaks)
 
-    (pixel-location \"1000\" 28 9 1199 10)
-    ;=> {:spatial-res \"1000\", :mod-h 28, :mod-v 9, :sample 1199, :line 10}"
-  [spatial-res mod-h mod-v sample line]
-  (->> (ModisPixelLocation. spatial-res mod-h mod-v sample line)
-       LocationPropertyValue/pixelLocation
-       LocationProperty.))
-
-(defn unpack-pixel-location
-  "Unpacks pixel-location object into a tuple.
-
-    (unpack-pixel-location
-     {:spatial-res \"1000\", :mod-h 28, :mod-v 9, :sample 1199, :line 10})
-    ;=> [\"1000\" 28 9 1199 10]"
-  [^ModisPixelLocation loc]
-  [(.getResolution loc)
-   (.getTileH loc)
-   (.getTileV loc)
-   (.getSample loc)
-   (.getLine loc)])
-
-(defn unpack-chunk-location
-  "Unpacks chunk-location object into a tuple.
-
-    (unpack-chunk-location
-     {:spatial-res \"1000\", :mod-h 28, :mod-v 9, :index 4, :size 24000})
-    ;=> [\"1000\" 28 9 4 24000]"
-  [^ModisChunkLocation loc]
-  [(.getResolution loc)
-   (.getTileH loc)
-   (.getTileV loc)
-   (.getChunkID loc)
-   (.getChunkSize loc)])
-
-(defn chunkloc->pixloc
-  "Accepts a chunk location and a pixel index within that location and
-   returns a pixel location.
- 
-     (chunkloc->pixloc
-      {:spatial-res \"1000\", :mod-h 28, :mod-v 9, :index 59, :size 24000}
-      23999)
-
-    ;=> {:spatial-res \"1000\", :mod-h 28, :mod-v 9, :sample 1199, :line 1199}"
-  [chunk-loc pix-idx]
-  (let [[spatial-res mod-h mod-v index size] (unpack-chunk-location chunk-loc)]
-    (apply pixel-location spatial-res mod-h mod-v
-           (r/tile-position spatial-res size index pix-idx))))
-
-;; ## Data Chunks
-
-(defn chunk-value
-  "Creates a chunk-value object.
-
-   Example:
-    (let [size 24000
-          location (chunk-location \"1000\" 8 6 0 24000)
-          data (range size)]
-     (chunk-value \"ndvi\" \"32\" \"2006-01-01\" location (take 10 data))
-
-  ;=> {:date \"2006-01-01\"
-       :temporal-res \"32\"
-       :location {:spatial-res \"1000\", :mod-h 8, :mod-v 6, :index 0, :size 24000}     :dataset \"ndvi\"
-       :value [0 1 2 3 4 5 6 7 8 9]}"
-  [dataset t-res date location data-value]
-  (let [chunk (DataChunk. dataset
-                          location
-                          data-value
-                          t-res)]
-    (if date
-      (doto chunk
-        (.setDate date))
-      chunk)))
-
-(defn extract-location
-  [^DataChunk chunk]
-  (-> chunk
-      .getLocationProperty
-      .getProperty
-      .getFieldValue))
-
-(defn extract-chunk-value
-  [^DataChunk chunk]
-  (-> chunk
-      .getChunkValue
-      .getFieldValue))
-
-(defn unpack-chunk-val
-  "Used by timeseries. Unpacks a chunk object. Returns `[dataset-name
- t-res date location collection]`, where collection is a vector and
- location is a `chunk-location`."
-  [^DataChunk chunk]
-  [(.getDataset chunk)
-   (.getTemporalRes chunk)
-   (.getDate chunk)
-   (-> chunk .getLocationProperty .getProperty .getFieldValue)
-   (-> chunk .getChunkValue .getFieldValue)])
-
-(defn unpack-timeseries
-  "Used by timeseries. Unpacks a chunk object. Returns `[dataset-name
- t-res date location collection]`, where collection is a vector and
- location is a `chunk-location`."
-  [^TimeSeries ts]
-  [(.getStartIdx ts)
-   (.getEndIdx ts)
-   (-> ts .getSeries .getFieldValue)])
+        longs (u/replace-all nil nodata long-series)
+        t-stats (u/replace-all nil nodata t-stat-series)]
+    [fires shorts longs t-stats breaks]))
 
 (defn forma-seq
-  "Accepts a number of timeseries of equal length and starting
-  position, and converts the first entry in each timeseries to a forma
-  value, for all first values and on up the sequence. Series must be
-  supplied as specified by the arguments for `forma-value`. For
-  example:
+  "Accepts 5 timeseries of equal length and starting position, each
+   representing a time-indexed series of features for a given pixel.
+   Returns the tranposition: a single timeseries of
+   FormaValues.
 
-    (forma-seq fire-series short-series long-series t-stat-series)"
-  [& in-series]
-  [(->> in-series
-        (map #(or % (repeat %)))
-        (apply map forma-value))])
+  `fire-series` gets special treatment because it could come into
+   `forma-seq` as nil (i.e. no fires for a given pixel) per the
+   forma-tap query in forma.clj; fires is an ungrounded variable in
+   the cascalog query, forma-tap"
+  [nodata fire-series short-series long-series t-stat-series break-series]
+  (let [[fires
+         shorts
+         longs
+         t-stats
+         breaks] (forma-seq-prep nodata fire-series short-series
+                                 long-series t-stat-series
+                                 break-series)]
+    [(->> (concat [fires] [shorts] [longs] [t-stats] [breaks])
+          (map #(or % (repeat %)))
+          (apply map forma-value)
+          (vec))]))

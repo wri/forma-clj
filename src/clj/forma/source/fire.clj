@@ -55,7 +55,7 @@
         [forma.date-time :only (convert)])
   (:require [clojure.string :as s]
             [forma.utils :as utils]
-            [forma.schema :as schema]
+            [forma.thrift :as thrift]
             [forma.reproject :as r]
             [forma.hadoop.io :as io]
             [forma.hadoop.predicate :as p]))
@@ -107,7 +107,7 @@
       (p/filtered-count [330] ?kelvin :> ?temp-330)
       (p/filtered-count [50] ?conf :> ?conf-50)
       (p/bi-filtered-count [50 330] ?conf ?kelvin :> ?both-preds)
-      (schema/fire-value ?temp-330 ?conf-50 ?both-preds ?count :> ?tuple)))
+      (thrift/FireValue* ?temp-330 ?conf-50 ?both-preds ?count :> ?tuple)))
 
 (def fire-pred
  "Returns a Cascalog predicate macro that creates a FireTuple Thrift object.
@@ -156,8 +156,7 @@
                 :> ?datestring _ _ ?s-lat ?s-lon ?s-kelvin _ _ _ ?s-conf)
       (not= "YYYYMMDD" ?datestring)
       (monthly-datestring ?datestring :> ?date)
-      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
-      (:distinct false)))
+      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)))
 
 (defn fire-source-daily
   "Returns a Cascalog query that creates tuples for daily fires.
@@ -178,17 +177,62 @@
       (p/mangle [#","] ?line
                 :> ?s-lat ?s-lon ?s-kelvin _ _ ?datestring _ _ ?s-conf _ _ _)
       (daily-datestring ?datestring :> ?date)
-      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
-      (:distinct false)))
+      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)))
+
+(defn valid-fire?
+  "Check whether a fire observation is valid. A valid observation starts
+   with a float value, and has `field-count` fields.
+
+   A handful of observations don't meet this standard. Header rows do
+   not, nor do a handful of observations that have extra fields (14 or
+   19, instead of the expected 12)."
+  [line field-count]
+  (let [fire-fields (seq (.split line ","))]
+      (and
+       (number? (read-string (first fire-fields)))
+       (= field-count (count fire-fields)))))
+
+(defn keep-fire?
+  "Returns true if the latlon for the fire falls within a tile in tile-set.
+
+   Note that latlons falling on edges of tiles will be assigned to a tile
+   based on the behavior of the forma.reproject namespace. Most fires will
+   have an unambiguous assignment, however."
+  [s-res tile-set lat lon]
+  (let [[mod-h mod-v _ _] (r/latlon->modis s-res lat lon)]
+    (contains? tile-set [mod-h mod-v])))
+
+(defn fire-source
+  "Returns a Cascalog query that creates tuples for new fire format.
+
+  Source:
+    src - An hfs-textline of daily fires
+          (lat lon kelvin _ _ date _ _ conf _ _ _).
+          Header line is dropped
+
+  Output variables:
+    ?dataset - The dataset name (fires).
+    ?date - The fire date formatted as YYYY-MM-DD.
+    ?t-res - The fire temporal resolution (1).
+    ?lat - The fire latitude as a float.
+    ?lon - The fire longitude as a float.
+    ?tuple - The FireTuple Thrift object representing the fire."
+  [src tile-set s-res]
+  (let [expected-fields 12]
+    (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
+        (src ?line)
+        (valid-fire? ?line expected-fields)
+        (p/mangle [#","] ?line
+                  :> ?s-lat ?s-lon ?s-kelvin _ _ ?date _ _ ?s-conf _ _ _)
+        (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
+        (keep-fire? s-res tile-set ?lat ?lon))))
 
 (defn reproject-fires
   "Returns a Cascalog query that creates DataChunk Thrift objects for fires."
   [m-res src]
-  (<- [?datachunk]
+  (<- [?pixel-chunk]
       (p/add-fields m-res :> ?m-res)
       (src ?dataset ?date ?t-res ?lat ?lon ?tuple)
-      (schema/mk-data-value ?tuple :> ?tuple-val)
-      (r/latlon->modis ?m-res ?lat ?lon :> ?mod-h ?mod-v ?sample ?line)
-      (schema/pixel-location ?m-res ?mod-h ?mod-v ?sample ?line :> ?location)
-      (schema/chunk-value ?dataset ?t-res ?date ?location ?tuple-val :> ?datachunk)
-      (:distinct false)))
+      (r/latlon->modis ?m-res ?lat ?lon :> ?h ?v ?sample ?line)
+      (thrift/ModisPixelLocation* ?m-res ?h ?v ?sample ?line :> ?pixel-loc)
+      (thrift/DataChunk* ?dataset ?pixel-loc ?tuple ?t-res :date ?date  :> ?pixel-chunk)))

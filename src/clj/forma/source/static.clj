@@ -4,6 +4,7 @@
   (:require [cascalog.ops :as c]
             [forma.reproject :as r]
             [forma.schema :as schema]
+            [forma.thrift :as thrift]
             [forma.hadoop.io :as io]
             [clojure.java.io :as java.io]
             [forma.hadoop.predicate :as p]))
@@ -94,8 +95,7 @@
         ((c/juxt #'mod #'quot) ?row span :> ?line ?mv)
         (pixel-tap ?mod-h ?mod-v ?sample ?line :> true)
         (+ 5 ?mv :> ?mod-v)
-        (p/add-fields dataset m-res "00" nil :> ?dataset ?m-res ?t-res !date)
-        (:distinct false))))
+        (p/add-fields dataset m-res "00" nil :> ?dataset ?m-res ?t-res !date))))
 
 ;; TODO: Make a note that gzipped files can't be unpacked well when
 ;; they exist on S3. They need to be moved over to HDFS for that. I
@@ -109,22 +109,18 @@
 
   ?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val"
   [val-gen m-res chunk-size nodata]
-  (let [chunkifier (p/chunkify chunk-size)
-        src (p/sparse-windower val-gen
+  (let [src (p/sparse-windower val-gen
                                ["?sample" "?line"]
                                (r/chunk-dims m-res chunk-size)
                                "?val"
                                nodata)]
-    (<- [?datachunk]
-        (src ?dataset ?s-res ?t-res !date ?mod-h ?mod-v  _ ?chunkid ?window)
-        (p/flatten-window ?window :> ?chunk)
-        (schema/to-struct ?chunk :> ?struct)
-        (schema/mk-array-value ?struct :> ?arr)
-        (count ?chunk :> ?count)
+    (<- [?tile-chunk]
+        (src ?dataset ?s-res ?t-res !date ?h ?v  _ ?id ?window)
+        (p/flatten-window ?window :> ?data)
+        (count ?data :> ?count)
         (= ?count chunk-size)
-        (chunkifier
-         ?dataset !date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?arr :> ?datachunk)
-        (:distinct false))))
+        (thrift/ModisChunkLocation* ?s-res ?h ?v ?id chunk-size :> ?tile-loc)
+        (thrift/DataChunk* ?dataset ?tile-loc ?data ?t-res :date !date :> ?tile-chunk))))
 
 (defn static-chunks
   "TODO: DOCS!"
@@ -140,4 +136,4 @@
   "TODO: DESTROY. Replace with a better system."
   [chunk-size dataset agg line-tap pix-tap]
   (-> (absorb-modis "500" dataset pix-tap line-tap agg)
-       (agg-chunks "500" chunk-size -9999)))
+      (agg-chunks "500" chunk-size -9999)))
