@@ -9,7 +9,7 @@
             [forma.thrift :as thrift]
             [forma.hadoop.predicate :as p]
             [forma.trends.analysis :as a]
-            [forma.ops.classify :as log]
+            [forma.ops.classify :as classify]
             [forma.trends.filter :as f]
             [forma.utils :as u]
             [forma.source.humidtropics :as humid]
@@ -250,14 +250,15 @@
   (let [first-idx (date/datetime->period t-res est-start)]
     (<- [?s-res ?eco ?beta]
         (src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?eco ?hansen)
-        (log/logistic-beta-wrap [ridge-const convergence-thresh max-iterations]
-                                ?hansen ?val ?neighbor-val :> ?beta)
+        (classify/logistic-beta-wrap
+         [ridge-const convergence-thresh max-iterations]
+         ?hansen ?val ?neighbor-val :> ?beta)
         (:distinct false))))
 
 (defmapop [apply-betas [betas]]
   [eco val neighbor-val]
   (let [beta (((comp keyword str) eco) betas)]
-    (log/logistic-prob-wrap beta val neighbor-val)))
+    (classify/logistic-prob-wrap beta val neighbor-val)))
 
 (defbufferop consolidate-timeseries
   "Orders tuples by the second incoming field, inserting a supplied
@@ -284,7 +285,7 @@
   "query to end all queries: estimate the probabilities for each
   period after the training period."
   [{:keys [nodata]} beta-src dynamic-src static-src]
-  (let [betas (log/beta-dict beta-src)]
+  (let [betas (classify/beta-dict beta-src)]
     (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
         (u/obj-contains-nodata? nodata ?val :> false)
