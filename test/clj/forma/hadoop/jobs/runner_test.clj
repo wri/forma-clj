@@ -319,34 +319,108 @@
         _ (?- (hfs-seqfile fire-path :sinkmode :replace)  fire-src)]
         {:ndvi-path ndvi-path :rain-path rain-path :static-path static-path :fire-path fire-path}))
 
-;; slightly modified version of the TimeseriesFilter defmain
+
+
 (def ndvi-series
-  (g/flow-fn [s-res t-res ndvi-path static-path]
-             (let [vcf-limit (:vcf-limit (get-est-map s-res t-res))
+  (g/flow-fn [est-map ndvi-path static-path]
+             (let [vcf-limit (:vcf-limit est-map)
                    static-src (hfs-seqfile static-path)
-                   ts-src (hfs-seqfile ndvi-path)
-                   sink (hfs-seqfile output-path :sinkmode :replace)]
+                   ts-src (hfs-seqfile ndvi-path)]
                (forma/filter-query static-src vcf-limit ts-src))))
 
-;; slightly modified version of the AdjustSeries defmain
 (def adjust-series
-  (g/flow-fn [s-res t-res ndvi-series rain-path output-tap]
-               (let [est-map (get-est-map s-res t-res nil)]
-               (?- output-tap
-                    (forma/dynamic-filter est-map
-                                          ndvi-series
-                                          (hfs-seqfile rain-path))))))
+  (g/flow-fn
+   [est-map ndvi-series rain-path output-tap]
+   (?- output-tap (forma/dynamic-filter est-map
+                                        ndvi-series
+                                        (hfs-seqfile rain-path)))))
 
-;; this defines the workflow - you want fewer steps? remove the step
-;; you hate. nothing else has to change.
-(def complete-flow (g/fns-to-flow #'ndvi-series #'adjust-series))
+(def trends
+  (g/flow-fn
+   [est-map adjust-series output-tap]
+   (?- output-tap (forma/analyze-trends est-map adjust-series))))
+
+(def forma-tap
+  (g/flow-fn
+   [est-map fire-path trends]
+   (let [fire-src (hfs-seqfile fire-path)]
+     (forma/forma-tap est-map trends fire-src))))
+
+(def neighbors
+  (g/flow-fn
+   [est-map forma-tap]
+   (let [val-src (<- [?s-res ?period ?modh ?modv ?sample ?line ?forma-val]
+                     (forma-tap ?s-res ?period ?modh ?modv ?sample ?line ?forma-val))]
+     (forma/neighbor-query est-map val-src))))
+
+(def beta-data-prep
+  (g/flow-fn
+   [est-map neighbors static-path]
+   (let [static-src (hfs-seqfile static-path)]
+     (forma/beta-data-prep est-map neighbors static-src))))
+
+(def gen-betas
+  (g/flow-fn
+   [est-map beta-data-prep]
+   (let [est-map (get-est-map s-res t-res est-start)]
+     (forma/beta-gen est-map beta-data-prep))))
+
+(def estimate-forma
+  (g/flow-fn
+   [est-map neighbors gen-betas output-tap]
+   (let [beta-src gen-betas
+         dynamic-src neighbors]
+    (?- output-tap (forma/forma-estimate est-map beta-src dynamic-src static-src)))))
+
+(def adjusted-wf (g/fns-to-flow #'ndvi-series #'adjust-series))
+(def trends-wf (g/fns-to-flow #'trends))
+(def estimate-wf (g/fns-to-flow #'forma-tap #'neighbors #'beta-data-prep #'gen-betas #'estimate-forma))
+
+(def complete-flow
+  "For reference - doesn't work w/current flow-fns"
+  (g/fns-to-flow #'ndvi-series #'adjust-series #'trends #'forma-tap #'neighbors #'beta-data-prep #'gen-betas #'estimate-forma))
+
+(defmacro flow-runner
+  ([wf s-res t-res path-map]
+     (run-flow s-res t-res nil nil))
+  ([wf s-res t-res path-map est-end]
+     (run-flow s-res t-res nil est-end))
+  ([wf s-res t-res path-map est-start est-end]
+     (let [est-map (-> (get-est-map s-res t-res est-end)
+                       (#(if est-start ;; update est-start if supplied
+                           (assoc % :est-start est-start)
+                           %)))
+           {:keys [ndvi-path rain-path static-path fire-path
+                   adjusted-path trends-path output-path]} path-map
+           arg-map {:output-tap (hfs-seqfile output-path :sinkmode :replace)
+                    :est-map est-map
+                    :ndvi-path ndvi-path :static-path static-path :rain-path rain-path :fire-path fire-path}]
+       ((g/mk-workflow-fn wf)))))
 
 ;; this runs the flow. Note that arguments to each of the flow-fns
 ;; are simply key-value pairs in a map. args used more than once
 ;; (e.g. s-res) don't have to be specified more than once.
-(defn run-flow []
-  (let [{:keys [ndvi-path rain-path static-path]} (prep-data)]
-    ((g/mk-workflow-fn complete-flow)
-     {:output-tap (hfs-seqfile "/tmp/adjusted" :sinkmode :replace)
-      :s-res "500" :t-res "16" :ndvi-path ndvi-path :rain-path rain-path
-      :static-path static-path})))
+
+(defn run-flow
+  ([s-res t-res]
+     (run-flow s-res t-res nil nil))
+  ([s-res t-res est-end]
+     (run-flow s-res t-res nil est-end))
+  ([s-res t-res est-start est-end]
+     (let [est-map (-> (get-est-map s-res t-res est-end)
+                       (#(if est-start ;; update est-start if supplied
+                           (assoc % :est-start est-start)
+                           %)))
+           {:keys [ndvi-path rain-path static-path fire-path]} (prep-data)]
+       ((g/mk-workflow-fn complete-flow)
+        {:output-tap (hfs-seqfile "/tmp/output" :sinkmode :replace)
+         :est-map est-map
+         :ndvi-path ndvi-path :static-path static-path :rain-path rain-path :fire-path fire-path}))))
+
+(defn run-pre-trends
+  [])
+;; need several workflows - can have diff cluster configs, outputs
+;; run-preprocess - no temp files at all, right?
+;; run-adjusted
+;; run-trends
+;; run-probs

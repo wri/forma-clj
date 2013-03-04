@@ -30,8 +30,6 @@
   (run-params (str s-res "-" t-res) est-end))
 
 (defmain TimeseriesFilter
-  "Uses thrift-bool as switch instead of {:keys [thrift] ...} because use
-   with defmain seemed unreliable - keyword were not recognized as such."
   [s-res t-res ts-path static-path output-path]
   (let [vcf-limit (:vcf-limit (get-est-map s-res t-res))
         static-src (hfs-seqfile static-path)
