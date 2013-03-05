@@ -25,7 +25,8 @@
                  [backtype/dfs-datastores "1.1.3"]
                  [backtype/dfs-datastores-cascading "1.2.0"]
                  [org.apache.thrift/libthrift "0.8.0"
-                  :exclusions [org.slf4j/slf4j-api]]]
+                  :exclusions [org.slf4j/slf4j-api]]
+                 [org.clojars.robinkraft/clj-aws "0.0.2-SNAPSHOT"]]
   :aot [forma.hadoop.pail, forma.schema, #"forma.hadoop.jobs.*"]
   :profiles {:dev {:dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
                                   [cascalog/midje-cascalog "1.10.1-SNAPSHOT"]
