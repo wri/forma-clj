@@ -42,3 +42,7 @@ echo 'export JAVA_LIBRARY_PATH=$LD_LIBRARY_PATH:$JAVA_LIBRARY_PATH' >> /home/$US
 
 # source .bashrc so that LD_LIBRARY_PATH and JAVA_LIBRARY_PATH show up
 source ~/.bashrc
+
+# install midje-cascalog
+git clone git://github.com/nathanmarz/cascalog.git
+lein sub install
