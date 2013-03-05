@@ -39,6 +39,8 @@ wget https://raw.github.com/technomancy/leiningen/preview/bin/lein;
 chmod u+x lein;
 ./lein;
 cd ..;
+git clone git://github.com/nathanmarz/cascalog.git;
+lein sub install;
 tmux new-session -d;'
 
 echo "Running 'lein do deps, compile :all, uberjar', then running tests."
