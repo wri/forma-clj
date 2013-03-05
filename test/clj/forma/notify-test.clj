@@ -21,6 +21,10 @@
   (step-complete-body start-date end-date "neighbors" sample-dt)
   => "Step 'neighbors' for 2010-01-01 to 2011-01-01 finished on 2013-03-04 at 12:01.")
 
+(fact "Test step-failed-body."
+  (step-failed-body start-date end-date "neighbors" sample-dt)
+  => "Step 'neighbors' for 2010-01-01 to 2011-01-01 FAILED on 2013-03-04 at 12:01.")
+
 (fact "Test pixel-count-body."
   (pixel-count-body start-date end-date 5)
   => "There are 5 pixels in the output for 2010-01-01 to 2011-01-01. There should be 60000000 pixels. This is a difference of 59999995 pixels.")

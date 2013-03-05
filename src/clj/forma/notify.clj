@@ -24,10 +24,12 @@
    of notification emails."
   {:workflow-complete {:subject "Workflow complete"
                        :body "Workflow for %s to %s finished on %s at %s."}
-   :step-complete {:subject "Step %s complete"
+   :step-complete {:subject "Step '%s' complete"
                    :body "Step '%s' for %s to %s finished on %s at %s."}
    :pixel-count {:subject "Output pixel count"
-                 :body "There are %d pixels in the output for %s to %s. There should be %d pixels. This is a difference of %d pixels."}})
+                 :body "There are %d pixels in the output for %s to %s. There should be %d pixels. This is a difference of %d pixels."}
+   :step-failed {:subject "Step '%s' failed"
+                 :body "Step '%s' for %s to %s FAILED on %s at %s."}})
 
 (defn extract-date-time
   "Returns a hashmap of the current date and time.
@@ -60,6 +62,18 @@
   [start-date end-date step-name dt]
   (let [{:keys [date time]} (extract-date-time dt)]
     (-> (canned-emails :step-complete)
+        (:body)
+        (format step-name start-date end-date date time))))
+
+(defn step-failed-body
+  "Returns a string containing the body for a :step-failed message.
+
+   Usage:
+     (step-failed-body \"2006-01-01\" \"2007-01-01\" \"neighbors\" (t/now))
+     ;=> \"Step 'neighbors' for 2006-01-01 to 2007-01-01 FAILED on 2013-03-05 at 03:00.\""
+  [start-date end-date step-name dt]
+  (let [{:keys [date time]} (extract-date-time dt)]
+    (-> (canned-emails :step-failed)
         (:body)
         (format step-name start-date end-date date time))))
 
