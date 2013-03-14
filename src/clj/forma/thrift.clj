@@ -288,7 +288,7 @@
 
 (defn DataChunk*
   "Create a DataChunk."
-  [name loc val res & {:keys [date pedigree] :or {date nil pedigree nil}}]
+  [name loc val res & {:keys [date pedigree] :or {date nil pedigree (epoch)}}]
   {:pre  [(every? string? [name res])
           (or (nil? date) (string? date))
           (or (nil? pedigree) (integer? pedigree))
