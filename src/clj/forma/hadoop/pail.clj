@@ -27,11 +27,16 @@
   (let [location   (-> d .getLocationProperty .getProperty .getFieldValue)
         resolution (format "%s-%s"
                            (.getResolution location)
-                           (.getTemporalRes d))]
-    [(.getDataset d) resolution]))
+                           (.getTemporalRes d))
+        dataset (.getDataset d)
+        date-str (.getDate d)
+        dirs [dataset resolution]]
+    (if (= "forma" dataset)
+      (conj dirs date-str)
+      dirs)))
 
 (defn split-isValidTarget [this dirs]
-  (boolean (#{2 3} (count dirs))))
+  (boolean (#{2 3 4} (count dirs))))
 
 (defn pail-structure []
   (forma.hadoop.pail.SplitDataChunkPailStructure.))
