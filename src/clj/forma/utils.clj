@@ -373,3 +373,7 @@
   (if (string? arg)
     (read-string arg)
     arg))
+
+(defn nest-vals
+  [& v]
+  [(vec v)])

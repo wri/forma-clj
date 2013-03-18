@@ -1,6 +1,5 @@
 (ns forma.hadoop.jobs.forma
-  (:use cascalog.api
-        [forma.hadoop.pail :only (split-chunk-tap)])
+  (:use cascalog.api)
   (:require [cascalog.ops :as c]
             [forma.matrix.walk :as w]
             [forma.reproject :as r]
@@ -14,7 +13,8 @@
             [forma.utils :as u]
             [forma.source.humidtropics :as humid]
             [forma.matrix.utils :as mu]
-            [forma.trends.stretch :as stretch]))
+            [forma.trends.stretch :as stretch]
+            [forma.hadoop.pail :as pail]))
 
 (defn static-tap
   "Accepts a source of DataChunks, and returns a new query with all
@@ -120,6 +120,31 @@
                      ?n-start ?ndvi-clean
                      :> ?start-idx ?precl-ts ?ndvi-ts)))
 
+(defmapcatop ts->long
+  [start-pd series]
+  (let [pds (range start-pd (+ start-pd (count series)))]
+    (map vector pds series)))
+
+(defn adjusted->long-ts
+  [{:keys [t-res]} src]
+  (let [dataset-name "adjusted"
+        data-src (<- [?s-res ?mod-h ?mod-v ?sample ?line ?date ?vals]
+                     (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ndvi-ts ?precl-ts)
+                     (ts->long ?start-idx ?ndvi-ts :> ?pd ?ndvi)
+                     (ts->long ?start-idx ?precl-ts :> ?pd ?precl)
+                     (u/nest-vals ?ndvi ?precl :> ?vals)
+                     (date/period->datetime t-res ?pd :> ?date))]
+    (<- [?dc]
+        (data-src ?s-res ?mod-h ?mod-v ?sample ?line ?date ?vals)
+        (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?loc)
+        (thrift/DataChunk* dataset-name ?loc ?vals t-res :date ?date :> ?dc))))
+
+(defn adjusted
+  [est-map ndvi-src rain-src pail-path]
+  (let [adjusted-src (dynamic-filter est-map ndvi-src rain-src)
+        adjusted-long-src (adjusted->long-ts est-map adjusted-src)]
+    (pail/to-pail pail-path adjusted-long-src)))
+
 (defn series-end
   "Return the relative index of the final element of a collection
   given a series and a starting index.
@@ -185,6 +210,28 @@
         (telescoping-trends est-map ?start ?clean-ndvi ?precl :> ?end-idx ?short ?long ?t-stat ?break)
         (reduce max ?end-idx :> ?end)
         (:distinct false))))
+
+(defn trends->long-ts
+  [{:keys [t-res]} src]
+  (let [dataset-name "trends"
+        data-src (<- [?s-res ?mod-h ?mod-v ?sample ?line ?date ?vals]
+                     (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx _ ?short-s ?long-s ?t-stat-s ?break-s)
+                     (ts->long ?start-idx ?short-s :> ?pd ?short)
+                     (ts->long ?start-idx ?long-s :> ?pd ?long)
+                     (ts->long ?start-idx ?t-stat-s :> ?pd ?t-stat)
+                     (ts->long ?start-idx ?break-s :> ?pd ?break)
+                     (u/nest-vals ?short ?long ?t-stat ?break :> ?vals)
+                     (date/period->datetime t-res ?pd :> ?date))]
+    (<- [?dc]
+        (data-src ?s-res ?mod-h ?mod-v ?sample ?line ?date ?vals)
+        (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?loc)
+        (thrift/DataChunk* dataset-name ?loc ?vals t-res :date ?date :> ?dc))))
+
+(defn trends
+  [est-map dynamic-src pail-path]
+  (let [trends-src (analyze-trends est-map dynamic-src)
+        trends-long-src (trends->long-ts est-map trends-src)]
+    (pail/to-pail pail-path trends-long-src)))
 
 (defn forma-tap
   "Accepts an est-map and sources for dynamic and fires data,
@@ -286,11 +333,34 @@
   period after the training period."
   [{:keys [nodata]} beta-src dynamic-src static-src]
   (let [betas (classify/beta-dict beta-src)]
-    (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
+    (<- [?s-res ?mod-h ?mod-v ?s ?l ?pd ?prob]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
         (u/obj-contains-nodata? nodata ?val :> false)
         (u/obj-contains-nodata? nodata ?neighbor-val :> false)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _ _)
         (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
-        (consolidate-timeseries nodata ?pd ?prob :> _ ?prob-series)
+;;        (consolidate-timeseries nodata ?pd ?prob :> _ ?prob-series)
         (:distinct false))))
+
+(defn probs
+  [est-map beta-src dynamic-src static-src pail-path]
+  (let [dataset-name "forma"
+        t-res (:t-res est-map)
+        probs-src (forma-estimate est-map beta-src dynamic-src static-src)
+        probs-dc-src (<- [?dc]
+                         (probs-src ?s-res ?mod-h ?mod-v ?s ?l ?pd ?prob)
+                         (date/period->datetime t-res ?pd :> ?date)
+                         (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?s ?l :> ?loc)
+                         (thrift/DataChunk* dataset-name ?loc ?prob t-res :date ?date :> ?dc))]
+    (pail/to-pail pail-path probs-dc-src)))
+
+(defn mk-prob-series
+  [{:keys [nodata]} src]
+  (<- [?s-res ?mod-h ?mod-v ?s ?l ?start-idx ?prob-series]
+      (src _ ?dc)
+      (thrift/unpack ?dc :> ?ds-name ?loc ?data-val ?t-res ?date)
+      (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
+      (thrift/unpack ?data-val :> ?prob)
+      (date/datetime->period ?t-res ?date :> ?pd)
+      (consolidate-timeseries nodata ?pd ?prob :> ?pds ?prob-series)
+      (first ?pds :> ?start-idx)))
