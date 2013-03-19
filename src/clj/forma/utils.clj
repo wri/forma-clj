@@ -373,7 +373,3 @@
   (if (string? arg)
     (read-string arg)
     arg))
-
-(defn merge-ts
-  "Merge time series"
-  [ts-map])

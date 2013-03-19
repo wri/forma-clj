@@ -3,7 +3,8 @@
 ;; proper temporal comparison of two unrelated datasets.
 
 (ns forma.date-time
-  (:use [clj-time.core :only (date-time month year)])
+  (:use [clj-time.core :only (date-time month year)]
+        [forma.matrix.utils :only (sparse-expander)])
   (:require [clj-time.core :as time]
             [clj-time.format :as f]))
 
@@ -371,10 +372,55 @@ in which `string` lies (according to the supplied resolution, `res`)."
   [coll]
   (same-len? coll (set coll)))
 
-(defn vec->ordered-map
-  "Accepts a collection and a key that indicates the first element in
-  the collection, and a temporal resolution."
-  [init-key t-res coll]
-  (let [init (key->period t-res init-key)
+(defn ts-vec->ts-map
+  "Accepts a date key (a la :2012-01-01) for the first element in a
+   time series, plus a temporal resolution and a collection. Returns a
+   map containing dates as keys and series elements as values."
+  [init-date-key t-res coll]
+  (let [init (key->period t-res init-date-key)
         end-key  (period->key t-res (+ init (count coll)))]
-    (zipmap (key-span init-key end-key t-res) coll)))
+    (zipmap (key-span init-date-key end-key t-res) coll)))
+
+(defn ts-map->ts-vec
+  "Accepts a temporal resolution, time series map, and a nodata value. Returns the
+  corresponding time series, expanded as necessary using the nodata value."
+  [t-res m nodata]
+  (let [date-ks (sort (keys m))
+        pds-vals (for [k date-ks]
+                   [(key->period t-res k) (k m)])]
+    (sparse-expander nodata pds-vals)))
+
+(defn overlap?
+  [m1 m2]
+  (let [k-m1 (keys m1)
+        k-m2 (keys m2)]
+    (= k-m1 k-m2)))
+
+(defn inc-eq?
+  ([[a b]]
+     (inc-eq? a b))
+  ([a b]
+     (= (inc a) b)))
+
+(defn consecutive?
+  [t-res coll]
+  (let [pds (map (partial key->period t-res) (sort coll))
+        tuples (partition 2 1 pds)]
+    (every? true? (map inc-eq? tuples))))
+
+(defn merge-ts
+  "Merge time series maps."
+  [t-res master new & {:keys [update consecutive nodata]
+                       :or {update false consecutive true nodata nil}}]
+  (let []
+    (apply assoc master (apply concat (for [[k v] new] [k v])))))
+
+
+
+(comment
+    {:pre [(or (true? update)         ;; updates ok, overlap doesn't matter
+             (false? (overlap? master new))) ;; updates not ok, overlap matters
+         (if (true? consecutive)    ;; can't have holes in series
+           (consecutive? t-res (set (concat (keys master) (keys new))))  ;; output will be consec.?
+           true)
+         ]})
