@@ -40,7 +40,9 @@ chmod u+x lein;
 ./lein;
 cd ..;
 git clone git://github.com/nathanmarz/cascalog.git;
+cd cascalog;
 lein sub install;
+cd ..;
 tmux new-session -d;'
 
 echo "Running 'lein do deps, compile :all, uberjar', then running tests."
