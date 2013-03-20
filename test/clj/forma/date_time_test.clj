@@ -121,30 +121,46 @@ month    1       12)
   (get-val-at-date "16" "2000-01-01" [2 4 6] "2005-01-01" :out-of-bounds-idx 0) => 2)
 
 (tabular
- (fact
-   (merge-ts "16" ?a ?b :update ?update :consecutive ?consecutive :nodata ?nodata)
+ (fact "Check merge-ts."
+   (merge-ts ?master ?new :update ?update)
    => ?result)
- ?a ?b ?update ?consecutive ?nodata ?result
+ ?master ?new ?update ?result
+
+ ;; non-overlapping, :update true
  {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3}
  {:2012-02-18 4}
- true true -9999.0 {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3 :2012-02-18 4}
-
- ;; non-consecutive new, :consecutive true
+ true {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3 :2012-02-18 4}
+ 
+ ;; non-overlapping, :update false
  {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3}
- {:2013-02-18 4}
- true true -9999.0 (throws Exception)
-
- ;; non-consecutive master, :consecutive true
- {:2012-01-01 1 :2012-01-17 2 :2013-02 3}
- {:2013-02-18 4}
- true true -9999.0 (throws Exception)
-
- ;; non-consecutive, :consecutive false
+ {:2012-02-18 4}
+ false {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3 :2012-02-18 4}
+ 
+ ;; overlapping time series, :update true
  {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3}
- {:2013-02-18 4}
- true false -9999.0 {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3 :2013-02-18 4}
+ {:2012-02-02 4}
+ true {:2012-01-01 1 :2012-01-17 2 :2012-02-02 4}
+ 
+ ;; overlapping time series, :update false
+ {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3}
+ {:2012-02-02 -1}
+ false (throws AssertionError)
+ 
+ ;; overlapping time series, where new time series updates elements
+ ;; in the middle of the master time series
+ {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3 :2012-02-18 4}
+ {:2012-01-17 -1 :2012-02-02 -1}
+ true {:2012-01-01 1 :2012-01-17 -1 :2012-02-02 -1 :2012-02-18 4}
 
-)
+ ;; non-consecutive - hole in master series
+ {:2012-01-01 1 :2012-01-17 2 :2013-01-01 3}
+ {:2013-02-02 4}
+ false {:2012-01-01 1 :2012-01-17 2 :2013-01-01 3 :2013-02-02 4}
+ 
+ ;; non-consecutive - hole in new series
+ {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3}
+ {:2012-02-18 4 :2012-03-21 5}
+ false {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3 :2012-02-18 4 :2012-03-21 5})
 
 (comment
    (fact

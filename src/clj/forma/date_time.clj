@@ -383,18 +383,22 @@ in which `string` lies (according to the supplied resolution, `res`)."
 
 (defn ts-map->ts-vec
   "Accepts a temporal resolution, time series map, and a nodata value. Returns the
-  corresponding time series, expanded as necessary using the nodata value."
+  corresponding time series, with any holes filled in using the nodata value."
   [t-res m nodata]
   (let [date-ks (sort (keys m))
         pds-vals (for [k date-ks]
                    [(key->period t-res k) (k m)])]
     (sparse-expander nodata pds-vals)))
 
+(defn get-ts-map-start-idx
+  [t-res ts-map]
+  (key->period t-res (first (sort (keys ts-map)))))
+
 (defn overlap?
   [m1 m2]
-  (let [k-m1 (keys m1)
-        k-m2 (keys m2)]
-    (= k-m1 k-m2)))
+  (let [ks-m1 (set (keys m1))
+        ks-m2 (set (keys m2))]
+    (not (empty? (clojure.set/intersection ks-m1 ks-m2)))))
 
 (defn inc-eq?
   ([[a b]]
@@ -402,25 +406,14 @@ in which `string` lies (according to the supplied resolution, `res`)."
   ([a b]
      (= (inc a) b)))
 
-(defn consecutive?
-  [t-res coll]
-  (let [pds (map (partial key->period t-res) (sort coll))
-        tuples (partition 2 1 pds)]
-    (every? true? (map inc-eq? tuples))))
-
 (defn merge-ts
-  "Merge time series maps."
-  [t-res master new & {:keys [update consecutive nodata]
-                       :or {update false consecutive true nodata nil}}]
-  (let []
-    (apply assoc master (apply concat (for [[k v] new] [k v])))))
+  "Merge time series maps. With :update true, key collisions are ok. Otherwise,
+   key collisions will trip up the precondition.
 
-
-
-(comment
-    {:pre [(or (true? update)         ;; updates ok, overlap doesn't matter
-             (false? (overlap? master new))) ;; updates not ok, overlap matters
-         (if (true? consecutive)    ;; can't have holes in series
-           (consecutive? t-res (set (concat (keys master) (keys new))))  ;; output will be consec.?
-           true)
-         ]})
+   Note that this function only merges maps of dates and values, and
+   does not ensure that the resulting time series map contains a
+   complete time series (i.e. holes are possible."
+  [master new & {:keys [update] :or {update false}}]
+  {:pre [(or (true? update)
+             (not (overlap? master new)))]}
+  (into master new))
