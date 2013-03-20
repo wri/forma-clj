@@ -34,9 +34,11 @@
                            (.getResolution location)
                            (.getTemporalRes d))
         dirs [dataset resolution]
-        date-str (.getDate d)]
+;;        date-str (first (.split (.getDate d) "-"))
+        ]
     (if (contains? DATASETS-BY-DATE dataset)
-      (conj dirs date-str)
+      ;;      (conj dirs date-str)
+      dirs
       dirs)))
 
 (defn split-isValidTarget [this dirs]
