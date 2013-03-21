@@ -33,12 +33,13 @@
 
     > (unpack (get-series ts)
     [1.0 2.0 3.0]"
+  (:use [forma.date-time :only (epoch)])
   (:import [forma.schema
             ArrayValue DataChunk DataValue DoubleArray FireArray
             FireValue FormaValue IntArray LocationProperty
             LocationPropertyValue LongArray ModisChunkLocation
             ModisPixelLocation ShortArray TimeSeries FormaArray
-            NeighborValue]
+            NeighborValue Pedigree]
            [java.util ArrayList]
            [org.apache.thrift TBase TUnion]))
 
@@ -287,9 +288,10 @@
 
 (defn DataChunk*
   "Create a DataChunk."
-  [name loc val res & {:keys [date] :or {date nil}}]
+  [name loc val res & {:keys [date pedigree] :or {date nil pedigree (epoch)}}]
   {:pre  [(every? string? [name res])
           (or (nil? date) (string? date))
+          (or (nil? pedigree) (integer? pedigree))
           (LocationPropertyValue? loc)
           (DataValue? val)]}
   (let [loc (mk-location-prop loc)
@@ -300,6 +302,9 @@
     (if date
       (doto chunk
         (.setDate date)))
+    (if pedigree
+      (doto chunk
+        (.setPedigree (Pedigree. pedigree))))
     chunk))
 
 (extend-protocol ITUnion

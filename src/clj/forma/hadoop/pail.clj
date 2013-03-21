@@ -10,6 +10,10 @@
            [backtype.hadoop.pail PailStructure Pail]
            [forma.tap ThriftPailStructure]))
 
+(def DATASETS-BY-DATE
+  "Datasets that can be vertically partitioned by date."
+  #{"adjusted" "trends" "forma"})
+
 ;; ## Pail Data Structures
 
 (gen-class :name forma.hadoop.pail.DataChunkPailStructure
@@ -25,13 +29,18 @@
 
 (defn split-getTarget [this ^DataChunk d]
   (let [location   (-> d .getLocationProperty .getProperty .getFieldValue)
+        dataset (.getDataset d)
         resolution (format "%s-%s"
                            (.getResolution location)
-                           (.getTemporalRes d))]
-    [(.getDataset d) resolution]))
+                           (.getTemporalRes d))
+        dirs [dataset resolution]
+        date-str (.getDate d)]
+    (if (contains? DATASETS-BY-DATE dataset)
+      (conj dirs date-str)
+      dirs)))
 
 (defn split-isValidTarget [this dirs]
-  (boolean (#{2 3} (count dirs))))
+  (boolean (#{2 3 4 5} (count dirs))))
 
 (defn pail-structure []
   (forma.hadoop.pail.SplitDataChunkPailStructure.))

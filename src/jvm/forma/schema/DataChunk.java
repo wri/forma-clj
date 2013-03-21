@@ -36,6 +36,7 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
   private static final org.apache.thrift.protocol.TField CHUNK_VALUE_FIELD_DESC = new org.apache.thrift.protocol.TField("chunkValue", org.apache.thrift.protocol.TType.STRUCT, (short)3);
   private static final org.apache.thrift.protocol.TField TEMPORAL_RES_FIELD_DESC = new org.apache.thrift.protocol.TField("temporalRes", org.apache.thrift.protocol.TType.STRING, (short)4);
   private static final org.apache.thrift.protocol.TField DATE_FIELD_DESC = new org.apache.thrift.protocol.TField("date", org.apache.thrift.protocol.TType.STRING, (short)5);
+  private static final org.apache.thrift.protocol.TField PEDIGREE_FIELD_DESC = new org.apache.thrift.protocol.TField("pedigree", org.apache.thrift.protocol.TType.STRUCT, (short)6);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -48,6 +49,7 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
   public DataValue chunkValue; // required
   public String temporalRes; // required
   public String date; // optional
+  public Pedigree pedigree; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -55,7 +57,8 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
     LOCATION_PROPERTY((short)2, "locationProperty"),
     CHUNK_VALUE((short)3, "chunkValue"),
     TEMPORAL_RES((short)4, "temporalRes"),
-    DATE((short)5, "date");
+    DATE((short)5, "date"),
+    PEDIGREE((short)6, "pedigree");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -80,6 +83,8 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
           return TEMPORAL_RES;
         case 5: // DATE
           return DATE;
+        case 6: // PEDIGREE
+          return PEDIGREE;
         default:
           return null;
       }
@@ -120,7 +125,7 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
   }
 
   // isset id assignments
-  private _Fields optionals[] = {_Fields.DATE};
+  private _Fields optionals[] = {_Fields.DATE,_Fields.PEDIGREE};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
@@ -134,6 +139,8 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
     tmpMap.put(_Fields.DATE, new org.apache.thrift.meta_data.FieldMetaData("date", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
+    tmpMap.put(_Fields.PEDIGREE, new org.apache.thrift.meta_data.FieldMetaData("pedigree", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, Pedigree.class)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(DataChunk.class, metaDataMap);
   }
@@ -173,6 +180,9 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
     if (other.isSetDate()) {
       this.date = other.date;
     }
+    if (other.isSetPedigree()) {
+      this.pedigree = new Pedigree(other.pedigree);
+    }
   }
 
   public DataChunk deepCopy() {
@@ -186,6 +196,7 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
     this.chunkValue = null;
     this.temporalRes = null;
     this.date = null;
+    this.pedigree = null;
   }
 
   public String getDataset() {
@@ -308,6 +319,30 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
     }
   }
 
+  public Pedigree getPedigree() {
+    return this.pedigree;
+  }
+
+  public DataChunk setPedigree(Pedigree pedigree) {
+    this.pedigree = pedigree;
+    return this;
+  }
+
+  public void unsetPedigree() {
+    this.pedigree = null;
+  }
+
+  /** Returns true if field pedigree is set (has been assigned a value) and false otherwise */
+  public boolean isSetPedigree() {
+    return this.pedigree != null;
+  }
+
+  public void setPedigreeIsSet(boolean value) {
+    if (!value) {
+      this.pedigree = null;
+    }
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case DATASET:
@@ -350,6 +385,14 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
       }
       break;
 
+    case PEDIGREE:
+      if (value == null) {
+        unsetPedigree();
+      } else {
+        setPedigree((Pedigree)value);
+      }
+      break;
+
     }
   }
 
@@ -369,6 +412,9 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
 
     case DATE:
       return getDate();
+
+    case PEDIGREE:
+      return getPedigree();
 
     }
     throw new IllegalStateException();
@@ -391,6 +437,8 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
       return isSetTemporalRes();
     case DATE:
       return isSetDate();
+    case PEDIGREE:
+      return isSetPedigree();
     }
     throw new IllegalStateException();
   }
@@ -453,6 +501,15 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
         return false;
     }
 
+    boolean this_present_pedigree = true && this.isSetPedigree();
+    boolean that_present_pedigree = true && that.isSetPedigree();
+    if (this_present_pedigree || that_present_pedigree) {
+      if (!(this_present_pedigree && that_present_pedigree))
+        return false;
+      if (!this.pedigree.equals(that.pedigree))
+        return false;
+    }
+
     return true;
   }
 
@@ -484,6 +541,11 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
     builder.append(present_date);
     if (present_date)
       builder.append(date);
+
+    boolean present_pedigree = true && (isSetPedigree());
+    builder.append(present_pedigree);
+    if (present_pedigree)
+      builder.append(pedigree);
 
     return builder.toHashCode();
   }
@@ -546,6 +608,16 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
         return lastComparison;
       }
     }
+    lastComparison = Boolean.valueOf(isSetPedigree()).compareTo(typedOther.isSetPedigree());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetPedigree()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.pedigree, typedOther.pedigree);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     return 0;
   }
 
@@ -604,6 +676,16 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
         sb.append("null");
       } else {
         sb.append(this.date);
+      }
+      first = false;
+    }
+    if (isSetPedigree()) {
+      if (!first) sb.append(", ");
+      sb.append("pedigree:");
+      if (this.pedigree == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.pedigree);
       }
       first = false;
     }
@@ -691,6 +773,15 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
+          case 6: // PEDIGREE
+            if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
+              struct.pedigree = new Pedigree();
+              struct.pedigree.read(iprot);
+              struct.setPedigreeIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
           default:
             org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
         }
@@ -733,6 +824,13 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
           oprot.writeFieldEnd();
         }
       }
+      if (struct.pedigree != null) {
+        if (struct.isSetPedigree()) {
+          oprot.writeFieldBegin(PEDIGREE_FIELD_DESC);
+          struct.pedigree.write(oprot);
+          oprot.writeFieldEnd();
+        }
+      }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
     }
@@ -766,7 +864,10 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
       if (struct.isSetDate()) {
         optionals.set(4);
       }
-      oprot.writeBitSet(optionals, 5);
+      if (struct.isSetPedigree()) {
+        optionals.set(5);
+      }
+      oprot.writeBitSet(optionals, 6);
       if (struct.isSetDataset()) {
         oprot.writeString(struct.dataset);
       }
@@ -782,12 +883,15 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
       if (struct.isSetDate()) {
         oprot.writeString(struct.date);
       }
+      if (struct.isSetPedigree()) {
+        struct.pedigree.write(oprot);
+      }
     }
 
     @Override
     public void read(org.apache.thrift.protocol.TProtocol prot, DataChunk struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
-      BitSet incoming = iprot.readBitSet(5);
+      BitSet incoming = iprot.readBitSet(6);
       if (incoming.get(0)) {
         struct.dataset = iprot.readString();
         struct.setDatasetIsSet(true);
@@ -809,6 +913,11 @@ public class DataChunk implements org.apache.thrift.TBase<DataChunk, DataChunk._
       if (incoming.get(4)) {
         struct.date = iprot.readString();
         struct.setDateIsSet(true);
+      }
+      if (incoming.get(5)) {
+        struct.pedigree = new Pedigree();
+        struct.pedigree.read(iprot);
+        struct.setPedigreeIsSet(true);
       }
     }
   }

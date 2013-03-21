@@ -29,3 +29,5 @@
                             (thrift/ModisPixelLocation* "500" 1 2 3 4)
                             [1 1 1] "16" "2001")))
     (.consolidate some-pail)))
+
+(future-fact "tests using pedigree field")
