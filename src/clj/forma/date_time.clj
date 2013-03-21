@@ -341,13 +341,23 @@ in which `string` lies (according to the supplied resolution, `res`)."
   Example:
     (sorted-ts {:2005-12-31 3 :2006-08-21 1}) => (3 1)"
   [m]
-  [(vals (into (sorted-map) m))])
+  (vals (into (sorted-map) m)))
 
 (defn key->period
+  "Convert a date keyword to a period.
+
+   Usage:
+     (key->period \"16\" :2006-01-01)
+     ;=> 827"
   [t-res k]
   (datetime->period t-res (name k)))
 
 (defn period->key
+  "Convert a period to a date keyword.
+
+   Usage:
+     (period->key \"16\" 827)
+     ;=> :2006-01-01"
   [t-res pd]
   (keyword (period->datetime t-res pd)))
 
@@ -365,17 +375,35 @@ in which `string` lies (according to the supplied resolution, `res`)."
     (map (partial period->key t-res)
          (range init-idx end-idx))))
 
-(defn same-len? [coll1 coll2]
+(defn same-len?
+  "Checks whether two collections have the same number of elements.
+
+   Usage:
+     (same-len? [1 2 3] [4 5 6])
+     ;=> true"
+  [coll1 coll2]
   (= (count coll1) (count coll2)))
 
 (defn all-unique?
+  "Checks whether all the elements in `coll` are unique.
+
+   Usage:
+     (all-unique? [1 2 3])
+     ;=> true
+
+     (all-unique? [1 1 2])
+     ;=> false"
   [coll]
   (same-len? coll (set coll)))
 
 (defn ts-vec->ts-map
   "Accepts a date key (a la :2012-01-01) for the first element in a
    time series, plus a temporal resolution and a collection. Returns a
-   map containing dates as keys and series elements as values."
+   map containing dates as keys and series elements as values.
+
+   Usage:
+     (ts-vec->ts-map :2006-01-01 \"16\" [1 2 3])
+     ;=> {:2006-01-01 1 :2006-01-17 2 :2006-02-02 3}"
   [init-date-key t-res coll]
   (let [init (key->period t-res init-date-key)
         end-key  (period->key t-res (+ init (count coll)))]
@@ -383,7 +411,14 @@ in which `string` lies (according to the supplied resolution, `res`)."
 
 (defn ts-map->ts-vec
   "Accepts a temporal resolution, time series map, and a nodata value. Returns the
-  corresponding time series, with any holes filled in using the nodata value."
+  corresponding time series, with any holes filled in using the nodata value.
+
+  Usage:
+    (ts-map->ts-vec \"16\" {:2006-01-01 1 :2006-01-17 2 :2006-02-02 3} -9999.0)
+    ;=> [1 2 3]
+
+    (ts-map->ts-vec \"16\" {:2006-01-01 1 :2006-01-17 2 :2006-02-18 3} -9999.0)
+    ;=> [1 2 -9999.0 3]"
   [t-res m nodata]
   (let [date-ks (sort (keys m))
         pds-vals (for [k date-ks]
@@ -391,28 +426,54 @@ in which `string` lies (according to the supplied resolution, `res`)."
     (sparse-expander nodata pds-vals)))
 
 (defn get-ts-map-start-idx
+  "Given a map of dates and values, return the first date converted to a period.
+
+   Usage:
+     (get-ts-map-start-idx \"16\" {:2006-01-01 1 :2006-01-17 2 :2006-02-18 3})
+     ;=> 828"
   [t-res ts-map]
   (key->period t-res (first (sort (keys ts-map)))))
 
 (defn overlap?
+  "Checks for collisions between keys in provided maps.
+
+   Usage:
+     (overlap? {:a 1} {:b 2})
+     ;=> false
+
+     (overlap? {:a 1 :b 2} {:b 3})
+     ;=> true
+
+     (overlap? {:2006-01-01 1 :2006-01-17 2} {2006-01-17 30})
+     ;=> true"
   [m1 m2]
   (let [ks-m1 (set (keys m1))
         ks-m2 (set (keys m2))]
     (not (empty? (clojure.set/intersection ks-m1 ks-m2)))))
 
-(defn inc-eq?
-  ([[a b]]
-     (inc-eq? a b))
-  ([a b]
-     (= (inc a) b)))
-
 (defn merge-ts
-  "Merge time series maps. With :update true, key collisions are ok. Otherwise,
-   key collisions will trip up the precondition.
+  "Merges (ostensibly) two time series hashmaps. With :update true,
+   key collisions are ok and updates will occur. Otherwise, key
+   collisions will trip up the precondition.
 
-   Note that this function only merges maps of dates and values, and
-   does not ensure that the resulting time series map contains a
-   complete time series (i.e. holes are possible."
+   Note that this function only merges hashmaps, and does not ensure
+   that the result is a complete time series. It doesn't even check
+   that keys are dates. So there may be holes in the time series that
+   comes out, if it's even a time series at all. Use `ts-map->ts-vec`
+   to convert to a vector with holes filled with nodata values.
+
+   Usage:
+     (merge-ts {:2006-01-01 1 :2006-01-17 2} {:2006-02-02 3})
+     ;=> {:2006-01-01 1 :2006-01-17 2 :2006-02-02 3}
+
+     (merge-ts {:2006-01-01 1 :2006-01-17 2} {2006-01-17 30} :update true)
+     ;=> {:2006-01-01 1 :2006-01-17 30}
+
+     (merge-ts {:2006-01-01 1 :2006-01-17 2} {2006-01-17 30})
+     ;=> throws AssertionError for tripping the precondition
+
+     (merge-ts {:a 1 :b 2} {:c 3})
+     ;=> {:a 1 :b 2 :c 3} ;; this function works for any hashmap."
   [master new & {:keys [update] :or {update false}}]
   {:pre [(or (true? update)
              (not (overlap? master new)))]}

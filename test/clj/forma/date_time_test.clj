@@ -120,6 +120,44 @@ month    1       12)
   (get-val-at-date "16" "2000-01-01" [2 4 6] "2005-01-01" :out-of-bounds-val 5) => 5
   (get-val-at-date "16" "2000-01-01" [2 4 6] "2005-01-01" :out-of-bounds-idx 0) => 2)
 
+(fact "Check sorted-ts."
+  (sorted-ts {:2005-12-31 3 :2006-08-21 1}) => [3 1])
+
+(fact "Check key->period."
+  (key->period "16" :2005-12-31) => 827
+  (key->period "16" :2005-12-19) => 827
+  (key->period "16" :2000-02-18) => 693
+  (key->period "32" :2005-12-31) => 431
+  (key->period "32" :2000-02-18) => 361)
+
+(fact "Check period->key."
+  (period->key "16" 827) => :2005-12-19
+  (period->key "16" 693) => :2000-02-18
+  (period->key "32" 431) => :2005-12-01
+  (period->key "32" 361) => :2000-02-01)
+
+(fact "Check key-span."
+  (key-span :2005-12-31 :2006-01-18 "16") => [:2005-12-19 :2006-01-01 :2006-01-17])
+
+(fact "Check all-unique?"
+  (all-unique? [1 2 3]) => true
+  (all-unique? [1 1 2]) => false)
+
+(fact "Check ts-vec->ts-map."
+  (ts-vec->ts-map :2005-12-19 "16" [1 2 3])
+  => {:2005-12-19 1 :2006-01-01 2 :2006-01-17 3})
+
+(fact "Check ts-map->ts-vec."
+  (ts-map->ts-vec "16" {:2005-12-19 1 :2006-01-01 2 :2006-01-17 3} -9999.0) => [1 2 3]
+  (ts-map->ts-vec "16" {:2005-12-19 1 :2006-01-01 2 :2006-02-02 3} -9999.0) => [1 2 -9999.0 3])
+
+(fact "Check get-ts-map-start-idx"
+  (get-ts-map-start-idx "16" {:2005-12-19 1 :2000-02-18 47}) => 693)
+
+(fact "Check overlap?"
+  (overlap? {:2006-01-01 1 :2006-01-17 2} {:2006-01-17 3 :2006-02-02 4}) => true
+  (overlap? {:2006-01-01 1 :2006-01-17 2} {:2006-02-02 3 :2006-02-18 4}) => false)
+
 (tabular
  (fact "Check merge-ts."
    (merge-ts ?master ?new :update ?update)
@@ -161,61 +199,6 @@ month    1       12)
  {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3}
  {:2012-02-18 4 :2012-03-21 5}
  false {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3 :2012-02-18 4 :2012-03-21 5})
-
-(comment
-   (fact
-
-
-   "Test merge-ts"
-   ;; non-overlapping, sequential time series.
-   (let [a {:start-idx 693 :resolution "16" :series (range 2)}
-         b {:start-idx 695 :resolution "16" :series (range 2 4)}]
-     (merge-ts a b)) => {:start-idx 693 :resolution "16" :series (range 4)}
-
-     ;; overlapping time series, where overlap values are the same.
-     ;; (let [a {:start-idx 693 :resolution "16" :series (range 2)}
-     ;;       b {:start-idx 694 :resolution "16" :series (range 2 4)}]
-     ;;   (merge-ts a b)) => {:start-idx 693 :resolution "16" :series (range 4)}
-
-     ;; overlapping time series, :update flag not used
-     (let [a {:start-idx 693 :resolution "16" :series (range 2)}
-           b {:start-idx 694 :resolution "16" :series (range 5 8)}]
-       (merge-ts a b) => (throws Exception))
-
-     ;; overlapping time series, :update flag is used.
-     (let [a {:start-idx 693 :resolution "16" :series (range 2)}
-           b {:start-idx 694 :resolution "16" :series (range 5 8)}]
-       (merge-ts a b :update true ) => {:start-idx 693 :resolution "16" :series [0 5 6 7]})
-
-     ;; overlapping time series, where one time series updates only a few
-     ;; elements in the middle of the original time series
-     (let [a {:start-idx 693 :resolution "16" :series (range 5)}
-           b {:start-idx 695 :resolution "16" :series [20]}]
-       (merge-ts a b :update true ) => {:start-idx 693 :resolution "16" :series [0 1 20 3 4]})
-
-     ;; non-sequential time series results in hole in output - no :nodata flag
-     (let [a {:start-idx 693 :resolution "16" :series (range 2)}
-           b {:start-idx 700 :resolution "16" :series (range 2 4)}]
-       (merge-ts a b) => (throws Exception))
-
-     ;; non-sequential time series results in hole in output - :nodata flag used
-     (let [a {:start-idx 693 :resolution "16" :series (range 2)}
-           b {:start-idx 700 :resolution "16" :series (range 2 4)}]
-       (merge-ts a b :nodata -9999.0)
-       => {:start-idx 693 :resolution "16" :series [0 1 -9999.0 -9999.0 -9999.0 -9999.0 -9999.0 2 3]})
-
-     ;; using both flags is ok - example uses non-sequential time series
-     (let [a {:start-idx 693 :resolution "16" :series (range 2)}
-           b {:start-idx 700 :resolution "16" :series (range 2 4)}]
-       (merge-ts a b :update true :nodata -9999.0)
-       => {:start-idx 693 :resolution "16" :series [0 1 -9999.0 -9999.0 -9999.0 -9999.0 -9999.0 2 3]})
-
-     ;; using both flags is ok - example uses overlapping time series, and overlap
-     ;; values are different
-     (let [a {:start-idx 693 :resolution "16" :series (range 2)}
-           b {:start-idx 694 :resolution "16" :series (range 5 8)}]
-       (merge-ts a b :update true :nodata -9999.0)
-       => {:start-idx 693 :resolution "16" :series [0 5 6 7]})))
 
 (tabular
  (fact "Check ts-vec->ts-map"
