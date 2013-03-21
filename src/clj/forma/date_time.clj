@@ -4,7 +4,8 @@
 
 (ns forma.date-time
   (:use [clj-time.core :only (date-time month year)]
-        [forma.matrix.utils :only (sparse-expander)])
+        [forma.matrix.utils :only (sparse-expander)]
+        [forma.utils :only (inc-eq? all-unique?)])
   (:require [clj-time.core :as time]
             [clj-time.format :as f]))
 
@@ -334,15 +335,6 @@ in which `string` lies (according to the supplied resolution, `res`)."
             (nth v out-of-bounds-idx))
           nil))))
 
-(defn sorted-ts
-  "Accepts a map with date keys and time series values, and returns a
-  vector with the values appropriately sorted.
-
-  Example:
-    (sorted-ts {:2005-12-31 3 :2006-08-21 1}) => (3 1)"
-  [m]
-  (vals (into (sorted-map) m)))
-
 (defn key->period
   "Convert a date keyword to a period.
 
@@ -374,40 +366,6 @@ in which `string` lies (according to the supplied resolution, `res`)."
         end-idx  (inc (key->period t-res end-key))]
     (map (partial period->key t-res)
          (range init-idx end-idx))))
-
-(defn same-len?
-  "Checks whether two collections have the same number of elements.
-
-   Usage:
-     (same-len? [1 2 3] [4 5 6])
-     ;=> true"
-  [coll1 coll2]
-  (= (count coll1) (count coll2)))
-
-(defn all-unique?
-  "Checks whether all the elements in `coll` are unique.
-
-   Usage:
-     (all-unique? [1 2 3])
-     ;=> true
-
-     (all-unique? [1 1 2])
-     ;=> false"
-  [coll]
-  (same-len? coll (set coll)))
-
-(defn inc-eq?
-  "Checks whether the first integer immediately preceeds the second one.
-
-   Usage:
-     (inc-eq? [1 2]) => true
-     (inc-eq? [0 2]) => false
-     (inc-eq? 1 2) => true
-     (inc-eq? 0 2) => false"
-  ([[a b]]
-     (inc-eq? a b))
-  ([a b]
-     (= (inc a) b)))
 
 (defn consecutive?
   "Checks whether a collection of date keys is consecutive (i.e. has no gaps or repetition).
@@ -468,67 +426,3 @@ in which `string` lies (according to the supplied resolution, `res`)."
      ;=> 828"
   [t-res ts-map]
   (key->period t-res (first (sort (keys ts-map)))))
-
-(defn overlap?
-  "Checks for collisions between keys in provided maps.
-
-   Usage:
-     (overlap? {:a 1} {:b 2})
-     ;=> false
-
-     (overlap? {:a 1 :b 2} {:b 3})
-     ;=> true
-
-     (overlap? {:2006-01-01 1 :2006-01-17 2} {2006-01-17 30})
-     ;=> true"
-  ([& maps]
-     (let [all-ks (flatten (map keys maps))]
-       (not (all-unique? all-ks)))))
-
-(defn merge-ts
-  "Merges (ostensibly) 1 or more time series hashmaps. The first argument
-   `update?` must be supplied as true or false. If true, key collisions are
-   ok, otherwise collisions will trip the precondition.
-
-   Resolving the collisions depends on the behavior of the `merge` built-in
-   function. That is, the value from the last map (left to right) is
-   retained for that key, and the final value in the output will key
-   collisions are ok and updates will occur. Otherwise, key collisions will
-   trip up the precondition.
-
-   Note that this function depends on `merge`, which only merges maps. This
-   function and does not ensure that the result is a complete time series.
-   It doesn't even check that keys are dates. So there may be holes in the
-   time series that comes out, if it's even a time series at all. Use
-   `ts-map->ts-vec` to convert to a vector with holes filled with nodata
-   values.
-
-   Usage:
-     (merge-ts false {:2006-01-01 1 :2006-01-17 2} {:2006-02-02 3})
-     ;=> {:2006-01-01 1 :2006-01-17 2 :2006-02-02 3}
-
-     (merge-ts true {:2006-01-01 1 :2006-01-17 2} {2006-01-17 30})
-     ;=> {:2006-01-01 1 :2006-01-17 30}
-
-     (merge-ts false {:2006-01-01 1 :2006-01-17 2} {2006-01-17 30})
-     ;=> (throws AssertionError)
-
-     (merge-ts false {:a 1 :b 2} {:c 3})
-     ;=> {:a 1 :b 2 :c 3}
-
-     (merge-ts true {:a 1 :b 2} {:c 3})
-     ;=> {:a 1 :b 2 :c 3}
-
-     (merge-ts true {:a 1 :b 2} {:c 3} {:c 4})
-     ;=> {:a 1 :b 2 :c 4}
-
-     (merge-ts true {:a 1 :b 2} {:c 4} {:c 3})
-     ;=> {:a 1 :b 2 :c 3}
-
-     (merge-ts false {:a 1 :b 2} {:c 3} {:c 4})
-     ;=> (throws AssertionError)"
-  [update? & maps]
-  {:pre [(= java.lang.Boolean (type update?))
-         (or (true? update?)
-             (not (apply overlap? maps)))]}
-  (apply merge maps))

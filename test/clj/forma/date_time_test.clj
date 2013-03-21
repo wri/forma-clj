@@ -120,9 +120,6 @@ month    1       12)
   (get-val-at-date "16" "2000-01-01" [2 4 6] "2005-01-01" :out-of-bounds-val 5) => 5
   (get-val-at-date "16" "2000-01-01" [2 4 6] "2005-01-01" :out-of-bounds-idx 0) => 2)
 
-(fact "Check sorted-ts."
-  (sorted-ts {:2005-12-31 3 :2006-08-21 1}) => [3 1])
-
 (fact "Check key->period."
   (key->period "16" :2005-12-31) => 827
   (key->period "16" :2005-12-19) => 827
@@ -138,16 +135,6 @@ month    1       12)
 
 (fact "Check key-span."
   (key-span :2005-12-31 :2006-01-18 "16") => [:2005-12-19 :2006-01-01 :2006-01-17])
-
-(fact "Check all-unique?"
-  (all-unique? [1 2 3]) => true
-  (all-unique? [1 1 2]) => false)
-
-(fact "Check inc-eq?"
-  (inc-eq? [1 2]) => true
-  (inc-eq? [0 2]) => false
-  (inc-eq? 1 2) => true
-  (inc-eq? 0 2) => false)
 
 (fact "Check consecutive?"
   (consecutive? "16" [:2006-01-01 :2006-01-17]) => true
@@ -165,69 +152,6 @@ month    1       12)
 
 (fact "Check get-ts-map-start-idx"
   (get-ts-map-start-idx "16" {:2005-12-19 1 :2000-02-18 47}) => 693)
-
-(fact "Check overlap?"
-  (overlap? {:2006-01-01 1 :2006-01-17 2} {:2006-01-17 3 :2006-02-02 4}) => true
-  (overlap? {:2006-01-01 1 :2006-01-17 2} {:2006-02-02 3 :2006-02-18 4}) => false
-  (overlap? {:2006-01-01 1 :2006-01-17 2} {:2006-01-17 3 :2006-02-02 4}
-            {:2006-01-17 5 :2006-02-02 5} {:2006-01-17 10 :2006-02-02 10})
-  => true
-  (overlap? {:2006-01-01 1 :2006-01-17 2} {:2006-02-02 3 :2006-02-18 4}
-            {:2007-01-01 1 :2007-01-17 2} {:2007-02-02 3 :2007-02-18 4})
-  => false
-  (overlap? {:a 1}) => false)
-
-(tabular
- (fact "Check merge-ts with two maps."
-   (merge-ts ?update ?master ?new)
-   => ?result)
- ?master ?new ?update ?result
-
- ;; non-overlapping, update? true
- {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3}
- {:2012-02-18 4}
- true {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3 :2012-02-18 4}
- 
- ;; non-overlapping, update? false
- {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3}
- {:2012-02-18 4}
- false {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3 :2012-02-18 4}
- 
- ;; overlapping time series, update? true
- {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3}
- {:2012-02-02 4}
- true {:2012-01-01 1 :2012-01-17 2 :2012-02-02 4}
- 
- ;; overlapping time series, update? false
- {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3}
- {:2012-02-02 -1}
- false (throws AssertionError)
- 
- ;; overlapping time series, where new time series updates elements
- ;; in the middle of the master time series
- {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3 :2012-02-18 4}
- {:2012-01-17 -1 :2012-02-02 -1}
- true {:2012-01-01 1 :2012-01-17 -1 :2012-02-02 -1 :2012-02-18 4}
-
- ;; non-consecutive - hole in master series
- {:2012-01-01 1 :2012-01-17 2 :2013-01-01 3}
- {:2013-02-02 4}
- false {:2012-01-01 1 :2012-01-17 2 :2013-01-01 3 :2013-02-02 4}
- 
- ;; non-consecutive - hole in new series
- {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3}
- {:2012-02-18 4 :2012-03-21 5}
- false {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3 :2012-02-18 4 :2012-03-21 5})
-
-(facts "Check merge-ts with any number of maps."
-  (merge-ts false {:a 1}) => {:a 1}
-  (merge-ts true {:a 1}) => {:a 1}
-  (merge-ts false {:a 1} {:b 2} {:c 3}) => {:a 1 :b 2 :c 3}
-  (merge-ts true {:a 1} {:b 2} {:c 3}) => {:a 1 :b 2 :c 3}
-  (merge-ts true {:a 1} {:b 2} {:b 99}) => {:a 1 :b 99}
-  (merge-ts true {:a 1} {:b 2} {:b 99} {:b 999}) => {:a 1 :b 999}
-  (merge-ts true {:a 1} {:b 2} {:b 999} {:b 99}) => {:a 1 :b 99}
-  (merge-ts false {:a 1} {:b 2} {:b 99}) => (throws AssertionError))
 
 (tabular
  (fact "Check ts-vec->ts-map"
