@@ -168,30 +168,37 @@ month    1       12)
 
 (fact "Check overlap?"
   (overlap? {:2006-01-01 1 :2006-01-17 2} {:2006-01-17 3 :2006-02-02 4}) => true
-  (overlap? {:2006-01-01 1 :2006-01-17 2} {:2006-02-02 3 :2006-02-18 4}) => false)
+  (overlap? {:2006-01-01 1 :2006-01-17 2} {:2006-02-02 3 :2006-02-18 4}) => false
+  (overlap? {:2006-01-01 1 :2006-01-17 2} {:2006-01-17 3 :2006-02-02 4}
+            {:2006-01-17 5 :2006-02-02 5} {:2006-01-17 10 :2006-02-02 10})
+  => true
+  (overlap? {:2006-01-01 1 :2006-01-17 2} {:2006-02-02 3 :2006-02-18 4}
+            {:2007-01-01 1 :2007-01-17 2} {:2007-02-02 3 :2007-02-18 4})
+  => false
+  (overlap? {:a 1}) => false)
 
 (tabular
- (fact "Check merge-ts."
-   (merge-ts ?master ?new :update ?update)
+ (fact "Check merge-ts with two maps."
+   (merge-ts ?update ?master ?new)
    => ?result)
  ?master ?new ?update ?result
 
- ;; non-overlapping, :update true
+ ;; non-overlapping, update? true
  {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3}
  {:2012-02-18 4}
  true {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3 :2012-02-18 4}
  
- ;; non-overlapping, :update false
+ ;; non-overlapping, update? false
  {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3}
  {:2012-02-18 4}
  false {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3 :2012-02-18 4}
  
- ;; overlapping time series, :update true
+ ;; overlapping time series, update? true
  {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3}
  {:2012-02-02 4}
  true {:2012-01-01 1 :2012-01-17 2 :2012-02-02 4}
  
- ;; overlapping time series, :update false
+ ;; overlapping time series, update? false
  {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3}
  {:2012-02-02 -1}
  false (throws AssertionError)
@@ -211,6 +218,16 @@ month    1       12)
  {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3}
  {:2012-02-18 4 :2012-03-21 5}
  false {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3 :2012-02-18 4 :2012-03-21 5})
+
+(facts "Check merge-ts with any number of maps."
+  (merge-ts false {:a 1}) => {:a 1}
+  (merge-ts true {:a 1}) => {:a 1}
+  (merge-ts false {:a 1} {:b 2} {:c 3}) => {:a 1 :b 2 :c 3}
+  (merge-ts true {:a 1} {:b 2} {:c 3}) => {:a 1 :b 2 :c 3}
+  (merge-ts true {:a 1} {:b 2} {:b 99}) => {:a 1 :b 99}
+  (merge-ts true {:a 1} {:b 2} {:b 99} {:b 999}) => {:a 1 :b 999}
+  (merge-ts true {:a 1} {:b 2} {:b 999} {:b 99}) => {:a 1 :b 99}
+  (merge-ts false {:a 1} {:b 2} {:b 99}) => (throws AssertionError))
 
 (tabular
  (fact "Check ts-vec->ts-map"

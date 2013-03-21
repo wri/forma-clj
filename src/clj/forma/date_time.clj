@@ -481,35 +481,54 @@ in which `string` lies (according to the supplied resolution, `res`)."
 
      (overlap? {:2006-01-01 1 :2006-01-17 2} {2006-01-17 30})
      ;=> true"
-  [m1 m2]
-  (let [ks-m1 (set (keys m1))
-        ks-m2 (set (keys m2))]
-    (not (empty? (clojure.set/intersection ks-m1 ks-m2)))))
+  ([& maps]
+     (let [all-ks (flatten (map keys maps))]
+       (not (all-unique? all-ks)))))
 
 (defn merge-ts
-  "Merges (ostensibly) two time series hashmaps. With :update true,
-   key collisions are ok and updates will occur. Otherwise, key
-   collisions will trip up the precondition.
+  "Merges (ostensibly) 1 or more time series hashmaps. The first argument
+   `update?` must be supplied as true or false. If true, key collisions are
+   ok, otherwise collisions will trip the precondition.
 
-   Note that this function only merges hashmaps, and does not ensure
-   that the result is a complete time series. It doesn't even check
-   that keys are dates. So there may be holes in the time series that
-   comes out, if it's even a time series at all. Use `ts-map->ts-vec`
-   to convert to a vector with holes filled with nodata values.
+   Resolving the collisions depends on the behavior of the `merge` built-in
+   function. That is, the value from the last map (left to right) is
+   retained for that key, and the final value in the output will key
+   collisions are ok and updates will occur. Otherwise, key collisions will
+   trip up the precondition.
+
+   Note that this function depends on `merge`, which only merges maps. This
+   function and does not ensure that the result is a complete time series.
+   It doesn't even check that keys are dates. So there may be holes in the
+   time series that comes out, if it's even a time series at all. Use
+   `ts-map->ts-vec` to convert to a vector with holes filled with nodata
+   values.
 
    Usage:
-     (merge-ts {:2006-01-01 1 :2006-01-17 2} {:2006-02-02 3})
+     (merge-ts false {:2006-01-01 1 :2006-01-17 2} {:2006-02-02 3})
      ;=> {:2006-01-01 1 :2006-01-17 2 :2006-02-02 3}
 
-     (merge-ts {:2006-01-01 1 :2006-01-17 2} {2006-01-17 30} :update true)
+     (merge-ts true {:2006-01-01 1 :2006-01-17 2} {2006-01-17 30})
      ;=> {:2006-01-01 1 :2006-01-17 30}
 
-     (merge-ts {:2006-01-01 1 :2006-01-17 2} {2006-01-17 30})
-     ;=> throws AssertionError for tripping the precondition
+     (merge-ts false {:2006-01-01 1 :2006-01-17 2} {2006-01-17 30})
+     ;=> (throws AssertionError)
 
-     (merge-ts {:a 1 :b 2} {:c 3})
-     ;=> {:a 1 :b 2 :c 3} ;; this function works for any hashmap."
-  [master new & {:keys [update] :or {update false}}]
-  {:pre [(or (true? update)
-             (not (overlap? master new)))]}
-  (into master new))
+     (merge-ts false {:a 1 :b 2} {:c 3})
+     ;=> {:a 1 :b 2 :c 3}
+
+     (merge-ts true {:a 1 :b 2} {:c 3})
+     ;=> {:a 1 :b 2 :c 3}
+
+     (merge-ts true {:a 1 :b 2} {:c 3} {:c 4})
+     ;=> {:a 1 :b 2 :c 4}
+
+     (merge-ts true {:a 1 :b 2} {:c 4} {:c 3})
+     ;=> {:a 1 :b 2 :c 3}
+
+     (merge-ts false {:a 1 :b 2} {:c 3} {:c 4})
+     ;=> (throws AssertionError)"
+  [update? & maps]
+  {:pre [(= java.lang.Boolean (type update?))
+         (or (true? update?)
+             (not (apply overlap? maps)))]}
+  (apply merge maps))
