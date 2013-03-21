@@ -143,13 +143,25 @@ month    1       12)
   (all-unique? [1 2 3]) => true
   (all-unique? [1 1 2]) => false)
 
+(fact "Check inc-eq?"
+  (inc-eq? [1 2]) => true
+  (inc-eq? [0 2]) => false
+  (inc-eq? 1 2) => true
+  (inc-eq? 0 2) => false)
+
+(fact "Check consecutive?"
+  (consecutive? "16" [:2006-01-01 :2006-01-17]) => true
+  (consecutive? "16" [:2006-01-01 :2006-01-01]) => false
+  (consecutive? "16" [:2006-01-01 :2007-12-31]) => false)
+
 (fact "Check ts-vec->ts-map."
   (ts-vec->ts-map :2005-12-19 "16" [1 2 3])
   => {:2005-12-19 1 :2006-01-01 2 :2006-01-17 3})
 
 (fact "Check ts-map->ts-vec."
   (ts-map->ts-vec "16" {:2005-12-19 1 :2006-01-01 2 :2006-01-17 3} -9999.0) => [1 2 3]
-  (ts-map->ts-vec "16" {:2005-12-19 1 :2006-01-01 2 :2006-02-02 3} -9999.0) => [1 2 -9999.0 3])
+  (ts-map->ts-vec "16" {:2005-12-19 1 :2006-01-01 2 :2006-02-02 3} -9999.0) => [1 2 -9999.0 3]
+  (ts-map->ts-vec "16" {:2005-12-19 1 :2006-01-01 2 :2006-02-02 3} -9999.0 :consecutive true) => (throws AssertionError))
 
 (fact "Check get-ts-map-start-idx"
   (get-ts-map-start-idx "16" {:2005-12-19 1 :2000-02-18 47}) => 693)

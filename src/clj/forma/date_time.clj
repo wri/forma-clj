@@ -396,6 +396,31 @@ in which `string` lies (according to the supplied resolution, `res`)."
   [coll]
   (same-len? coll (set coll)))
 
+(defn inc-eq?
+  "Checks whether the first integer immediately preceeds the second one.
+
+   Usage:
+     (inc-eq? [1 2]) => true
+     (inc-eq? [0 2]) => false
+     (inc-eq? 1 2) => true
+     (inc-eq? 0 2) => false"
+  ([[a b]]
+     (inc-eq? a b))
+  ([a b]
+     (= (inc a) b)))
+
+(defn consecutive?
+  "Checks whether a collection of date keys is consecutive (i.e. has no gaps or repetition).
+
+   Usage:
+     (consecutive? \"16\" [:2006-01-01 :2006-01-17]) => true
+     (consecutive? \"16\" [:2006-01-01 :2006-01-01]) => false
+     (consecutive? \"16\" [:2006-01-01 :2007-21-31]) => false"
+  [t-res date-coll]
+  (let [pds (map (partial key->period t-res) (sort date-coll))
+        tuples (partition 2 1 pds)]
+    (every? true? (map inc-eq? tuples))))
+
 (defn ts-vec->ts-map
   "Accepts a date key (a la :2012-01-01) for the first element in a
    time series, plus a temporal resolution and a collection. Returns a
@@ -410,16 +435,26 @@ in which `string` lies (according to the supplied resolution, `res`)."
     (zipmap (key-span init-date-key end-key t-res) coll)))
 
 (defn ts-map->ts-vec
-  "Accepts a temporal resolution, time series map, and a nodata value. Returns the
-  corresponding time series, with any holes filled in using the nodata value.
+  "Accepts a temporal resolution, time series map, and a nodata value.
+   Returns the corresponding time series as a vector.
+
+   If :consecutive is false (default), holes in the time series will be
+   filled with the nodata value. If :consecutive is true, holes in the
+   time series will trip the precondition.
 
   Usage:
     (ts-map->ts-vec \"16\" {:2006-01-01 1 :2006-01-17 2 :2006-02-02 3} -9999.0)
     ;=> [1 2 3]
 
     (ts-map->ts-vec \"16\" {:2006-01-01 1 :2006-01-17 2 :2006-02-18 3} -9999.0)
-    ;=> [1 2 -9999.0 3]"
-  [t-res m nodata]
+    ;=> [1 2 -9999.0 3]
+
+    (ts-map->ts-vec \"16\" {:2006-01-01 1 :2006-01-17 2 :2006-02-18 3} -9999.0
+    :consecutive true)
+    ;=> throws AssertionError"
+  [t-res m nodata & {:keys [consecutive] :or {consecutive false}}]
+  {:pre [(or (false? consecutive)
+             (consecutive? t-res (keys m)))]}
   (let [date-ks (sort (keys m))
         pds-vals (for [k date-ks]
                    [(key->period t-res k) (k m)])]
