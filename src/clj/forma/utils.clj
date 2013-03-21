@@ -377,3 +377,76 @@
 (defn nest-vals
   [& v]
   [(vec v)])
+
+(defn sorted-ts
+  "Accepts a map with date keys and time series values, and returns a
+  vector with the values appropriately sorted.
+
+  Example:
+    (sorted-ts {:2005-12-31 3 :2006-08-21 1}) => (3 1)"
+  [m]
+  (vals (into (sorted-map) m)))
+
+(defn same-len?
+  "Checks whether two collections have the same number of elements.
+
+   Usage:
+     (same-len? [1 2 3] [4 5 6])
+     ;=> true"
+  [coll1 coll2]
+  (= (count coll1) (count coll2)))
+
+(defn all-unique?
+  "Checks whether all the elements in `coll` are unique.
+
+   Usage:
+     (all-unique? [1 2 3])
+     ;=> true
+
+     (all-unique? [1 1 2])
+     ;=> false"
+  [coll]
+  (same-len? coll (set coll)))
+
+(defn inc-eq?
+  "Checks whether the first integer immediately preceeds the second one.
+
+   Usage:
+     (inc-eq? [1 2]) => true
+     (inc-eq? [0 2]) => false
+     (inc-eq? 1 2) => true
+     (inc-eq? 0 2) => false"
+  ([[a b]]
+     (inc-eq? a b))
+  ([a b]
+     (= (inc a) b)))
+
+(defn overlap?
+  "Checks for collisions between keys in provided maps.
+
+   Usage:
+     (overlap? {:a 1} {:b 2})
+     ;=> false
+
+     (overlap? {:a 1 :b 2} {:b 3})
+     ;=> true
+
+     (overlap? {:2006-01-01 1 :2006-01-17 2} {2006-01-17 30})
+     ;=> true"
+  ([& maps]
+     (let [all-ks (flatten (map keys maps))]
+       (not (all-unique? all-ks)))))
+
+(defn merge-no-overlap
+  "This function shadows the built-in `merge` function, but uses a
+   precondition to check for key collisions before merging maps.
+
+   Usage:
+     (merge-no-overlap {:2006-01-01 1 :2006-01-17 2} {:2006-02-02 3})
+     ;=> {:2006-01-01 1 :2006-01-17 2 :2006-02-02 3}
+
+     (merge-no-overlap {:2006-01-01 1 :2006-01-17 2} {2006-01-17 30})
+     ;=> (throws AssertionError)"
+  [& maps]
+  {:pre [(not (apply overlap? maps))]}
+  (apply merge maps))

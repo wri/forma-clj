@@ -238,3 +238,26 @@
   "Test arg-parser"
   (arg-parser "ndvi") => (symbol "ndvi")
   (arg-parser "[\"ndvi\"]") => ["ndvi"])
+
+(fact "Check sorted-ts."
+  (sorted-ts {:2005-12-31 3 :2006-08-21 1}) => [3 1])
+
+(fact "Check all-unique?"
+  (all-unique? [1 2 3]) => true
+  (all-unique? [1 1 2]) => false)
+
+(fact "Check inc-eq?"
+  (inc-eq? [1 2]) => true
+  (inc-eq? [0 2]) => false
+  (inc-eq? 1 2) => true
+  (inc-eq? 0 2) => false)
+
+(fact "Check overlap?"
+  (overlap? {:a 1} {:b 2} {:b 3}) => true
+  (overlap? {:a 1} {:b 2}) => false
+  (overlap? {:a 1}) => false)
+
+(facts "Check merge-no-overlap"
+  (merge-no-overlap {:a 1}) => {:a 1}
+  (merge-no-overlap {:a 1} {:b 2} {:c 3}) => {:a 1 :b 2 :c 3}
+  (merge-no-overlap {:a 1} {:b 2} {:b 99}) => (throws AssertionError))

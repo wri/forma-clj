@@ -3,7 +3,9 @@
 ;; proper temporal comparison of two unrelated datasets.
 
 (ns forma.date-time
-  (:use [clj-time.core :only (date-time month year)])
+  (:use [clj-time.core :only (date-time month year)]
+        [forma.matrix.utils :only (sparse-expander)]
+        [forma.utils :only (inc-eq? all-unique?)])
   (:require [clj-time.core :as time]
             [clj-time.format :as f]))
 
@@ -337,3 +339,95 @@ in which `string` lies (according to the supplied resolution, `res`)."
           (if out-of-bounds-idx
             (nth v out-of-bounds-idx))
           nil))))
+
+(defn key->period
+  "Convert a date keyword to a period.
+
+   Usage:
+     (key->period \"16\" :2006-01-01)
+     ;=> 827"
+  [t-res k]
+  (datetime->period t-res (name k)))
+
+(defn period->key
+  "Convert a period to a date keyword.
+
+   Usage:
+     (period->key \"16\" 827)
+     ;=> :2006-01-01"
+  [t-res pd]
+  (keyword (period->datetime t-res pd)))
+
+(defn key-span
+  "Returns a list of date keys, beginning and end date inclusive.  The
+  first and last keys represent the periods that start just before the
+  supplied boundary dates.
+
+  Example:
+    (key-span :2005-12-31 :2006-01-18 \"16\")
+    => (:2005-12-19 :2006-01-01 :2006-01-17)"
+  [init-key end-key t-res]
+  (let [init-idx (key->period t-res init-key)
+        end-idx  (inc (key->period t-res end-key))]
+    (map (partial period->key t-res)
+         (range init-idx end-idx))))
+
+(defn consecutive?
+  "Checks whether a collection of date keys is consecutive (i.e. has no gaps or repetition).
+
+   Usage:
+     (consecutive? \"16\" [:2006-01-01 :2006-01-17]) => true
+     (consecutive? \"16\" [:2006-01-01 :2006-01-01]) => false
+     (consecutive? \"16\" [:2006-01-01 :2007-21-31]) => false"
+  [t-res date-coll]
+  (let [pds (map (partial key->period t-res) (sort date-coll))
+        tuples (partition 2 1 pds)]
+    (every? true? (map inc-eq? tuples))))
+
+(defn ts-vec->ts-map
+  "Accepts a date key (a la :2012-01-01) for the first element in a
+   time series, plus a temporal resolution and a collection. Returns a
+   map containing dates as keys and series elements as values.
+
+   Usage:
+     (ts-vec->ts-map :2006-01-01 \"16\" [1 2 3])
+     ;=> {:2006-01-01 1 :2006-01-17 2 :2006-02-02 3}"
+  [init-date-key t-res coll]
+  (let [init (key->period t-res init-date-key)
+        end-key  (period->key t-res (+ init (count coll)))]
+    (zipmap (key-span init-date-key end-key t-res) coll)))
+
+(defn ts-map->ts-vec
+  "Accepts a temporal resolution, time series map, and a nodata value.
+   Returns the corresponding time series as a vector.
+
+   If :consecutive is false (default), holes in the time series will be
+   filled with the nodata value. If :consecutive is true, holes in the
+   time series will trip the precondition.
+
+  Usage:
+    (ts-map->ts-vec \"16\" {:2006-01-01 1 :2006-01-17 2 :2006-02-02 3} -9999.0)
+    ;=> [1 2 3]
+
+    (ts-map->ts-vec \"16\" {:2006-01-01 1 :2006-01-17 2 :2006-02-18 3} -9999.0)
+    ;=> [1 2 -9999.0 3]
+
+    (ts-map->ts-vec \"16\" {:2006-01-01 1 :2006-01-17 2 :2006-02-18 3} -9999.0
+    :consecutive true)
+    ;=> throws AssertionError"
+  [t-res m nodata & {:keys [consecutive] :or {consecutive false}}]
+  {:pre [(or (false? consecutive)
+             (consecutive? t-res (keys m)))]}
+  (let [date-ks (sort (keys m))
+        pds-vals (for [k date-ks]
+                   [(key->period t-res k) (k m)])]
+    (sparse-expander nodata pds-vals)))
+
+(defn get-ts-map-start-idx
+  "Given a map of dates and values, return the first date converted to a period.
+
+   Usage:
+     (get-ts-map-start-idx \"16\" {:2006-01-01 1 :2006-01-17 2 :2006-02-18 3})
+     ;=> 828"
+  [t-res ts-map]
+  (key->period t-res (first (sort (keys ts-map)))))
