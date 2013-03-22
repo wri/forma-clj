@@ -455,3 +455,11 @@
   calling this within a Cascalog query."
   [x]
   (vector (unpack x)))
+
+(defn obj-contains-nodata?
+  "Check whether any fields in thrift object contain nodata value"
+  [nodata obj]
+  (-> obj
+      (unpack)
+      (set)
+      (contains? nodata)))

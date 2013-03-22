@@ -1,7 +1,6 @@
 (ns forma.utils
-  (:use [clojure.math.numeric-tower :only (round expt)])
-  (:require [clojure.java.io :as io]
-            [forma.thrift :as thrift])
+  (:use [clojure.math.numeric-tower :only (round)])
+  (:require [clojure.java.io :as io])
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]))
 
@@ -286,14 +285,6 @@
                    :or {default nil all-types false}}]
   [(vec (replace-from-left bad-val coll :default default :all-types all-types))])
 
-(defn obj-contains-nodata?
-  "Check whether any fields in thrift object contain nodata value"
-  [nodata obj]
-  (-> obj
-      (thrift/unpack)
-      (set)
-      (contains? nodata)))
-
 (defn filter*
   "Wrapper for `filter` to make it safe for use with vectors in Cascalog.
 
@@ -353,14 +344,13 @@
 (defn rest*
   "Wrapper for `rest` is safe for use with Cascalog"
   [coll]
-  (vector (vec (rest coll))))
+  [(vec (rest coll))])
 
-(defn map-round
-  "Round the values of a timeseries in a TimeSeries object, returning
-   the starting period and the rounded timeseries."
-  [series-obj]
-  (let [[start _ series] (thrift/unpack series-obj)]
-    [start (vec (map round (thrift/unpack series)))]))
+(defn map-round*
+  "Round the values of a series, returning a vector safe for use with
+  Cascalog."
+  [series]
+  [(vec (map round series))])
 
 (defn within-tileset?
   [tile-set h v]
