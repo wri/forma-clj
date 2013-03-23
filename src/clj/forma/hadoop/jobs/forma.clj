@@ -51,21 +51,6 @@
       (thrift/unpack ?pixel-loc :> _ ?h ?v _ _)
       (u/within-tileset? tile-set ?h ?v)))
 
-(defn adjust-precl
-  "Given a base temporal resolution, a target temporal resolution and a
-   source of rain data, stretches rain to new resolution and rounds it."
-  [base-t-res target-t-res src]
-  (if (= target-t-res base-t-res)
-      src
-      (<- [?s-res ?mod-h ?mod-v ?sample ?line ?new-start-idx ?rounded-series]
-          (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ts)
-          (thrift/TimeSeries* ?start-idx ?ts :> ?ts-obj)
-          (stretch/ts-expander base-t-res target-t-res ?ts-obj :> ?expanded-ts-obj)
-          (thrift/unpack ?expanded-ts-obj :> ?new-start-idx _ ?arr-val)
-          (thrift/unpack* ?arr-val :> ?expanded-series)
-          (u/map-round* ?expanded-series :> ?rounded-series)
-          (:distinct false))))
-
 (defn fire-tap
   "Accepts an est-map and a query source of fire timeseries. Note that
   this won't work, pulling directly from the pail!"
@@ -122,30 +107,61 @@
                      ?n-start ?ndvi-clean
                      :> ?start-idx ?precl-ts ?ndvi-ts)))
 
-(defmapcatop ts->long
-  [start-pd series]
-  (let [pds (range start-pd (+ start-pd (count series)))]
-    (map vector pds series)))
-
-(defn adjusted->long-ts
-  [{:keys [t-res]} src]
-  (let [dataset-name "adjusted"
-        data-src (<- [?s-res ?mod-h ?mod-v ?sample ?line ?date ?vals]
-                     (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ndvi-ts ?precl-ts)
-                     (ts->long ?start-idx ?ndvi-ts :> ?pd ?ndvi)
-                     (ts->long ?start-idx ?precl-ts :> ?pd ?precl)
-                     (u/nest-vals ?ndvi ?precl :> ?vals)
-                     (date/period->datetime t-res ?pd :> ?date))]
+(defn adjusted-to-datachunk
+  [est-map adjusted-src]
+  (let [data-name "adjusted"
+        nodata (:nodata est-map)
+        t-res (:t-res est-map)]
     (<- [?dc]
-        (data-src ?s-res ?mod-h ?mod-v ?sample ?line ?date ?vals)
+        (adjusted-src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ndvi-ts ?precl-ts)
+        (count ?ndvi-ts :> ?len)
+        (u/repeat* ?len nodata :> ?nodata)
+        (u/map-cast* double ?ndvi-ts :> ?ndvi)
+        (u/map-cast* double ?precl-ts :> ?precl)
+        (schema/forma-seq nodata nil ?ndvi ?precl ?nodata ?nodata :> ?forma-seq)
+        (thrift/TimeSeries* ?start-idx ?forma-seq :> ?fv-series)
         (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?loc)
-        (thrift/DataChunk* dataset-name ?loc ?vals t-res :date ?date :> ?dc))))
+        (thrift/DataChunk* data-name ?loc ?fv-series t-res :> ?dc))))
 
-(defn adjusted
-  [est-map ndvi-src rain-src pail-path]
-  (let [adjusted-src (dynamic-filter est-map ndvi-src rain-src)
-        adjusted-long-src (adjusted->long-ts est-map adjusted-src)]
-    (pail/to-pail pail-path adjusted-long-src)))
+(defbufferop merge-maps
+  "Sorts maps by Pedigree, then merges them. Duplicate keys are handled
+   through `merge` built-in."
+  [tuples]
+  (let [sorted-by-pedigree (map second (sort-by first tuples))]
+    [(apply merge sorted-by-pedigree)]))
+
+(defn forma-vals->adjusted-ts
+  [data-val]
+  (let [[start _ forma-val-arr] (thrift/unpack data-val)
+        forma-vals (thrift/unpack forma-val-arr)]
+    ))
+(defn mk-master-adjusted
+  [est-map pail-path]
+  (let [t-res (:t-res est-map)
+        res-str (format "%s-%s" (:s-res est-map) (:t-res est-map))
+        pail-dirs ["adjusted" res-str]
+        src (pail/split-chunk-tap pail-path pail-dirs)]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ndvi-ts ?precl-ts]
+        (src ?dc)
+        (thrift/unpack ?dc :> _ ?loc ?data t-res _ ?pedigree)
+        (thrift/unpack ?pedigree :> ?sec-created)
+        (thrift/unpack ?data :> ?start-idx _ ?arr-val)
+        (thrift/unpack* ?arr-val :> ?fvs)
+        (thrift/unpack ?fvs :> ?vals)
+
+        
+        
+        (merge-maps ?map :> ?master-map))))
+
+(defn merge-adjusted-ts
+  "
+Will have multiple ts, hopefully not overlapping. If a particular ts has been updated twice, we want to take the most recent change, which means sorting by pedigree. Any other sorting shouldn't matter. But check this!!!!
+
+Otherwise, just make sure update is false so there's no worry about collisions and order of updates, etc."
+  [est-map adjusted-src pail-path]
+  (<- []
+      (adjusted-src ?dc)
+      (thrift/unpack ?dc :> _ ?loc ?ts-val ?t-res ?date ?pedigree)))
 
 (defn series-end
   "Return the relative index of the final element of a collection
@@ -212,28 +228,6 @@
         (telescoping-trends est-map ?start ?clean-ndvi ?precl :> ?end-idx ?short ?long ?t-stat ?break)
         (reduce max ?end-idx :> ?end)
         (:distinct false))))
-
-(defn trends->long-ts
-  [{:keys [t-res]} src]
-  (let [dataset-name "trends"
-        data-src (<- [?s-res ?mod-h ?mod-v ?sample ?line ?date ?vals]
-                     (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx _ ?short-s ?long-s ?t-stat-s ?break-s)
-                     (ts->long ?start-idx ?short-s :> ?pd ?short)
-                     (ts->long ?start-idx ?long-s :> ?pd ?long)
-                     (ts->long ?start-idx ?t-stat-s :> ?pd ?t-stat)
-                     (ts->long ?start-idx ?break-s :> ?pd ?break)
-                     (u/nest-vals ?short ?long ?t-stat ?break :> ?vals)
-                     (date/period->datetime t-res ?pd :> ?date))]
-    (<- [?dc]
-        (data-src ?s-res ?mod-h ?mod-v ?sample ?line ?date ?vals)
-        (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?loc)
-        (thrift/DataChunk* dataset-name ?loc ?vals t-res :date ?date :> ?dc))))
-
-(defn trends
-  [est-map dynamic-src pail-path]
-  (let [trends-src (analyze-trends est-map dynamic-src)
-        trends-long-src (trends->long-ts est-map trends-src)]
-    (pail/to-pail pail-path trends-long-src)))
 
 (defn forma-tap
   "Accepts an est-map and sources for dynamic and fires data,
@@ -341,8 +335,48 @@
         (thrift/obj-contains-nodata? nodata ?neighbor-val :> false)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _ _)
         (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
-;;        (consolidate-timeseries nodata ?pd ?prob :> _ ?prob-series)
+        (consolidate-timeseries nodata ?pd ?prob :> _ ?prob-series)
         (:distinct false))))
+
+
+
+
+
+
+
+
+
+
+
+
+
+(comment
+  (defmapcatop ts->long
+  [start-pd series]
+  (let [pds (range start-pd (+ start-pd (count series)))]
+    (map vector pds series)))
+
+(defn trends->long-ts
+  [{:keys [t-res]} src]
+  (let [dataset-name "trends"
+        data-src (<- [?s-res ?mod-h ?mod-v ?sample ?line ?date ?vals]
+                     (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx _ ?short-s ?long-s ?t-stat-s ?break-s)
+                     (ts->long ?start-idx ?short-s :> ?pd ?short)
+                     (ts->long ?start-idx ?long-s :> ?pd ?long)
+                     (ts->long ?start-idx ?t-stat-s :> ?pd ?t-stat)
+                     (ts->long ?start-idx ?break-s :> ?pd ?break)
+                     (u/nest-vals ?short ?long ?t-stat ?break :> ?vals)
+                     (date/period->datetime t-res ?pd :> ?date))]
+    (<- [?dc]
+        (data-src ?s-res ?mod-h ?mod-v ?sample ?line ?date ?vals)
+        (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?loc)
+        (thrift/DataChunk* dataset-name ?loc ?vals t-res :date ?date :> ?dc))))
+
+(defn trends
+  [est-map dynamic-src pail-path]
+  (let [trends-src (analyze-trends est-map dynamic-src)
+        trends-long-src (trends->long-ts est-map trends-src)]
+    (pail/to-pail pail-path trends-long-src)))
 
 (defn probs
   [est-map beta-src dynamic-src static-src pail-path]
@@ -366,3 +400,4 @@
       (date/datetime->period ?t-res ?date :> ?pd)
       (consolidate-timeseries nodata ?pd ?prob :> ?pds ?prob-series)
       (first ?pds :> ?start-idx)))
+)

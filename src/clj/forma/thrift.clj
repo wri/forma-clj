@@ -447,7 +447,10 @@
   ;;     [name loc data t-res date]))
   
   ArrayValue
-  (unpack [x] (->> x .getFieldValue unpack)))
+  (unpack [x] (->> x .getFieldValue unpack))
+
+  Pedigree
+  (unpack [x] (->> x .getTrueAsOfSecs)))
 
 (defn count-vals
   "Return the count of elements in the supplied Tnrift object."

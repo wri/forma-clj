@@ -101,14 +101,6 @@
     (fire-tap est-start est-end t-res src)) => (produces [[s-res 28 8 0 0 (sample-fire-series 827 2)]]))
 
 (fact
-  "Test `adjust-precl`"
-  (let [base-t-res "32"
-        target-t-res "16"
-        precl-src [["500" 28 8 0 0 360 [1.5 2.5 3.4 4.7]]]]
-    (adjust-precl base-t-res target-t-res precl-src))
-  => (produces [["500" 28 8 0 0 690 [2 2 3 3 3 4 5]]]))
-
-(fact
   "Check that `filter-query` properly screens out the pixel with VCF < 25, and keeps the one with VCF >= 25."
   (let [vcf-limit 25
         static-src [["500" 28 8 0 0 25 0 0 0 0]

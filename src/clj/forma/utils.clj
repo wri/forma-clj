@@ -440,3 +440,20 @@
   [& maps]
   {:pre [(not (apply overlap? maps))]}
   (apply merge maps))
+
+(defn repeat*
+  "Repeat x n times, and wrap in a vector safe for use with Cascalog."
+  [n x]
+  [(vec (repeat n x))])
+
+(defn map-cast*
+  "Cast all values in a collection to supplied Clojure type (e.g. long, float, etc.).
+   Safe for Cascalog, but not careful at all about type coercion."
+  [t v]
+  [(vec (map t v))])
+
+(defn map*
+  "Shadows basic `map` built-in function, safe for Cascalog. May not work as expected
+   when used in conjunction with `apply`."
+  [f & colls]
+  [(vec (apply map f colls))])

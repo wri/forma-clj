@@ -95,7 +95,7 @@
   [src t-res]
   (<- [?name ?datestring ?s-res ?h ?v ?sample ?line ?agg-fire-val]
       (src ?pixel-chunk)
-      (thrift/unpack ?pixel-chunk :> ?name ?pixel-loc ?data-val _ ?date)
+      (thrift/unpack ?pixel-chunk :> ?name ?pixel-loc ?data-val _ ?date _)
       (thrift/unpack ?data-val :> ?temp-330 ?conf-50 ?bothPreds ?count)
       (thrift/FireValue* ?temp-330 ?conf-50 ?bothPreds ?count :> ?fire-val)
       (merge-firevals ?fire-val :> ?agg-fire-val)

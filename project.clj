@@ -22,8 +22,10 @@
                  [cascalog "1.10.0"]
                  [org.clojure/clojure-contrib "1.2.0"]
                  [cascalog-checkpoint "0.1.1"]
-                 [backtype/dfs-datastores "1.1.3"]
-                 [backtype/dfs-datastores-cascading "1.2.0"]
+		 [org.slf4j/slf4j-log4j12 "1.6.6"]
+                 [com.backtype/dfs-datastores "1.3.0"
+                  :exclusions [org.slf4j/slf4j-api]]
+                 [backtype/dfs-datastores-cascading "1.3.0"]
                  [org.apache.thrift/libthrift "0.8.0"
                   :exclusions [org.slf4j/slf4j-api]]]
   :aot [forma.hadoop.pail, forma.schema, #"forma.hadoop.jobs.*"]

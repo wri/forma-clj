@@ -256,3 +256,17 @@
   (merge-no-overlap {:a 1}) => {:a 1}
   (merge-no-overlap {:a 1} {:b 2} {:c 3}) => {:a 1 :b 2 :c 3}
   (merge-no-overlap {:a 1} {:b 2} {:b 99}) => (throws AssertionError))
+
+(fact "Check repeat*."
+  (repeat* 3 1) => [[1 1 1]])
+
+(fact "Check map-cast*."
+  (map-cast* long [1.0 2.0 3.0]) => [[1 2 3]]
+  (map-cast* double [1 2 3]) => [[1.0 2.0 3.0]]
+  (map-cast* float [1 2 3]) => [[1.0 2.0 3.0]])
+
+(fact "Check map*."
+  (map* + [1 2 3] [4 5 6]) => [[5 7 9]]
+  (map* * [1 2 3] [4 5 6]) => [[4 10 18]]
+  (map* (partial + 10) [1 2 3]) => [[11 12 13]])
+  
