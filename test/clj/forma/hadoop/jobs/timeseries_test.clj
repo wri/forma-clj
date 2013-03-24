@@ -72,7 +72,7 @@
              ["" (mk-data "2000-02-02")]]]
     (<- [?name ?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?t-res ?series]
         ((extract-tseries *missing-val* src) ?dc)
-        (thrift/unpack ?dc :> ?name ?loc ?data-val ?t-res _)
+        (thrift/unpack ?dc :> ?name ?loc ?data-val ?t-res _ _)
         (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
         (thrift/unpack ?data-val :> ?start ?end ?series-arr)
         (thrift/unpack* ?series-arr :> ?series)))
@@ -130,9 +130,14 @@
 (fact
   "Test create-fire-series. Should return a monotonically increasing
    series truncated to 2006-01-01"
-  (-> (test-fires START-DAY SERIES-LENGTH)
-      (create-fire-series "16" "2000-11-01" "2005-12-19" "2006-01-01"))
-  => (let [loc (thrift/ModisPixelLocation* "500" 1 6 10 10)
-           FS (thrift/TimeSeries* 827 [(thrift/FireValue* 29 29 29 29)
-                                       (thrift/FireValue* 30 30 30 30)])]
-       (produces [[(thrift/DataChunk* "fire" loc FS "16")]])))
+  (let [t-res "16"
+        loc (thrift/ModisPixelLocation* "500" 1 6 10 10)
+        FS (thrift/TimeSeries* 827 [(thrift/FireValue* 29 29 29 29)
+                                    (thrift/FireValue* 30 30 30 30)])
+        data-chunk (-> (test-fires START-DAY SERIES-LENGTH)
+                   (create-fire-series t-res "2000-11-01" "2005-12-19" "2006-01-01")
+                   (??-)
+                   (flatten)
+                   (first))
+        secs (thrift/unpack (last (thrift/unpack data-chunk)))]
+    data-chunk => (thrift/DataChunk* "fire" loc FS t-res :pedigree secs)))

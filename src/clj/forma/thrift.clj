@@ -43,6 +43,11 @@
            [java.util ArrayList]
            [org.apache.thrift TBase TUnion]))
 
+(defn epoch  
+  []
+  "Return seconds since epoch."
+  (int (/ (System/currentTimeMillis) 1000)))
+
 ;; Protocols for accessing Thrift object fields:
 (defprotocol ITUnion
   (get-field-value [x]))

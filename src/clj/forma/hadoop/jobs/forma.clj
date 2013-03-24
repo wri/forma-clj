@@ -23,7 +23,7 @@
   [chunk-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?val]
       (chunk-src _ ?chunk)
-      (thrift/unpack ?chunk :> _ ?loc ?data _ _)
+      (thrift/unpack ?chunk :> _ ?loc ?data _ _ _)
       (thrift/get-field-value ?data :> ?val)
       (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
 
@@ -47,7 +47,7 @@
   [src tile-set]
   (<- [?pail-path ?pixel-chunk]
       (src ?pail-path ?pixel-chunk)
-      (thrift/unpack ?pixel-chunk :> _ ?pixel-loc _ _ _)
+      (thrift/unpack ?pixel-chunk :> _ ?pixel-loc _ _ _ _)
       (thrift/unpack ?pixel-loc :> _ ?h ?v _ _)
       (u/within-tileset? tile-set ?h ?v)))
 
@@ -57,7 +57,7 @@
   [est-start est-end t-res fire-src]
   (<- [?s-res ?h ?v ?sample ?line ?adjusted-ts]
       (fire-src ?fire-pixel)
-      (thrift/unpack ?fire-pixel :> _ ?pixel-loc ?ts _ _)
+      (thrift/unpack ?fire-pixel :> _ ?pixel-loc ?ts _ _ _)
       (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)
       (schema/adjust-fires est-start est-end t-res ?ts :> ?adjusted-ts)))
 
@@ -76,7 +76,7 @@
       (static-src ?s-res ?mod-h ?mod-v ?sample ?line ?vcf _ _ _ _)
       
       ;; unpack ts object
-      (thrift/unpack ?ts-chunk :> _ ?ts-loc ?ts-data _ _)
+      (thrift/unpack ?ts-chunk :> _ ?ts-loc ?ts-data _ _ _)
       (thrift/unpack ?ts-data :> ?start-idx _ ?ts-array)
       (thrift/unpack* ?ts-array :> ?series)
       (thrift/unpack ?ts-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)

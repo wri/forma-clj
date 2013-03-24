@@ -50,7 +50,7 @@
   (let [mk-tseries (form-tseries missing-val)
         val-src (<- [?name ?t-res ?date ?s-res ?h ?v ?id ?size ?data]
                     (tile-chunk-src _ ?tile-chunk)
-                    (thrift/unpack ?tile-chunk :> ?name ?tile-loc ?data ?t-res ?date)
+                    (thrift/unpack ?tile-chunk :> ?name ?tile-loc ?data ?t-res ?date _)
                     (thrift/unpack ?tile-loc :> ?s-res ?h ?v ?id ?size)
                      (:distinct false))
         ts-src (<- [?name ?t-res ?s-res ?h ?v ?id ?size ?pixel-idx ?ts]
