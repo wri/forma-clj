@@ -164,6 +164,14 @@
      [2.0 4.0 -9999.0 8.0 10.0]
      [10.0 11.0 11.0 14.0 14.0]])
 
+(fact "Test `series->forma-values`."
+  (series->forma-values nil [1. 2.] [3. 4.] [5. 6.] [7. 8.])
+  => [[(thrift/FormaValue* (thrift/FireValue* 0 0 0 0) 1. 3. 5. 7.)
+       (thrift/FormaValue* (thrift/FireValue* 0 0 0 0) 2. 4. 6. 8.)]]
+  (series->forma-values (vec (repeat 2 (thrift/FireValue* 1 2 3 4))) [1. 2.] [3. 4.] [5. 6.] [7. 8.])
+  => [[(thrift/FormaValue* (thrift/FireValue* 1 2 3 4) 1. 3. 5. 7.)
+       (thrift/FormaValue* (thrift/FireValue* 1 2 3 4) 2. 4. 6. 8.)]])
+
 (fact "Test that the first element of each of the supplied timeseries
   to `forma-seq` is appropriately bundled into the first FormaValue
   of the output timeseries (consisting of FormaValues for each

@@ -182,6 +182,15 @@
         t-stats (u/replace-all nil nodata t-stat-series)]
     [fires shorts longs t-stats breaks]))
 
+(defn series->forma-values
+  "Given vectors of equal length of fires and trends stats, create vector
+   of FormaValues. This vector can be used to produce a TimeSeries object."
+  [fires shorts longs t-stats breaks]
+  [(->> (concat [fires] [shorts] [longs] [t-stats] [breaks])
+        (map #(or % (repeat %)))
+        (apply map forma-value)
+        (vec))])
+
 (defn forma-seq
   "Accepts 5 timeseries of equal length and starting position, each
    representing a time-indexed series of features for a given pixel.
@@ -200,7 +209,4 @@
          breaks] (forma-seq-prep nodata fire-series short-series
                                  long-series t-stat-series
                                  break-series)]
-    [(->> (concat [fires] [shorts] [longs] [t-stats] [breaks])
-          (map #(or % (repeat %)))
-          (apply map forma-value)
-          (vec))]))
+    (series->forma-values fires shorts longs t-stats breaks)))

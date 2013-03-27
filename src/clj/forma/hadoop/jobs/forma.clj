@@ -14,7 +14,8 @@
             [forma.source.humidtropics :as humid]
             [forma.matrix.utils :as mu]
             [forma.trends.stretch :as stretch]
-            [forma.hadoop.pail :as pail]))
+            [forma.hadoop.pail :as pail])
+  (:import [forma.schema.ArrayValue]))
 
 (defn static-tap
   "Accepts a source of DataChunks, and returns a new query with all
@@ -107,38 +108,16 @@
                      ?n-start ?ndvi-clean
                      :> ?start-idx ?precl-ts ?ndvi-ts)))
 
-(defn adjusted-to-datachunk
-  [est-map adjusted-src]
-  (let [data-name "adjusted"
-        nodata (:nodata est-map)
-        t-res (:t-res est-map)]
-    (<- [?dc]
-        (adjusted-src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ndvi-ts ?precl-ts)
-        (count ?ndvi-ts :> ?len)
-        (u/repeat* ?len nodata :> ?nodata)
-        (u/map-cast* double ?ndvi-ts :> ?ndvi)
-        (u/map-cast* double ?precl-ts :> ?precl)
-        (schema/forma-seq nodata nil ?ndvi ?precl ?nodata ?nodata :> ?forma-seq)
-        (thrift/TimeSeries* ?start-idx ?forma-seq :> ?fv-series)
-        (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?loc)
-        (thrift/DataChunk* data-name ?loc ?fv-series t-res :> ?dc))))
-
-(defbufferop merge-maps
-  "Sorts maps by Pedigree, then merges them. Duplicate keys are handled
-   through `merge` built-in."
-  [tuples]
-  (let [sorted-by-pedigree (map second (sort-by first tuples))]
-    [(apply merge sorted-by-pedigree)]))
-
 (defn forma-vals->adjusted-ts
   [data-val]
   (let [[start _ forma-val-arr] (thrift/unpack data-val)
         forma-vals (thrift/unpack forma-val-arr)]
     ))
-(defn mk-master-adjusted
+(comment
+  (defn mk-master-adjusted
   [est-map pail-path]
   (let [t-res (:t-res est-map)
-        res-str (format "%s-%s" (:s-res est-map) (:t-res est-map))
+        res-str (format "%s-%s" (:s-res est-map) t-res)
         pail-dirs ["adjusted" res-str]
         src (pail/split-chunk-tap pail-path pail-dirs)]
     (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ndvi-ts ?precl-ts]
@@ -151,7 +130,7 @@
 
         
         
-        (merge-maps ?map :> ?master-map))))
+        (merge-maps ?map :> ?master-map)))))
 
 (defn merge-adjusted-ts
   "
@@ -228,6 +207,73 @@ Otherwise, just make sure update is false so there's no worry about collisions a
         (telescoping-trends est-map ?start ?clean-ndvi ?precl :> ?end-idx ?short ?long ?t-stat ?break)
         (reduce max ?end-idx :> ?end)
         (:distinct false))))
+
+(defn trends-to-datachunk
+  [est-map trends-src]
+  (let [data-name "trends"
+        nodata (:nodata est-map)
+        t-res (:t-res est-map)]
+    (<- [?dc]
+        (trends-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break)
+        (schema/series->forma-values nil ?short ?long ?t-stat ?break :> ?forma-vals)
+        (thrift/TimeSeries* ?start ?forma-vals :> ?fv-series)
+        (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?loc)
+        (thrift/DataChunk* data-name ?loc ?fv-series t-res :> ?dc))))
+
+(defn merge-sorted
+  [t-res nodata start-ks series]
+  (->> (map #(date/ts-vec->ts-map %1 t-res %2) start-ks series)
+       (apply merge)
+       (#(date/ts-map->ts-vec t-res % nodata :consecutive true))))
+
+(defn merge-trends
+  "Sorts maps by created date, then merges them into a master map. Conflicts
+   between overlapping series are resolved by retaining the value from most
+   recent version of the time series."
+  [t-res nodata tuples]
+  (let [r (range 2 (inc 5))
+        sorted (sort-by first tuples)
+        start-keys (map second sorted)
+        shorts (merge-sorted t-res nodata start-keys (map #(nth % 2) sorted))
+        longs (merge-sorted t-res nodata start-keys (map #(nth % 3) sorted))
+        t-stats (merge-sorted t-res nodata start-keys (map #(nth % 4) sorted))
+        breaks (merge-sorted t-res nodata start-keys (map #(nth % 5) sorted))
+        start-idx (apply min (map (partial date/key->period t-res) start-keys))
+        srt (fn [n sorted]
+              (map #(merge-sorted t-res nodata start-keys (map #(nth %2 %1)))))]
+    [[start-idx shorts longs t-stats breaks]]))
+
+(defbufferop [merge-trends-wrapper [t-res nodata]]
+  "Wrapper for `merge-trends`"
+  [tuples]
+  (merge-trends t-res nodata tuples))
+        
+(defn forma-values->series
+  "Given an ArrayValue of FormaValues, unpack the ArrayValue and
+   return series of each component of a FormaValue - fires, shorts,
+   longs, t-stats and breaks."
+  [array-val]
+  {:pre [(or (= forma.schema.ArrayValue (type array-val))
+             (= forma.schema.FormaArray (type array-val)))]}
+  (let [forma-vals (thrift/unpack array-val)]
+    (apply map vector (map thrift/unpack forma-vals))))
+
+(defn trends-datachunks->series
+  [est-map pail-src]
+  (let [data-name "trends"
+        nodata (:nodata est-map)
+        t-res (:t-res est-map)
+        res-str (format "%s-%s" (:s-res est-map) (:t-res est-map))]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-final ?short-final ?long-final ?t-stat-final ?break-final]
+        (pail-src _ ?dc)
+        (thrift/unpack ?dc :> _ ?loc ?data ?t-res _ ?pedigree)
+        (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
+        (thrift/unpack ?pedigree :> ?created)
+        (thrift/unpack ?data :> ?start _ ?forma-val-arr)
+        (forma-values->series ?forma-val-arr :> _ ?short ?long ?t-stat ?break)
+        (date/period->key ?t-res ?start :> ?start-key)
+        (merge-trends-wrapper [t-res nodata] ?created ?start-key ?short ?long ?t-stat ?break
+                              :> ?start-final ?short-final ?long-final ?t-stat-final ?break-final))))
 
 (defn forma-tap
   "Accepts an est-map and sources for dynamic and fires data,
@@ -329,7 +375,7 @@ Otherwise, just make sure update is false so there's no worry about collisions a
   period after the training period."
   [{:keys [nodata]} beta-src dynamic-src static-src]
   (let [betas (classify/beta-dict beta-src)]
-    (<- [?s-res ?mod-h ?mod-v ?s ?l ?pd ?prob]
+    (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
         (thrift/obj-contains-nodata? nodata ?val :> false)
         (thrift/obj-contains-nodata? nodata ?neighbor-val :> false)

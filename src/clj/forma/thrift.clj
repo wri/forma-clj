@@ -33,7 +33,6 @@
 
     > (unpack (get-series ts)
     [1.0 2.0 3.0]"
-  (:use [forma.date-time :only (epoch)])
   (:import [forma.schema
             ArrayValue DataChunk DataValue DoubleArray FireArray
             FireValue FormaValue IntArray LocationProperty

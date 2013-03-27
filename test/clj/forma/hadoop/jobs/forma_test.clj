@@ -20,6 +20,7 @@
         [forma.ops.classify :only (beta-dict)])
   (:require [forma.testing :as t]
             [forma.thrift :as thrift]
+            [forma.schema :as schema]
             [forma.utils :as u]))
 
 (def test-map
@@ -179,6 +180,47 @@
   => (produces [["500" 28 8 0 0 693 973
                  0.9999999999999959 0.6468022465705872
                  6.0531753194685895E-6 136.1034297586291]]))
+
+(fact "Check `merge-sorted`"
+  (merge-sorted "16" -9999.0 [:2006-01-01 :2006-01-01] [[2 3] [1 4]]) => [1 4]
+  (merge-sorted "16" -9999.0 [:2006-01-01 :2006-01-17] [[2 3] [1 4]]) => [2 1 4])
+
+(fact "Check `forma-values->series`"
+  (let [forma-values (thrift/pack (first (schema/series->forma-values
+                                          (repeat 2 (thrift/FireValue* 0 0 0 0))
+                                          [1. 2.] [3. 4.] [5. 6.] [7. 8.])))]
+    (forma-values->series forma-values))
+  => [[(thrift/FireValue* 0 0 0 0) (thrift/FireValue* 0 0 0 0)]
+      [1. 2.] [3. 4.] [5. 6.] [7. 8.]]
+
+  (forma-values->series "test") => (throws AssertionError))
+
+(fact "Check `merge-trends`"
+  ;; non-overlapping time series - Pedigree does not influence output
+  (merge-trends "16" -9999.0 [[1 :2006-01-01 [1 2] [3 4] [5 6] [7 8]]
+                              [2 :2006-02-02 [10 11] [13 14] [16 17] [19 20]]])
+  => [[828 [1 2 10 11] [3 4 13 14] [5 6 16 17] [7 8 19 20]]]
+
+  ;; overlapping time series where Pedigree determines output at collision
+  (merge-trends "16" -9999.0 [[1 :2006-01-01 [1 2] [3 4] [5 6] [7 8]]
+                              [2 :2006-01-17 [10 11 12] [13 14 15] [ 16 17 18] [19 20 21]]])
+  => [[828 [1 10 11 12] [3 13 14 15] [5 16 17 18] [7 19 20 21]]])
+
+(fact "Check trends-datachunks->series"
+  ;; check that the query runs through and handles overlapping series correctly
+  (let [est-map {:t-res "16" :s-res "500"}
+        ts0 (thrift/TimeSeries* 827 (first (schema/series->forma-values
+                                            (repeat 2 (thrift/FireValue* 0 0 0 0))
+                                            [1. 2.] [3. 4.] [5. 6.] [7. 8.])))
+        ts1 (thrift/TimeSeries* 828 (first (schema/series->forma-values
+                                            (repeat 2 (thrift/FireValue* 0 0 0 0))
+                                            [1. 2.] [3. 4.] [5. 6.] [7. 8.])))
+        loc0 (thrift/ModisPixelLocation* "500" 28 8 0 0)
+        loc1 (thrift/ModisPixelLocation* "500" 28 8 0 1)
+        pail-src [["" (thrift/DataChunk* "trends" loc0 ts0 "16")]
+                  ["" (thrift/DataChunk* "trends" loc0 ts1 "16")]]]
+    (trends-datachunks->series est-map pail-src))
+  => (produces [["500" 28 8 0 0 827 [1.0 1.0 2.0] [3.0 3.0 4.0] [5.0 5.0 6.0] [7.0 7.0 8.0]]]))
 
 (fact
   "Check forma-tap. This test got crazy because it seems that comparing
