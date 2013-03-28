@@ -56,4 +56,4 @@
                            :sink-template "%s/%s"
                            :templatefields template-fields
                            :outfields out-fields)]
-    (?- sink (prob-series->csv-api est-map src static-src))))
+    (?- sink (prob-series->tsv-api est-map src static-src))))
