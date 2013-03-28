@@ -32,4 +32,4 @@
                                   [incanter/incanter-charts "1.3.0"]]
                    :plugins [[lein-swank "1.4.4"]
                              [lein-midje "3.0-beta1"]
-                             [lein-emr "0.1.0-SNAPSHOT"]]}})
+                             [lein-emr "0.2.0-SNAPSHOT"]]}})
