@@ -8,7 +8,7 @@ SRES="500"
 TRES="16"
 #YEAR=$(date +%Y) # no longer used
 MODISLAYERS="[:ndvi]" # :reli
-TILES="[[28 8]]" # leave blank for all tiles
+TILES="[[28 8]]" # [:all] for all tiles
 ESTSTART="2005-12-19"
 ESTEND="2013-03-06"
 
@@ -17,10 +17,10 @@ ESTEND="2013-03-06"
 ####################
 
 TMP="/tmp"
-STAGING="s3n://formastaging/"
+STAGING="s3n://formastaging"
 STATIC="s3n://pailbucket/all-static-seq/all"
-ARCHIVE="s3n://modisfiles/"
-S3OUT="s3n://formatemp/output/"
+ARCHIVE="s3n://modisfiles"
+S3OUT="s3n://formatemp/output"
 PAILPATH="s3n://pailbucket/all-master"
 BETAS="s3n://formatest/tmp/betas"
 
@@ -43,7 +43,7 @@ FORMANS="forma.hadoop.jobs.forma"
 
 ## Preprocess MODIS data
 # 5 minutes w/5 high-memory for 2 periods
-$LAUNCHER "$PREPROCESSNS.PreprocessModis" "$STAGING/MOD13A1/" $PAILPATH "{*}" "$TILES" $MODISLAYERS
+$LAUNCHER "$PREPROCESSNS.PreprocessModis" "$STAGING/MOD13A1/" $PAILPATH "{20}*" "$TILES" $MODISLAYERS
 
 # 57 minutes w/5 high-memory for all data
 fireoutput="$S3OUT/fires"
