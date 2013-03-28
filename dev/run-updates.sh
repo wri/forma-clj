@@ -6,22 +6,23 @@
 
 SRES="500"
 TRES="16"
-YEAR=$(date +%Y)
+#YEAR=$(date +%Y) # no longer used
 MODISLAYERS="[:ndvi]" # :reli
 TILES="[[28 8]]" # leave blank for all tiles
-ESTSTART="2006-01-17"
-ESTEND="2006-02-18"
+ESTSTART="2005-12-19"
+ESTEND="2013-03-06"
 
 ####################
 # Storage settings #
 ####################
 
-TMP="s3n://formatest/updates/tmp"
-STAGING="s3n://formatest/updates"
+TMP="/tmp"
+STAGING="s3n://formastaging/"
 STATIC="s3n://pailbucket/all-static-seq/all"
-ARCHIVE="s3n://formatest/updates"
-S3OUT="$TMP"  # "s3n://formatest/output"
-PAILPATH="s3n://formatest/tmp/pail"
+ARCHIVE="s3n://modisfiles/"
+S3OUT="s3n://formatemp/output/"
+PAILPATH="s3n://pailbucket/all-master"
+BETAS="s3n://formatest/tmp/betas"
 
 #############
 # Constants #
@@ -45,7 +46,8 @@ FORMANS="forma.hadoop.jobs.forma"
 $LAUNCHER "$PREPROCESSNS.PreprocessModis" "$STAGING/MOD13A1/" $PAILPATH "{*}" "$TILES" $MODISLAYERS
 
 # 57 minutes w/5 high-memory for all data
-$LAUNCHER "$PREPROCESSNS.PreprocessFire" "$ARCHIVE/fires" "$TMP/fires" 500 16 2000-11-01 $ESTSTART $ESTEND "$TILES"
+fireoutput="$S3OUT/fires"
+$LAUNCHER "$PREPROCESSNS.PreprocessFire" "$ARCHIVE/fires" $fireoutput 500 16 2000-11-01 $ESTSTART $ESTEND "$TILES"
 
 # 7 minutes w/5 high-memory for all data
 # 1h15 w/1 large instance for 1 tile
@@ -54,7 +56,8 @@ $LAUNCHER "$PREPROCESSNS.PreprocessRain" "$ARCHIVE/PRECL" "$TMP/rain" $SRES $TRE
 # 50 minutes w/5 high-memory for all data - one process took forever,
 # had to kill it. Default # of tasks now greater.
 # 4h32 with 1 large instance for 1 tile
-$LAUNCHER "$PREPROCESSNS.ExplodeRain" "$TMP/rain" "$S3OUT/rain-series" $SRES "$TILES"
+rainoutput="$S3OUT/rain-series"
+$LAUNCHER "$PREPROCESSNS.ExplodeRain" "$TMP/rain" rainoutput $SRES "$TILES"
 
 ####################
 # REST OF WORKFLOW #
@@ -73,10 +76,9 @@ $LAUNCHER forma.hadoop.jobs.runner.TimeseriesFilter $SRES $TRES $ts $STATIC $out
 
 # join, adjust series
 
-ndvi="$TMP/ndvi-filtered"
-rain="$TMP/rain-series"
+ndvi=$output
 output="$TMP/adjusted"
-$LAUNCHER forma.hadoop.jobs.runner.AdjustSeries $SRES $TRES $ndvi $rain $output
+$LAUNCHER forma.hadoop.jobs.runner.AdjustSeries $SRES $TRES $ndvi $rainoutput $output
 
 # trends
 
@@ -86,10 +88,9 @@ $LAUNCHER forma.hadoop.jobs.runner.Trends $SRES $TRES $ESTEND $adjusted $output 
 
 # forma-tap
 
-fires="$TMP/fires"
 dynamic=$output
 output="$TMP/forma-tap"
-$LAUNCHER forma.hadoop.jobs.runner.FormaTap $SRES $TRES $ESTEND $fires $dynamic $output
+$LAUNCHER forma.hadoop.jobs.runner.FormaTap $SRES $TRES $ESTEND $fireoutput $dynamic $output
 
 # neighbors
 
@@ -99,7 +100,6 @@ $LAUNCHER forma.hadoop.jobs.runner.NeighborQuery $SRES $TRES $dynamic $output
 
 # forma-estimate
 
-betas="s3n://formatest/tmp/betas"
 dynamic="$TMP/neighbors"
 output="$TMP/estimated"
-$LAUNCHER forma.hadoop.jobs.runner.EstimateForma $SRES $TRES $betas $dynamic $STATIC $output
+$LAUNCHER forma.hadoop.jobs.runner.EstimateForma $SRES $TRES $BETAS $dynamic $STATIC $output
