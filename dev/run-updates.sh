@@ -57,7 +57,7 @@ $LAUNCHER "$PREPROCESSNS.PreprocessRain" "$ARCHIVE/PRECL" "$TMP/rain" $SRES $TRE
 # had to kill it. Default # of tasks now greater.
 # 4h32 with 1 large instance for 1 tile
 rainoutput="$S3OUT/rain-series"
-$LAUNCHER "$PREPROCESSNS.ExplodeRain" "$TMP/rain" rainoutput $SRES "$TILES"
+$LAUNCHER "$PREPROCESSNS.ExplodeRain" "$TMP/rain" $rainoutput $SRES "$TILES"
 
 ####################
 # REST OF WORKFLOW #
