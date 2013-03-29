@@ -51,13 +51,15 @@ $LAUNCHER "$PREPROCESSNS.PreprocessFire" "$ARCHIVE/fires" $fireoutput 500 16 200
 
 # 7 minutes w/5 high-memory for all data
 # 1h15 w/1 large instance for 1 tile
-$LAUNCHER "$PREPROCESSNS.PreprocessRain" "$ARCHIVE/PRECL" "$TMP/rain" $SRES $TRES
+output="$TMP/rain"
+$LAUNCHER "$PREPROCESSNS.PreprocessRain" "$ARCHIVE/PRECL" output $SRES $TRES
 
 # 50 minutes w/5 high-memory for all data - one process took forever,
 # had to kill it. Default # of tasks now greater.
 # 4h32 with 1 large instance for 1 tile
+rain=$output
 rainoutput="$S3OUT/rain-series"
-$LAUNCHER "$PREPROCESSNS.ExplodeRain" "$TMP/rain" $rainoutput $SRES "$TILES"
+$LAUNCHER "$PREPROCESSNS.ExplodeRain" $rain $rainoutput $SRES "$TILES"
 
 ####################
 # REST OF WORKFLOW #
