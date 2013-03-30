@@ -85,7 +85,7 @@ $LAUNCHER forma.hadoop.jobs.runner.AdjustSeries $SRES $TRES $ndvi $rainoutput $o
 # trends
 
 adjusted=$output
-output="$TMP/trends"
+output="$S3OUT/trends"
 $LAUNCHER forma.hadoop.jobs.runner.Trends $SRES $TRES $ESTEND $adjusted $output $ESTSTART
 
 # forma-tap
@@ -102,6 +102,6 @@ $LAUNCHER forma.hadoop.jobs.runner.NeighborQuery $SRES $TRES $dynamic $output
 
 # forma-estimate
 
-dynamic="$TMP/neighbors"
+dynamic=$output
 output="$TMP/estimated"
 $LAUNCHER forma.hadoop.jobs.runner.EstimateForma $SRES $TRES $BETAS $dynamic $STATIC $output
