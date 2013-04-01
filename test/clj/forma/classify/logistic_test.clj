@@ -47,3 +47,11 @@
   row matrix"
   (logistic-prob (to-double-rowmat [1 2 3])
                  (to-double-rowmat [0 0 0])) => (to-double-rowmat [0.5]))
+
+(tabular
+ (fact "Test `logistic-prob-wrap` preconditions."
+   (logistic-prob ?beta-rowmat ?features-rowmat) => ?result)
+   ?beta-rowmat ?features-rowmat ?result
+   (to-double-rowmat [1 2]) (to-double-rowmat [0 0]) (to-double-rowmat [0.5])
+   (to-double-rowmat nil) (to-double-rowmat [0 0]) (throws AssertionError)
+   (to-double-rowmat [1 2]) (to-double-rowmat nil) (throws AssertionError))
