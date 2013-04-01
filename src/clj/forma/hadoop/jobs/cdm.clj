@@ -69,11 +69,13 @@ coordinates."
     The threshold number for valid detections (0-100, integer).
     `tres` - The input temporal resolution (string).  `tres-out` - The
     output temporal resolution (string).  `zoom` - The map zoom
-    level (integer).
+    level (integer). `min-period` ensures there are no duplicate records
+    due to resampling pixels to CDM.
 
   Example usage:
     (forma->cdm (hfs-seqfile \"/home/dan/Dropbox/local/output\")
                 (hfs-seqfile \"/tmp/forma/data/gadm-path\")
+                -9999.0
                 17
                 \"16\"
                 \"32\"
@@ -94,5 +96,5 @@ coordinates."
         (min-period ?rp :> ?p)
         (r/modis->latlon ?sres ?modh ?modv ?s ?l :> ?lat ?lon)
         (latlon-valid? ?lat ?lon)
-        (latlon->tile ?lat ?lon zoom :> ?x ?y ?z)
-        (:distinct true))))
+        (latlon->tile ?lat ?lon zoom :> ?x ?y ?z))))
+
