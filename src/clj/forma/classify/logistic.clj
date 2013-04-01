@@ -78,7 +78,8 @@
 
   Precondition checks for empty beta/feature row matrices, which are
   created when `to-double-rowmat` operates on `nil`. This should never
-  happen in production.
+  happen in production, but if it does, the result of classification
+  would always be a probability of 0.5.
 
   Arguments: 
     beta-rowmat: DoubleMatrix row vector

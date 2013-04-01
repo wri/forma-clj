@@ -49,7 +49,7 @@
                  (to-double-rowmat [0 0 0])) => (to-double-rowmat [0.5]))
 
 (tabular
- (fact "Test `logistic-prob-wrap`"
+ (fact "Test `logistic-prob-wrap` preconditions."
    (logistic-prob ?beta-rowmat ?features-rowmat) => ?result)
    ?beta-rowmat ?features-rowmat ?result
    (to-double-rowmat [1 2]) (to-double-rowmat [0 0]) (to-double-rowmat [0.5])
