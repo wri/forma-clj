@@ -82,7 +82,7 @@ coordinates."
   [src gadm-src nodata zoom tres tres-out start thresh]
   (let [epoch (date/datetime->period tres-out "2000-01-01")
         start-period (date/datetime->period tres start)]
-    (<- [?x ?y ?z ?p ?iso ?lat ?lon]
+    (<- [?x ?y ?z ?p ?iso]
         (src ?sres ?modh ?modv ?s ?l ?prob-series)
         (gadm-src _ ?modh ?modv ?s ?l ?gadm)
         (gadm->iso ?gadm :> ?iso)
@@ -94,4 +94,5 @@ coordinates."
         (min-period ?rp :> ?p)
         (r/modis->latlon ?sres ?modh ?modv ?s ?l :> ?lat ?lon)
         (latlon-valid? ?lat ?lon)
-        (latlon->tile ?lat ?lon zoom :> ?x ?y ?z))))
+        (latlon->tile ?lat ?lon zoom :> ?x ?y ?z)
+        (:distinct true))))
