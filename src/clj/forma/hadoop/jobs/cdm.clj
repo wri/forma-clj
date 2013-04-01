@@ -86,7 +86,7 @@ coordinates."
         start-period (date/datetime->period tres start)]
     (<- [?x ?y ?z ?p ?iso]
         (src ?sres ?modh ?modv ?s ?l ?prob-series)
-        (gadm-src _ ?modh ?modv ?s ?l ?gadm)
+        (gadm-src ?s-res ?mod-h ?mod-v ?sample ?line _ ?gadm _ _ _)
         (gadm->iso ?gadm :> ?iso)
         (o/clean-probs ?prob-series nodata :> ?clean-series)
         (first-hit thresh ?clean-series :> ?first-hit-idx)
@@ -115,7 +115,7 @@ coordinates."
         start-period (date/datetime->period tres start)]
     (<- [?iso ?s-res ?modh ?modv ?s ?l ?p]
         (src ?sres ?modh ?modv ?s ?l ?prob-series)
-        (gadm-src _ ?modh ?modv ?s ?l ?gadm)
+        (gadm-src ?s-res ?mod-h ?mod-v ?sample ?line _ ?gadm _ _ _)
         (gadm->iso ?gadm :> ?iso)
         (o/clean-probs ?prob-series nodata :> ?clean-series)
         (first-hit thresh ?clean-series :> ?first-hit-idx)
@@ -130,3 +130,4 @@ coordinates."
     (<- [?iso ?p ?ct]
         (spark-src ?iso _ _ _ _ _ ?p)
         (c/distinct-count ?p :> ?ct))))
+
