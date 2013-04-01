@@ -98,3 +98,35 @@ coordinates."
         (latlon-valid? ?lat ?lon)
         (latlon->tile ?lat ?lon zoom :> ?x ?y ?z))))
 
+(defn spark-hits
+  "Prep for generate counts by country, for spark graphs on GFW site.
+
+   Example usage:
+    (spark-hits (hfs-seqfile \"/home/dan/Dropbox/local/output\")
+                (hfs-seqfile \"/tmp/forma/data/gadm-path\")
+                -9999.0
+                17
+                \"16\"
+                \"32\"
+                \"2005-12-31\"
+                50)"
+  [src gadm-src nodata tres tres-out start thresh]
+  (let [epoch (date/datetime->period tres-out "2000-01-01")
+        start-period (date/datetime->period tres start)]
+    (<- [?iso ?s-res ?modh ?modv ?s ?l ?p]
+        (src ?sres ?modh ?modv ?s ?l ?prob-series)
+        (gadm-src _ ?modh ?modv ?s ?l ?gadm)
+        (gadm->iso ?gadm :> ?iso)
+        (o/clean-probs ?prob-series nodata :> ?clean-series)
+        (first-hit thresh ?clean-series :> ?first-hit-idx)
+        (+ start-period ?first-hit-idx :> ?period)
+        (date/convert-period-res tres tres-out ?period :> ?period-new-res)
+        (- ?period-new-res epoch :> ?rp)
+        (min-period ?rp :> ?p))))
+
+(defn spark-graphify
+  [src gadm-src nodata tres tres-out start thresh]
+  (let [spark-src (spark-hits src gadm-src nodata tres tres-out start thresh)]
+    (<- [?iso ?p ?ct]
+        (spark-src ?iso _ _ _ _ _ ?p)
+        (c/distinct-count ?p :> ?ct))))
