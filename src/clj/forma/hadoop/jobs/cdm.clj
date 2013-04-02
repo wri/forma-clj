@@ -96,7 +96,8 @@ coordinates."
         (min-period ?rp :> ?p)
         (r/modis->latlon ?sres ?modh ?modv ?s ?l :> ?lat ?lon)
         (latlon-valid? ?lat ?lon)
-        (latlon->tile ?lat ?lon zoom :> ?x ?y ?z))))
+        (latlon->tile ?lat ?lon zoom :> ?x ?y ?z)
+        (:trap (hfs-seqfile "s3n://formatemp/output/cdm-trapped")))))
 
 (defn spark-hits
   "Prep for generate counts by country, for spark graphs on GFW site.
@@ -113,7 +114,7 @@ coordinates."
   [src gadm-src nodata tres tres-out start thresh]
   (let [epoch (date/datetime->period tres-out "2000-01-01")
         start-period (date/datetime->period tres start)]
-    (<- [?iso ?s-res ?modh ?modv ?s ?l ?p]
+    (<- [?iso ?sres ?modh ?modv ?s ?l ?p]
         (src ?sres ?modh ?modv ?s ?l ?prob-series)
         (gadm-src ?sres ?modh ?modv ?s ?l _ ?gadm _ _ _)
         (gadm->iso ?gadm :> ?iso)
@@ -122,11 +123,12 @@ coordinates."
         (+ start-period ?first-hit-idx :> ?period)
         (date/convert-period-res tres tres-out ?period :> ?period-new-res)
         (- ?period-new-res epoch :> ?rp)
-        (min-period ?rp :> ?p))))
+        (min-period ?rp :> ?p)
+        (:trap (hfs-seqfile "s3n://formatemp/output/spark-trapped")))))
 
 (defn spark-graphify
   [src gadm-src nodata tres tres-out start thresh]
   (let [spark-src (spark-hits src gadm-src nodata tres tres-out start thresh)]
     (<- [?iso ?p ?ct]
         (spark-src ?iso _ _ _ _ _ ?p)
-        (c/distinct-count ?p :> ?ct))))
+        (c/count ?ct))))
