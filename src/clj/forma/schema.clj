@@ -104,12 +104,12 @@
   [nodata neighbor-val forma-val]
   {:pre [(instance? forma.schema.NeighborValue neighbor-val)]}
   (cond
-   (and (u/obj-contains-nodata? nodata neighbor-val)
-        (u/obj-contains-nodata? nodata forma-val))
+   (and (thrift/obj-contains-nodata? nodata neighbor-val)
+        (thrift/obj-contains-nodata? nodata forma-val))
               empty-neighbor-val
-   (u/obj-contains-nodata? nodata neighbor-val)
+   (thrift/obj-contains-nodata? nodata neighbor-val)
               (neighbor-value forma-val)
-   (u/obj-contains-nodata? nodata forma-val)
+   (thrift/obj-contains-nodata? nodata forma-val)
               neighbor-val
    :else (let [[fire short-val long-val t-stat break-param] (thrift/unpack forma-val)
                [n-fire ncount avg-short min-short avg-long
