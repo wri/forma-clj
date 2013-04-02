@@ -84,7 +84,7 @@ coordinates."
   [src gadm-src nodata zoom tres tres-out start thresh]
   (let [epoch (date/datetime->period tres-out "2000-01-01")
         start-period (date/datetime->period tres start)]
-    (<- [?x ?y ?z ?p ?iso]
+    (<- [?x ?y ?z ?p ?iso ?lat ?lon]
         (src ?sres ?modh ?modv ?s ?l ?prob-series)
         (gadm-src ?sres ?modh ?modv ?s ?l _ ?gadm _ _ _)
         (gadm->iso ?gadm :> ?iso)
