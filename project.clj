@@ -19,7 +19,7 @@
                  [clj-time "0.3.4"]
                  [forma/gdal "1.8.0"]
                  [forma/jblas "1.2.1"]
-                 [cascalog "1.10.0"]
+                 [cascalog "1.10.1"]
                  [org.clojure/clojure-contrib "1.2.0"]
                  [cascalog-checkpoint "0.1.1"]
                  [backtype/dfs-datastores "1.1.3"]
@@ -32,4 +32,4 @@
                                   [incanter/incanter-charts "1.3.0"]]
                    :plugins [[lein-swank "1.4.4"]
                              [lein-midje "3.0-beta1"]
-                             [lein-emr "0.1.0-SNAPSHOT"]]}})
+                             [lein-emr "0.2.0-SNAPSHOT"]]}})

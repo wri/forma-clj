@@ -115,3 +115,12 @@
       (.setDate nil)
       (.setPedigree (Pedigree. 200000)))
     (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :pedigree 200000) => dc))
+
+(facts
+  "Check `objs-contains-nodata?"
+  (obj-contains-nodata? -9999. (FormaValue*
+                                (FireValue* 1 1 1 1)
+                                -9999. 1. 1. 1.)) => true
+  (obj-contains-nodata? -9999. (FormaValue*
+                                (FireValue* 1 1 1 1)
+                                  1. 1. 1. 1.)) => false)
