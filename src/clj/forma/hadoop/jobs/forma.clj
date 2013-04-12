@@ -199,6 +199,78 @@
         (reduce max ?end-idx :> ?end)
         (:distinct false))))
 
+(defn trends->datachunks
+  "Query converts trends output to DataChunk thrift objects suitable for pail."
+  [est-map trends-src & [pedigree]]
+  (let [data-name "trends"
+        nodata (:nodata est-map)
+        t-res (:t-res est-map)]
+    (<- [?dc]
+        (trends-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break)
+        (schema/series->forma-values nil ?short ?long ?t-stat ?break :> ?forma-vals)
+        (thrift/TimeSeries* ?start ?forma-vals :> ?fv-series)
+        (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?loc)
+        (thrift/DataChunk* data-name ?loc ?fv-series t-res :pedigree pedigree :> ?dc))))
+
+(defn merge-sorted
+  "Given tuples of time series sorted by Pedigree (or any other index),
+   merges the (possibly overlapping) time series."
+  [t-res nodata field-n sorted & {:keys [consecutive] :or {consecutive false}}]
+  (let [start-keys (map second sorted)
+        series (map #(nth % field-n) sorted)]
+    (->> (map #(date/ts-vec->ts-map %1 t-res %2) start-keys series)
+         (apply merge)
+         (#(date/ts-map->ts-vec t-res % nodata :consecutive consecutive)))))
+
+(defn merge-trends
+  "Sorts maps by pedigree (created date), then merges them into a
+   master map. Conflicts between overlapping series are resolved by
+   retaining the value from most recent version of the time series."
+   [t-res nodata tuples & {:keys [consecutive] :or {consecutive false}}]
+   (let [rng (range 2 (count (first tuples)))
+         sorted (sort-by first tuples)
+         start-keys (map second sorted)
+         start-idx (apply min (map (partial date/key->period t-res) start-keys))]
+     (->> (for [field-n rng]
+            (merge-sorted t-res nodata field-n sorted :consecutive consecutive))
+          (vec)
+          (into [start-idx])
+          (vector))))
+
+(defbufferop [merge-trends-wrapper [t-res nodata field-map]]
+  "Wrapper for `merge-trends`"
+  [tuples]
+  (let [consecutive true]
+    (merge-trends t-res nodata field-map tuples :consecutive true)))
+
+(defn forma-values->series
+  "Given an ArrayValue of FormaValues, unpack the ArrayValue and
+   return series of each component of a FormaValue - fires, shorts,
+   longs, t-stats and breaks."
+  [array-val]
+  {:pre [(or (= forma.schema.ArrayValue (type array-val))
+             (= forma.schema.FormaArray (type array-val)))]}
+  (let [forma-vals (thrift/unpack array-val)]
+    (apply map vector (map thrift/unpack forma-vals))))
+
+(defn trends-datachunks->series
+  [est-map pail-src]
+  (let [data-name "trends"
+        nodata (:nodata est-map)
+        t-res (:t-res est-map)
+        res-str (format "%s-%s" (:s-res est-map) (:t-res est-map))
+        field-map {:shorts 2 :longs 3 :t-stats 4 :breaks 5}]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-final ?short-final ?long-final ?t-stat-final ?break-final]
+        (pail-src _ ?dc)
+        (thrift/unpack ?dc :> _ ?loc ?data ?t-res _ ?pedigree)
+        (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
+        (thrift/unpack ?pedigree :> ?created)
+        (thrift/unpack ?data :> ?start _ ?forma-val-arr)
+        (forma-values->series ?forma-val-arr :> _ ?short ?long ?t-stat ?break)
+        (date/period->key ?t-res ?start :> ?start-key)
+        (merge-trends-wrapper [t-res nodata field-map] ?created ?start-key ?short ?long ?t-stat ?break
+                              :> ?start-final ?short-final ?long-final ?t-stat-final ?break-final))))
+
 (defn forma-tap
   "Accepts an est-map and sources for dynamic and fires data,
   spits out FormaValues for each period.

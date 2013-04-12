@@ -20,7 +20,9 @@
         [forma.ops.classify :only (beta-dict)])
   (:require [forma.testing :as t]
             [forma.thrift :as thrift]
-            [forma.utils :as u]))
+            [forma.utils :as u]
+            [forma.schema :as schema])
+  (:import [forma.schema DataChunk]))
 
 (def test-map
   "Define estimation map for testing based on 500m-16day resolution.
@@ -187,6 +189,51 @@
   => (produces [["500" 28 8 0 0 693 973
                  0.9999999999999959 0.6468022465705872
                  6.0531753194685895E-6 136.1034297586291]]))
+
+(fact "Test `trends-to-datachunks`."
+  (let [start 827
+        end 828
+        ts [1. 2.]
+        t-res (:t-res test-map)
+        pedigree 1
+        trends-src [["500" 28 8 0 0 start end ts ts ts ts]]
+        dc (first (ffirst (??- (trends->datachunks test-map trends-src pedigree))))]
+    (type dc) => DataChunk
+    (.getDataset dc) => "trends"))
+
+(tabular
+ (fact "Test `merge-sorted`."
+  (let [t-res (:t-res test-map)
+        nodata (:nodata test-map)]
+    (merge-sorted t-res nodata 2 ?tuples :consecutive ?consec)) => ?result)
+ ?consec ?tuples                  ?result
+ ;; ok
+ true    [[1 :2005-12-19 [1 2] [3 4] [5 6] [7 8]]
+          [1 :2006-01-17 [11 12] [13 14] [15 16] [17 18]]]  [1 2 11 12]
+          
+ ;; not consecutive
+ true    [[1 :2005-12-19 [1 2] [3 4] [5 6] [7 8]]
+          [1 :2006-02-02 [11 12] [13 14] [15 16] [17 18]]]  (throws AssertionError)
+
+ ;; not consecutive, fills in with nodata
+ false   [[1 :2005-12-19 [1 2] [3 4] [5 6] [7 8]]
+          [1 :2006-02-17 [11 12] [13 14] [15 16] [17 18]]]  [1 2 (:nodata test-map) 11 12])
+
+(tabular
+ (fact "Test `merge-trends`"
+  (let [series [[1 ?first-series [1 2] [3 4] [5 6] [7 8]]
+                [1 ?second-series [11 12] [13 14] [15 16] [17 18]]]]
+    (merge-trends "16" -9999.0 series :consecutive ?consec))
+  => ?result)
+ ?consec ?first-series ?second-series ?result
+ true :2005-12-19 :2006-01-17 [[827 [1 2 11 12] [3 4 13 14] [5 6 15 16] [7 8 17 18]]]
+ false :2005-12-19 :2006-01-17 [[827 [1 2 11 12] [3 4 13 14] [5 6 15 16] [7 8 17 18]]]
+ true :2005-12-19 :2006-02-02 (throws AssertionError)
+ false :2005-12-19 :2006-02-02 [[827 [1 2 -9999.0 11 12] [3 4 -9999.0 13 14] [5 6 -9999.0 15 16] [7 8 -9999.0 17 18]]])
+
+(future-fact "Test `merge-trends-wrapper`")
+(future-fact "Test `forma-values->series`")
+(future-fact "Test `trends-datachunks->series`")
 
 (fact
   "Check forma-tap. This test got crazy because it seems that comparing
