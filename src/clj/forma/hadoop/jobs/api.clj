@@ -29,16 +29,21 @@
     (map vector idxs series)))
 
 (defn prob-series->tsv-api
-  "Convert output of `forma-estimate` to long form according to API spec.
-   ?year field is intended for use with template tap."
+  "Returns a Cascalog query that that converts output of `forma-estimate` to long form
+   according to API spec.
+
+   ?year field is intended for use with template tap. ?iso-extra is
+   included because the template tap removes :templatefields
+   from :outfields, but we want the iso code included in the output."
   [est-map src static-src]
   (let [nodata (:nodata est-map)
         est-start (:est-start est-map)
         t-res (:t-res est-map)]
-    (<- [?lat ?lon ?iso ?gadm ?date ?year ?prob]
+    (<- [?lat ?lon ?iso ?iso-extra ?gadm ?date ?year ?prob]
         (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?prob-series)
         (static-src ?s-res ?mod-h ?mod-v ?sample ?line _ ?gadm _ _ _)
         (gadm->iso ?gadm :> ?iso)
+        (p/add-fields ?iso :> ?iso-extra)
         (o/clean-probs ?prob-series nodata :> ?clean-series)
         (wide->long ?start-idx ?clean-series :> ?period ?prob)
         (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
@@ -46,10 +51,11 @@
         (date/convert ?date :year-month-day :year :> ?year))))
 
 (defn mk-tsv
-  "Wrapper `for prob-series->tsv-api` handles export via template tap."
+  "Wrapper `for prob-series->tsv-api` handles export to tab-separated text
+   via template tap. Header will be \"lat\tlon\tiso\tgadm\tdate\tprobability\"."
   [est-map forma-path static-path out-path]
-  (let [out-fields ["?lat" "?lon" "?gadm" "?date" "?prob"]
-        template-fields ["?year" "?iso"]
+  (let [out-fields ["?lat" "?lon" "?iso" "?gadm" "?date" "?prob"]
+        template-fields ["?year" "?iso-extra"]
         src (hfs-seqfile forma-path)
         static-src (hfs-seqfile static-path)
         sink (hfs-textline out-path :sinkmode :replace
