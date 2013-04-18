@@ -44,6 +44,8 @@
         (static-src ?s-res ?mod-h ?mod-v ?sample ?line _ ?gadm _ _ _)
         (gadm->iso ?gadm :> ?iso)
         (p/add-fields ?iso :> ?iso-extra)
+        (first ?prob-series :> ?first-elem)
+        (symbol? ?first-elem :> false) ;; screen out NA
         (o/clean-probs ?prob-series nodata :> ?clean-series)
         (wide->long ?start-idx ?clean-series :> ?period ?prob)
         (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
