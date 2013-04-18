@@ -87,13 +87,13 @@
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?series]
       (chunk-src ?ts-chunk)
       (static-src ?s-res ?mod-h ?mod-v ?sample ?line ?vcf _ _ _ _)
-      
+
       ;; unpack ts object
       (thrift/unpack ?ts-chunk :> _ ?ts-loc ?ts-data _ _)
       (thrift/unpack ?ts-data :> ?start-idx _ ?ts-array)
       (thrift/unpack* ?ts-array :> ?series)
       (thrift/unpack ?ts-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
-      
+
       ;; filter on vcf-limit - ensures join & filter actually happens
       (>= ?vcf vcf-limit)))
 
@@ -143,18 +143,18 @@
         short-rain (first (f/shorten-ts ts rain-ts))]
     (flatten [end-idx
               (a/short-stat long-block window ts)
-              (a/long-stats ts short-rain)      
+              (a/long-stats ts short-rain)
               (a/hansen-stat ts)])))
 
 (defn new-trends
   "Calculates all trend statistics for a timeseries, also returns the
-   period index of the last element of the series"
-  [window long-block start-idx ts rain-ts]
+   period index of the last element of the series. Same as
+   calculate-trends but does NOT include the short trends statistic."
+   [window long-block start-idx ts rain-ts]
   (let [end-idx (series-end ts start-idx)
         short-rain (first (f/shorten-ts ts rain-ts))]
     (flatten [end-idx
-    ;;          (a/short-stat long-block window ts)
-              (a/long-stats ts short-rain)      
+              (a/long-stats ts short-rain)
               (a/hansen-stat ts)])))
 
 (defn test-trends-perf
@@ -172,7 +172,7 @@ Usage:
   (let [val-ts (repeatedly 350 (partial rand-int 10000))
         rain-ts (repeatedly 350 (partial rand-int 10000))
         [start-idx end-idx] (date/relative-period t-res ts-start-period
-                                          [est-start est-end])
+                                                  [est-start est-end])
         tele-start-idx (inc start-idx)
         tele-end-idx (inc end-idx)
         calculate #(calculate-trends window long-block
@@ -181,12 +181,12 @@ Usage:
                                    ts-start-period % rain-ts)]
     (prn "Normal trends")
     (time (dotimes [_ 10] (last (first (map (comp vec calculate) ;; force realization
-                                      (f/tele-ts tele-start-idx tele-end-idx val-ts))))))
+                                            (f/tele-ts tele-start-idx tele-end-idx val-ts))))))
     (prn "Optimized trends")
     (time (dotimes [_ 10]
             (let [a (a/short-stat long-block window val-ts)
                   b (last (first (map (comp vec new-calculate) ;; force realization
-                         (f/tele-ts tele-start-idx tele-end-idx val-ts))))])))))
+                                      (f/tele-ts tele-start-idx tele-end-idx val-ts))))])))))
 
 (defmapcatop telescoping-trends
   "Maps `calculate-trends` onto each part of an ever-lengthening subset
@@ -195,14 +195,25 @@ Usage:
   [{:keys [est-start est-end t-res window long-block]}
    ts-start-period val-ts rain-ts]
   (let [[start-idx end-idx] (date/relative-period t-res ts-start-period
-                                          [est-start est-end])
+                                                  [est-start est-end])
         tele-start-idx (inc start-idx)
         tele-end-idx (inc end-idx)
-        calculate #(calculate-trends window long-block
-                                     ts-start-period % rain-ts)]
-    [(mu/transpose
-      (map (comp vec calculate)
-           (f/tele-ts tele-start-idx tele-end-idx val-ts)))]))
+        tele-series (f/tele-ts tele-start-idx tele-end-idx val-ts)
+        ;;takes the last telescoping series (the longest one), and computes
+        ;;the windowed trends, and then the moving averages. Then does
+        ;;reductions min on the moving averages. We want the same
+        ;;number of short-stats as there are tele-series (remember
+        ;;each short stat is the largest short term drop observed over
+        ;;that series).
+        short-stats (take-last (count tele-series)
+                               (a/short-stat-all long-block window (last tele-series)))
+        calculate #(new-trends window long-block
+                               ts-start-period % rain-ts)
+        all-trends-but-short (mu/transpose
+                              (map calculate tele-series))]
+    [(concat (take 1 all-trends-but-short)
+             [short-stats]
+             (take-last 3 all-trends-but-short))]))
 
 (defn analyze-trends
   "Accepts an est-map and a source for both ndvi and rain timeseries.
@@ -281,7 +292,7 @@ Usage:
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen ?coast-dist)
         (u/obj-contains-nodata? nodata ?val :> false)
-        (u/obj-contains-nodata? nodata ?neighbor-val :> false)        
+        (u/obj-contains-nodata? nodata ?neighbor-val :> false)
         (= ?pd first-idx)
         (>= ?coast-dist min-coast-dist)
         (:distinct false))))

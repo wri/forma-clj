@@ -81,7 +81,7 @@
           (i/trace))
       nil)))
 
-;; Long-term trend characteristic; supporting functions 
+;; Long-term trend characteristic; supporting functions
 
 (defn trend-characteristics
   "returns a nested vector of (1) the OLS coefficients from regressing
@@ -194,3 +194,12 @@
   (->> (windowed-trend long-block ts)
        (utils/moving-average short-block)
        (reduce min)))
+
+(defn short-stat-all
+  "Similar to short stat, but returns a collection of values, where
+  each value represents the largest short-term drop seen in the moving
+  averages of the trends data up to the current moving average block."
+  [long-block short-block ts]
+  (->> (windowed-trend long-block ts)
+       (utils/moving-average short-block)
+       (reductions min)))
