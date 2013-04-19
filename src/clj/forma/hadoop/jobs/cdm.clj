@@ -69,11 +69,19 @@ coordinates."
     The threshold number for valid detections (0-100, integer).
     `tres` - The input temporal resolution (string).  `tres-out` - The
     output temporal resolution (string).  `zoom` - The map zoom
-    level (integer).
+    level (integer). `min-period` ensures there are no duplicate records
+    due to resampling pixels to CDM.
 
-  Example usage:
+   Note that there may be a handful of pixels with NA values in the
+   probability series that cause this job to fail. If that's the case,
+   add a trap to the query a la
+
+     (:trap (hfs-seqfile \"s3n://formatemp/output/cdm-trapped\"))
+
+ Example usage:
     (forma->cdm (hfs-seqfile \"/home/dan/Dropbox/local/output\")
                 (hfs-seqfile \"/tmp/forma/data/gadm-path\")
+                -9999.0
                 17
                 \"16\"
                 \"32\"
@@ -84,7 +92,7 @@ coordinates."
         start-period (date/datetime->period tres start)]
     (<- [?x ?y ?z ?p ?iso ?lat ?lon]
         (src ?sres ?modh ?modv ?s ?l ?prob-series)
-        (gadm-src _ ?modh ?modv ?s ?l ?gadm)
+        (gadm-src ?sres ?modh ?modv ?s ?l _ ?gadm _ _ _)
         (gadm->iso ?gadm :> ?iso)
         (o/clean-probs ?prob-series nodata :> ?clean-series)
         (first-hit thresh ?clean-series :> ?first-hit-idx)
@@ -95,3 +103,37 @@ coordinates."
         (r/modis->latlon ?sres ?modh ?modv ?s ?l :> ?lat ?lon)
         (latlon-valid? ?lat ?lon)
         (latlon->tile ?lat ?lon zoom :> ?x ?y ?z))))
+
+(defn spark-hits
+  "Prep for generate counts by country, for spark graphs on GFW site.
+
+   Example usage:
+    (spark-hits (hfs-seqfile \"/home/dan/Dropbox/local/output\")
+                (hfs-seqfile \"/tmp/forma/data/gadm-path\")
+                -9999.0
+                17
+                \"16\"
+                \"32\"
+                \"2005-12-31\"
+                50)"
+  [src gadm-src nodata tres tres-out start thresh]
+  (let [epoch (date/datetime->period tres-out "2000-01-01")
+        start-period (date/datetime->period tres start)]
+    (<- [?iso ?sres ?modh ?modv ?s ?l ?p]
+        (src ?sres ?modh ?modv ?s ?l ?prob-series)
+        (gadm-src ?sres ?modh ?modv ?s ?l _ ?gadm _ _ _)
+        (gadm->iso ?gadm :> ?iso)
+        (o/clean-probs ?prob-series nodata :> ?clean-series)
+        (first-hit thresh ?clean-series :> ?first-hit-idx)
+        (+ start-period ?first-hit-idx :> ?period)
+        (date/convert-period-res tres tres-out ?period :> ?period-new-res)
+        (- ?period-new-res epoch :> ?rp)
+        (min-period ?rp :> ?p)
+        (:trap (hfs-seqfile "s3n://formatemp/output/spark-trapped")))))
+
+(defn spark-graphify
+  [src gadm-src nodata tres tres-out start thresh]
+  (let [spark-src (spark-hits src gadm-src nodata tres tres-out start thresh)]
+    (<- [?iso ?p ?ct]
+        (spark-src ?iso _ _ _ _ _ ?p)
+        (c/count ?ct))))

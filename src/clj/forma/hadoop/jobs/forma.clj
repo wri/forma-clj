@@ -23,7 +23,7 @@
   [chunk-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?val]
       (chunk-src _ ?chunk)
-      (thrift/unpack ?chunk :> _ ?loc ?data _ _)
+      (thrift/unpack ?chunk :> _ ?loc ?data _ _ _)
       (thrift/get-field-value ?data :> ?val)
       (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
 
@@ -47,7 +47,7 @@
   [src tile-set]
   (<- [?pail-path ?pixel-chunk]
       (src ?pail-path ?pixel-chunk)
-      (thrift/unpack ?pixel-chunk :> _ ?pixel-loc _ _ _)
+      (thrift/unpack ?pixel-chunk :> _ ?pixel-loc _ _ _ _)
       (thrift/unpack ?pixel-loc :> _ ?h ?v _ _)
       (u/within-tileset? tile-set ?h ?v)))
 
@@ -57,11 +57,13 @@
   [base-t-res target-t-res src]
   (if (= target-t-res base-t-res)
       src
-      (<- [?s-res ?mod-h ?mod-v ?sample ?line ?new-start-idx ?rounded-ts]
+      (<- [?s-res ?mod-h ?mod-v ?sample ?line ?new-start-idx ?rounded-series]
           (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ts)
           (thrift/TimeSeries* ?start-idx ?ts :> ?ts-obj)
-          (stretch/ts-expander base-t-res target-t-res ?ts-obj :> ?expanded-ts)
-          (u/map-round ?expanded-ts :> ?new-start-idx ?rounded-ts)
+          (stretch/ts-expander base-t-res target-t-res ?ts-obj :> ?expanded-ts-obj)
+          (thrift/unpack ?expanded-ts-obj :> ?new-start-idx _ ?arr-val)
+          (thrift/unpack* ?arr-val :> ?expanded-series)
+          (u/map-round* ?expanded-series :> ?rounded-series)
           (:distinct false))))
 
 (defn fire-tap
@@ -70,7 +72,7 @@
   [est-start est-end t-res fire-src]
   (<- [?s-res ?h ?v ?sample ?line ?adjusted-ts]
       (fire-src ?fire-pixel)
-      (thrift/unpack ?fire-pixel :> _ ?pixel-loc ?ts _ _)
+      (thrift/unpack ?fire-pixel :> _ ?pixel-loc ?ts _ _ _)
       (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)
       (schema/adjust-fires est-start est-end t-res ?ts :> ?adjusted-ts)))
 
@@ -89,7 +91,7 @@
       (static-src ?s-res ?mod-h ?mod-v ?sample ?line ?vcf _ _ _ _)
 
       ;; unpack ts object
-      (thrift/unpack ?ts-chunk :> _ ?ts-loc ?ts-data _ _)
+      (thrift/unpack ?ts-chunk :> _ ?ts-loc ?ts-data _ _ _)
       (thrift/unpack ?ts-data :> ?start-idx _ ?ts-array)
       (thrift/unpack* ?ts-array :> ?series)
       (thrift/unpack ?ts-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
@@ -249,8 +251,8 @@
     (<- [?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?eco ?hansen]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen ?coast-dist)
-        (u/obj-contains-nodata? nodata ?val :> false)
-        (u/obj-contains-nodata? nodata ?neighbor-val :> false)
+        (thrift/obj-contains-nodata? nodata ?val :> false)
+        (thrift/obj-contains-nodata? nodata ?neighbor-val :> false)        
         (= ?pd first-idx)
         (>= ?coast-dist min-coast-dist)
         (:distinct false))))
@@ -299,8 +301,8 @@
   (let [betas (classify/beta-dict beta-src)]
     (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-        (u/obj-contains-nodata? nodata ?val :> false)
-        (u/obj-contains-nodata? nodata ?neighbor-val :> false)
+        (thrift/obj-contains-nodata? nodata ?val :> false)
+        (thrift/obj-contains-nodata? nodata ?neighbor-val :> false)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _ _)
         (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
         (consolidate-timeseries nodata ?pd ?prob :> _ ?prob-series)

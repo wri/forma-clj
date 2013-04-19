@@ -8,7 +8,7 @@
             FireValue FormaValue IntArray LocationProperty
             LocationPropertyValue LongArray ModisChunkLocation
             ModisPixelLocation ShortArray TimeSeries FormaArray
-            NeighborValue]
+            NeighborValue Pedigree]
            [org.apache.thrift TBase TUnion]
            [java.util ArrayList]))
 
@@ -70,37 +70,57 @@
                  LocationProperty.)
         data (->> (vec (map int [1 1 1 1])) IntArray. ArrayValue/ints DataValue/vals)
         x (DataChunk. "name" loc data "16")
-        c (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :date "2001")]
+        c (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :date "2001" :pedigree 1)]
     (doto x
-      (.setDate "2001"))
+      (.setDate "2001")
+      (.setPedigree (Pedigree. 1)))
     c => x
-    (unpack c) => ["name" loc data "16" "2001"]))
+    (unpack c) => ["name" loc data "16" "2001" (Pedigree. 1)]))
 
 (fact "Test DataChunk* with various date values."
   (let [loc (->> (ModisChunkLocation. "500" 8 0 100 24000)
                  LocationPropertyValue/chunkLocation
                  LocationProperty.)
         data (->> (vec (map int [1 1 1 1])) IntArray. ArrayValue/ints DataValue/vals)
-        dc (DataChunk. "name" loc data "16")]    
-
+        dc (DataChunk. "name" loc data "16")]
     (doto dc
-      (.setDate ""))
+      (.setDate "")
+      (.setPedigree (Pedigree. 1)))
 
-    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16") =>
-    (DataChunk. "name" loc data "16")
+    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :pedigree 1)
+    => (-> (DataChunk. "name" loc data "16")
+           (doto)
+           (.setPedigree (Pedigree. 1)))
 
-    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :date nil) =>
-    (DataChunk. "name" loc data "16")
+    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :date nil :pedigree 1)
+    => (-> (DataChunk. "name" loc data "16")
+           (doto)
+           (.setPedigree (Pedigree. 1)))
     
     (doto dc
       (.setDate nil))
-    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :date nil) => dc
-    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16") => dc
+    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :date nil :pedigree 1) => dc
+
+    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :pedigree 1) => dc
     
     (doto dc
       (.setDate ""))
-    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :date "") => dc
+    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :date "" :pedigree 1) => dc
 
     (doto dc
       (.setDate "1977"))
-    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :date "1977") => dc))
+    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :date "1977" :pedigree 1) => dc
+
+    (doto dc
+      (.setDate nil)
+      (.setPedigree (Pedigree. 200000)))
+    (DataChunk* "name" (ModisChunkLocation. "500" 8 0 100 24000) [1 1 1 1] "16" :pedigree 200000) => dc))
+
+(facts
+  "Check `objs-contains-nodata?"
+  (obj-contains-nodata? -9999. (FormaValue*
+                                (FireValue* 1 1 1 1)
+                                -9999. 1. 1. 1.)) => true
+  (obj-contains-nodata? -9999. (FormaValue*
+                                (FireValue* 1 1 1 1)
+                                  1. 1. 1. 1.)) => false)

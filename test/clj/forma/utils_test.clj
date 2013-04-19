@@ -3,8 +3,6 @@
   (:use forma.trends.analysis
         [midje sweet cascalog]
         cascalog.api)
-  (:require [forma.testing :as t]
-            [forma.thrift :as thrift])
   (:require [forma.testing :as t])
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]))
@@ -177,15 +175,6 @@
   "Check nested replace-from-left*"
   (replace-from-left* -9999 [1 2 -9999 3 -9999 5]) => [[1 2 2 3 3 5]])
 
-(facts
-  "Check `objs-contains-nodata?"
-  (obj-contains-nodata? -9999. (thrift/FormaValue*
-                                  (thrift/FireValue* 1 1 1 1)
-                                  -9999. 1. 1. 1.)) => true
-  (obj-contains-nodata? -9999. (thrift/FormaValue*
-                                  (thrift/FireValue* 1 1 1 1)
-                                  1. 1. 1. 1.)) => false)
-
 (fact
   "Check `filter*`"
   (let [src [[1 [2 3 2]] [3 [5 nil 6]]]]
@@ -224,9 +213,15 @@
         (replace-all* to-replace replacement ?series :> ?new-series)))
   => (produces [[[1 nil 3]]]))
 
+(fact "Check `rest*`"
+  (let [src [[1 [2 3 4 5]]]]
+    (<- [?id ?rest]
+        (src ?id ?series)
+        (rest* ?series :> ?rest))) => (produces [[1 [3 4 5]]]))
+
 (fact
-  "Test for `map-round`"
-  (map-round (thrift/TimeSeries* 0 3 [1.1 2.6 3.4 4.0])) => [0 [1 3 3 4]])
+  "Test for `map-round*`"
+  (map-round* [1.1 2.6 3.4 4.0]) => [[1 3 3 4]])
 
 (fact
   "Checks that `within-tileset?` correctly handles data inside and outside the given tile-set"
@@ -238,3 +233,26 @@
   "Test arg-parser"
   (arg-parser "ndvi") => (symbol "ndvi")
   (arg-parser "[\"ndvi\"]") => ["ndvi"])
+
+(fact "Check sorted-ts."
+  (sorted-ts {:2005-12-31 3 :2006-08-21 1}) => [3 1])
+
+(fact "Check all-unique?"
+  (all-unique? [1 2 3]) => true
+  (all-unique? [1 1 2]) => false)
+
+(fact "Check inc-eq?"
+  (inc-eq? [1 2]) => true
+  (inc-eq? [0 2]) => false
+  (inc-eq? 1 2) => true
+  (inc-eq? 0 2) => false)
+
+(fact "Check overlap?"
+  (overlap? {:a 1} {:b 2} {:b 3}) => true
+  (overlap? {:a 1} {:b 2}) => false
+  (overlap? {:a 1}) => false)
+
+(facts "Check merge-no-overlap"
+  (merge-no-overlap {:a 1}) => {:a 1}
+  (merge-no-overlap {:a 1} {:b 2} {:c 3}) => {:a 1 :b 2 :c 3}
+  (merge-no-overlap {:a 1} {:b 2} {:b 99}) => (throws AssertionError))

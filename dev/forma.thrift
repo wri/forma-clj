@@ -105,10 +105,15 @@ struct LocationProperty {
   1: LocationPropertyValue property;
 }
 
+struct Pedigree {
+  1: required i32 trueAsOfSecs;
+}
+
 struct DataChunk {
   1: string dataset;
   2: LocationProperty locationProperty;
   3: DataValue chunkValue;
   4: string temporalRes;
   5: optional string date;
+  6: optional Pedigree pedigree;
 }

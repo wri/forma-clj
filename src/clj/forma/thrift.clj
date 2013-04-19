@@ -38,9 +38,14 @@
             FireValue FormaValue IntArray LocationProperty
             LocationPropertyValue LongArray ModisChunkLocation
             ModisPixelLocation ShortArray TimeSeries FormaArray
-            NeighborValue]
+            NeighborValue Pedigree]
            [java.util ArrayList]
            [org.apache.thrift TBase TUnion]))
+
+(defn epoch  
+  []
+  "Return seconds since epoch."
+  (int (/ (System/currentTimeMillis) 1000)))
 
 ;; Protocols for accessing Thrift object fields:
 (defprotocol ITUnion
@@ -287,9 +292,10 @@
 
 (defn DataChunk*
   "Create a DataChunk."
-  [name loc val res & {:keys [date] :or {date nil}}]
+  [name loc val res & {:keys [date pedigree] :or {date nil pedigree (epoch)}}]
   {:pre  [(every? string? [name res])
           (or (nil? date) (string? date))
+          (or (nil? pedigree) (integer? pedigree))
           (LocationPropertyValue? loc)
           (DataValue? val)]}
   (let [loc (mk-location-prop loc)
@@ -300,6 +306,9 @@
     (if date
       (doto chunk
         (.setDate date)))
+    (if pedigree
+      (doto chunk
+        (.setPedigree (Pedigree. pedigree))))
     chunk))
 
 (extend-protocol ITUnion
@@ -442,7 +451,10 @@
   ;;     [name loc data t-res date]))
   
   ArrayValue
-  (unpack [x] (->> x .getFieldValue unpack)))
+  (unpack [x] (->> x .getFieldValue unpack))
+
+  Pedigree
+  (unpack [x] (->> x .getTrueAsOfSecs)))
 
 (defn count-vals
   "Return the count of elements in the supplied Tnrift object."
@@ -455,3 +467,11 @@
   calling this within a Cascalog query."
   [x]
   (vector (unpack x)))
+
+(defn obj-contains-nodata?
+  "Check whether any fields in thrift object contain nodata value"
+  [nodata obj]
+  (-> obj
+      (unpack)
+      (set)
+      (contains? nodata)))

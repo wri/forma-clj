@@ -76,6 +76,11 @@
   given by the dot product of the parameter vector and the feature
   vector. Both arguments and return values are DoubleMatrix instances.
 
+  Precondition checks for empty beta/feature row matrices, which are
+  created when `to-double-rowmat` operates on `nil`. This should never
+  happen in production, but if it does, the result of classification
+  would always be a probability of 0.5.
+
   Arguments: 
     beta-rowmat: DoubleMatrix row vector
     features-rowmat: DoubleMatrix row vector, of equal length as
@@ -86,6 +91,9 @@
     (def features (to-double-rowmat [1 2]))
     (logistic-prob beta features) => #<DoubleMatrix [0.5]>"
   [beta-rowmat features-rowmat]
+  ;; check for empty double matrices (created with `nil`)
+  {:pre [(not (= beta-rowmat (to-double-rowmat nil)))
+         (not (= features-rowmat (to-double-rowmat nil)))]}
   (logistic-fn
    (to-double-rowmat [(.dot beta-rowmat features-rowmat)])))
 
