@@ -189,7 +189,7 @@
   time-series.
 
   Example:
-    (short-stat 30 10 ndvi) => -63.3346"
+    (short-stat 30 10 ndvi) => -63.334638487208096"
   [long-block short-block ts]
   (->> (windowed-trend long-block ts)
        (utils/moving-average short-block)

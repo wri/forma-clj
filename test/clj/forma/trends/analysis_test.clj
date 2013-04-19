@@ -48,3 +48,15 @@
   time-series that yield a singular first-order-condition matrix."
   (hansen-stat (i/matrix ndvi)) => (roughly 0.911317)
   (hansen-stat (repeat 100 0))  => nil)
+
+(fact "Test `short-stat`."
+  (short-stat 30 10 ndvi) => -63.334638487208096)
+
+(facts
+  "Test `short-stat-all`. Last value in output should be the same as
+   the output for `short-stat` (which uses `(reduce min stats)` to
+   select output). `short-stat-all` on the other hand uses
+   `(reductions min stats)`, so the result should contain
+   `(- (count ndvi) 29 9)` => 233 values given the input for these tests."
+  (last (short-stat-all 30 10 ndvi)) => -63.334638487208096
+  (count   (short-stat-all 30 10 ndvi)) => 233)
