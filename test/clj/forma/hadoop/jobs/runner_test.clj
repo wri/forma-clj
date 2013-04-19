@@ -12,14 +12,14 @@
 
 (def s-res "500")
 (def t-res "16")
-(def pix-loc ["500" 28 8 0 0])
+(def pix-loc [s-res 28 8 0 0])
 (def modis-start "2000-02-18")
 (def est-start "2005-12-19")
 (def est-end "2006-01-01")
 (def start-idx (date/datetime->period t-res modis-start))
-(def end-idx (date/datetime->period "16" "2006-01-01"))
+(def end-idx (date/datetime->period t-res est-end))
 (def series (vec (range (inc (- end-idx start-idx)))))
-(def static-src [["500" 28 8 0 0 50 -1 -1 -1 -1]])
+(def static-src [[s-res 28 8 0 0 50 -1 -1 -1 -1]])
 
 (def ts-path (.getPath (io/temp-dir "ts-src")))
 (def static-path (.getPath (io/temp-dir "static-src")))
@@ -90,7 +90,7 @@
   "Integration test of `FormaTap` defmain. All queries and functions used
    are tested elsewhere."
   (let [fire-src [[s-res 28 8 0 0 (sample-fire-series 827 1)]]
-        dynamic-src [[s-res 28 8 0 0 827 [827] [1.] [3.] [5.] [7.]]]
+        dynamic-src [[s-res 28 8 0 0 827 [1.] [3.] [5.] [7.]]]
         fire-path (.getPath (io/temp-dir "fire-src"))
         dynamic-path (.getPath (io/temp-dir "dynamic-src"))
         output-path (.getPath (io/temp-dir "forma-src"))
@@ -202,7 +202,7 @@
       _ (?- (hfs-seqfile static-path :sinkmode :replace) static-src)]
   (EstimateForma s-res t-res beta-path neighbor-path static-path output-path)
   (hfs-seqfile output-path))
-  => (produces [["500" 28 8 0 0 [0.9999999999996823]]]))
+  => (produces [["500" 28 8 0 0 827 [0.9999999999996823]]]))
 
 (fact
   "Test everything after preprocessing"
@@ -272,6 +272,7 @@
 
               estimateforma
               ([:tmp-dirs prob-series-path]
-                 (EstimateForma s-res t-res beta-path neighbor-path static-path prob-series-path))))
+                 (EstimateForma s-res t-res beta-path neighbor-path static-path prob-series-path)))
+    )
   1
   => 1)

@@ -57,6 +57,18 @@
         sink (hfs-seqfile output-path :sinkmode :replace)]
     (?- sink (forma/analyze-trends est-map adjusted-series-src))))
 
+(defmain TrendsDataChunks
+  [s-res t-res est-end trends-path output-path & [pedigree]]
+  (let [est-map (get-est-map s-res t-res est-end)
+        trends-src (hfs-seqfile trends-path)
+        sink (hfs-seqfile output-path :sinkmode :replace)]
+    (?- sink (forma/trends->datachunks est-map trends-src pedigree))))
+
+(defmain MergeTrends
+  [s-res t-res est-end trends-dc-path output-path]
+  (let [est-map (get-est-map s-res t-res est-end)
+        trends-dc-src (hfs-seqfile trends-dc-path)]))
+
 (defmain FormaTap
   [s-res t-res est-end fire-path dynamic-path output-path]
   (let [est-map (get-est-map s-res t-res est-end)
