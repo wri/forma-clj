@@ -26,8 +26,8 @@
   "Define estimation map for testing based on 500m-16day resolution.
   This is the estimation map that generated the small-sample test
   data."
-  {:est-start "2005-12-31"
-   :est-end "2012-04-22"
+  {:est-start "2005-12-31" ;; period index 827
+   :est-end "2012-04-22" ;; period index 973
    :s-res "500"
    :t-res "16"
    :neighbors 1
@@ -152,13 +152,13 @@
  50           [[52]])
 
 (fact
- "Test `calculate-trends` mechanics - math is checked elsewhere"
+ "Test `calculate-trends` mechanics - math is checked elsewhere."
   (let [{:keys [window long-block]} test-map]
     (calculate-trends window long-block 693 (range 300 600) (range 800 499 -1)))
-  => (list 992 0.9999999999999906 nil nil 201.353677896894))
+  => (list 992 nil nil 201.353677896894))
 
 (fact
-  "Test `telescoping-trends` defmapcatop - math is tested elsewhere"
+  "Test `telescoping-trends` defmapcatop - math is tested elsewhere."
   (let [src [["500" 28 8 0 0 693 (vec (range 300))
                     (vec (map #(/ % 100.) (range 1 301)))]]]
     (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end-l ?short-l ?long-l ?t-stat-l ?break-l]
