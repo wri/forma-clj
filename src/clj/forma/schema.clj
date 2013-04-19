@@ -139,10 +139,10 @@
    long stat, t-stat and break stat. Exists to handle the case where
    there are no fires in a given pixel. A `nil` value would normally
    cause an exception to be thrown by `thrift/FormaValue*`"
-  [fire short param-break long t-stat]
+  [fire short long t-stat param-break]
   (let [fire (or fire
                  (thrift/FireValue* 0 0 0 0))]
-    (thrift/FormaValue* fire short param-break long t-stat)))
+    (thrift/FormaValue* fire short long t-stat param-break)))
 
 (defn fires-cleanup
   "If the fire-series is nil, leave it be, else, unpack it. fire-series
