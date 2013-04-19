@@ -220,26 +220,62 @@
           [1 :2006-02-17 [11 12] [13 14] [15 16] [17 18]]]  [1 2 (:nodata test-map) 11 12])
 
 (tabular
- (fact "Test `merge-trends`"
-  (let [series [[1 ?first-series [1 2] [3 4] [5 6] [7 8]]
-                [1 ?second-series [11 12] [13 14] [15 16] [17 18]]]]
+ (fact "Test `merge-trends`."
+  (let [series [[1 :2005-12-19 [1 2] [3 4] [5 6] [7 8]]
+                [1 ?2nd-start-key [11 12] [13 14] [15 16] [17 18]]]]
     (merge-trends "16" -9999.0 series :consecutive ?consec))
   => ?result)
- ?consec ?first-series ?second-series ?result
- true :2005-12-19 :2006-01-17 [[827 [1 2 11 12] [3 4 13 14] [5 6 15 16] [7 8 17 18]]]
- false :2005-12-19 :2006-01-17 [[827 [1 2 11 12] [3 4 13 14] [5 6 15 16] [7 8 17 18]]]
- true :2005-12-19 :2006-02-02 (throws AssertionError)
- false :2005-12-19 :2006-02-02 [[827 [1 2 -9999.0 11 12] [3 4 -9999.0 13 14] [5 6 -9999.0 15 16] [7 8 -9999.0 17 18]]])
+ ?consec ?2nd-start-key ?result
+ true :2006-01-17 [[827 [1 2 11 12] [3 4 13 14] [5 6 15 16] [7 8 17 18]]]
+ false :2006-01-17 [[827 [1 2 11 12] [3 4 13 14] [5 6 15 16] [7 8 17 18]]]
+ true :2006-02-02 (throws AssertionError)
+ false :2006-02-02 [[827 [1 2 -9999.0 11 12] [3 4 -9999.0 13 14]
+                     [5 6 -9999.0 15 16] [7 8 -9999.0 17 18]]])
 
-(future-fact "Test `merge-trends-wrapper`")
-(future-fact "Test `forma-values->series`")
-(future-fact "Test `trends-datachunks->series`")
+(fact "Test `merge-trends-wrapper`."
+  (let [t-res (:t-res test-map)
+        nodata (:nodata test-map)
+        src [[50 0 :2005-12-19 [1 2 3] [2 3 4] [3 4 5] [4 5 6]]
+             [50 1 :2006-01-01 [11] [12] [13] [14]] ;; replaces 2nd element
+             [50 1 :2006-01-17 [6] [7] [8] [9]]]] ;; replaces 3rd element
+    (<- [?id ?start-final ?short-final ?long-final ?t-stat-final ?break-final]
+        (src ?id ?created ?start-key ?short ?long ?t-stat ?break)
+        (merge-trends-wrapper [t-res nodata] ?created ?start-key ?short
+                              ?long ?t-stat ?break :> ?start-final ?short-final
+                              ?long-final ?t-stat-final ?break-final)))
+  => (produces [[50 827 [1 11 6] [2 12 7] [3 13 8] [4 14 9]]]))
+
+(fact "Test `array-val->series`."
+  (let [fire-val (thrift/FireValue* 0 0 0 0)
+        forma-vals [(thrift/FormaValue* fire-val 1. 2. 3. 4.)
+                    (thrift/FormaValue* fire-val 2. 3. 4. 5.)]
+        array-val (last (thrift/unpack (thrift/TimeSeries* 827 forma-vals)))]
+    (array-val->series array-val)
+    => (produces [[fire-val fire-val] [1. 2.] [2. 3.] [3. 4.] [4. 5.]]))
+  (array-val->series 5) => (throws AssertionError))
+
+(fact "Test `trends-datachunks->series`. Second element of `data` is
+       overwritten with first element of `data2`. This is because the
+       time series are converted into maps then merged left to
+       right (per standard `merge` behavior), older to newer based on
+       `pedigree`. Overlapping series therefore take the most recent
+       value for a given date."
+  (let [loc (thrift/ModisPixelLocation* "500" 28 8 0 0)
+        fire-val (thrift/FireValue* 0 0 0 0)
+        forma-val (thrift/FormaValue* fire-val 1. 2. 3. 4.)
+        forma-val2 (thrift/FormaValue* fire-val 2. 3. 4. 5.) 
+        data (thrift/TimeSeries* 827 [forma-val forma-val])
+        data2 (thrift/TimeSeries* 828 [forma-val2 forma-val2])
+        src [["" (thrift/DataChunk* "trends" loc data "16" :pedigree 1)]
+             ["" (thrift/DataChunk* "trends" loc data2 "16" :pedigree 10)]]]
+    (trends-datachunks->series test-map src))
+  => (produces [["500" 28 8 0 0 827 [1. 2. 2.] [2. 3. 3.] [3. 4. 4.] [4. 5. 5.]]]))
 
 (fact
   "Check forma-tap. This test got crazy because it seems that comparing
    thrift objects to one another doesn't work for checking a result."
-  (let [dynamic-src [["500" 28 8 0 0 827 [827 828] [1. 2.] [3. 4.] [5. 6.] [7. 8.]]
-                     ["500" 28 8 0 1 827 [827 828] [1. 2.] [3. 4.] [5. 6.] [7. 8.]]]
+  (let [dynamic-src [["500" 28 8 0 0 827 [1. 2.] [3. 4.] [5. 6.] [7. 8.]]
+                     ["500" 28 8 0 1 827 [1. 2.] [3. 4.] [5. 6.] [7. 8.]]]
         fire-src [["500" 28 8 0 0 (sample-fire-series 827 2)]]
         first-period [1. 3. 5. 7.]
         second-period [1. 4. 6. 8.]
@@ -420,4 +456,4 @@
       dyn-src [["500" 827 28 8 0 0 forma-val neighbor-val]
                ["500" 829 28 8 0 0 forma-val neighbor-val]]]
     (forma-estimate test-map beta-src dyn-src static-src))
-  => (produces [["500" 28 8 0 0 [0.0953494648991095 -9999.0 0.0953494648991095]]]))
+  => (produces [["500" 28 8 0 0 827 [0.0953494648991095 -9999.0 0.0953494648991095]]]))

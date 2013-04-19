@@ -201,7 +201,7 @@
 
 (defn trends->datachunks
   "Query converts trends output to DataChunk thrift objects suitable for pail."
-  [est-map trends-src & [pedigree]]
+  [est-map trends-src & [pedigree]] ; ok if no pedigree - will be generated
   (let [data-name "trends"
         nodata (:nodata est-map)
         t-res (:t-res est-map)]
@@ -214,8 +214,11 @@
 
 (defn merge-sorted
   "Given tuples of time series sorted by Pedigree (or any other index),
-   merges the (possibly overlapping) time series."
-  [t-res nodata field-n sorted & {:keys [consecutive] :or {consecutive false}}]
+   merges the (possibly overlapping) time series. Conflicts between
+   overlapping series are resolved by retaining the value from most
+   recent version of the time series."
+  [t-res nodata field-n sorted &
+   {:keys [consecutive] :or {consecutive false}}]
   (let [start-keys (map second sorted)
         series (map #(nth % field-n) sorted)]
     (->> (map #(date/ts-vec->ts-map %1 t-res %2) start-keys series)
@@ -223,10 +226,10 @@
          (#(date/ts-map->ts-vec t-res % nodata :consecutive consecutive)))))
 
 (defn merge-trends
-  "Sorts maps by pedigree (created date), then merges them into a
-   master map. Conflicts between overlapping series are resolved by
-   retaining the value from most recent version of the time series."
-   [t-res nodata tuples & {:keys [consecutive] :or {consecutive false}}]
+  "Sorts time series by pedigree (creation date), then merges them
+  into a master time series using `merge-sorted`."
+  [t-res nodata
+  tuples & {:keys [consecutive] :or {consecutive false}}]
    (let [rng (range 2 (count (first tuples)))
          sorted (sort-by first tuples)
          start-keys (map second sorted)
@@ -237,19 +240,19 @@
           (into [start-idx])
           (vector))))
 
-(defbufferop [merge-trends-wrapper [t-res nodata field-map]]
-  "Wrapper for `merge-trends`"
+(defbufferop [merge-trends-wrapper [t-res nodata]]
+  "Wrapper for `merge-trends`."
   [tuples]
   (let [consecutive true]
-    (merge-trends t-res nodata field-map tuples :consecutive true)))
+    (merge-trends t-res nodata tuples :consecutive consecutive)))
 
-(defn forma-values->series
-  "Given an ArrayValue of FormaValues, unpack the ArrayValue and
+(defn array-val->series
+  "Given an ArrayValue of FormaValues (the product of unpacking the
+   TimeSeries object inside a DataChunk), unpack the ArrayValue and
    return series of each component of a FormaValue - fires, shorts,
    longs, t-stats and breaks."
-  [array-val]
-  {:pre [(or (= forma.schema.ArrayValue (type array-val))
-             (= forma.schema.FormaArray (type array-val)))]}
+  [array-val] {:pre [(= forma.schema.ArrayValue (type array-val))
+                     (= forma.schema.FormaValue (type (first (thrift/unpack array-val))))]}
   (let [forma-vals (thrift/unpack array-val)]
     (apply map vector (map thrift/unpack forma-vals))))
 
@@ -258,18 +261,19 @@
   (let [data-name "trends"
         nodata (:nodata est-map)
         t-res (:t-res est-map)
-        res-str (format "%s-%s" (:s-res est-map) (:t-res est-map))
-        field-map {:shorts 2 :longs 3 :t-stats 4 :breaks 5}]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-final ?short-final ?long-final ?t-stat-final ?break-final]
+        res-str (format "%s-%s" (:s-res est-map) (:t-res est-map))]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-final
+         ?short-final ?long-final ?t-stat-final ?break-final]
         (pail-src _ ?dc)
         (thrift/unpack ?dc :> _ ?loc ?data ?t-res _ ?pedigree)
         (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
         (thrift/unpack ?pedigree :> ?created)
-        (thrift/unpack ?data :> ?start _ ?forma-val-arr)
-        (forma-values->series ?forma-val-arr :> _ ?short ?long ?t-stat ?break)
+        (thrift/unpack ?data :> ?start ?end ?array-val)
+        (array-val->series ?array-val :> _ ?short ?long ?t-stat ?break)
         (date/period->key ?t-res ?start :> ?start-key)
-        (merge-trends-wrapper [t-res nodata field-map] ?created ?start-key ?short ?long ?t-stat ?break
-                              :> ?start-final ?short-final ?long-final ?t-stat-final ?break-final))))
+        (merge-trends-wrapper [t-res nodata] ?created ?start-key ?short
+                              ?long ?t-stat ?break :> ?start-final ?short-final
+                              ?long-final ?t-stat-final ?break-final))))
 
 (defn forma-tap
   "Accepts an est-map and sources for dynamic and fires data,
@@ -279,13 +283,12 @@
   is an ungrounding variable. This triggers a left join with the trend
   result variables, even when there are no fires for a particular pixel."
   [{:keys [t-res est-start nodata]} dynamic-src fire-src]
-  (let [start (date/datetime->period t-res est-start)]
-    (<- [?s-res ?period ?mh ?mv ?s ?l ?forma-val]
-        (fire-src ?s-res ?mh ?mv ?s ?l !!fire)
-        (dynamic-src ?s-res ?mh ?mv ?s ?l _ ?end-s ?short-s ?long-s ?t-stat-s ?break-s)
-        (schema/forma-seq nodata !!fire ?short-s ?long-s ?t-stat-s ?break-s :> ?forma-seq)
-        (p/index ?forma-seq :zero-index start :> ?period ?forma-val)
-        (:distinct false))))
+  (<- [?s-res ?period ?mh ?mv ?s ?l ?forma-val]
+      (fire-src ?s-res ?mh ?mv ?s ?l !!fire)
+      (dynamic-src ?s-res ?mh ?mv ?s ?l ?start-idx ?short-s ?long-s ?t-stat-s ?break-s)
+      (schema/forma-seq nodata !!fire ?short-s ?long-s ?t-stat-s ?break-s :> ?forma-seq)
+      (p/index ?forma-seq :zero-index ?start-idx :> ?period ?forma-val)
+      (:distinct false)))
 
 (defmapcatop [process-neighbors [num-neighbors]]
   "Processes all neighbors... Returns the index within the chunk, the
@@ -371,11 +374,12 @@
   period after the training period."
   [{:keys [nodata]} beta-src dynamic-src static-src]
   (let [betas (classify/beta-dict beta-src)]
-    (<- [?s-res ?mod-h ?mod-v ?s ?l ?prob-series]
+    (<- [?s-res ?mod-h ?mod-v ?s ?l ?start-idx ?prob-series]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
         (thrift/obj-contains-nodata? nodata ?val :> false)
         (thrift/obj-contains-nodata? nodata ?neighbor-val :> false)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _ _)
         (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
-        (consolidate-timeseries nodata ?pd ?prob :> _ ?prob-series)
+        (consolidate-timeseries nodata ?pd ?prob :> ?pd-series ?prob-series)
+        (first ?pd-series :> ?start-idx)
         (:distinct false))))
