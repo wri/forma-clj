@@ -12,7 +12,7 @@ struct FormaValue {
   2: double shortDrop;
   3: double longDrop;
   4: double tStat;
-  5: optional double paramBreak;
+  5: double paramBreak;
 }
 
 struct NeighborValue {
