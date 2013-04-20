@@ -6,7 +6,8 @@
   (:use cascalog.api
         [forma.source.tilesets :only (tile-set country-tiles)])
   (:require [forma.hadoop.jobs.forma :as forma]
-            [forma.utils :as utils]))
+            [forma.utils :as utils]
+            [forma.hadoop.pail :as p]))
 
 (defn run-params [k est-end]
   (-> {"500-16" {:est-start "2005-12-19"
@@ -57,17 +58,19 @@
         sink (hfs-seqfile output-path :sinkmode :replace)]
     (?- sink (forma/analyze-trends est-map adjusted-series-src))))
 
-(defmain TrendsDataChunks
-  [s-res t-res est-end trends-path output-path & [pedigree]]
+(defmain TrendsPail
+  [s-res t-res est-end trends-path output-path & [pedigree]] ;; pedigree helps w/testing
   (let [est-map (get-est-map s-res t-res est-end)
-        trends-src (hfs-seqfile trends-path)
-        sink (hfs-seqfile output-path :sinkmode :replace)]
-    (?- sink (forma/trends->datachunks est-map trends-src pedigree))))
+        trends-src (hfs-seqfile trends-path)]
+    (p/to-pail output-path
+               (forma/trends->datachunks est-map trends-src pedigree))))
 
 (defmain MergeTrends
-  [s-res t-res est-end trends-dc-path output-path]
+  [s-res t-res est-end trends-pail-path output-path]
   (let [est-map (get-est-map s-res t-res est-end)
-        trends-dc-src (hfs-seqfile trends-dc-path)]))
+        trends-dc-src (p/split-chunk-tap trends-pail-path ["trends" (format "%s-%s" s-res t-res)])
+        sink (hfs-seqfile output-path :sinkmode :replace)]
+    (?- sink (forma/trends-datachunks->series est-map trends-dc-src))))
 
 (defmain FormaTap
   [s-res t-res est-end fire-path dynamic-path output-path]
