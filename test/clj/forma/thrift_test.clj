@@ -53,16 +53,11 @@
   [0 1 (->> (map int [1 1 1 1]) IntArray. ArrayValue/ints)])
 
 (fact "Check creating and unpacking FormaValue objects."
-  (FormaValue* (FireValue. 1 1 1 1) 1.0 2.0 3.0) =>
-  (FormaValue. (FireValue. 1 1 1 1) 1.0 2.0 3.0)
+  (FormaValue* (FireValue. 1 1 1 1) 1.0 2.0 3.0 4.0) =>
+  (FormaValue. (FireValue. 1 1 1 1) 1.0 2.0 3.0 4.0)
 
-  (let [x  (FormaValue. (FireValue. 1 1 1 1) 1.0 2.0 3.0)]
-    (doto x
-      (.setParamBreak 4.0))
-    (FormaValue* (FireValue. 1 1 1 1) 1.0 2.0 3.0 4.0) => x)
-
-  (unpack (FormaValue* (FireValue. 1 1 1 1) 1.0 2.0 3.0)) =>
-  [(FireValue. 1 1 1 1) 1.0 2.0 3.0 0.0])
+  (unpack (FormaValue* (FireValue. 1 1 1 1) 1.0 2.0 3.0 4.0)) =>
+  [(FireValue. 1 1 1 1) 1.0 2.0 3.0 4.0])
 
 (fact "Check creating and unpacking DataChunk objects."
   (let [loc (->> (ModisChunkLocation. "500" 8 0 100 24000)

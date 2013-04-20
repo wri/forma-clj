@@ -279,16 +279,10 @@
 
 (defn FormaValue*
   "Create a FormaValue."
-  [fire short long tstat & break]
+  [fire short long tstat break]
   {:pre [(instance? forma.schema.FireValue fire)
-         (every? float? [short long tstat])
-         (or (not break) (float? (first break)))]}
-  (let [[break] break
-        forma-value (FormaValue. fire short long tstat)]
-    (if break
-      (doto forma-value
-        (.setParamBreak break)))
-    forma-value))
+         (every? float? [short long tstat break])]}
+  (FormaValue. fire short long tstat break))
 
 (defn DataChunk*
   "Create a DataChunk."
