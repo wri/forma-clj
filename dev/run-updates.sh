@@ -84,6 +84,18 @@ adjusted=$output
 output="$TMP/trends"
 $LAUNCHER forma.hadoop.jobs.runner.Trends $SRES $TRES $ESTEND $adjusted $output $ESTSTART
 
+# trends->pail
+
+trends=$output
+output=$PAILPATH
+$LAUNCHER forma.hadoo.jobs.runner.TrendsPail $SRES $TRES $trends $output
+
+# merge trends
+
+trendspail=$output
+output="$TMP/merged-trends"
+$LAUNCHER forma.hadoo.jobs.runner.MergeTrends $SRES $TRES $trendspail $output
+
 # forma-tap
 
 fires="$TMP/fires"
