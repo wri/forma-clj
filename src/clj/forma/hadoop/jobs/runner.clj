@@ -7,6 +7,7 @@
         [forma.source.tilesets :only (tile-set country-tiles)])
   (:require [forma.hadoop.jobs.forma :as forma]
             [forma.utils :as utils]
+            [forma.thrift :as thrift]
             [forma.hadoop.pail :as p]))
 
 (defn run-params [k est-end]
@@ -60,10 +61,16 @@
 
 (defmain TrendsPail
   [s-res t-res est-end trends-path output-path & [pedigree]] ;; pedigree helps w/testing
-  (let [est-map (get-est-map s-res t-res est-end)
+  (let [pedigree (if (or (nil? pedigree)
+                         (empty? pedigree)) ;; empty string
+                   (thrift/epoch)
+                   (if (string? pedigree)
+                     (read-string pedigree)
+                     pedigree))
+        est-map (get-est-map s-res t-res est-end)
         trends-src (hfs-seqfile trends-path)]
     (p/to-pail output-path
-               (forma/trends->datachunks est-map trends-src pedigree))))
+               (forma/trends->datachunks est-map trends-src))))
 
 (defmain MergeTrends
   [s-res t-res est-end trends-pail-path output-path]

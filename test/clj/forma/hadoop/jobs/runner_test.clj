@@ -86,7 +86,7 @@ functions are tested elsewhere."
         trends-pail-path (.getPath (io/temp-dir "trends-pail"))
         pail-tap (p/split-chunk-tap trends-pail-path ["trends" (format "%s-%s" s-res t-res)])
         _ (?- (hfs-seqfile trends-path :sinkmode :replace) src)]
-    (TrendsPail s-res t-res est-end trends-path trends-pail-path)
+    (TrendsPail s-res t-res est-end trends-path trends-pail-path :pedigree 1)
     (<- [?type-n]
         (pail-tap _ ?dc)
         (type ?dc :> ?type)
