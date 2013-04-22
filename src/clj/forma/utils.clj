@@ -436,3 +436,13 @@
   [& maps]
   {:pre [(not (apply overlap? maps))]}
   (apply merge maps))
+
+(defn contains-nils?
+  "Checks whether a collection contains `nil` values."
+  [coll]
+  (contains? (set coll) nil))
+
+(defn all-nils?
+  "Checks whether a collection is all `nil` values."
+  [coll]
+  (every? nil? coll))

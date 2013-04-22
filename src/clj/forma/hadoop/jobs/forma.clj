@@ -207,6 +207,7 @@
         t-res (:t-res est-map)]
     (<- [?dc]
         (trends-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break)
+        ((c/each #'u/all-nils?) ?short ?long ?t-stat ?break :> false false false false)
         (schema/series->forma-values nil ?short ?long ?t-stat ?break :> ?forma-vals)
         (thrift/TimeSeries* ?start ?forma-vals :> ?fv-series)
         (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?loc)

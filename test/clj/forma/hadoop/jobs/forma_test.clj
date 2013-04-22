@@ -196,10 +196,13 @@
         ts [1. 2.]
         t-res (:t-res test-map)
         pedigree 1
-        trends-src [["500" 28 8 0 0 start end ts ts ts ts]]
-        dc (first (ffirst (??- (trends->datachunks test-map trends-src pedigree))))]
-    (type dc) => DataChunk
-    (.getDataset dc) => "trends"))
+        trends-src [["500" 28 8 0 0 start end ts ts ts ts]
+                    ["500" 28 8 0 0 start end [nil nil] ts ts ts]
+                    ["500" 28 8 0 0 start end [nil nil] [nil nil] [nil nil] [nil nil] ]]
+        dcs (??- (trends->datachunks test-map trends-src))]
+    (type (first (ffirst dcs))) => DataChunk
+    (.getDataset (first (ffirst dcs))) => "trends"
+    (count (first dcs)) => 1))
 
 (tabular
  (fact "Test `merge-sorted`."
