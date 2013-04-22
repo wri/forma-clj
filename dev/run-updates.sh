@@ -88,13 +88,13 @@ $LAUNCHER forma.hadoop.jobs.runner.Trends $SRES $TRES $ESTEND $adjusted $output 
 
 trends=$output
 output=$PAILPATH
-$LAUNCHER forma.hadoo.jobs.runner.TrendsPail $SRES $TRES $trends $output
+$LAUNCHER forma.hadoo.jobs.runner.TrendsPail $SRES $TRES $ESTEND $trends $output
 
 # merge trends
 
 trendspail=$output
 output="$TMP/merged-trends"
-$LAUNCHER forma.hadoo.jobs.runner.MergeTrends $SRES $TRES $trendspail $output
+$LAUNCHER forma.hadoo.jobs.runner.MergeTrends $SRES $TRES $ESTEND $trendspail $output
 
 # forma-tap
 
