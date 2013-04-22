@@ -265,3 +265,7 @@
   (all-nils? [1 2 nil]) => false
   (all-nils? [1 2 3]) => false
   (all-nils? [nil nil]) => true)
+
+(facts "Check `nils->neg9999*`."
+  (nils->neg9999* [1 2 3]) => [[1 2 3]]
+  (nils->neg9999* [1 nil 3]) => [[1 -9999.0 3]])

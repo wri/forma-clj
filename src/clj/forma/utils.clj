@@ -446,3 +446,7 @@
   "Checks whether a collection is all `nil` values."
   [coll]
   (every? nil? coll))
+
+(defn nils->neg9999*
+  [coll]
+  (replace-all* nil -9999.0 coll))

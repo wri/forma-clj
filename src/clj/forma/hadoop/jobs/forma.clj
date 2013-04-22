@@ -200,15 +200,19 @@
         (:distinct false))))
 
 (defn trends->datachunks
-  "Query converts trends output to DataChunk thrift objects suitable for pail."
+  "Query converts trends output to DataChunk thrift objects suitable for pail.
+
+   `nil` values in the stats time series cannot be used with a FormaValue (which only
+   accepts float values), so they must be replaced. They are replaced with nodata values,
+   currently hardcoded as -9999.0."
   [est-map trends-src & {:keys [pedigree] :or {pedigree (thrift/epoch)}}] ; default to now
   (let [data-name "trends"
         nodata (:nodata est-map)
         t-res (:t-res est-map)]
     (<- [?dc]
         (trends-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break)
-        ((c/each #'u/all-nils?) ?short ?long ?t-stat ?break :> false false false false)
-        (schema/series->forma-values nil ?short ?long ?t-stat ?break :> ?forma-vals)
+        ((c/each #'u/nils->neg9999*) ?short ?long ?t-stat ?break :> ?short-n ?long-n ?t-stat-n ?break-n)
+        (schema/series->forma-values nil ?short-n ?long-n ?t-stat-n ?break-n :> ?forma-vals)
         (thrift/TimeSeries* ?start ?forma-vals :> ?fv-series)
         (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?loc)
         (thrift/DataChunk* data-name ?loc ?fv-series t-res :pedigree pedigree :> ?dc))))

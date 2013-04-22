@@ -202,7 +202,7 @@
         dcs (??- (trends->datachunks test-map trends-src))]
     (type (first (ffirst dcs))) => DataChunk
     (.getDataset (first (ffirst dcs))) => "trends"
-    (count (first dcs)) => 1))
+    (count (first dcs)) => 3))
 
 (tabular
  (fact "Test `merge-sorted`."
