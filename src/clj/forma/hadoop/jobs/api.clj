@@ -28,21 +28,30 @@
         idxs (range start-idx (inc (+ start-idx len)))]
     (map vector idxs series)))
 
+(defn merge-gadm
+  "Returns a source of probability series along with the appropriate gadm v.2 code."
+  [gadm2-src forma-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?gadm2 ?start-idx ?prob-series]
+      (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?prob-series)
+      (static-src ?s-res ?mod-h ?mod-v ?sample ?line ?gadm2)))
+
 (defn prob-series->tsv-api
-  "Returns a Cascalog query that that converts output of `forma-estimate` to long form
-   according to API spec.
+  "Returns a Cascalog query that that converts output of
+   `forma-estimate` to long form according to API spec. The merge with
+   GADM data occurs prior to conversion to long form for API, as the
+   conversion gives us tons of records and the join would take longer.
 
    ?year field is intended for use with template tap. ?iso-extra is
    included because the template tap removes :templatefields
    from :outfields, but we want the iso code included in the output."
-  [est-map src static-src]
+  [est-map src gadm2-src]
   (let [nodata (:nodata est-map)
         est-start (:est-start est-map)
-        t-res (:t-res est-map)]
-    (<- [?lat ?lon ?iso ?iso-extra ?gadm ?date ?year ?prob]
-        (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?prob-series)
-        (static-src ?s-res ?mod-h ?mod-v ?sample ?line _ ?gadm _ _ _)
-        (gadm->iso ?gadm :> ?iso)
+        t-res (:t-res est-map)
+        forma-src (merge-gadm src gadm2-src)]
+    (<- [?lat ?lon ?iso ?iso-extra ?gadm2 ?date ?year ?prob]
+        (src ?s-res ?mod-h ?mod-v ?sample ?line ?gadm2 ?start-idx ?prob-series)
+        (gadm2->iso ?gadm :> ?iso)
         (p/add-fields ?iso :> ?iso-extra)
         (first ?prob-series :> ?first-elem)
         (symbol? ?first-elem :> false) ;; screen out NA
