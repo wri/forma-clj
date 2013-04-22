@@ -201,7 +201,7 @@
 
 (defn trends->datachunks
   "Query converts trends output to DataChunk thrift objects suitable for pail."
-  [est-map trends-src & [pedigree]] ; ok if no pedigree - will be generated
+  [est-map trends-src & {:keys [pedigree] :or {pedigree (thrift/epoch)}}] ; default to now
   (let [data-name "trends"
         nodata (:nodata est-map)
         t-res (:t-res est-map)]
