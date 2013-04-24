@@ -3,7 +3,9 @@
   (:require [clojure.java.io :as io])
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]
-            [net.lingala.zip4j.core ZipFile]))
+            [net.lingala.zip4j.core ZipFile]
+            [java.io File]
+            [java.util.UUID]))
 
 ;; ## Argument Validation
 
@@ -443,3 +445,11 @@
   [file dir]
   (let [zipfile (ZipFile. file)]
     (.extractAll zipfile dir)))
+
+(defn gen-uuid
+  []
+  (str (java.util.UUID/randomUUID)))
+
+(defn ls
+  [dir]
+  (.listFiles (File. dir)))
