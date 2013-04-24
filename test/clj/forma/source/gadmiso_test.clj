@@ -18,3 +18,9 @@
 (fact "Test that `gadm->iso` correctly wraps `gadm-iso-map`."
   (gadm->iso 1) => "AFG"
   (gadm->iso -9999) => "UNK"  )
+
+(fact "Test that `gadm2->iso` works."
+  (gadm2->iso 1) => "AFG"
+  (gadm2->iso 100000) => "KEN")
+
+(future-fact "gadm2->iso handles -9999 as UNK")
