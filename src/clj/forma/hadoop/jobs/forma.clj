@@ -191,12 +191,14 @@
   (let [nodata (:nodata est-map)
         long-block (:long-block est-map)
         short-block (:window est-map)
-        t-res (:t-res est-map)]
-    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break]
+        t-res (:t-res est-map)
+        start-idx (date/datetime->period t-res (:est-start est-map))]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?end-idx ?short ?long ?t-stat ?break]
         (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl)
         (u/replace-from-left* nodata ?ndvi :all-types true :> ?clean-ndvi)
-        (telescoping-trends est-map ?start ?clean-ndvi ?precl :> ?end-idx ?short ?long ?t-stat ?break)
-        (reduce max ?end-idx :> ?end)
+        (telescoping-trends est-map ?start ?clean-ndvi ?precl :> ?end-idxs ?short ?long ?t-stat ?break)
+        (p/add-fields start-idx :> ?start-idx)
+        (reduce max ?end-idxs :> ?end-idx)
         (:distinct false))))
 
 (defn trends->datachunks
@@ -213,7 +215,7 @@
         (trends-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?short ?long ?t-stat ?break)
         ((c/each #'u/nils->neg9999*) ?short ?long ?t-stat ?break :> ?short-n ?long-n ?t-stat-n ?break-n)
         (schema/series->forma-values nil ?short-n ?long-n ?t-stat-n ?break-n :> ?forma-vals)
-        (thrift/TimeSeries* ?start ?forma-vals :> ?fv-series)
+        (thrift/TimeSeries* ?start ?end ?forma-vals :> ?fv-series)
         (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?loc)
         (thrift/DataChunk* data-name ?loc ?fv-series t-res :pedigree pedigree :> ?dc))))
 

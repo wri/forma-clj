@@ -60,7 +60,7 @@
     (?- sink (forma/analyze-trends est-map adjusted-series-src))))
 
 (defmain TrendsPail
-  [s-res t-res est-end trends-path output-path & [pedigree]] ;; pedigree helps w/testing
+  [s-res t-res est-end trends-path output-path & pedigree] ;; pedigree helps w/testing
   (let [pedigree (if (or (nil? pedigree)
                          (empty? pedigree)) ;; empty string
                    (thrift/epoch)

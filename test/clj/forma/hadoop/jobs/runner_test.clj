@@ -64,7 +64,7 @@
         _ (?- (hfs-seqfile adjusted-path :sinkmode :replace) src)]
     (Trends s-res t-res est-end adjusted-path output-path)
     (hfs-seqfile output-path)
-    => (produces [[s-res 28 8 0 0 693 829
+    => (produces [[s-res 28 8 0 0 827 829
                    [0.9999999999999982 0.999999999999998 0.999999999999998]
                    [nil nil 1.4999999999989022]
                    [nil nil 8.131966242712587E10]
@@ -72,7 +72,7 @@
 
     (Trends s-res t-res est-end adjusted-path output-path est-start)
     (hfs-seqfile output-path)
-    => (produces [[s-res 28 8 0 0 693 829
+    => (produces [[s-res 28 8 0 0 829 829
                    [0.999999999999998]
                    [1.4999999999989022]
                    [8.131966242712587E10]
@@ -81,12 +81,13 @@
 (fact "Integration test of `TrendsPail` defmain. All queries and
 functions are tested elsewhere."
   (let [est-end "2006-01-17"
+        pedigree 1
         src [[s-res 28 8 0 0 827 829 [1. 1. 1.] [2. 2. 2.] [3. 3. 3.] [4. 4. 4.]]]
         trends-path (.getPath (io/temp-dir "trends-src"))
         trends-pail-path (.getPath (io/temp-dir "trends-pail"))
         pail-tap (p/split-chunk-tap trends-pail-path ["trends" (format "%s-%s" s-res t-res)])
         _ (?- (hfs-seqfile trends-path :sinkmode :replace) src)]
-    (TrendsPail s-res t-res est-end trends-path trends-pail-path :pedigree 1)
+    (TrendsPail s-res t-res est-end trends-path trends-pail-path pedigree)
     (<- [?type-n]
         (pail-tap _ ?dc)
         (type ?dc :> ?type)

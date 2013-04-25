@@ -28,7 +28,8 @@
 ;; Cascalog memory tap for tile chunks: 
 (def tile-chunk-tap [[tile-chunk]])
 
-(def ts (thrift/TimeSeries* 0 1 (repeat 10 100)))
+(def ts (let [ts (repeat 10 100)]
+          (thrift/TimeSeries* 0 (dec (count ts)) ts)))
 
 ;; FireValue
 
