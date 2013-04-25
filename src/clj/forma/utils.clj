@@ -2,7 +2,10 @@
   (:use [clojure.math.numeric-tower :only (round)])
   (:require [clojure.java.io :as io])
   (:import  [java.io InputStream]
-            [java.util.zip GZIPInputStream]))
+            [java.util.zip GZIPInputStream]
+            [net.lingala.zip4j.core ZipFile]
+            [java.io File]
+            [java.util.UUID]))
 
 ;; ## Argument Validation
 
@@ -436,3 +439,17 @@
   [& maps]
   {:pre [(not (apply overlap? maps))]}
   (apply merge maps))
+
+(defn unzip
+  "Unzips the supplied ZIP file into the supplied directory."
+  [file dir]
+  (let [zipfile (ZipFile. file)]
+    (.extractAll zipfile dir)))
+
+(defn gen-uuid
+  []
+  (str (java.util.UUID/randomUUID)))
+
+(defn ls
+  [dir]
+  (.listFiles (File. dir)))
