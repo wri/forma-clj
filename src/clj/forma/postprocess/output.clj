@@ -52,7 +52,8 @@
     (clean-probs [0.1 0.2 0.3 0.4 0.5]) => [[10 15 20 30 40]]"
   [ts nodata]
   {:post [(= (count (flatten %)) (count ts))]}
-  (let [no-nodata-ts (u/replace-from-left nodata ts :default 0 :all-types true)]
+  (let [no-NA-ts (u/replace-all 'NA -9999.0 ts)
+        no-nodata-ts (u/replace-from-left nodata no-NA-ts :default 0 :all-types true)]
     [(vec (->> (backward-looking-mavg 3 no-nodata-ts)
              (reductions max)
              (map #(round (* % 100)))))]))
