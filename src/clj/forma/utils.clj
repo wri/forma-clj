@@ -440,6 +440,20 @@
   {:pre [(not (apply overlap? maps))]}
   (apply merge maps))
 
+(defn contains-nils?
+  "Checks whether a collection contains `nil` values."
+  [coll]
+  (contains? (set coll) nil))
+
+(defn all-nils?
+  "Checks whether a collection is all `nil` values."
+  [coll]
+  (every? nil? coll))
+
+(defn nils->neg9999*
+  [coll]
+  (replace-all* nil -9999.0 coll))
+
 (defn unzip
   "Unzips the supplied ZIP file into the supplied directory."
   [file dir]

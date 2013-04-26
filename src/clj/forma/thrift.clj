@@ -273,7 +273,11 @@
                (instance? ShortArray vals)
                (instance? FireArray vals)
                (instance? FormaArray vals)
-               (coll? vals))]}
+               (coll? vals))
+           (let [len (if (coll? vals)
+                       (count vals)
+                       (count (unpack vals)))]
+             (= len (inc (- end start))))]}
     (let [series (if (coll? vals) (pack vals) vals)]
       (TimeSeries. start end (mk-array-value series)))))
 
