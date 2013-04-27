@@ -35,4 +35,9 @@
     (clean-probs ts -9999.0)) => [[0 5 8 13 18 23 30 35]]
 
   (let [ts [0.05 0.1 0.15 -9999.0 0.25 0.3 0.35 0.4]]
-    (clean-probs ts -9999.0))  => [[5 8 10 13 18 23 30 35]])
+    (clean-probs ts -9999.0))  => [[5 8 10 13 18 23 30 35]]
+
+    ;; Check that `NA` values are replaced with nodata
+    (let [NA (symbol "NA")
+          ts [NA 0.2 NA 0.4]]
+      (clean-probs ts -9999.0) => [[0 10 13 27]]))
