@@ -1,14 +1,17 @@
 (ns forma.hadoop.jobs.preprocess
   (:use cascalog.api
-        [forma.hadoop.pail :only (to-pail)]
+        [forma.hadoop.pail :only (to-pail split-chunk-tap)]
         [forma.source.tilesets :only (tile-set)]
         [cascalog.io :only (with-fs-tmp)])
   (:require [forma.hadoop.predicate :as p]
             [forma.hadoop.io :as io]
             [forma.source.rain :as r]
+            [forma.reproject :as reproj]
+            [forma.thrift :as thrift]
             [forma.hadoop.jobs.forma :as forma]
             [forma.source.fire :as f]
             [forma.source.static :as s]
+            [forma.hadoop.predicate :as p]
             [forma.source.hdf :as hdf]
             [forma.hadoop.jobs.timeseries :as tseries]
             [forma.static :as static]
@@ -101,6 +104,19 @@
                                   line-tap
                                   pix-tap)
            (to-pail pail-path)))))
+
+(defmain ExplodeStatic
+  "Explode DataChunks from a pail into individual pixels."
+  [dataset s-res pail-path out-path]
+  (let [src (split-chunk-tap pail-path [dataset (format "%s-00" s-res)])
+        sink (hfs-seqfile out-path)]
+    (?<- sink [?s-res ?mod-h ?mod-v ?sample ?line ?val]
+         (src _ ?dc)
+         (thrift/unpack ?dc :> _ ?tile-loc ?data _ _ _)
+         (thrift/unpack* ?data :> ?data-value)
+         (p/index ?data-value :> ?pixel-idx ?val)
+         (thrift/unpack ?tile-loc :> ?s-res ?mod-h ?mod-v ?id ?size)
+         (reproj/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line))))
 
 ;; ## Fires Processing
 ;;
