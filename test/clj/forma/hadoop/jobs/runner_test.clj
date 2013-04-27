@@ -3,23 +3,25 @@
         [midje sweet cascalog]
         forma.hadoop.jobs.runner
         [forma.source.tilesets :only (tile-set country-tiles)]
-        [cascalog.checkpoint :only (workflow)])
+        [cascalog.checkpoint :only (workflow)]
+        [forma.schema :only (series->forma-values)])
   (:require [forma.hadoop.jobs.forma :as forma]
             [forma.thrift :as thrift]
             [forma.date-time :as date]
             [cascalog.io :as io]
-            [cascalog.ops :as c]))
+            [cascalog.ops :as c]
+            [forma.hadoop.pail :as p]))
 
 (def s-res "500")
 (def t-res "16")
-(def pix-loc ["500" 28 8 0 0])
+(def pix-loc [s-res 28 8 0 0])
 (def modis-start "2000-02-18")
 (def est-start "2005-12-19")
 (def est-end "2006-01-01")
 (def start-idx (date/datetime->period t-res modis-start))
-(def end-idx (date/datetime->period "16" "2006-01-01"))
+(def end-idx (date/datetime->period t-res est-end))
 (def series (vec (range (inc (- end-idx start-idx)))))
-(def static-src [["500" 28 8 0 0 50 -1 -1 -1 -1]])
+(def static-src [[s-res 28 8 0 0 50 -1 -1 -1 -1]])
 
 (def ts-path (.getPath (io/temp-dir "ts-src")))
 (def static-path (.getPath (io/temp-dir "static-src")))
@@ -62,7 +64,7 @@
         _ (?- (hfs-seqfile adjusted-path :sinkmode :replace) src)]
     (Trends s-res t-res est-end adjusted-path output-path)
     (hfs-seqfile output-path)
-    => (produces [[s-res 28 8 0 0 693 829
+    => (produces [[s-res 28 8 0 0 827 829
                    [0.9999999999999982 0.999999999999998 0.999999999999998]
                    [nil nil 1.4999999999989022]
                    [nil nil 8.131966242712587E10]
@@ -70,11 +72,48 @@
 
     (Trends s-res t-res est-end adjusted-path output-path est-start)
     (hfs-seqfile output-path)
-    => (produces [[s-res 28 8 0 0 693 829
+    => (produces [[s-res 28 8 0 0 829 829
                    [0.999999999999998]
                    [1.4999999999989022]
                    [8.131966242712587E10]
                    [17.048905109489304]]])))
+
+(fact "Integration test of `TrendsPail` defmain. All queries and
+functions are tested elsewhere."
+  (let [est-end "2006-01-17"
+        pedigree 1
+        src [[s-res 28 8 0 0 827 829 [1. 1. 1.] [2. 2. 2.] [3. 3. 3.] [4. 4. 4.]]]
+        trends-path (.getPath (io/temp-dir "trends-src"))
+        trends-pail-path (.getPath (io/temp-dir "trends-pail"))
+        pail-tap (p/split-chunk-tap trends-pail-path ["trends" (format "%s-%s" s-res t-res)])
+        _ (?- (hfs-seqfile trends-path :sinkmode :replace) src)]
+    (TrendsPail s-res t-res est-end trends-path trends-pail-path pedigree)
+    (<- [?type-n]
+        (pail-tap _ ?dc)
+        (type ?dc :> ?type)
+        (c/limit [1] ?type :> ?type-n)))
+  => (produces [[forma.schema.DataChunk]]))
+
+(fact "Integration test of `MergeTrends` defmain. All queries and
+  functions are tested elsewhere.
+
+  Note that the expected behavior (given the supplied pedigree values)
+  is that the second element of the first time series will be
+  overwritten by the first element of the second time series as the
+  time series are merged."
+  (let [trends-pail-path (.getPath (io/temp-dir "trends-pail-merge"))
+        merged-path (.getPath (io/temp-dir "trends-merged"))
+        [forma-vals] (series->forma-values nil [1. 2.] [2. 3.] [3. 4.] [4. 5.])
+        loc (apply thrift/ModisPixelLocation* pix-loc)
+        ts-1 (thrift/TimeSeries* 827 forma-vals)
+        ts-2 (thrift/TimeSeries* 828 forma-vals)
+        pedigree1 1
+        pedigree2 2
+        src [[(thrift/DataChunk* "trends" loc ts-1 t-res :pedigree pedigree1)]
+             [(thrift/DataChunk* "trends" loc ts-2 t-res :pedigree pedigree2)]]
+        _ (p/to-pail trends-pail-path src)]
+    (MergeTrends s-res t-res est-end trends-pail-path merged-path)
+    (hfs-seqfile merged-path)) => (produces [(into pix-loc [827 [1. 1. 2.] [2. 2. 3.] [3. 3. 4.] [4. 4. 5.]])]))
 
 (defn sample-fire-series
   "Create a sample fire time series. Duplicated from
@@ -90,7 +129,7 @@
   "Integration test of `FormaTap` defmain. All queries and functions used
    are tested elsewhere."
   (let [fire-src [[s-res 28 8 0 0 (sample-fire-series 827 1)]]
-        dynamic-src [[s-res 28 8 0 0 827 [827] [1.] [3.] [5.] [7.]]]
+        dynamic-src [[s-res 28 8 0 0 827 [1.] [3.] [5.] [7.]]]
         fire-path (.getPath (io/temp-dir "fire-src"))
         dynamic-path (.getPath (io/temp-dir "dynamic-src"))
         output-path (.getPath (io/temp-dir "forma-src"))
@@ -177,32 +216,32 @@
   "Integration test of `FormaEstimate` defmain. All queries and functions
    used are tested elsewhere."
   (let [forma-val (thrift/FormaValue* (thrift/FireValue* 1 1 1 1)
-                                    1. 2. 3. 4.)
-      neighbor-val (thrift/NeighborValue* (thrift/FireValue* 1 1 1 1)
-                                          1 1. 2. 3. 4. 5. 6. 7. 8. 9.)
-      beta-src [["500" 1000 [0.11842551448466368 0.11842586443146805
-                             0.1184259896040349 0.11842585137116168
-                             0.11842584951322709 0.11842584885467246
-                             0.23685185941367817 0.35527734116779586
-                             0.4737032372673255 0.11842582139264606
-                             0.11842582044881808 0.118425835272797
-                             0.11842581441993594 0.1184258039325292
-                             0.23685165512279985 0.35527741717744016
-                             0.4737032025455936 0.5921290128620343
-                             0.7105544981645566 0.8289803917212081
-                             0.947406494802988]]]
-      neighbor-src [[s-res 827 28 8 0 0 forma-val neighbor-val]]
-      static-src [[s-res 28 8 0 0 25 14000 1000 100 20]]
-      neighbor-path (.getPath (io/temp-dir "to-estimate-src"))
-      beta-path (.getPath (io/temp-dir "beta-src"))
-      static-path (.getPath (io/temp-dir "static-src"))
-      output-path (.getPath (io/temp-dir "estimated-src"))
-      _ (?- (hfs-seqfile beta-path :sinkmode :replace) beta-src)
-      _ (?- (hfs-seqfile neighbor-path :sinkmode :replace) neighbor-src)
-      _ (?- (hfs-seqfile static-path :sinkmode :replace) static-src)]
-  (EstimateForma s-res t-res beta-path neighbor-path static-path output-path)
-  (hfs-seqfile output-path))
-  => (produces [["500" 28 8 0 0 [0.9999999999996823]]]))
+                                      1. 2. 3. 4.)
+        neighbor-val (thrift/NeighborValue* (thrift/FireValue* 1 1 1 1)
+                                            1 1. 2. 3. 4. 5. 6. 7. 8. 9.)
+        beta-src [["500" 1000 [0.11842551448466368 0.11842586443146805
+                               0.1184259896040349 0.11842585137116168
+                               0.11842584951322709 0.11842584885467246
+                               0.23685185941367817 0.35527734116779586
+                               0.4737032372673255 0.11842582139264606
+                               0.11842582044881808 0.118425835272797
+                               0.11842581441993594 0.1184258039325292
+                               0.23685165512279985 0.35527741717744016
+                               0.4737032025455936 0.5921290128620343
+                               0.7105544981645566 0.8289803917212081
+                               0.947406494802988]]]
+        neighbor-src [[s-res 827 28 8 0 0 forma-val neighbor-val]]
+        static-src [[s-res 28 8 0 0 25 14000 1000 100 20]]
+        neighbor-path (.getPath (io/temp-dir "to-estimate-src"))
+        beta-path (.getPath (io/temp-dir "beta-src"))
+        static-path (.getPath (io/temp-dir "static-src"))
+        output-path (.getPath (io/temp-dir "estimated-src"))
+        _ (?- (hfs-seqfile beta-path :sinkmode :replace) beta-src)
+        _ (?- (hfs-seqfile neighbor-path :sinkmode :replace) neighbor-src)
+        _ (?- (hfs-seqfile static-path :sinkmode :replace) static-src)]
+    (EstimateForma s-res t-res beta-path neighbor-path static-path output-path)
+    (hfs-seqfile output-path))
+  => (produces [["500" 28 8 0 0 827 [0.9999999999996823]]]))
 
 (fact
   "Test everything after preprocessing"
@@ -254,9 +293,17 @@
               ([:tmp-dirs trends-path]
                  (Trends s-res t-res est-end adjust-series-path trends-path))
 
+              trends-pail
+              ([:tmp-dirs trends-pail-path]
+                 (TrendsPail s-res t-res est-end trends-path trends-pail-path))
+              
+              merge-trends
+              ([:tmp-dirs merge-trends-path]
+                 (MergeTrends s-res t-res est-end trends-pail-path merge-trends-path))
+              
               formatap
               ([:tmp-dirs forma-tap-path]
-                 (FormaTap s-res t-res est-end fire-path trends-path forma-tap-path))
+                 (FormaTap s-res t-res est-end fire-path merge-trends-path forma-tap-path))
 
               neighborquery
               ([:tmp-dirs neighbor-path]
@@ -272,6 +319,8 @@
 
               estimateforma
               ([:tmp-dirs prob-series-path]
-                 (EstimateForma s-res t-res beta-path neighbor-path static-path prob-series-path))))
+                 (EstimateForma s-res t-res beta-path neighbor-path static-path prob-series-path)))
+    )
   1
   => 1)
+

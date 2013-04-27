@@ -256,3 +256,16 @@
   (merge-no-overlap {:a 1}) => {:a 1}
   (merge-no-overlap {:a 1} {:b 2} {:c 3}) => {:a 1 :b 2 :c 3}
   (merge-no-overlap {:a 1} {:b 2} {:b 99}) => (throws AssertionError))
+
+(facts "Check `contains-nils?`."
+  (contains-nils? [1 2 nil]) => true
+  (contains-nils? [1 2 3]) => false)
+
+(facts "Check `all-nils?`."
+  (all-nils? [1 2 nil]) => false
+  (all-nils? [1 2 3]) => false
+  (all-nils? [nil nil]) => true)
+
+(facts "Check `nils->neg9999*`."
+  (nils->neg9999* [1 2 3]) => [[1 2 3]]
+  (nils->neg9999* [1 nil 3]) => [[1 -9999.0 3]])
