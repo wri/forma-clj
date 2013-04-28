@@ -33,7 +33,7 @@
   "Decompress gadm2.zip and return the output directory."
   [& [uuid]]
   (let [zip-name "gadm2.zip"
-        base-dir "/tmp"
+        base-dir "/tmp/gadm2"
         path (.getPath (io/resource zip-name))
         uuid (or uuid (utils/gen-uuid))
         decomp-dir (str base-dir "/" uuid)]
