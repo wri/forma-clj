@@ -26,7 +26,7 @@
     (-> (format "/tmp/%s" uuid)
         (utils/ls)
         (first)
-        (.getPath)) => (format "/tmp/%s/gadm2.csv" "12345")))
+        (.getPath) => (format "/tmp/gadm2/%s/gadm2.csv" uuid))))
 
 (fact "Check `csv-dir->line-seq`."
   (let [uuid "12345"
