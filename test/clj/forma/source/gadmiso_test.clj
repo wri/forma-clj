@@ -21,12 +21,13 @@
   (gadm->iso -9999) => "UNK")
 
 (fact "Check decompression using `zip->decomp-dir`."
-  (let [uuid "12345"]
-    (zip->decomp-dir uuid) => (format "/tmp/%s" uuid)
-    (-> (format "/tmp/%s" uuid)
+  (let [uuid "12345"
+        base-path "/tmp/gadm2"]
+    (zip->decomp-dir uuid) => (format "%s/%s" base-path uuid)
+    (-> (format "%s/%s" base-path uuid)
         (utils/ls)
         (first)
-        (.getPath) => (format "/tmp/gadm2/%s/gadm2.csv" uuid))))
+        (.getPath)) => (format "/tmp/gadm2/%s/gadm2.csv" uuid)))
 
 (fact "Check `csv-dir->line-seq`."
   (let [uuid "12345"

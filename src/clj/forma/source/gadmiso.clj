@@ -132,4 +132,3 @@
 (defn gadm2->iso
   [object-id]
   (:iso (gadm2-map object-id)))
-
