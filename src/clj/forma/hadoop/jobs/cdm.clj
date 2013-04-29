@@ -2,7 +2,7 @@
   "Functions and Cascalog queries for converting data into map tile
 coordinates."
   (:use [cascalog.api]
-        [forma.source.gadmiso :only (gadm->iso)]
+        [forma.source.gadmiso :only (gadm2->iso)]
         [forma.gfw.cdm :only (latlon->tile, latlon-valid?, meters->maptile)]
         [forma.utils :only (positions)])
   (:require [forma.postprocess.output :as o]
@@ -137,3 +137,20 @@ coordinates."
     (<- [?iso ?p ?ct]
         (spark-src ?iso _ _ _ _ _ ?p)
         (c/count ?ct))))
+
+(defn probs->country-stats
+  "Given a source of probabilty series pre-joined with GADM v.2, count
+  up the number of hits per country in preparation for upload to
+  CartoDB country stats table."
+  [thresh nodata t-res t-res-out probs-gadm-src]
+  (let [epoch (date/datetime->period t-res-out "2000-01-01")]
+    (<- [?iso ?cdm-period ?date-str ?count] ;; ?period ?count
+        (probs-gadm-src ?s-res ?mod-h ?mod-v ?s ?l ?start-idx ?prob-series ?gadm2)
+        (gadm2->iso ?gadm2 :> ?iso)
+        (o/clean-probs ?prob-series nodata :> ?clean-series)
+        (first-hit thresh ?clean-series :> ?first-hit-idx)
+        (+ ?start-idx ?first-hit-idx :> ?period)
+        (date/convert-period-res t-res t-res-out ?period :> ?period-new-res)
+        (- ?period-new-res epoch :> ?cdm-period)
+        (date/period->datetime t-res-out ?period-new-res :> ?date-str)
+        (c/count ?count))))
