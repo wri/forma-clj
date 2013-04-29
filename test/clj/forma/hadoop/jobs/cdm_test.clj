@@ -35,3 +35,15 @@ series."
     (forma->cdm raw-output gadm-src nodata 17 "16" "32" "2005-12-31" 50)
     => (produces [[102590 65206 17 74 "IDN" 0.9062499999999973 101.77314715106174]
                   [102591 65206 17 73 "IDN" 0.9062499999999973 101.7773143389889]])))
+
+(fact "Test `probs->country-stats."
+  (let [thresh 50
+        t-res "16"
+        t-res-out "32"
+        nodata -9999.0
+        src [["500" 28 8 0 0 827 [0.2 0.5 0.8 0.9] 88500]
+             ["500" 28 8 0 1 827 [0.1 0.1 0.1 0.1] 88500]
+             ["500" 28 8 0 2 827 [0.1 0.1 0.5 0.9] 88501]]]
+    (probs->country-stats thresh nodata t-res t-res-out src))
+  => (produces [["IDN" 72 "2006-01-01" 1]
+                ["IDN" 73 "2006-02-01" 1]]))
