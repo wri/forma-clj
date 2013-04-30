@@ -232,11 +232,13 @@
          (apply merge)
          (#(date/ts-map->ts-vec t-res % nodata :consecutive consecutive)))))
 
-(defn merge-trends
+(defn merge-series
   "Sorts time series by pedigree (creation date), then merges them
-  into a master time series using `merge-sorted`."
-  [t-res nodata
-  tuples & {:keys [consecutive] :or {consecutive false}}]
+  into a master time series using `merge-sorted`.
+
+  The fields in `tuples` must be pedigree, start keys then one or more
+  time series fields."
+  [t-res nodata tuples & {:keys [consecutive] :or {consecutive false}}]
    (let [rng (range 2 (count (first tuples)))
          sorted (sort-by first tuples)
          start-keys (map second sorted)
@@ -247,11 +249,11 @@
           (into [start-idx])
           (vector))))
 
-(defbufferop [merge-trends-wrapper [t-res nodata]]
-  "Wrapper for `merge-trends`."
+(defbufferop [merge-series-wrapper [t-res nodata]]
+  "defbufferop wrapper for `merge-series`."
   [tuples]
   (let [consecutive true]
-    (merge-trends t-res nodata tuples :consecutive consecutive)))
+    (merge-series t-res nodata tuples :consecutive consecutive)))
 
 (defn array-val->series
   "Given an ArrayValue of FormaValues (the product of unpacking the
@@ -278,7 +280,7 @@
         (thrift/unpack ?data :> ?start ?end ?array-val)
         (array-val->series ?array-val :> _ ?short ?long ?t-stat ?break)
         (date/period->key ?t-res ?start :> ?start-key)
-        (merge-trends-wrapper [t-res nodata] ?created ?start-key ?short
+        (merge-series-wrapper [t-res nodata] ?created ?start-key ?short
                               ?long ?t-stat ?break :> ?start-final ?short-final
                               ?long-final ?t-stat-final ?break-final))))
 
@@ -390,3 +392,34 @@
         (consolidate-timeseries nodata ?pd ?prob :> ?pd-series ?prob-series)
         (first ?pd-series :> ?start-idx)
         (:distinct false))))
+
+(defn probs->datachunks
+  "Query converts probability series into TimeSeries DataChunk objects
+  suitable for pail."
+  [est-map prob-src & {:keys [pedigree] :or {pedigree (thrift/epoch)}}]
+  (let [data-name "forma"
+        nodata (:nodata est-map)
+        t-res (:t-res est-map)]
+    (<- [?dc]
+        (prob-src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?prob-series)
+        (u/replace-all* 'NA nodata ?prob-series :> ?no-na-probs)
+        (thrift/TimeSeries* ?start-idx ?no-na-probs :> ?ts)
+        (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?loc)
+        (thrift/DataChunk* data-name ?loc ?ts t-res :pedigree pedigree :> ?dc))))
+
+(defn probs-datachunks->series
+  [est-map pail-src]
+  (let [data-name "forma"
+        nodata (:nodata est-map)
+        t-res (:t-res est-map)
+        res-str (format "%s-%s" (:s-res est-map) (:t-res est-map))]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-final ?merged-series]
+        (pail-src _ ?dc)
+        (thrift/unpack ?dc :> _ ?loc ?data ?t-res _ ?pedigree)
+        (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
+        (thrift/unpack ?pedigree :> ?created)
+        (thrift/unpack ?data :> ?start ?end ?array-val)
+        (thrift/unpack* ?array-val :> ?prob-series)
+        (date/period->key ?t-res ?start :> ?start-key)
+        (merge-series-wrapper [t-res nodata] ?created ?start-key ?prob-series
+                              :> ?start-final ?merged-series))))
