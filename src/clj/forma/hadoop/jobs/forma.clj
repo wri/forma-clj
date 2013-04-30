@@ -401,9 +401,9 @@
         nodata (:nodata est-map)
         t-res (:t-res est-map)]
     (<- [?dc]
-        (prob-src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?prob-series)
+        (prob-src ?s-res ?mod-h ?mod-v ?sample ?line ?prob-series)
         (u/replace-all* 'NA nodata ?prob-series :> ?no-na-probs)
-        (thrift/TimeSeries* ?start-idx ?no-na-probs :> ?ts)
+        (thrift/TimeSeries* 827 ?no-na-probs :> ?ts)
         (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?loc)
         (thrift/DataChunk* data-name ?loc ?ts t-res :pedigree pedigree :> ?dc))))
 

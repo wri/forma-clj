@@ -20,8 +20,8 @@
                  [clj-time "0.3.4"]
                  [forma/gdal "1.8.0"]
                  [forma/jblas "1.2.1"]
-                 [cascalog "1.10.2-SNAPSHOT"]
-                 [cascalog/cascalog-checkpoint "1.10.2-SNAPSHOT"]
+                 [cascalog "1.9.0"]
+                 [cascalog-checkpoint "0.1.1"]
                  [backtype/dfs-datastores "1.1.3"]
                  [backtype/dfs-datastores-cascading "1.2.0"]
                  [org.apache.thrift/libthrift "0.8.0"
