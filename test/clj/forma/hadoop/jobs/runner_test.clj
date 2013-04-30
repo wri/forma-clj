@@ -27,6 +27,16 @@
 (def static-path (.getPath (io/temp-dir "static-src")))
 (def output-path (.getPath (io/temp-dir "output-sink")))
 
+(defn sample-fire-series
+  "Create a sample fire time series. Duplicated from
+   forma.hadoop.jobs.forma-test namespace."
+  [start-idx length]
+  (thrift/TimeSeries* start-idx (vec (repeat length (thrift/FireValue* 0 0 0 0)))))
+
+(future-fact
+ "sample-fire-series is not duplicated from forma.hadoop.jobs.forma-test
+  namespace")
+
 (fact
   "Integration test of `TimeseriesFilter`. All queries and functions used
    are tested elsewhere."
@@ -114,16 +124,6 @@ functions are tested elsewhere."
         _ (p/to-pail trends-pail-path src)]
     (MergeTrends s-res t-res est-end trends-pail-path merged-path)
     (hfs-seqfile merged-path)) => (produces [(into pix-loc [827 [1. 1. 2.] [2. 2. 3.] [3. 3. 4.] [4. 4. 5.]])]))
-
-(defn sample-fire-series
-  "Create a sample fire time series. Duplicated from
-   forma.hadoop.jobs.forma-test namespace."
-  [start-idx length]
-  (thrift/TimeSeries* start-idx (vec (repeat length (thrift/FireValue* 0 0 0 0)))))
-
-(future-fact
- "sample-fire-series is not duplicated from forma.hadoop.jobs.forma-test
-  namespace")
 
 (fact
   "Integration test of `FormaTap` defmain. All queries and functions used
@@ -243,6 +243,45 @@ functions are tested elsewhere."
     (hfs-seqfile output-path))
   => (produces [["500" 28 8 0 0 827 [0.9999999999996823]]]))
 
+(fact "Integration test of `ProbsPail` defmain. All queries and
+functions are tested elsewhere."
+  (let [est-end "2006-01-17"
+        pedigree 1
+        name "forma"
+        src [[s-res 28 8 0 0 827 [1. 1. 1.]]]
+        probs-path (.getPath (io/temp-dir "probs-src"))
+        probs-pail-path (.getPath (io/temp-dir "probs-pail"))
+        pail-tap (p/split-chunk-tap probs-pail-path [name (format "%s-%s" s-res t-res)])
+        _ (?- (hfs-seqfile probs-path :sinkmode :replace) src)]
+    (ProbsPail s-res t-res est-end probs-path probs-pail-path pedigree)
+    (<- [?type-n]
+        (pail-tap _ ?dc)
+        (type ?dc :> ?type)
+        (c/limit [1] ?type :> ?type-n)))
+  => (produces [[forma.schema.DataChunk]]))
+
+(fact "Integration test of `MergeProbs` defmain. All queries and
+  functions are tested elsewhere.
+
+  Note that the expected behavior (given the supplied pedigree values)
+  is that the second element of the first time series will be
+  overwritten by the first element of the second time series as the
+  time series are merged."
+  (let [probs-pail-path (.getPath (io/temp-dir "probs-pail-merge"))
+        merged-path (.getPath (io/temp-dir "probs-merged"))
+        loc (apply thrift/ModisPixelLocation* pix-loc)
+        series1 [0.1 0.2 0.3]
+        series2 [0.10 0.11 0.12]
+        ts-1 (thrift/TimeSeries* 827 series1)
+        ts-2 (thrift/TimeSeries* 828 series2)
+        pedigree1 1
+        pedigree2 2
+        src [[(thrift/DataChunk* "forma" loc ts-1 t-res :pedigree pedigree1)]
+             [(thrift/DataChunk* "forma" loc ts-2 t-res :pedigree pedigree2)]]
+        _ (p/to-pail probs-pail-path src)]
+    (MergeProbs s-res t-res est-end probs-pail-path merged-path)
+    (hfs-seqfile merged-path)) => (produces [(into pix-loc [827 [0.1 0.1 0.11 0.12]])]))
+
 (fact
   "Test everything after preprocessing"
   (let [tmp-root "/tmp/run-test"
@@ -318,9 +357,15 @@ functions are tested elsewhere."
                  (GenBetas s-res t-res est-start beta-data-path beta-path))
 
               estimateforma
-              ([:tmp-dirs prob-series-path]
-                 (EstimateForma s-res t-res beta-path neighbor-path static-path prob-series-path)))
-    )
+              ([:tmp-dirs probs-path]
+                 (EstimateForma s-res t-res beta-path neighbor-path static-path probs-path))
+
+              probs-pail
+              ([:tmp-dirs probs-pail-path]
+                 (ProbsPail s-res t-res est-end probs-path probs-pail-path))
+              
+              merge-probs
+              ([:tmp-dirs merge-probs-path]
+                 (MergeProbs s-res t-res est-end probs-pail-path merge-probs-path))))
   1
   => 1)
-
