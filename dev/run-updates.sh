@@ -21,7 +21,7 @@ STAGING="s3n://formatest/updates"
 STATIC="s3n://pailbucket/all-static-seq/all"
 ARCHIVE="s3n://formatest/updates"
 S3OUT="$TMP"  # "s3n://formatest/output"
-PAILPATH="s3n://formatest/tmp/pail"
+PAILPATH="s3n://pailbucket/all-master"
 
 #############
 # Constants #
@@ -115,3 +115,15 @@ betas="s3n://formatest/tmp/betas"
 dynamic="$TMP/neighbors"
 output="$TMP/estimated"
 $LAUNCHER forma.hadoop.jobs.runner.EstimateForma $SRES $TRES $betas $dynamic $STATIC $output
+
+# probs-pail
+
+dynamic=$output
+output=$PAILPATH
+$LAUNCHER forma.hadoop.jobs.runner.ProbsPail $SRES $TRES $ESTEND $dynamic $output
+
+# merge-probs
+
+dynamic=$output
+output=$S3OUT
+$LAUNCHER forma.hadoop.jobs.runner.MergePail $SRES $TRES $ESTEND $dynamic $output

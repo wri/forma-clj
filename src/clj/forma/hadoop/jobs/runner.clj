@@ -31,6 +31,16 @@
   [s-res t-res & [est-end]]
   (run-params (str s-res "-" t-res) est-end))
 
+(defn parse-pedigree
+  "Parse with various forms of pedigree - nils, strings, and ints."
+  [pedigree]
+  (if (or (nil? pedigree)
+          (empty? pedigree)) ;; empty string
+    (thrift/epoch)
+    (if (string? pedigree)
+      (read-string pedigree)
+      pedigree)))
+
 (defmain TimeseriesFilter
   "Uses thrift-bool as switch instead of {:keys [thrift] ...} because use
    with defmain seemed unreliable - keyword were not recognized as such."
@@ -61,12 +71,7 @@
 
 (defmain TrendsPail
   [s-res t-res est-end trends-path output-path & pedigree] ;; pedigree helps w/testing
-  (let [pedigree (if (or (nil? pedigree)
-                         (empty? pedigree)) ;; empty string
-                   (thrift/epoch)
-                   (if (string? pedigree)
-                     (read-string pedigree)
-                     pedigree))
+  (let [pedigree (parse-pedigree pedigree)
         est-map (get-est-map s-res t-res est-end)
         trends-src (hfs-seqfile trends-path)]
     (p/to-pail output-path
@@ -119,3 +124,19 @@
         static-src (hfs-seqfile static-path)
         sink (hfs-seqfile output-path :sinkmode :replace)]
     (?- sink (forma/forma-estimate est-map beta-src dynamic-src static-src))))
+
+(defmain ProbsPail
+  [s-res t-res est-end probs-path output-path & pedigree] ;; pedigree helps w/testing
+  (let [pedigree (parse-pedigree pedigree)
+        est-map (get-est-map s-res t-res est-end)
+        probs-src (hfs-seqfile probs-path)]
+    (p/to-pail output-path
+               (forma/probs->datachunks est-map probs-src))))
+
+(defmain MergeProbs
+  [s-res t-res est-end probs-pail-path output-path]
+  (let [data-name "forma"
+        est-map (get-est-map s-res t-res est-end)
+        probs-dc-src (p/split-chunk-tap probs-pail-path [data-name (format "%s-%s" s-res t-res)])
+        sink (hfs-seqfile output-path :sinkmode :replace)]
+    (?- sink (forma/probs-datachunks->series est-map probs-dc-src))))
