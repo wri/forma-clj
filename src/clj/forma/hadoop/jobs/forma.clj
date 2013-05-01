@@ -149,7 +149,7 @@
               (a/long-stats ts short-rain)
               (a/hansen-stat ts)])))
 
-(defmapcatop telescoping-trends
+(defn telescoping-trends
   "Maps `calculate-trends` onto each part of an ever-lengthening subset
    of the input timeseries, from `est-start` to `est-end`. Returns
    timeseries for each of the trend statistics."
@@ -172,8 +172,14 @@
                                ts-start-period % rain-ts)
         all-trends-but-short (mu/transpose
                               (map calculate tele-series))]
-    [(into [(first all-trends-but-short) (vec short-stats)]
-           (take-last 3 all-trends-but-short))]))
+    (into [(first all-trends-but-short) (vec short-stats)]
+          (take-last 3 all-trends-but-short))))
+
+(defmapcatop telescoping-trends-wrapper
+  "Wrapper for `telescoping-trends` makes it easier to test that
+   function outside of the Cascalog context."
+  [est-map ts-start-period val-ts rain-ts]
+  [(telescoping-trends est-map ts-start-period val-ts rain-ts)])
 
 (defn analyze-trends
   "Accepts an est-map and a source for both ndvi and rain timeseries.
@@ -196,7 +202,8 @@
     (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?end-idx ?short ?long ?t-stat ?break]
         (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl)
         (u/replace-from-left* nodata ?ndvi :all-types true :> ?clean-ndvi)
-        (telescoping-trends est-map ?start ?clean-ndvi ?precl :> ?end-idxs ?short ?long ?t-stat ?break)
+        (telescoping-trends-wrapper est-map ?start ?clean-ndvi ?precl
+                                    :> ?end-idxs ?short ?long ?t-stat ?break)
         (p/add-fields start-idx :> ?start-idx)
         (reduce max ?end-idxs :> ?end-idx)
         (:distinct false))))
