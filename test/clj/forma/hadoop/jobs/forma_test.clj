@@ -160,12 +160,34 @@
   => (list 992 nil nil 201.353677896894))
 
 (fact
-  "Test `telescoping-trends` defmapcatop - math is tested elsewhere."
+  "Check that trends calculations in `telescoping-trends` are
+   independently calculated with regard to time. That is, if we
+   calculate trends separately for two series using partially
+   overlapping est-start and est-end parameters, the calculated trends
+   coefficients should be identical for the overlapping periods. This
+   test basically ensures that there isn't some bug in the interaction
+   between est-start, est-end and the telescoping nature the trends
+   coefficients calculation.
+
+   In this test, the trends coefficients in the output series overlap
+   for the period corresponding to 2012-04-22. Because the trends are
+   calculated independently for each period, the coefficients should
+   be identical for that period."
+  (let [start-idx 693
+        ndvi (vec (repeatedly 300 (partial rand-int 10000)))
+        rain (vec (repeatedly 300 (partial rand 10)))
+        test-map1 (assoc test-map :est-start "2005-12-19" :est-end "2012-04-22")
+        test-map2 (assoc test-map :est-start "2012-04-22" :est-end "2012-04-22")]
+    (= (map last (telescoping-trends test-map1 start-idx ndvi rain))
+       (map last (telescoping-trends test-map2 start-idx ndvi rain)))) => true)
+
+(fact
+  "Test `telescoping-trends-wrapper` defmapcatop - math is tested elsewhere."
   (let [src [["500" 28 8 0 0 693 (vec (range 300))
                     (vec (map #(/ % 100.) (range 1 301)))]]]
     (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end-l ?short-l ?long-l ?t-stat-l ?break-l]
         (src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?ndvi ?precl)
-        (telescoping-trends test-map 693 ?ndvi ?precl :> ?end-idx ?short ?long ?t-stat ?break)
+        (telescoping-trends-wrapper test-map 693 ?ndvi ?precl :> ?end-idx ?short ?long ?t-stat ?break)
         (last ?end-idx :> ?end-l)
         (last ?short :> ?short-l)
         (last ?long :> ?long-l)
