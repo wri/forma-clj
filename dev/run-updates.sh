@@ -31,7 +31,7 @@ BETAS="s3n://pailbucket/all-betas-APR13"
 FORMAJAR="target/forma-0.2.0-SNAPSHOT-standalone.jar"
 LAUNCHER="hadoop jar $FORMAJAR"
 PREPROCESSNS="forma.hadoop.jobs.preprocess"
-FORMANS="forma.hadoop.jobs.forma"
+RUNNERNS="forma.hadoop.jobs.runner"
 
 #################
 # PREPROCESSING #
@@ -67,64 +67,64 @@ $LAUNCHER "$PREPROCESSNS.ExplodeRain" "$TMP/rain" $rainoutput $SRES "$TILES"
 # ndvi timeseries
 # 12 minutes, 1 large instance, 1 tile
 output="$S3OUT/ndvi-series"
-#$LAUNCHER forma.hadoop.jobs.timeseries.ModisTimeseries $PAILPATH $output $SRES $TRES ndvi
+$LAUNCHER forma.hadoop.jobs.timeseries.ModisTimeseries $PAILPATH $output $SRES $TRES ndvi
 
 # ndvi filter
 
 ts=$output
 output="$TMP/ndvi-filtered"
-$LAUNCHER forma.hadoop.jobs.runner.TimeseriesFilter $SRES $TRES $ts $STATIC $output
+$LAUNCHER $RUNNERNS.TimeseriesFilter $SRES $TRES $ts $STATIC $output
 
 # join, adjust series
 
 ndvi=$output
 output="$TMP/adjusted"
-$LAUNCHER forma.hadoop.jobs.runner.AdjustSeries $SRES $TRES $ndvi $rainoutput $output
+$LAUNCHER $RUNNERNS.AdjustSeries $SRES $TRES $ndvi $rainoutput $output
 
 # trends
 
 adjusted=$output
 output="$TMP/trends"
-$LAUNCHER forma.hadoop.jobs.runner.Trends $SRES $TRES $ESTEND $adjusted $output $ESTSTART
+$LAUNCHER $RUNNERNS.Trends $SRES $TRES $ESTEND $adjusted $output $ESTSTART
 
 # trends->pail
 
 trends=$output
 output=$PAILPATH
-$LAUNCHER forma.hadoo.jobs.runner.TrendsPail $SRES $TRES $ESTEND $trends $output
+$LAUNCHER $RUNNERNS.TrendsPail $SRES $TRES $ESTEND $trends $output
 
 # merge trends
 
 trendspail=$output
 output="$TMP/merged-trends"
-$LAUNCHER forma.hadoop.jobs.runner.MergeTrends $SRES $TRES $ESTEND $trendspail $output
+$LAUNCHER $RUNNERNS.MergeTrends $SRES $TRES $ESTEND $trendspail $output
 
 # forma-tap
 
 dynamic=$output
 output="$TMP/forma-tap"
-$LAUNCHER forma.hadoop.jobs.runner.FormaTap $SRES $TRES $ESTEND $fireoutput $dynamic $output
+$LAUNCHER $RUNNERNS.FormaTap $SRES $TRES $ESTEND $fireoutput $dynamic $output
 
 # neighbors
 
 dynamic=$output
 output="$TMP/neighbors"
-$LAUNCHER forma.hadoop.jobs.runner.NeighborQuery $SRES $TRES $dynamic $output
+$LAUNCHER $RUNNERNS.NeighborQuery $SRES $TRES $dynamic $output
 
 # forma-estimate
 
 dynamic=$output
 output="$S3OUT/estimated"
-$LAUNCHER forma.hadoop.jobs.runner.EstimateForma $SRES $TRES $BETAS $dynamic $STATIC $output
+$LAUNCHER $RUNNERNS.EstimateForma $SRES $TRES $BETAS $dynamic $STATIC $output
 
 # probs-pail
 
 dynamic=$output
 output=$PAILPATH
-$LAUNCHER forma.hadoop.jobs.runner.ProbsPail $SRES $TRES $ESTEND $dynamic $output
+$LAUNCHER $RUNNERNS.ProbsPail $SRES $TRES $ESTEND $dynamic $output
 
 # merge-probs
 
 dynamic=$output
 output="$S3OUT/merged-estimated"
-$LAUNCHER forma.hadoop.jobs.runner.MergePail $SRES $TRES $ESTEND $dynamic $output
+$LAUNCHER $RUNNERNS.MergePail $SRES $TRES $ESTEND $dynamic $output
