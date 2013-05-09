@@ -60,7 +60,7 @@ $LAUNCHER "$PREPROCESSNS.PreprocessRain" "$ARCHIVE/PRECL" "$TMP/rain" $SRES $TRE
 # had to kill it. Default # of tasks now greater.
 # 4h32 with 1 large instance for 1 tile
 echo "Exploding rain into MODIS pixels"
-rainoutput="$S3OUT/rain"
+rainoutput="$TMP/rain"
 $LAUNCHER "$PREPROCESSNS.ExplodeRain" "$TMP/rain" $rainoutput $SRES "$TILES"
 
 
