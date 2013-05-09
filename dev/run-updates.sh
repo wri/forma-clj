@@ -6,11 +6,10 @@
 
 SRES="500"
 TRES="16"
-YEAR=$(date +%Y)
 MODISLAYERS="[:ndvi]" # :reli
 TILES="[:all]" # "[[28 8]]"
-ESTSTART="2013-02-18"
-ESTEND="2013-03-06"
+ESTSTART=$1 # "2013-02-18"
+ESTEND=$2 # "2013-03-06"
 
 ####################
 # Storage settings #
@@ -20,9 +19,9 @@ TMP="/tmp"
 STAGING="s3n://formastaging"
 STATIC="s3n://pailbucket/all-static-seq/all"
 ARCHIVE="s3n://modisfiles"
-S3OUT="s3n://formatemp/output/may-2013"
+S3OUT="s3n://pailbucket/output/run-`date 20+%y-%m-%d`" # store output by date of run
 PAILPATH="s3n://pailbucket/all-master"
-BETAS="s3n://pailbucket/all-betas-APR13"
+BETAS="s3n://pailbucket/all-betas"
 
 #############
 # Constants #
@@ -66,7 +65,7 @@ $LAUNCHER "$PREPROCESSNS.ExplodeRain" "$TMP/rain" $rainoutput $SRES "$TILES"
 
 # ndvi timeseries
 # 12 minutes, 1 large instance, 1 tile
-output="$S3OUT/ndvi-series"
+output="$TMP/ndvi-series"
 $LAUNCHER forma.hadoop.jobs.timeseries.ModisTimeseries $PAILPATH $output $SRES $TRES ndvi
 
 # ndvi filter
@@ -127,4 +126,4 @@ $LAUNCHER $RUNNERNS.ProbsPail $SRES $TRES $ESTEND $dynamic $output
 
 dynamic=$output
 output="$S3OUT/merged-estimated"
-$LAUNCHER $RUNNERNS.MergePail $SRES $TRES $ESTEND $dynamic $output
+$LAUNCHER $RUNNERNS.MergeProbs $SRES $TRES $ESTEND $dynamic $output
