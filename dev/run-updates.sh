@@ -6,22 +6,22 @@
 
 SRES="500"
 TRES="16"
-YEAR=$(date +%Y)
 MODISLAYERS="[:ndvi]" # :reli
-TILES="[[28 8]]" # leave blank for all tiles
-ESTSTART="2006-01-17"
-ESTEND="2006-02-18"
+TILES="[:all]" # "[[28 8]]"
+ESTSTART=$1 # "2013-02-18"
+ESTEND=$2 # "2013-03-06"
 
 ####################
 # Storage settings #
 ####################
 
-TMP="s3n://formatest/updates/tmp"
-STAGING="s3n://formatest/updates"
+TMP="/tmp"
+STAGING="s3n://formastaging"
 STATIC="s3n://pailbucket/all-static-seq/all"
-ARCHIVE="s3n://formatest/updates"
-S3OUT="$TMP"  # "s3n://formatest/output"
+ARCHIVE="s3n://modisfiles"
+S3OUT="s3n://pailbucket/output/run-`date 20+%y-%m-%d`" # store output by date of run
 PAILPATH="s3n://pailbucket/all-master"
+BETAS="s3n://pailbucket/all-betas"
 
 #############
 # Constants #
@@ -30,7 +30,7 @@ PAILPATH="s3n://pailbucket/all-master"
 FORMAJAR="target/forma-0.2.0-SNAPSHOT-standalone.jar"
 LAUNCHER="hadoop jar $FORMAJAR"
 PREPROCESSNS="forma.hadoop.jobs.preprocess"
-FORMANS="forma.hadoop.jobs.forma"
+RUNNERNS="forma.hadoop.jobs.runner"
 
 #################
 # PREPROCESSING #
@@ -42,10 +42,11 @@ FORMANS="forma.hadoop.jobs.forma"
 
 ## Preprocess MODIS data
 # 5 minutes w/5 high-memory for 2 periods
-$LAUNCHER "$PREPROCESSNS.PreprocessModis" "$STAGING/MOD13A1/" $PAILPATH "{*}" "$TILES" $MODISLAYERS
+$LAUNCHER "$PREPROCESSNS.PreprocessModis" "$STAGING/MOD13A1/" $PAILPATH "{20}*" "$TILES" $MODISLAYERS
 
 # 57 minutes w/5 high-memory for all data
-$LAUNCHER "$PREPROCESSNS.PreprocessFire" "$ARCHIVE/fires" "$TMP/fires" 500 16 2000-11-01 $ESTSTART $ESTEND "$TILES"
+fireoutput="$S3OUT/fires"
+$LAUNCHER "$PREPROCESSNS.PreprocessFire" "$ARCHIVE/fires" $fireoutput 500 16 2000-11-01 $ESTSTART $ESTEND "$TILES"
 
 # 7 minutes w/5 high-memory for all data
 # 1h15 w/1 large instance for 1 tile
@@ -54,7 +55,9 @@ $LAUNCHER "$PREPROCESSNS.PreprocessRain" "$ARCHIVE/PRECL" "$TMP/rain" $SRES $TRE
 # 50 minutes w/5 high-memory for all data - one process took forever,
 # had to kill it. Default # of tasks now greater.
 # 4h32 with 1 large instance for 1 tile
-$LAUNCHER "$PREPROCESSNS.ExplodeRain" "$TMP/rain" "$S3OUT/rain-series" $SRES "$TILES"
+rainoutput="$S3OUT/rain"
+$LAUNCHER "$PREPROCESSNS.ExplodeRain" "$TMP/rain" $rainoutput $SRES "$TILES"
+
 
 ####################
 # REST OF WORKFLOW #
@@ -69,61 +72,58 @@ $LAUNCHER forma.hadoop.jobs.timeseries.ModisTimeseries $PAILPATH $output $SRES $
 
 ts=$output
 output="$TMP/ndvi-filtered"
-$LAUNCHER forma.hadoop.jobs.runner.TimeseriesFilter $SRES $TRES $ts $STATIC $output
+$LAUNCHER $RUNNERNS.TimeseriesFilter $SRES $TRES $ts $STATIC $output
 
 # join, adjust series
 
-ndvi="$TMP/ndvi-filtered"
-rain="$TMP/rain-series"
+ndvi=$output
 output="$TMP/adjusted"
-$LAUNCHER forma.hadoop.jobs.runner.AdjustSeries $SRES $TRES $ndvi $rain $output
+$LAUNCHER $RUNNERNS.AdjustSeries $SRES $TRES $ndvi $rainoutput $output
 
 # trends
 
 adjusted=$output
 output="$TMP/trends"
-$LAUNCHER forma.hadoop.jobs.runner.Trends $SRES $TRES $ESTEND $adjusted $output $ESTSTART
+$LAUNCHER $RUNNERNS.Trends $SRES $TRES $ESTEND $adjusted $output $ESTSTART
 
 # trends->pail
 
 trends=$output
 output=$PAILPATH
-$LAUNCHER forma.hadoo.jobs.runner.TrendsPail $SRES $TRES $ESTEND $trends $output
+$LAUNCHER $RUNNERNS.TrendsPail $SRES $TRES $ESTEND $trends $output
 
 # merge trends
 
 trendspail=$output
 output="$TMP/merged-trends"
-$LAUNCHER forma.hadoo.jobs.runner.MergeTrends $SRES $TRES $ESTEND $trendspail $output
+$LAUNCHER $RUNNERNS.MergeTrends $SRES $TRES $ESTEND $trendspail $output
 
 # forma-tap
 
-fires="$TMP/fires"
 dynamic=$output
 output="$TMP/forma-tap"
-$LAUNCHER forma.hadoop.jobs.runner.FormaTap $SRES $TRES $ESTEND $fires $dynamic $output
+$LAUNCHER $RUNNERNS.FormaTap $SRES $TRES $ESTEND $fireoutput $dynamic $output
 
 # neighbors
 
 dynamic=$output
 output="$TMP/neighbors"
-$LAUNCHER forma.hadoop.jobs.runner.NeighborQuery $SRES $TRES $dynamic $output
+$LAUNCHER $RUNNERNS.NeighborQuery $SRES $TRES $dynamic $output
 
 # forma-estimate
 
-betas="s3n://formatest/tmp/betas"
-dynamic="$TMP/neighbors"
-output="$TMP/estimated"
-$LAUNCHER forma.hadoop.jobs.runner.EstimateForma $SRES $TRES $betas $dynamic $STATIC $output
+dynamic=$output
+output="$S3OUT/estimated"
+$LAUNCHER $RUNNERNS.EstimateForma $SRES $TRES $BETAS $dynamic $STATIC $output
 
 # probs-pail
 
 dynamic=$output
 output=$PAILPATH
-$LAUNCHER forma.hadoop.jobs.runner.ProbsPail $SRES $TRES $ESTEND $dynamic $output
+$LAUNCHER $RUNNERNS.ProbsPail $SRES $TRES $ESTEND $dynamic $output
 
 # merge-probs
 
 dynamic=$output
-output=$S3OUT
-$LAUNCHER forma.hadoop.jobs.runner.MergePail $SRES $TRES $ESTEND $dynamic $output
+output="$S3OUT/merged-estimated"
+$LAUNCHER $RUNNERNS.MergeProbs $SRES $TRES $ESTEND $dynamic $output
