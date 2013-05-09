@@ -278,22 +278,28 @@
     => (produces [[fire-val fire-val] [1. 2.] [2. 3.] [3. 4.] [4. 5.]]))
   (array-val->series 5) => (throws AssertionError))
 
-(fact "Test `trends-datachunks->series`. Second element of `data` is
-       overwritten with first element of `data2`. This is because the
-       time series are converted into maps then merged left to
-       right (per standard `merge` behavior), older to newer based on
-       `pedigree`. Overlapping series therefore take the most recent
-       value for a given date."
-  (let [loc (thrift/ModisPixelLocation* "500" 28 8 0 0)
+(fact "Test `trends-datachunks->series`.
+
+       Second element of `data` is overwritten with first element of
+       `data2`. This is because the time series are converted into
+       maps then merged left to right (per standard `merge` behavior),
+       older to newer based on `pedigree`. Overlapping series
+       therefore take the most recent value for a given date. `data3`
+       is ignored entirely because it falls outside the range given by
+       `:est-start` and `:est-end`."
+  (let [test-map (assoc test-map :est-start "2005-12-19" :est-end "2006-01-17")
         fire-val (thrift/FireValue* 0 0 0 0)
         forma-val (thrift/FormaValue* fire-val 1. 2. 3. 4.)
-        forma-val2 (thrift/FormaValue* fire-val 2. 3. 4. 5.) 
+        forma-val2 (thrift/FormaValue* fire-val 11. 12. 13. 14.) 
         data (thrift/TimeSeries* 827 [forma-val forma-val])
-        data2 (thrift/TimeSeries* 828 [forma-val2 forma-val2])
-        src [["" (thrift/DataChunk* "trends" loc data "16" :pedigree 1)]
-             ["" (thrift/DataChunk* "trends" loc data2 "16" :pedigree 10)]]]
+        data2 (thrift/TimeSeries* 828 [forma-val2 forma-val2]) ;; overlapping `data`
+        data3 (thrift/TimeSeries* 900 [forma-val forma-val]) ;; outside est dates
+        src [["" (thrift/DataChunk* "trends" pixel-loc data "16" :pedigree 1)]
+             ["" (thrift/DataChunk* "trends" pixel-loc data2 "16" :pedigree 10)]
+             ["" (thrift/DataChunk* "trends" pixel-loc data3 "16" :pedigree 20)]]]
     (trends-datachunks->series test-map src))
-  => (produces [["500" 28 8 0 0 827 [1. 2. 2.] [2. 3. 3.] [3. 4. 4.] [4. 5. 5.]]]))
+  => (produces [["500" 28 8 0 0 827 [1. 11. 11.] [2. 12. 12.]
+                                    [3. 13. 13.] [4. 14. 14.]]]))
 
 (fact
   "Check forma-tap. This test got crazy because it seems that comparing
