@@ -19,7 +19,7 @@ TMP="/tmp"
 STAGING="s3n://formastaging"
 STATIC="s3n://pailbucket/all-static-seq/all"
 ARCHIVE="s3n://modisfiles"
-S3OUT="s3n://pailbucket/output/run-20`date %y-%m-%d`" # store output by date of run
+S3OUT="s3n://pailbucket/output/run-20`date +%y-%m-%d`" # store output by date of run
 PAILPATH="s3n://pailbucket/all-master"
 BETAS="s3n://pailbucket/all-betas"
 
