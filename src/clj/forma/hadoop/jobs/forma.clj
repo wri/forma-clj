@@ -51,21 +51,6 @@
       (thrift/unpack ?pixel-loc :> _ ?h ?v _ _)
       (u/within-tileset? tile-set ?h ?v)))
 
-(defn adjust-precl
-  "Given a base temporal resolution, a target temporal resolution and a
-   source of rain data, stretches rain to new resolution and rounds it."
-  [base-t-res target-t-res src]
-  (if (= target-t-res base-t-res)
-      src
-      (<- [?s-res ?mod-h ?mod-v ?sample ?line ?new-start-idx ?rounded-series]
-          (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ts)
-          (thrift/TimeSeries* ?start-idx ?ts :> ?ts-obj)
-          (stretch/ts-expander base-t-res target-t-res ?ts-obj :> ?expanded-ts-obj)
-          (thrift/unpack ?expanded-ts-obj :> ?new-start-idx _ ?arr-val)
-          (thrift/unpack* ?arr-val :> ?expanded-series)
-          (u/map-round* ?expanded-series :> ?rounded-series)
-          (:distinct false))))
-
 (defn fire-tap
   "Accepts an est-map and a query source of fire timeseries. Note that
   this won't work, pulling directly from the pail!"
@@ -109,7 +94,7 @@
 (defn dynamic-filter
   "Filters out all NDVI pixels where timeseries is all -3000s. Trims
    ndvi and rain timeseries so that they are the same length,
-   and replaces any nodata values with the value to their left. Leaves
+   and replaces any nodata values with the value to the left. Leaves
    nodata value if at the start of the timeseries"
   [{:keys [t-res nodata est-start]} ndvi-src rain-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?ndvi-ts ?precl-ts]
@@ -332,12 +317,15 @@
   Note that all values internally discuss timeseries, and that !!fire
   is an ungrounding variable. This triggers a left join with the trend
   result variables, even when there are no fires for a particular pixel."
-  [{:keys [t-res est-start nodata]} dynamic-src fire-src]
+  [{:keys [t-res est-start est-end nodata]} dynamic-src fire-src]
   (<- [?s-res ?period ?mh ?mv ?s ?l ?forma-val]
       (fire-src ?s-res ?mh ?mv ?s ?l !!fire)
       (dynamic-src ?s-res ?mh ?mv ?s ?l ?start-idx ?short-s ?long-s ?t-stat-s ?break-s)
-      (schema/forma-seq nodata !!fire ?short-s ?long-s ?t-stat-s ?break-s :> ?forma-seq)
-      (p/index ?forma-seq :zero-index ?start-idx :> ?period ?forma-val)
+      (series-end ?short-s ?start-idx :> ?end-idx)
+      (schema/forma-seq t-res est-start est-end ?start-idx ?end-idx nodata !!fire
+                        ?short-s ?long-s ?t-stat-s ?break-s :> ?forma-seq)
+      (date/datetime->period t-res est-start :> ?start-idx-final)
+      (p/index ?forma-seq :zero-index ?start-idx-final :> ?period ?forma-val)
       (:distinct false)))
 
 (defmapcatop [process-neighbors [num-neighbors]]

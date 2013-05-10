@@ -10,8 +10,8 @@
             [forma.thrift :as thrift]
             [forma.hadoop.pail :as p]))
 
-(defn run-params [k est-end]
-  (-> {"500-16" {:est-start "2005-12-19"
+(defn run-params [k est-end & [est-start]]
+  (let [est-map {"500-16" {:est-start "2005-12-19"
                  :est-end est-end
                  :s-res "500"
                  :t-res "16"
@@ -24,12 +24,15 @@
                  :convergence-thresh 1e-6
                  :max-iterations 500
                  :min-coast-dist 3
-                 :nodata -9999.0}}
-      (get k)))
+                           :nodata -9999.0}}
+        est-map (get est-map k)]
+    (if est-start (assoc est-map :est-start est-start) est-map)))
 
 (defn get-est-map
-  [s-res t-res & [est-end]]
-  (run-params (str s-res "-" t-res) est-end))
+  [s-res t-res est-end & [est-start]]
+  (if est-start
+    (run-params (str s-res "-" t-res) est-end est-start)
+    (run-params (str s-res "-" t-res) est-end)))
 
 (defn parse-pedigree
   "Parse with various forms of pedigree - nils, strings, and ints."
@@ -45,7 +48,7 @@
   "Uses thrift-bool as switch instead of {:keys [thrift] ...} because use
    with defmain seemed unreliable - keyword were not recognized as such."
   [s-res t-res ts-path static-path output-path]
-  (let [vcf-limit (:vcf-limit (get-est-map s-res t-res))
+  (let [vcf-limit (:vcf-limit (get-est-map s-res t-res nil))
         static-src (hfs-seqfile static-path)
         ts-src (hfs-seqfile ts-path)
         sink (hfs-seqfile output-path :sinkmode :replace)]
@@ -85,8 +88,8 @@
     (?- sink (forma/trends-datachunks->series est-map trends-dc-src))))
 
 (defmain FormaTap
-  [s-res t-res est-end fire-path dynamic-path output-path]
-  (let [est-map (get-est-map s-res t-res est-end)
+  [s-res t-res est-start est-end fire-path dynamic-path output-path]
+  (let [est-map (get-est-map s-res t-res est-end est-start)
         dynamic-src (hfs-seqfile dynamic-path)
         fire-src (hfs-seqfile fire-path)
         sink (hfs-seqfile output-path :sinkmode :replace)]

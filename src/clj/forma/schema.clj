@@ -192,21 +192,31 @@
         (vec))])
 
 (defn forma-seq
-  "Accepts 5 timeseries of equal length and starting position, each
+  "Accepts a fire series covering est-start to est-end (or nil), and
+   trends series all of equal length and starting position, each
    representing a time-indexed series of features for a given pixel.
-   Returns the tranposition: a single timeseries of
-   FormaValues.
+   Returns the tranposition: a single timeseries of FormaValues.
 
   `fire-series` gets special treatment because it could come into
    `forma-seq` as nil (i.e. no fires for a given pixel) per the
-   forma-tap query in forma.clj; fires is an ungrounded variable in
-   the cascalog query, forma-tap"
-  [nodata fire-series short-series long-series t-stat-series break-series]
-  (let [[fires
+   forma-tap query in forma.clj; `fire-series` is an ungrounded variable in
+   the cascalog query, `forma-tap`. If `fire-series` is not `nil`, it will
+   have the same length and starting position as the other series."
+  [t-res est-start est-end start-idx end-idx nodata
+   fire-series short-series long-series t-stat-series break-series]
+  (let [inc-est-end (date/inc-date est-end (read-string t-res))
+        start-date (date/period->datetime t-res start-idx)
+        end-date (date/period->datetime t-res end-idx)
+        [fires
          shorts
          longs
          t-stats
          breaks] (forma-seq-prep nodata fire-series short-series
                                  long-series t-stat-series
-                                 break-series)]
+                                 break-series)
+         t-subvec (partial date/temporal-subvec est-start inc-est-end start-date end-date t-res)
+        [shorts longs t-stats breaks] (map t-subvec [shorts longs t-stats breaks])
+        ;; subvec not strictly necessary - fires should be clipped to
+        ;; est-start and est-end already based on forma.hadoop.jobs.forma/fire-tap
+        fires (if (nil? fires) fires (t-subvec fires))]
     (series->forma-values fires shorts longs t-stats breaks)))

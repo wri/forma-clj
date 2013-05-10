@@ -168,33 +168,30 @@
   to `forma-seq` is appropriately bundled into the first FormaValue
   of the output timeseries (consisting of FormaValues for each
   period)."
-  (let [nodata -9999.0
+  (let [t-res "16"
+        est-start "2006-01-01"
+        est-end "2006-02-18"
+        start-idx 827
+        end-idx 832
+        nodata -9999.0        
         fire-1 (thrift/FireValue* 1 1 1 1)
         fire-0 (thrift/FireValue* 0 0 0 0)
-        fires (thrift/TimeSeries* 826 (repeat 5 fire-1))
-        shorts  [nil 1. nil 3. 4.]
-        longs   [1. 3. nil 7. 9.]
-        t-stats [2. 4. nil 8. 10.]
-        breaks  [10. 11. nil 14. 13.]]
+        fires (thrift/TimeSeries* 826 (repeat 6 fire-1))
+        shorts  [1. nil 0. nil -1. 4.]
+        longs   [0. 1. 3. nil 7. 9.]
+        t-stats [0. 2. 4. nil 8. 10.]
+        breaks  [0. 10. 11. nil 14. 13.]]
     
-    ;; Test for an existing fire
-        (ffirst
-         (forma-seq nodata fires shorts longs t-stats breaks))
-    => (thrift/FormaValue* fire-1 nodata 1. 2. 10.)
+    ;; Test for an existing fire in the first FormaValue
+    (forma-seq t-res est-start est-end start-idx end-idx nodata
+               fires shorts longs t-stats breaks)
+    => [[(thrift/FormaValue* fire-1 1. 1. 2. 10.)
+         (thrift/FormaValue* fire-1 0. 3. 4. 11.)
+         (thrift/FormaValue* fire-1 0. nodata nodata 11.)
+         (thrift/FormaValue* fire-1 -1. 7. 8. 14.)]]
 
-    ;; check that second FormaValue is correct
-    (second
-     (first
-      (forma-seq nodata fires shorts longs t-stats breaks)))
-    => (thrift/FormaValue* fire-1 1. 3. 4. 11.)
-
-    ;; check that third FormaValue is correct
-    (nth
-     (first
-      (forma-seq nodata fires shorts longs t-stats breaks)) 2)
-    => (thrift/FormaValue* fire-1 1. nodata nodata 11.)
-     
-    ;; Test for the case when there are no fires
+    ;; Test for the case when there are no fires (i.e. `nil` fires)
     (ffirst
-     (forma-seq nodata nil shorts longs t-stats breaks))
-    => (thrift/FormaValue* fire-0 nodata 1. 2. 10.)))
+         (forma-seq t-res est-start est-end start-idx end-idx nodata
+                    nil shorts longs t-stats breaks))
+    => (thrift/FormaValue* fire-0 1. 1. 2. 10.)))

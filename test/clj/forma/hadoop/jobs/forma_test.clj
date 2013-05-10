@@ -28,7 +28,7 @@
   "Define estimation map for testing based on 500m-16day resolution.
   This is the estimation map that generated the small-sample test
   data."
-  {:est-start "2005-12-31" ;; period index 827
+  {:est-start "2005-12-19" ;; period index 827
    :est-end "2012-04-22" ;; period index 973
    :s-res "500"
    :t-res "16"
@@ -101,14 +101,6 @@
         est-start "2005-12-31"
         est-end "2006-01-01"]
     (fire-tap est-start est-end t-res src)) => (produces [[s-res 28 8 0 0 (sample-fire-series 827 2)]]))
-
-(fact
-  "Test `adjust-precl`"
-  (let [base-t-res "32"
-        target-t-res "16"
-        precl-src [["500" 28 8 0 0 360 [1.5 2.5 3.4 4.7]]]]
-    (adjust-precl base-t-res target-t-res precl-src))
-  => (produces [["500" 28 8 0 0 690 [2 2 3 3 3 4 5]]]))
 
 (fact
   "Check that `filter-query` properly screens out the pixel with VCF < 25, and keeps the one with VCF >= 25."
@@ -304,23 +296,26 @@
 (fact
   "Check forma-tap. This test got crazy because it seems that comparing
    thrift objects to one another doesn't work for checking a result."
-  (let [dynamic-src [["500" 28 8 0 0 827 [1. 2.] [3. 4.] [5. 6.] [7. 8.]]
-                     ["500" 28 8 0 1 827 [1. 2.] [3. 4.] [5. 6.] [7. 8.]]]
-        fire-src [["500" 28 8 0 0 (sample-fire-series 827 2)]]
-        first-period [1. 3. 5. 7.]
-        second-period [1. 4. 6. 8.]
+  (let [test-map (-> test-map
+                     (assoc :est-start "2006-01-01")
+                     (assoc :est-end "2006-01-17"))
+        stats [[1. 2. 3. 4. 100.] [5. 6. 7. 8. 100.] [9. 10. 11. 12. 100.]
+               [13. 14. 15. 16. 100.]]
+        dynamic-src [(concat ["500" 28 8 0 0 827] stats)
+                     (concat ["500" 28 8 0 1 827] stats)]
+        fire-src [["500" 28 8 0 0 (sample-fire-series 828 2)]] ;; already clipped to est-start/end
         empty-fire (thrift/FireValue* 0 0 0 0)
         forma-src (forma-tap test-map dynamic-src fire-src)]
     (<- [?s-res ?period ?mh ?mv ?s ?l ?fire-vec ?trends-stats]
         (forma-src ?s-res ?period ?mh ?mv ?s ?l ?forma-val)
         (thrift/unpack* ?forma-val :> ?forma-vec)
-        (u/rest* ?forma-vec :> ?trends-stats)
+        (u/rest* ?forma-vec :> ?trends-stats) ;; fires handled below
         (first ?forma-vec :> ?fire-val)
         (thrift/unpack* ?fire-val :> ?fire-vec))
-    => (produces [["500" 827 28 8 0 0 [0 0 0 0] first-period]
-                  ["500" 828 28 8 0 0 [0 0 0 0] second-period]
-                  ["500" 827 28 8 0 1 [0 0 0 0] first-period]
-                  ["500" 828 28 8 0 1 [0 0 0 0] second-period]])))
+    => (produces [["500" 828 28 8 0 0 [0 0 0 0] [1. 6. 10. 14.]]
+                  ["500" 829 28 8 0 0 [0 0 0 0] [1. 7. 11. 15.]]
+                  ["500" 828 28 8 0 1 [0 0 0 0] [1. 6. 10. 14.]]
+                  ["500" 829 28 8 0 1 [0 0 0 0] [1. 7. 11. 15.]]])))
 
 (def good-val
   (thrift/FormaValue* (thrift/FireValue* 1. 1. 1. 1.) 1. 1. 1. 1.))
