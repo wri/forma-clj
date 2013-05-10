@@ -314,17 +314,6 @@
                                ?end-date-final t-res ?short-tmp ?long-tmp
                                ?t-stat-tmp ?break-tmp :>> subvec-out))))
 
-(comment
-  (let [t-res "16"
-      src [["" a]]
-      s "yoyo"
-      in-vec ["?s-res" s t-res]
-      out-vec ["?str"]]
-  (??<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?array-val ?created ?str]
-        (src _ ?dc)
-        (unpack-ts-for-merge ?dc :> ?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?array-val ?created)
-        (str :<< in-vec :>> out-vec))))
-
 (defn forma-tap
   "Accepts an est-map and sources for dynamic and fires data,
   spits out FormaValues for each period.

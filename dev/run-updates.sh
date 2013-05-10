@@ -46,12 +46,8 @@ echo "Preprocessing MODIS data"
 # 5 minutes w/5 high-memory for 2 periods
 $LAUNCHER "$PREPROCESSNS.PreprocessModis" "$STAGING/MOD13A1/" $PAILPATH "{20}*" "$TILES" $MODISLAYERS
 
-# 57 minutes w/5 high-memory for all data
-echo "Preprocessing fires"
-fireoutput="$S3OUT/fires"
-$LAUNCHER "$PREPROCESSNS.PreprocessFire" "$ARCHIVE/fires" $fireoutput 500 16 2000-11-01 $ESTSTART $ESTEND "$TILES"
-
 # 7 minutes w/5 high-memory for all data
+# 4 minutes w/25 high-memory for all data
 # 1h15 w/1 large instance for 1 tile
 echo "Preprocessing rain"
 $LAUNCHER "$PREPROCESSNS.PreprocessRain" "$ARCHIVE/PRECL" "$TMP/rain" $SRES $TRES
@@ -59,6 +55,9 @@ $LAUNCHER "$PREPROCESSNS.PreprocessRain" "$ARCHIVE/PRECL" "$TMP/rain" $SRES $TRE
 # 50 minutes w/5 high-memory for all data - one process took forever,
 # had to kill it. Default # of tasks now greater.
 # 4h32 with 1 large instance for 1 tile
+# Now save to $TMP because the same cluster is used for all steps for updates.
+# With 25 high memory instances took 22 minutes, of which 12 were spent
+# waiting for copying to s3 to finish.
 echo "Exploding rain into MODIS pixels"
 rainoutput="$TMP/rain"
 $LAUNCHER "$PREPROCESSNS.ExplodeRain" "$TMP/rain" $rainoutput $SRES "$TILES"
@@ -106,15 +105,24 @@ $LAUNCHER $RUNNERNS.TrendsPail $SRES $TRES $ESTEND $trends $output
 
 echo "Merging trends time series stored in pail"
 trendspail=$output
-output="$TMP/merged-trends"
+output="$S3OUT/merged-trends"
 $LAUNCHER $RUNNERNS.MergeTrends $SRES $TRES $ESTEND $trendspail $output
+
+# 57 minutes w/5 high-memory for all data
+# 35 minutes with 25 high memory for all periods & all tiles. Lots of errors reading
+# 3gb csv of fires.
+# Now saving to tmp instead of S3, because we use the same cluster for the whole
+# update process.
+echo "Preprocessing fires"
+fireoutput="$TMP/fires"
+$LAUNCHER "$PREPROCESSNS.PreprocessFire" "$ARCHIVE/fires" $fireoutput 500 16 2000-11-01 $ESTSTART $ESTEND "$TILES"
 
 # forma-tap
 
 echo "Prepping FORMA tap for neighbor analysis"
 dynamic=$output
 output="$TMP/forma-tap"
-$LAUNCHER $RUNNERNS.FormaTap $SRES $TRES $ESTEND $fireoutput $dynamic $output
+$LAUNCHER $RUNNERNS.FormaTap $SRES $TRES $ESTSTART $ESTEND $fireoutput $dynamic $output
 
 # neighbors
 
