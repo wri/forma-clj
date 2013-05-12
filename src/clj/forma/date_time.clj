@@ -456,7 +456,6 @@ in which `string` lies (according to the supplied resolution, `res`)."
      (= (map date-str->millis date-vec)
         (reductions max (map date-str->millis date-vec))))
   ([d1 d2]
-     (prn  d1 d2)
      {:pre [(every? string? [d1 d2])]}
      (apply <= (map date-str->millis [d1 d2]))))
 

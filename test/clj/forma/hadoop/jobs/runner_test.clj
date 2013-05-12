@@ -114,24 +114,17 @@ functions are tested elsewhere."
   (let [trends-pail-path (.getPath (io/temp-dir "trends-pail-merge"))
         merged-path (.getPath (io/temp-dir "trends-merged"))
         [forma-vals] (series->forma-values nil [1. 2.] [2. 3.] [3. 4.] [4. 5.])
-        [forma-vals2] (series->forma-values nil [11. 11.] [12. 12.]
-                                                [13. 13.] [14. 14.])
-        [forma-vals3] (series->forma-values nil [21. 21.] [22. 22.]
-                                                [23. 23.] [24. 24.])
         loc (apply thrift/ModisPixelLocation* pix-loc)
         ts-1 (thrift/TimeSeries* 827 forma-vals)
-        ts-2 (thrift/TimeSeries* 828 forma-vals2)
-        ts-3 (thrift/TimeSeries* 900 forma-vals3) ;; outside est date range
+        ts-2 (thrift/TimeSeries* 828 forma-vals)
         pedigree1 1
         pedigree2 2
         src [[(thrift/DataChunk* "trends" loc ts-1 t-res :pedigree pedigree1)]
-             [(thrift/DataChunk* "trends" loc ts-2 t-res :pedigree pedigree2)]
-             [(thrift/DataChunk* "trends" loc ts-3 t-res :pedigree pedigree2)]]
+             [(thrift/DataChunk* "trends" loc ts-2 t-res :pedigree pedigree2)]]
         _ (p/to-pail trends-pail-path src)]
     (MergeTrends s-res t-res est-end trends-pail-path merged-path)
-    (hfs-seqfile merged-path)) => (produces [(into pix-loc
-                                                   [827 [1. 11.] [2. 12.]
-                                                        [3. 13.] [4. 14.]])]))
+    (hfs-seqfile merged-path))
+  => (produces [(into pix-loc [827 [1. 1. 2.] [2. 2. 3.] [3. 3. 4.] [4. 4. 5.]])]))
 
 (fact
   "Integration test of `FormaTap` defmain. All queries and functions used

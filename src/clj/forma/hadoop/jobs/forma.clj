@@ -284,35 +284,19 @@
   (let [data-name "trends"
         nodata (:nodata est-map)
         t-res (:t-res est-map)
-        res-str (format "%s-%s" (:s-res est-map) (:t-res est-map))
-        est-start (:est-start est-map)
-        est-end (:est-end est-map)
-        inc-est-end (date/inc-date est-end (read-string t-res))
-        unpack-out ["?s-res" "?mod-h" "?mod-v" "?sample" "?line" "?start"
-                    "?end" "?array-val" "?created"]
-        out-vec ["?s-res" "?mod-h" "?mod-v" "?sample" "?line" "?start-idx-final"
-                 "?short-final" "?long-final" "?t-stat-final" "?break-final"]
-        subvec-out ["?short-final" "?long-final" "?t-stat-final" "?break-final"]]
-    (<- out-vec
+        res-str (format "%s-%s" (:s-res est-map) (:t-res est-map))]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-final
+         ?short-final ?long-final ?t-stat-final ?break-final]
         (pail-src _ ?dc)
-        (unpack-ts-for-merge ?dc :>> unpack-out)       
-        (date/period->datetime t-res ?start :> ?start-date)
-        (date/period->datetime t-res ?end :> ?end-date)
-        ;; only keep series that overlap with est-start and est-end
-        (date/date-intervals-overlap? ?start-date ?end-date est-start est-end :> true)
-        ;; unpack stats array value
+        (thrift/unpack ?dc :> _ ?loc ?data ?t-res _ ?pedigree)
+        (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
+        (thrift/unpack ?pedigree :> ?created)
+        (thrift/unpack ?data :> ?start ?end ?array-val)
         (array-val->series ?array-val :> _ ?short ?long ?t-stat ?break)
-        (date/period->key t-res ?start :> ?start-key)
+        (date/period->key ?t-res ?start :> ?start-key)
         (merge-series-wrapper [t-res nodata] ?created ?start-key ?short
-                              ?long ?t-stat ?break
-                              :> ?start-idx-final ?short-tmp ?long-tmp
-                              ?t-stat-tmp ?break-tmp)
-        (series-end ?short-tmp ?start-idx-final :> ?end-final)
-        (date/period->datetime t-res ?start-idx-final :> ?start-date-final)
-        (date/period->datetime t-res ?end-final :> ?end-date-final)
-        (date/temporal-subvec* est-start inc-est-end ?start-date-final
-                               ?end-date-final t-res ?short-tmp ?long-tmp
-                               ?t-stat-tmp ?break-tmp :>> subvec-out))))
+                              ?long ?t-stat ?break :> ?start-final ?short-final
+                              ?long-final ?t-stat-final ?break-final))))
 
 (defn forma-tap
   "Accepts an est-map and sources for dynamic and fires data,
