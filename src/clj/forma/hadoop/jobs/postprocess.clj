@@ -30,6 +30,13 @@
   [thresh series]
   (first (positions (partial <= thresh) series)))
 
+(defn merge-gadm
+  "Returns a source of probability series along with the appropriate gadm v.2 code."
+  [forma-src gadm2-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?gadm2 ?start-idx ?prob-series]
+      (forma-src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?prob-series)
+      (gadm2-src ?s-res ?mod-h ?mod-v ?sample ?line ?gadm2)))
+
 (defn hansen-latlon->cdm
   "Returns a Cascalog query that transforms Hansen latlon data into map tile
   coordinates. `src` - The source tap.  `zoom` - The map zoom level.
