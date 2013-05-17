@@ -272,6 +272,13 @@
   (let [forma-vals (thrift/unpack array-val)]
     (apply map vector (map thrift/unpack forma-vals))))
 
+(def unpack-ts-for-merge
+  (<- [?dc :> ?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?array-val ?created]
+      (thrift/unpack ?dc :> _ ?loc ?data ?t-res _ ?pedigree)
+      (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
+      (thrift/unpack ?pedigree :> ?created)
+      (thrift/unpack ?data :> ?start ?end ?array-val)))
+
 (defn trends-datachunks->series
   [est-map pail-src]
   (let [data-name "trends"

@@ -3,9 +3,9 @@
 ;; proper temporal comparison of two unrelated datasets.
 
 (ns forma.date-time
-  (:use [clj-time.core :only (date-time month year)]
+  (:use [clj-time.core :only (date-time plus month year days)]
         [forma.matrix.utils :only (sparse-expander)]
-        [forma.utils :only (inc-eq? all-unique?)])
+        [forma.utils :only (inc-eq? all-unique? contains-nils?)])
   (:require [clj-time.core :as time]
             [clj-time.format :as f]))
 
@@ -40,7 +40,7 @@
   to `(clj-time.format/show-formatters)`.
 
   For example:
-    (within? \"2005-12-01\" \"2011-01-02\" \"2011-01-01\")
+    (within-dates? \"2005-12-01\" \"2011-01-02\" \"2011-01-01\")
     ;=> true"
   [start end dt & {:keys [format]
                    :or {format :year-month-day}}]
@@ -217,7 +217,11 @@ in which `string` lies (according to the supplied resolution, `res`)."
 
 (defn shift-resolution
   "Takes a period at `from-res`, returns the corresponding period at
-  `to-res`."
+  `to-res`.
+
+  By converting a period to a date, we get the first date within a
+  period. Converting date to period, we get the period in which that
+  first date falls, at the new resolution."
   [from-res to-res period]
   (->> period
        (period->datetime from-res)
@@ -270,16 +274,6 @@ in which `string` lies (according to the supplied resolution, `res`)."
            "8" [ordinal 8]
            "1" [ordinal 1])))
 
-(defn convert-period-res
-  "Convert a period from in-res to corresponding period at out-res.
-
-   By converting a period to a date, we get the first date within a
-   period. Converting date to period, we get the period in which that
-   first date falls, at the new resolution."
-  [res-in res-out period]
-  (->> (period->datetime res-in period)
-       (datetime->period res-out)))
-
 (defn date-str->vec-idx
   "Return the index of a vector that corresponds to a given date.
    Returns `nil` if date does not correspond to a period in the vector.
@@ -321,11 +315,14 @@ in which `string` lies (according to the supplied resolution, `res`)."
          period that contains it, given a temporal resolution.
 
    Usage:
-     (date-str->vec-idx \"16\" \"2000-01-01\" [2 4 6] \"2000-01-18\")
-     => 4
-   
-     (date-str->vec-idx \"16\" \"2000-01-01\" [2 4 6] \"2012-05-01\")
-     => nil"
+     (get-val-at-date \"16\" \"2000-01-01\" [2 4 6] \"2000-01-17\")
+     ;=> 4
+
+     (get-val-at-date \"16\" \"2000-01-01\" [2 4 6] \"2005-01-01\" :out-of-val -1)
+     ;=> -1
+
+     (get-val-at-date \"16\" \"2000-01-01\" [2 4 6] \"2005-01-01\" :out-of-val 0)
+     ;=> 2"
   [t-res start-dt v dt & {:keys [out-of-bounds-val out-of-bounds-idx]}]
   (let [idx (date-str->vec-idx t-res start-dt v dt)]
     (if idx
@@ -426,3 +423,91 @@ in which `string` lies (according to the supplied resolution, `res`)."
      ;=> 828"
   [t-res ts-map]
   (key->period t-res (first (sort (keys ts-map)))))
+
+(defn inc-date
+  "Increment `date-str` by n days. Defaults to 1 day.
+
+   Usage:
+     (inc-date \"2000-01-01\")
+     ;=> \"2000-01-02\"
+
+     (inc-date \"2000-01-01\" 10)
+     ;=> \"2000-01-11\""
+  [date-str & [n]]
+  (-> date-str
+      (parse :year-month-day)
+      (plus (days (or n 1)))
+      (unparse :year-month-day)))
+
+(defn date-str->millis
+  "Converts a :year-month-day datestring to milliseconds from epoch."
+  ([date-str]
+     {:pre [(string? date-str)]}
+     (-> date-str
+         (parse :year-month-day)
+         (msecs-from-epoch))))
+
+(defn sorted-dates?
+  "Checks that supplied date strings or elements of date vector are
+   ordered by date. They need not be consecutive."
+  ([date-vec]
+     {:pre [(coll? date-vec)
+            (every? string? date-vec)]}
+     (= (map date-str->millis date-vec)
+        (reductions max (map date-str->millis date-vec))))
+  ([d1 d2]
+     {:pre [(every? string? [d1 d2])]}
+     (apply <= (map date-str->millis [d1 d2]))))
+
+(defn date-intervals-overlap?
+  "Checks whether the supplied date intervals overlap temporally
+   (closed interval used)."
+  [start1 end1 start2 end2]
+  ;; intervals are ordered correctly (older to newer)
+  {:pre [(sorted-dates? start1 end1)
+         (sorted-dates? start2 end2)]}
+  (let [end1-inc (inc-date end1)
+        end2-inc (inc-date end2)]
+    (or (or (within-dates? start2 end2-inc start1) ;; 1 starts w/in 2
+            (within-dates? start2 end2-inc end1)) ;; 1 ends w/in 2
+        (or (within-dates? start1 end1-inc start2) ;; 2 starts w/in 1
+            (within-dates? start1 end1-inc end2))))) ;; 2 ends w/in 1
+
+(defn period-intervals-overlap?
+  "Checks whether the supplied period intervals overlap temporally
+   (closed interval used)."
+  [start1 end1 start2 end2 t-res]
+  {:pre [(map pos? [start1 end1 start2 end2])
+         (<= start1 end1)
+         (<= start2 end2)]}
+  (let [[start1 end1 start2 end2] (map (partial period->datetime t-res)
+                                       [start1 end1 start2 end2])]
+    (date-intervals-overlap? start1 end1 start2 end2)))
+
+(defn temporal-subvec
+  "Extract values from `get-start` (inclusive) to `get-end` (exclusive)
+   in a series based on the temporal resolution and supplied series start
+   and end.
+   
+   Usage:
+     (temporal-subvec \"2005-01-01\" \"2005-01-17\" \"2005-01-01\" \"2005-02-18\" \"16\" [1 2 3 4])
+     ;=> [1 2]"
+  [get-start get-end series-start series-end t-res series]
+  {:pre [(coll? series)
+         (every? true? (map string? [get-start get-end series-start series-end]))
+         (sorted-dates? get-start get-end) ;; properly ordered
+         (sorted-dates? series-start series-end) ;; properly ordered
+         (sorted-dates? series-start get-start) ;; get-start w/in interval (closed)
+         ;; get-end is w/in interval (closed)
+         (sorted-dates? get-end (inc-date series-end (read-string t-res)))]}
+  (let [dates (drop-last 1 (key-span (keyword get-start) (keyword get-end) t-res))
+        series-map (ts-vec->ts-map (keyword series-start) t-res series)]
+    (vec (map series-map dates))))
+
+(defn temporal-subvec*
+  "Wraps `temporal-subvec` to handle multiple series appropriately
+   for use with Cascalog."
+  [get-start get-end series-start series-end t-res & series]
+  (let [t-subvec (partial temporal-subvec get-start get-end
+                          series-start series-end t-res)]
+    (vec (map vec (map t-subvec series)))))

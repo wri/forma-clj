@@ -1,6 +1,6 @@
-(ns forma.hadoop.jobs.cdm
-  "Functions and Cascalog queries for converting data into map tile
-coordinates."
+(ns forma.hadoop.jobs.postprocess
+  "Functions and Cascalog queries for postprocessing FORMA data for
+   common data model et al."
   (:use [cascalog.api]
         [forma.source.gadmiso :only (gadm->iso gadm2->iso)]
         [forma.gfw.cdm :only (latlon->tile, latlon-valid?, meters->maptile)]
@@ -29,6 +29,13 @@ coordinates."
     (first-hit 5 [1 2 3 4 5 6 7 8 9 10]) => 4"
   [thresh series]
   (first (positions (partial <= thresh) series)))
+
+(defn merge-gadm
+  "Returns a source of probability series along with the appropriate gadm v.2 code."
+  [forma-src gadm2-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?gadm2 ?start-idx ?prob-series]
+      (forma-src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?prob-series)
+      (gadm2-src ?s-res ?mod-h ?mod-v ?sample ?line ?gadm2)))
 
 (defn hansen-latlon->cdm
   "Returns a Cascalog query that transforms Hansen latlon data into map tile
@@ -72,32 +79,28 @@ coordinates."
     level (integer). `min-period` ensures there are no duplicate records
     due to resampling pixels to CDM.
 
-   Note that there may be a handful of pixels with NA values in the
-   probability series that cause this job to fail. If that's the case,
-   add a trap to the query a la
+   Note that there may be a handful of pixels with `NA` values in the
+   probability series that could cause this job to fail. The `clean-probs`
+   now checks for this and replaces `NA` with the `nodata` value.
 
-     (:trap (hfs-seqfile \"s3n://formatemp/output/cdm-trapped\"))
 
  Example usage:
-    (forma->cdm (hfs-seqfile \"/home/dan/Dropbox/local/output\")
-                (hfs-seqfile \"/tmp/forma/data/gadm-path\")
+    (forma->cdm (hfs-seqfile \"s3n://pailbucket/output/run-2013-05-09/merged-estimated\")
                 -9999.0
                 17
                 \"16\"
                 \"32\"
                 \"2005-12-31\"
                 50)"
-  [src gadm-src nodata zoom tres tres-out start thresh]
-  (let [epoch (date/datetime->period tres-out "2000-01-01")
-        start-period (date/datetime->period tres start)]
-    (<- [?x ?y ?z ?p ?iso ?lat ?lon]
-        (src ?sres ?modh ?modv ?s ?l ?prob-series)
-        (gadm-src ?sres ?modh ?modv ?s ?l _ ?gadm _ _ _)
-        (gadm->iso ?gadm :> ?iso)
+  [src nodata zoom tres tres-out start thresh]
+  (let [epoch (date/datetime->period tres-out "2000-01-01")]
+    (<- [?x ?y ?z ?p ?iso ?gadm2 ?lat ?lon]
+        (src ?sres ?modh ?modv ?s ?l ?start-period ?prob-series ?gadm2)
+        (gadm2->iso ?gadm2 :> ?iso)
         (o/clean-probs ?prob-series nodata :> ?clean-series)
         (first-hit thresh ?clean-series :> ?first-hit-idx)
-        (+ start-period ?first-hit-idx :> ?period)
-        (date/convert-period-res tres tres-out ?period :> ?period-new-res)
+        (+ ?start-period ?first-hit-idx :> ?period)
+        (date/shift-resolution tres tres-out ?period :> ?period-new-res)
         (- ?period-new-res epoch :> ?rp)
         (min-period ?rp :> ?p)
         (r/modis->latlon ?sres ?modh ?modv ?s ?l :> ?lat ?lon)
@@ -116,24 +119,22 @@ coordinates."
                 \"32\"
                 \"2005-12-31\"
                 50)"
-  [src gadm-src nodata tres tres-out start thresh]
-  (let [epoch (date/datetime->period tres-out "2000-01-01")
-        start-period (date/datetime->period tres start)]
-    (<- [?iso ?sres ?modh ?modv ?s ?l ?p]
-        (src ?sres ?modh ?modv ?s ?l ?prob-series)
-        (gadm-src ?sres ?modh ?modv ?s ?l _ ?gadm _ _ _)
+  [src nodata tres tres-out start thresh]
+  (let [epoch (date/datetime->period tres-out "2000-01-01")]
+    (<- [?iso ?sres ?mod-h ?mod-v ?s ?l ?p]
+        (src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?prob-series ?gadm2)
         (gadm->iso ?gadm :> ?iso)
         (o/clean-probs ?prob-series nodata :> ?clean-series)
         (first-hit thresh ?clean-series :> ?first-hit-idx)
-        (+ start-period ?first-hit-idx :> ?period)
-        (date/convert-period-res tres tres-out ?period :> ?period-new-res)
+        (+ ?start ?first-hit-idx :> ?period)
+        (date/shift-resolution tres tres-out ?period :> ?period-new-res)
         (- ?period-new-res epoch :> ?rp)
         (min-period ?rp :> ?p)
         (:trap (hfs-seqfile "s3n://formatemp/output/spark-trapped")))))
 
 (defn spark-graphify
-  [src gadm-src nodata tres tres-out start thresh]
-  (let [spark-src (spark-hits src gadm-src nodata tres tres-out start thresh)]
+  [src nodata tres tres-out start thresh]
+  (let [spark-src (spark-hits src nodata tres tres-out start thresh)]
     (<- [?iso ?p ?ct]
         (spark-src ?iso _ _ _ _ _ ?p)
         (c/count ?ct))))
@@ -150,7 +151,7 @@ coordinates."
         (o/clean-probs ?prob-series nodata :> ?clean-series)
         (first-hit thresh ?clean-series :> ?first-hit-idx)
         (+ ?start-idx ?first-hit-idx :> ?period)
-        (date/convert-period-res t-res t-res-out ?period :> ?period-new-res)
+        (date/shift-resolution t-res t-res-out ?period :> ?period-new-res)
         (- ?period-new-res epoch :> ?cdm-period)
         (date/period->datetime t-res-out ?period-new-res :> ?date-str)
         (c/count ?count))))

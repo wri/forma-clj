@@ -123,7 +123,8 @@ functions are tested elsewhere."
              [(thrift/DataChunk* "trends" loc ts-2 t-res :pedigree pedigree2)]]
         _ (p/to-pail trends-pail-path src)]
     (MergeTrends s-res t-res est-end trends-pail-path merged-path)
-    (hfs-seqfile merged-path)) => (produces [(into pix-loc [827 [1. 1. 2.] [2. 2. 3.] [3. 3. 4.] [4. 4. 5.]])]))
+    (hfs-seqfile merged-path))
+  => (produces [(into pix-loc [827 [1. 1. 2.] [2. 2. 3.] [3. 3. 4.] [4. 4. 5.]])]))
 
 (fact
   "Integration test of `FormaTap` defmain. All queries and functions used
