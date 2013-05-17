@@ -1,8 +1,8 @@
-(ns forma.hadoop.jobs.cdm-test
+(ns forma.hadoop.jobs.postprocess-test
   "This namespace defines Midge tests for the forma.hadoop.jobs.cdm
 namespace."
   (:use [midje sweet]
-        forma.hadoop.jobs.cdm
+        forma.hadoop.jobs.postprocess
         cascalog.api
         midje.cascalog))
 
@@ -24,17 +24,13 @@ for 423, since the probabilities are lower -- taking more time to
 register as an alert, given the smoothing of the raw probability
 series."
   (let [nodata -9999.0
-        raw-output [["500" 28 8 420 2182 [0.0002 0.002 0.02 0.2 0.2 0.2]]
-                    ["500" 28 8 421 2182 [0.0004 0.004 0.04 0.4 0.4 0.4]]
-                    ["500" 28 8 422 2182 [0.0006 0.006 0.06 0.6 0.6 0.6]]
-                    ["500" 28 8 423 2182 [0.0008 0.008 0.08 0.8 0.8 0.8]]]
-        gadm-src   [["500" 28 8 420 2182 nil 15614 nil nil nil]
-                    ["500" 28 8 421 2182 nil 15614 nil nil nil]
-                    ["500" 28 8 422 2182 nil 15614 nil nil nil]
-                    ["500" 28 8 423 2182 nil 15614 nil nil nil]]]
-    (forma->cdm raw-output gadm-src nodata 17 "16" "32" "2005-12-31" 50)
-    => (produces [[102590 65206 17 74 "IDN" 0.9062499999999973 101.77314715106174]
-                  [102591 65206 17 73 "IDN" 0.9062499999999973 101.7773143389889]])))
+        raw-output [["500" 28 8 420 2182 827 [0.0002 0.002 0.02 0.2 0.2 0.2] 88500]
+                    ["500" 28 8 421 2182 827 [0.0004 0.004 0.04 0.4 0.4 0.4] 88500]
+                    ["500" 28 8 422 2182 827 [0.0006 0.006 0.06 0.6 0.6 0.6] 88500]
+                    ["500" 28 8 423 2182 827 [0.0008 0.008 0.08 0.8 0.8 0.8] 88500]]]
+    (forma->cdm raw-output nodata 17 "16" "32" "2005-12-19" 50)
+    => (produces [[102590 65206 17 74 "IDN" 88500 0.9062499999999973 101.77314715106174]
+                  [102591 65206 17 73 "IDN" 88500 0.9062499999999973 101.7773143389889]])))
 
 (fact "Test `probs->country-stats."
   (let [thresh 50
