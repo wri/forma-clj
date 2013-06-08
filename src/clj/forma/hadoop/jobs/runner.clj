@@ -10,8 +10,8 @@
             [forma.thrift :as thrift]
             [forma.hadoop.pail :as p]))
 
-(defn run-params [k est-end]
-  (-> {"500-16" {:est-start "2005-12-19"
+(defn run-params [k est-start est-end]
+  (-> {"500-16" {:est-start (or est-start "2005-12-19")
                  :est-end est-end
                  :s-res "500"
                  :t-res "16"
@@ -28,8 +28,8 @@
       (get k)))
 
 (defn get-est-map
-  [s-res t-res & [est-end]]
-  (run-params (str s-res "-" t-res) est-end))
+  [s-res t-res & {:keys [est-start est-end] :or {:est-start nil :est-end nil}}]
+  (run-params (str s-res "-" t-res) est-start est-end))
 
 (defn parse-pedigree
   "Parse with various forms of pedigree - nils, strings, and ints."
@@ -53,7 +53,7 @@
 
 (defmain AdjustSeries
   [s-res t-res ndvi-path rain-path output-path]
-  (let [est-map (get-est-map s-res t-res nil)
+  (let [est-map (get-est-map s-res t-res)
         sink (hfs-seqfile output-path :sinkmode :replace)]
     (?- sink (forma/dynamic-filter est-map
                                    (hfs-seqfile ndvi-path)
@@ -61,10 +61,7 @@
 
 (defmain Trends
   [s-res t-res est-end adjusted-path output-path & [est-start]]
-  (let [est-map (-> (get-est-map s-res t-res est-end)
-                    (#(if est-start
-                        (assoc % :est-start est-start)
-                        %)))
+  (let [est-map (get-est-map s-res t-res :est-end est-end :est-start)
         adjusted-series-src (hfs-seqfile adjusted-path)
         sink (hfs-seqfile output-path :sinkmode :replace)]
     (?- sink (forma/analyze-trends est-map adjusted-series-src))))
@@ -72,21 +69,21 @@
 (defmain TrendsPail
   [s-res t-res est-end trends-path output-path & pedigree] ;; pedigree helps w/testing
   (let [pedigree (parse-pedigree pedigree)
-        est-map (get-est-map s-res t-res est-end)
+        est-map (get-est-map s-res t-res :est-end est-end)
         trends-src (hfs-seqfile trends-path)]
     (p/to-pail output-path
                (forma/trends->datachunks est-map trends-src))))
 
 (defmain MergeTrends
   [s-res t-res est-end trends-pail-path output-path]
-  (let [est-map (get-est-map s-res t-res est-end)
+  (let [est-map (get-est-map s-res t-res :est-end est-end)
         trends-dc-src (p/split-chunk-tap trends-pail-path ["trends" (format "%s-%s" s-res t-res)])
         sink (hfs-seqfile output-path :sinkmode :replace)]
     (?- sink (forma/trends-datachunks->series est-map trends-dc-src))))
 
 (defmain FormaTap
-  [s-res t-res est-end fire-path dynamic-path output-path]
-  (let [est-map (get-est-map s-res t-res est-end)
+  [s-res t-res est-start est-end fire-path dynamic-path output-path]
+  (let [est-map (get-est-map s-res t-res :est-end est-end)
         dynamic-src (hfs-seqfile dynamic-path)
         fire-src (hfs-seqfile fire-path)
         sink (hfs-seqfile output-path :sinkmode :replace)]
@@ -94,7 +91,7 @@
 
 (defmain NeighborQuery
   [s-res t-res forma-val-path output-path]
-  (let [est-map (get-est-map s-res t-res nil)
+  (let [est-map (get-est-map s-res t-res)
         val-src (let [src (hfs-seqfile forma-val-path)]
                   (<- [?s-res ?period ?modh ?modv ?sample ?line ?forma-val]
                       (src ?s-res ?period ?modh ?modv ?sample ?line ?forma-val)))
@@ -103,7 +100,7 @@
 
 (defmain BetaDataPrep
   [s-res t-res dynamic-path static-path output-path]
-  (let [est-map (get-est-map s-res t-res nil)
+  (let [est-map (get-est-map s-res t-res)
         dynamic-src (hfs-seqfile dynamic-path)
         static-src (hfs-seqfile static-path)
         sink (hfs-seqfile output-path :sinkmode :replace)]
@@ -111,14 +108,14 @@
 
 (defmain GenBetas
   [s-res t-res est-start dynamic-path output-path]
-  (let [est-map (get-est-map s-res t-res est-start)
+  (let [est-map (get-est-map s-res t-res :est-start est-start)
         dynamic-src (hfs-seqfile dynamic-path)
         sink (hfs-seqfile output-path :sinkmode :replace)]
     (?- sink (forma/beta-gen est-map dynamic-src))))
 
 (defmain EstimateForma
   [s-res t-res beta-path dynamic-path static-path output-path]
-  (let [est-map (get-est-map s-res t-res nil)
+  (let [est-map (get-est-map s-res t-res)
         beta-src (hfs-seqfile beta-path)
         dynamic-src (hfs-seqfile dynamic-path)
         static-src (hfs-seqfile static-path)
@@ -128,7 +125,7 @@
 (defmain ProbsPail
   [s-res t-res est-end probs-path output-path & pedigree] ;; pedigree helps w/testing
   (let [pedigree (parse-pedigree pedigree)
-        est-map (get-est-map s-res t-res est-end)
+        est-map (get-est-map s-res t-res :est-end est-end)
         probs-src (hfs-seqfile probs-path)]
     (p/to-pail output-path
                (forma/probs->datachunks est-map probs-src))))
@@ -136,7 +133,7 @@
 (defmain MergeProbs
   [s-res t-res est-end probs-pail-path output-path]
   (let [data-name "forma"
-        est-map (get-est-map s-res t-res est-end)
+        est-map (get-est-map s-res t-res :est-end est-end)
         probs-dc-src (p/split-chunk-tap probs-pail-path [data-name (format "%s-%s" s-res t-res)])
         sink (hfs-seqfile output-path :sinkmode :replace)]
     (?- sink (forma/probs-datachunks->series est-map probs-dc-src))))

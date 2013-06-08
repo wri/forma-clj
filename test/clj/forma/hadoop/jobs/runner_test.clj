@@ -33,6 +33,12 @@
   [start-idx length]
   (thrift/TimeSeries* start-idx (vec (repeat length (thrift/FireValue* 0 0 0 0)))))
 
+(fact "Test `get-est-map`"
+  (map (get-est-map "500" "16") [:est-start :est-end]) => ["2005-12-19" nil]
+  (map (get-est-map "500" "16" :est-start "2006-01-01") [:est-start :est-end]) => ["2006-01-01" nil]
+  (map (get-est-map "500" "16" :est-start "2006-01-01" :est-end "2007-01-01")
+       [:est-start :est-end]) => ["2006-01-01" "2007-01-01"])
+
 (future-fact
  "sample-fire-series is not duplicated from forma.hadoop.jobs.forma-test
   namespace")
@@ -129,14 +135,16 @@ functions are tested elsewhere."
 (fact
   "Integration test of `FormaTap` defmain. All queries and functions used
    are tested elsewhere."
-  (let [fire-src [[s-res 28 8 0 0 (sample-fire-series 827 1)]]
+  (let [est-start "2005-12-19"
+        est-end "2005-12-19"
+        fire-src [[s-res 28 8 0 0 (sample-fire-series 827 1)]]
         dynamic-src [[s-res 28 8 0 0 827 [1.] [3.] [5.] [7.]]]
         fire-path (.getPath (io/temp-dir "fire-src"))
         dynamic-path (.getPath (io/temp-dir "dynamic-src"))
         output-path (.getPath (io/temp-dir "forma-src"))
         _ (?- (hfs-seqfile dynamic-path :sinkmode :replace) dynamic-src)
         _ (?- (hfs-seqfile fire-path :sinkmode :replace) fire-src)
-        _ (FormaTap s-res t-res est-end fire-path dynamic-path output-path)]
+        _ (FormaTap s-res t-res est-start est-end fire-path dynamic-path output-path)]
     (let [src (hfs-seqfile output-path)]
       (<- [?s-res ?pd ?mod-h ?mod-v ?sample ?line ?fire-vec
            ?short ?long ?t-stat ?break]
@@ -343,7 +351,7 @@ functions are tested elsewhere."
               
               formatap
               ([:tmp-dirs forma-tap-path]
-                 (FormaTap s-res t-res est-end fire-path merge-trends-path forma-tap-path))
+                 (FormaTap s-res t-res est-start est-end fire-path merge-trends-path forma-tap-path))
 
               neighborquery
               ([:tmp-dirs neighbor-path]
