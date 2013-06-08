@@ -59,6 +59,19 @@
         hit-val (get-hit-val thresh series)]
     [hit-period hit-val]))
 
+(defn api-prep-query
+  [src t-res nodata]
+  (<- [?lat ?lon ?iso ?iso-extra ?gadm2 ?start-idx ?clean-series]
+      (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?prob-series ?gadm2)
+      (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
+      (gadm2->iso ?gadm2 :> ?iso)
+      (p/add-fields ?iso :> ?iso-extra)
+      (o/clean-probs ?prob-series nodata :> ?clean-series)))
+
+(defn ever-crosses-thresh?
+  [thresh series]
+  (<= thresh (last series)))
+
 (defn prob-series->long-ts
   "Returns a Cascalog query that that takes output already joined with GADM,
    drops pixels that never meet the threshold, and converts remaining tuples
@@ -67,69 +80,46 @@
    ?year field is intended for use with template tap. ?iso-extra is
    included because the template tap removes :templatefields
    from :outfields, but we want the iso code included in the output."
-  [est-map src & {:keys [thresh pantropical] :or {thresh 0 pantropical true}}]
+  [est-map src & [thresh]]
   (let [thresh (or thresh 0)
         nodata (:nodata est-map)
         est-start (:est-start est-map)
         t-res (:t-res est-map)
-        q (<- [?lat ?lon ?iso ?iso-extra ?gadm2 ?date ?year ?prob]
-              (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?prob-series ?gadm2)
-              (gadm2->iso ?gadm2 :> ?iso)
-              (p/add-fields ?iso :> ?iso-extra)
-              (o/clean-probs ?prob-series nodata :> ?clean-series)
-              (last ?clean-series :> ?last-prob)
-              (<= thresh ?last-prob)
-              (wide->long ?start-idx ?clean-series :> ?period ?prob)
-              (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
-              (date/period->datetime t-res ?period :> ?date)
-              (date/convert ?date :year-month-day :year :> ?year))]
-    (if (not pantropical)
-      q
-      (<- [?lat ?lon ?iso ?gadm2 ?date ?prob]
-          (q ?lat ?lon ?iso _ ?gadm2 ?date _ ?prob)))))
+        clean-src (api-prep-query src t-res nodata)]
+    (<- [?lat ?lon ?iso ?iso-extra ?gadm2 ?date ?year ?prob]
+        (clean-src ?lat ?lon ?iso ?iso-extra ?gadm2 ?start-idx ?clean-series)
+        (ever-crosses-thresh? thresh ?clean-series)
+        (wide->long ?start-idx ?clean-series :> ?period ?prob)
+        (date/period->datetime t-res ?period :> ?date)
+        (date/convert ?date :year-month-day :year :> ?year))))
 
 (defn prob-series->first-hit
   "Returns a Cascalog query that generates data for the `first-hit`
    API endpoint. Takes a source of FORMA output already joined with
    GADM. Filters out any pixels that do not meet the threshold."
-  [est-map src & {:keys [thresh pantropical] :or {thresh 0 pantropical true}}]
+  [est-map src & [thresh]]
   (let [thresh (or thresh 0)
         t-res (:t-res est-map)
         nodata (:nodata est-map)
         est-start (:est-start est-map)
-        q (<- [?lat ?lon ?iso ?iso-extra ?gadm2 ?date ?prob]
-              (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?prob-series ?gadm2)
-              (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
-              (gadm2->iso ?gadm2 :> ?iso)
-              (p/add-fields ?iso :> ?iso-extra)
-              (o/clean-probs ?prob-series nodata :> ?clean-series)
-              (get-hit-period-and-value ?start-idx thresh ?clean-series :> ?period ?prob)
-              (date/period->datetime t-res ?period :> ?date))]
-    (if (not pantropical)
-      q
-      (<- [?lat ?lon ?iso ?gadm2 ?date ?prob]
-          (q ?lat ?lon ?iso _ ?gadm2 ?date ?prob)))))
+        clean-src (api-prep-query src t-res nodata)]
+    (<- [?lat ?lon ?iso ?iso-extra ?gadm2 ?date ?prob]
+        (clean-src ?lat ?lon ?iso ?iso-extra ?gadm2 ?start-idx ?clean-series)
+        (get-hit-period-and-value ?start-idx thresh ?clean-series :> ?period ?prob)
+        (date/period->datetime t-res ?period :> ?date))))
 
 (defn prob-series->latest
   "Returns a Cascalog query that generates data for the `latest`
    API endpoint. Takes a source of FORMA output already joined with
    GADM. Filters out any pixels that do not meet the threshold."
-  [est-map src & {:keys [thresh pantropical] :or {thresh 0 pantropical true}}]
+  [est-map src & [thresh]]
   (let [thresh (or thresh 0)
         t-res (:t-res est-map)
         nodata (:nodata est-map)
         est-start (:est-start est-map)
-        q (<- [?lat ?lon ?iso ?iso-extra ?gadm2 ?date ?prob]
-              (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?prob-series ?gadm2)
-              (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
-              (gadm2->iso ?gadm2 :> ?iso)
-              (p/add-fields ?iso :> ?iso-extra)
-              (o/clean-probs ?prob-series nodata :> ?clean-series)
-              (get-hit-period-and-value ?start-idx thresh ?clean-series :> ?period ?prob)
-              (latest-hit? thresh ?clean-series)
-              (date/period->datetime t-res ?period :> ?date))]
-    (if (not pantropical)
-      q
-      (<- [?lat ?lon ?iso ?gadm2 ?date ?prob]
-          (q ?lat ?lon ?iso _ ?gadm2 ?date ?prob)))))
-
+        clean-src (api-prep-query src t-res nodata)]
+    (<- [?lat ?lon ?iso ?iso-extra ?gadm2 ?date ?prob]
+        (clean-src ?lat ?lon ?iso ?iso-extra ?gadm2 ?start-idx ?clean-series)
+        (latest-hit? thresh ?clean-series)
+        (get-hit-period-and-value ?start-idx thresh ?clean-series :> ?period ?prob)
+        (date/period->datetime t-res ?period :> ?date))))

@@ -56,87 +56,39 @@
 
 (fact "Check `prob-series->long-ts`. Note that output probabilities
        are smoothed. The second test includes a threshold."
-  (prob-series->long-ts est-map sample-forma-data :pantropical false)
+  (prob-series->long-ts est-map sample-forma-data)
   => (produces-some
       [[9.99791666666666 101.54412568476158 "IDN" "IDN" 88500 "2005-12-19" "2005" 50]
        [9.99374999999999 101.542824160711 "IDN" "IDN" 88500 "2006-02-02" "2006" 0]])
-  (prob-series->long-ts est-map sample-forma-data :pantropical true)
+
+  (prob-series->long-ts est-map sample-forma-data 50)
   => (produces-some
-      [[9.99791666666666 101.54412568476158 "IDN" 88500 "2005-12-19" 50]
-       [9.99374999999999 101.542824160711 "IDN" 88500 "2006-02-02" 0]])
-  (prob-series->long-ts est-map sample-forma-data)
-  => (produces-some
-      [[9.99791666666666 101.54412568476158 "IDN" 88500 "2005-12-19" 50]
-       [9.99374999999999 101.542824160711 "IDN" 88500 "2006-02-02" 0]])
-  (let [thresh 50]
-    (prob-series->long-ts est-map sample-forma-data :thresh thresh)
-    => (produces-some
-        [[9.99791666666666 101.54412568476158 "IDN" 88500 "2005-12-19" 50]
-         [9.99791666666666 101.54412568476158 "IDN" 88500 "2006-01-01" 50]
-         [9.99791666666666 101.54412568476158 "IDN" 88500 "2006-01-17" 51]
-         [9.99791666666666 101.54412568476158 "IDN" 88500 "2006-02-02" 53]
-         [9.99791666666666 101.54412568476158 "IDN" 88500 "2006-02-18" 56]
-         [9.99791666666666 101.54412568476158 "IDN" 88500 "2006-03-06" 58]]))
-  (let [thresh 50
-        pantropical false]
-    (prob-series->long-ts est-map sample-forma-data :thresh thresh
-                          :pantropical pantropical)
-    => (produces-some
-        [[9.99791666666666 101.54412568476158 "IDN" "IDN" 88500 "2005-12-19" "2005" 50]
-         [9.99791666666666 101.54412568476158 "IDN" "IDN" 88500 "2006-01-01" "2006" 50]
-         [9.99791666666666 101.54412568476158 "IDN" "IDN" 88500 "2006-01-17" "2006" 51]
-         [9.99791666666666 101.54412568476158 "IDN" "IDN" 88500 "2006-02-02" "2006" 53]
-         [9.99791666666666 101.54412568476158 "IDN" "IDN" 88500 "2006-02-18" "2006" 56]
-         [9.99791666666666 101.54412568476158 "IDN" "IDN" 88500 "2006-03-06" "2006" 58]])))
+         [[9.99791666666666 101.54412568476158 "IDN" "IDN" 88500 "2005-12-19" "2005" 50]
+          [9.99791666666666 101.54412568476158 "IDN" "IDN" 88500 "2006-01-01" "2006" 50]
+          [9.99791666666666 101.54412568476158 "IDN" "IDN" 88500 "2006-01-17" "2006" 51]
+          [9.99791666666666 101.54412568476158 "IDN" "IDN" 88500 "2006-02-02" "2006" 53]
+          [9.99791666666666 101.54412568476158 "IDN" "IDN" 88500 "2006-02-18" "2006" 56]
+          [9.99791666666666 101.54412568476158 "IDN" "IDN" 88500 "2006-03-06" "2006" 58]]))
 
 (fact "Test `prob-series->first-hit"
-  (prob-series->first-hit est-map sample-forma-data :pantropical false)
+  (prob-series->first-hit est-map sample-forma-data)
   => (produces
       [[9.99791666666666 101.54412568476158 "IDN" "IDN" 88500 "2005-12-19" 50]
        [9.99374999999999 101.542824160711 "IDN" "IDN" 88500 "2005-12-19" 0]
        [9.98958333333332 101.54152320701927 "IDN" "IDN" 88500 "2005-12-19" 0]
        [9.985416666666667 101.54022282365065 "IDN" "IDN" 88500 "2005-12-19" 0]
        [9.981249999999996 101.53892301056953 "IDN" "IDN" 88500 "2005-12-19" 0]])
-  (prob-series->first-hit est-map sample-forma-data :thresh 20 :pantropical false)
+  (prob-series->first-hit est-map sample-forma-data 20)
   => (produces
       [[9.99791666666666 101.54412568476158 "IDN" "IDN" 88500 "2005-12-19" 50]
        [9.98958333333332 101.54152320701927 "IDN" "IDN" 88500 "2006-02-02" 20]
        [9.985416666666667 101.54022282365065 "IDN" "IDN" 88500 "2006-03-06"20]
-       [9.981249999999996 101.53892301056953 "IDN" "IDN" 88500 "2006-03-22" 33]])
-  (prob-series->first-hit est-map sample-forma-data :thresh 50 :pantropical false)
-  => (produces
-      [[9.99791666666666 101.54412568476158 "IDN" "IDN" 88500 "2005-12-19" 50]
-       [9.985416666666667 101.54022282365065 "IDN" "IDN" 88500 "2006-03-22" 53]])
-  )
-(fact
-  (prob-series->first-hit est-map sample-forma-data :pantropical true)
-  => (produces
-      [[9.99791666666666 101.54412568476158 "IDN" 88500 "2005-12-19" 50]
-       [9.99374999999999 101.542824160711 "IDN" 88500 "2005-12-19" 0]
-       [9.98958333333332 101.54152320701927 "IDN" 88500 "2005-12-19" 0]
-       [9.985416666666667 101.54022282365065 "IDN" 88500 "2005-12-19" 0]
-       [9.981249999999996 101.53892301056953 "IDN" 88500 "2005-12-19" 0]])
-  (prob-series->first-hit est-map sample-forma-data :thresh 20 :pantropical true)
-  => (produces
-      [[9.99791666666666 101.54412568476158 "IDN" 88500 "2005-12-19" 50]
-       [9.98958333333332 101.54152320701927 "IDN" 88500 "2006-02-02" 20]
-       [9.985416666666667 101.54022282365065 "IDN" 88500 "2006-03-06"20]
-       [9.981249999999996 101.53892301056953 "IDN" 88500 "2006-03-22" 33]])
-  (prob-series->first-hit est-map sample-forma-data :thresh 50 :pantropical true)
-  => (produces
-      [[9.99791666666666 101.54412568476158 "IDN" 88500 "2005-12-19" 50]
-       [9.985416666666667 101.54022282365065 "IDN" 88500 "2006-03-22" 53]]))
+       [9.981249999999996 101.53892301056953 "IDN" "IDN" 88500 "2006-03-22" 33]]))
 
 (fact "Test `prob-series->latest`."
-  (prob-series->latest est-map sample-forma-data :thresh 50 :pantropical false)
+    (prob-series->latest est-map sample-forma-data 50)
   => (produces
       [[9.985416666666667 101.54022282365065 "IDN" "IDN" 88500 "2006-03-22" 53]])
-  (prob-series->latest est-map sample-forma-data :thresh 20 :pantropical false)
+  (prob-series->latest est-map sample-forma-data 20)
   => (produces
-      [[9.981249999999996 101.53892301056953 "IDN" "IDN" 88500 "2006-03-22" 33]])
-    (prob-series->latest est-map sample-forma-data :thresh 50 :pantropical true)
-  => (produces
-      [[9.985416666666667 101.54022282365065 "IDN" 88500 "2006-03-22" 53]])
-  (prob-series->latest est-map sample-forma-data :thresh 20 :pantropical true)
-  => (produces
-      [[9.981249999999996 101.53892301056953 "IDN" 88500 "2006-03-22" 33]]))
+      [[9.981249999999996 101.53892301056953 "IDN" "IDN" 88500 "2006-03-22" 33]]))

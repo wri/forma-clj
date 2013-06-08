@@ -166,25 +166,11 @@
   (:query (api-kw api-config)))
 
 (defn get-output-path
-  [api-str thresh pantropical base-path]
-  (if pantropical
-    (format "%s/%s/pantropical/%s" base-path api-str thresh)
-    (format "%s/%s/country/%s" base-path api-str thresh)))
-
-(defn get-sink
-  [api-kw thresh pantropical base-path sink-template template-fields out-fields
-   & {:keys [textline] :or {textline true}}]
-  (let [out-path (get-output-path (name api-kw) thresh pantropical base-path)
-        hfs-format (if textline hfs-textline hfs-seqfile)]
-    (if pantropical
-      (hfs-format out-path :sinkmode :replace)
-      (hfs-format out-path :sinkmode :replace :sink-template sink-template
-                  :templatefields template-fields :outfields out-fields))))
+  [api-str thresh base-path]
+  (format "%s/%s/pantropical/%s/seq" base-path api-str thresh))
 
 (defmain ApiRunner
-  [api-str s-res t-res forma-gadm2-path base-output-path
-   & {:keys [thresh pantropical textline]
-      :or {thresh 0 pantropical true textline true}}]
+  [api-str thresh s-res t-res forma-gadm2-path base-output-path]
   {:pre [(contains? (set [:long :first :latest]) (keyword api-str))]}
   (let [api-kw (keyword api-str)
         est-map (get-est-map s-res t-res nil)
@@ -193,6 +179,6 @@
         sink-template (get-sink-template api-kw api-config)
         template-fields (get-template-fields api-kw api-config)
         query (get-query api-kw api-config)
-        sink (get-sink api-str thresh pantropical base-output-path sink-template
-                       template-fields out-fields)]
-    (?- sink (query est-map src :thresh thresh :pantropical pantropical))))
+        out-path (get-output-path api-str thresh base-output-path)
+        sink (hfs-seqfile out-path :sinkmode :replace)]
+    (?- sink (query est-map src :thresh thresh :pantropical true))))
