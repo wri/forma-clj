@@ -124,7 +124,7 @@ $LAUNCHER "$PREPROCESSNS.PreprocessFire" "$ARCHIVE/fires" $fireoutput 500 16 200
 echo "Prepping FORMA tap for neighbor analysis"
 dynamic=$output
 output="$TMP/forma-tap"
-$LAUNCHER $RUNNERNS.FormaTap $SRES $TRES $ESTSTART $ESTEND $fireoutput $dynamic $output
+$LAUNCHER $RUNNERNS.FormaTap $SRES $TRES $ESTEND $fireoutput $dynamic $output
 
 # neighbors
 
