@@ -50,7 +50,7 @@ $LAUNCHER "$PREPROCESSNS.PreprocessModis" "$STAGING/MOD13A1/" $PAILPATH "{20}*" 
 # 4 minutes w/25 high-memory for all data
 # 1h15 w/1 large instance for 1 tile
 echo "Preprocessing rain"
-$LAUNCHER "$PREPROCESSNS.PreprocessRain" "$ARCHIVE/PRECL" "$TMP/rain" $SRES $TRES
+$LAUNCHER "$PREPROCESSNS.PreprocessRain" "$ARCHIVE/PRECL" "$TMP/rain-raw" $SRES $TRES
 
 # 50 minutes w/5 high-memory for all data - one process took forever,
 # had to kill it. Default # of tasks now greater.
@@ -60,7 +60,7 @@ $LAUNCHER "$PREPROCESSNS.PreprocessRain" "$ARCHIVE/PRECL" "$TMP/rain" $SRES $TRE
 # waiting for copying to s3 to finish.
 echo "Exploding rain into MODIS pixels"
 rainoutput="$TMP/rain"
-$LAUNCHER "$PREPROCESSNS.ExplodeRain" "$TMP/rain" $rainoutput $SRES "$TILES"
+$LAUNCHER "$PREPROCESSNS.ExplodeRain" "$TMP/rain-raw" $rainoutput $SRES "$TILES"
 
 
 ####################
@@ -122,7 +122,7 @@ $LAUNCHER "$PREPROCESSNS.PreprocessFire" "$ARCHIVE/fires" $fireoutput 500 16 200
 echo "Prepping FORMA tap for neighbor analysis"
 dynamic=$output
 output="$TMP/forma-tap"
-$LAUNCHER $RUNNERNS.FormaTap $SRES $TRES $ESTSTART $ESTEND $fireoutput $dynamic $output
+$LAUNCHER $RUNNERNS.FormaTap $SRES $TRES $ESTEND $fireoutput $dynamic $output
 
 # neighbors
 
