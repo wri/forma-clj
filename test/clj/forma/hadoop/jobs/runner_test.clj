@@ -135,10 +135,10 @@ functions are tested elsewhere."
 (fact
   "Integration test of `FormaTap` defmain. All queries and functions used
    are tested elsewhere."
-  (let [est-start "2005-12-19"
-        est-end "2005-12-19"
+  (let [est-start "2006-01-01"
+        est-end "2006-01-01"
         fire-src [[s-res 28 8 0 0 (sample-fire-series 827 1)]]
-        dynamic-src [[s-res 28 8 0 0 827 [1.] [3.] [5.] [7.]]]
+        dynamic-src [[s-res 28 8 0 0 827 [1. 2. 3.] [3. 4. 5.] [5. 6. 7.] [7. 8. 9.]]]
         fire-path (.getPath (io/temp-dir "fire-src"))
         dynamic-path (.getPath (io/temp-dir "dynamic-src"))
         output-path (.getPath (io/temp-dir "forma-src"))
@@ -151,7 +151,7 @@ functions are tested elsewhere."
           (src ?s-res ?pd ?mod-h ?mod-v ?sample ?line ?forma-val)
           (thrift/unpack ?forma-val :> ?fire-val ?short ?long ?t-stat ?break)
           (thrift/unpack* ?fire-val :> ?fire-vec)))
-    => (produces [[s-res 827 28 8 0 0 [0 0 0 0] 1.0 3.0 5.0 7.0]])))
+    => (produces [[s-res 827 28 8 0 0 [0 0 0 0] 2. 4. 6. 8.]])))
 
 (fact
   "Integration test of `NeighborQuery` defmain. All queries and functions

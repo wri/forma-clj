@@ -61,7 +61,7 @@
 
 (defmain Trends
   [s-res t-res est-end adjusted-path output-path & [est-start]]
-  (let [est-map (get-est-map s-res t-res :est-end est-end :est-start)
+  (let [est-map (get-est-map s-res t-res :est-end est-end :est-start est-start)
         adjusted-series-src (hfs-seqfile adjusted-path)
         sink (hfs-seqfile output-path :sinkmode :replace)]
     (?- sink (forma/analyze-trends est-map adjusted-series-src))))
@@ -83,7 +83,7 @@
 
 (defmain FormaTap
   [s-res t-res est-start est-end fire-path dynamic-path output-path]
-  (let [est-map (get-est-map s-res t-res :est-end est-end)
+  (let [est-map (get-est-map s-res t-res :est-start est-start :est-end est-end)
         dynamic-src (hfs-seqfile dynamic-path)
         fire-src (hfs-seqfile fire-path)
         sink (hfs-seqfile output-path :sinkmode :replace)]
