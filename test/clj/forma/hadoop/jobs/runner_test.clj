@@ -34,8 +34,17 @@
 (defn sample-fire-series
   "Create a sample fire time series. Duplicated from
    forma.hadoop.jobs.forma-test namespace."
-  [start-idx length]
-  (thrift/TimeSeries* start-idx (vec (repeat length (thrift/FireValue* 0 0 0 0)))))
+  [start-idx length & defaults]
+  (thrift/TimeSeries* start-idx
+                      (vec (repeat length (if defaults
+                                            (apply thrift/FireValue* defaults)
+                                            (thrift/FireValue* 0 0 0 0))))))
+
+(fact "Test `get-est-map`"
+  (map (get-est-map "500" "16") [:est-start :est-end]) => ["2005-12-19" nil]
+  (map (get-est-map "500" "16" :est-start "2006-01-01") [:est-start :est-end]) => ["2006-01-01" nil]
+  (map (get-est-map "500" "16" :est-start "2006-01-01" :est-end "2007-01-01")
+       [:est-start :est-end]) => ["2006-01-01" "2007-01-01"])
 
 (future-fact
  "sample-fire-series is not duplicated from forma.hadoop.jobs.forma-test
@@ -133,21 +142,24 @@ functions are tested elsewhere."
 (fact
   "Integration test of `FormaTap` defmain. All queries and functions used
    are tested elsewhere."
-  (let [fire-src [[s-res 28 8 0 0 (sample-fire-series 827 1)]]
-        dynamic-src [[s-res 28 8 0 0 827 [1.] [3.] [5.] [7.]]]
+  (let [est-start "2006-01-01"
+        est-end "2006-01-17"
+        fire-src [[s-res 28 8 0 0 (sample-fire-series 827 3 0 0 0 1)]]
+        dynamic-src [[s-res 28 8 0 0 827 [1. 2. 3.] [3. 4. 5.] [5. 6. 7.] [7. 8. 9.]]]
         fire-path (.getPath (io/temp-dir "fire-src"))
         dynamic-path (.getPath (io/temp-dir "dynamic-src"))
         output-path (.getPath (io/temp-dir "forma-src"))
         _ (?- (hfs-seqfile dynamic-path :sinkmode :replace) dynamic-src)
         _ (?- (hfs-seqfile fire-path :sinkmode :replace) fire-src)
-        _ (FormaTap s-res t-res est-end fire-path dynamic-path output-path)]
+        _ (FormaTap s-res t-res est-start est-end fire-path dynamic-path output-path)]
     (let [src (hfs-seqfile output-path)]
       (<- [?s-res ?pd ?mod-h ?mod-v ?sample ?line ?fire-vec
            ?short ?long ?t-stat ?break]
           (src ?s-res ?pd ?mod-h ?mod-v ?sample ?line ?forma-val)
           (thrift/unpack ?forma-val :> ?fire-val ?short ?long ?t-stat ?break)
           (thrift/unpack* ?fire-val :> ?fire-vec)))
-    => (produces [[s-res 827 28 8 0 0 [0 0 0 0] 1.0 3.0 5.0 7.0]])))
+    => (produces [[s-res 828 28 8 0 0 [0 0 0 1] 1. 4. 6. 8.]
+                  [s-res 829 28 8 0 0 [0 0 0 1] 1. 5. 7. 9.]])))
 
 (fact
   "Integration test of `NeighborQuery` defmain. All queries and functions
@@ -347,7 +359,7 @@ functions are tested elsewhere."
               
               formatap
               ([:tmp-dirs forma-tap-path]
-                 (FormaTap s-res t-res est-end fire-path merge-trends-path forma-tap-path))
+                 (FormaTap s-res t-res est-start est-end fire-path merge-trends-path forma-tap-path))
 
               neighborquery
               ([:tmp-dirs neighbor-path]

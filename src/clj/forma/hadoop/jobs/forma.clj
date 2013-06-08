@@ -305,13 +305,17 @@
   Note that all values internally discuss timeseries, and that !!fire
   is an ungrounding variable. This triggers a left join with the trend
   result variables, even when there are no fires for a particular pixel."
-  [{:keys [t-res est-start nodata]} dynamic-src fire-src]
-  (<- [?s-res ?period ?mh ?mv ?s ?l ?forma-val]
-      (fire-src ?s-res ?mh ?mv ?s ?l !!fire)
-      (dynamic-src ?s-res ?mh ?mv ?s ?l ?start-idx ?short-s ?long-s ?t-stat-s ?break-s)
-      (schema/forma-seq nodata !!fire ?short-s ?long-s ?t-stat-s ?break-s :> ?forma-seq)
-      (p/index ?forma-seq :zero-index ?start-idx :> ?period ?forma-val)
-      (:distinct false)))
+  [{:keys [t-res est-start est-end nodata]} dynamic-src fire-src]
+  (let [start (date/datetime->period t-res est-start)
+        end (date/datetime->period t-res est-end)]
+    (<- [?s-res ?period ?mh ?mv ?s ?l ?forma-val]
+        (fire-src ?s-res ?mh ?mv ?s ?l !!fire)
+        (dynamic-src ?s-res ?mh ?mv ?s ?l ?start-idx ?short-s ?long-s ?t-stat-s ?break-s)
+        (schema/forma-seq nodata !!fire ?short-s ?long-s ?t-stat-s ?break-s :> ?forma-seq)
+        (p/index ?forma-seq :zero-index ?start-idx :> ?period ?forma-val)
+        (<= ?period end)
+        (>= ?period start)
+        (:distinct false))))
 
 (defmapcatop [process-neighbors [num-neighbors]]
   "Processes all neighbors... Returns the index within the chunk, the
@@ -437,3 +441,9 @@
         (date/period->key ?t-res ?start :> ?start-key)
         (merge-series-wrapper [t-res nodata] ?created ?start-key ?prob-series
                               :> ?start-final ?merged-series))))
+
+(defn probs-gadm2
+  [probs-src gadm2-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-final ?merged-series ?gadm2]
+      (probs-src ?s-res ?mod-h ?mod-v ?sample ?line ?start-final ?merged-series)
+      (gadm2-src ?s-res ?mod-h ?mod-v ?sample ?line ?gadm2)))

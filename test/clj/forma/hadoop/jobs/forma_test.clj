@@ -28,7 +28,7 @@
   "Define estimation map for testing based on 500m-16day resolution.
   This is the estimation map that generated the small-sample test
   data."
-  {:est-start "2005-12-31" ;; period index 827
+  {:est-start "2005-12-19" ;; period index 827
    :est-end "2012-04-22" ;; period index 973
    :s-res "500"
    :t-res "16"
@@ -300,11 +300,14 @@
 (fact
   "Check forma-tap. This test got crazy because it seems that comparing
    thrift objects to one another doesn't work for checking a result."
-  (let [dynamic-src [["500" 28 8 0 0 827 [1. 2.] [3. 4.] [5. 6.] [7. 8.]]
-                     ["500" 28 8 0 1 827 [1. 2.] [3. 4.] [5. 6.] [7. 8.]]]
-        fire-src [["500" 28 8 0 0 (sample-fire-series 827 2)]]
-        first-period [1. 3. 5. 7.]
-        second-period [1. 4. 6. 8.]
+  (let [test-map (assoc test-map :est-start "2006-01-01" :est-end "2006-01-17")
+        dynamic-src [["500" 28 8 0 0 827 [1. 2. 10. 11.] [3. 4. 10. 11.]
+                      [5. 6. 10. 11.] [7. 8. 10. 11.]]
+                     ["500" 28 8 0 1 827 [1. 2. 10. 11.] [3. 4. 10. 11.]
+                      [5. 6. 10. 11.] [7. 8. 10. 11.]]]
+        fire-src [["500" 28 8 0 0 (sample-fire-series 827 3)]]
+        first-period [1. 4. 6. 8.]
+        second-period [1. 10. 10. 10.]
         empty-fire (thrift/FireValue* 0 0 0 0)
         forma-src (forma-tap test-map dynamic-src fire-src)]
     (<- [?s-res ?period ?mh ?mv ?s ?l ?fire-vec ?trends-stats]
@@ -313,10 +316,10 @@
         (u/rest* ?forma-vec :> ?trends-stats)
         (first ?forma-vec :> ?fire-val)
         (thrift/unpack* ?fire-val :> ?fire-vec))
-    => (produces [["500" 827 28 8 0 0 [0 0 0 0] first-period]
-                  ["500" 828 28 8 0 0 [0 0 0 0] second-period]
-                  ["500" 827 28 8 0 1 [0 0 0 0] first-period]
-                  ["500" 828 28 8 0 1 [0 0 0 0] second-period]])))
+    => (produces [["500" 828 28 8 0 0 [0 0 0 0] first-period]
+                  ["500" 829 28 8 0 0 [0 0 0 0] second-period]
+                  ["500" 828 28 8 0 1 [0 0 0 0] first-period]
+                  ["500" 829 28 8 0 1 [0 0 0 0] second-period]])))
 
 (def good-val
   (thrift/FormaValue* (thrift/FireValue* 1. 1. 1. 1.) 1. 1. 1. 1.))
