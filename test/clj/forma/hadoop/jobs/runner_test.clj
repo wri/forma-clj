@@ -30,8 +30,11 @@
 (defn sample-fire-series
   "Create a sample fire time series. Duplicated from
    forma.hadoop.jobs.forma-test namespace."
-  [start-idx length]
-  (thrift/TimeSeries* start-idx (vec (repeat length (thrift/FireValue* 0 0 0 0)))))
+  [start-idx length & defaults]
+  (thrift/TimeSeries* start-idx
+                      (vec (repeat length (if defaults
+                                            (apply thrift/FireValue* defaults)
+                                            (thrift/FireValue* 0 0 0 0))))))
 
 (fact "Test `get-est-map`"
   (map (get-est-map "500" "16") [:est-start :est-end]) => ["2005-12-19" nil]
@@ -136,8 +139,8 @@ functions are tested elsewhere."
   "Integration test of `FormaTap` defmain. All queries and functions used
    are tested elsewhere."
   (let [est-start "2006-01-01"
-        est-end "2006-01-01"
-        fire-src [[s-res 28 8 0 0 (sample-fire-series 827 1)]]
+        est-end "2006-01-17"
+        fire-src [[s-res 28 8 0 0 (sample-fire-series 827 3 0 0 0 1)]]
         dynamic-src [[s-res 28 8 0 0 827 [1. 2. 3.] [3. 4. 5.] [5. 6. 7.] [7. 8. 9.]]]
         fire-path (.getPath (io/temp-dir "fire-src"))
         dynamic-path (.getPath (io/temp-dir "dynamic-src"))
@@ -151,7 +154,8 @@ functions are tested elsewhere."
           (src ?s-res ?pd ?mod-h ?mod-v ?sample ?line ?forma-val)
           (thrift/unpack ?forma-val :> ?fire-val ?short ?long ?t-stat ?break)
           (thrift/unpack* ?fire-val :> ?fire-vec)))
-    => (produces [[s-res 827 28 8 0 0 [0 0 0 0] 2. 4. 6. 8.]])))
+    => (produces [[s-res 828 28 8 0 0 [0 0 0 1] 1. 4. 6. 8.]
+                  [s-res 829 28 8 0 0 [0 0 0 1] 1. 5. 7. 9.]])))
 
 (fact
   "Integration test of `NeighborQuery` defmain. All queries and functions
