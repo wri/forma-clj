@@ -137,3 +137,10 @@
         probs-dc-src (p/split-chunk-tap probs-pail-path [data-name (format "%s-%s" s-res t-res)])
         sink (hfs-seqfile output-path :sinkmode :replace)]
     (?- sink (forma/probs-datachunks->series est-map probs-dc-src))))
+
+(defmain ProbsGadm2
+  [probs-path gadm2-path output-path]
+  (let [probs-src (hfs-seqfile probs-path)
+        gadm-src (hfs-seqfile gadm2-path)
+        sink (hfs-seqfile output-path :sinkmode :replace)]
+    (?- sink (forma/probs-gadm2 probs-src gadm-src))))

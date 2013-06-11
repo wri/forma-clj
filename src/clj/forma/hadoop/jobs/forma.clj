@@ -441,3 +441,9 @@
         (date/period->key ?t-res ?start :> ?start-key)
         (merge-series-wrapper [t-res nodata] ?created ?start-key ?prob-series
                               :> ?start-final ?merged-series))))
+
+(defn probs-gadm2
+  [probs-src gadm2-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-final ?merged-series ?gadm2]
+      (probs-src ?s-res ?mod-h ?mod-v ?sample ?line ?start-final ?merged-series)
+      (gadm2-src ?s-res ?mod-h ?mod-v ?sample ?line ?gadm2)))
