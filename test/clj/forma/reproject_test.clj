@@ -168,3 +168,21 @@ direction, then half-stepping to the centroid."
  "1000" [29 10 100 1120] [8479 14095]
  "500" [25 7 2399 2399]  [24000 19495]
  "250" [29 10 3432 1222] [37177 57608])
+
+(tabular
+ (fact "Test `downsample-latlon`."
+   (let [in-res "500"
+         out-res "5000"
+         [lat-hi lon-hi] (modis->latlon in-res 28 8 1 4)]
+     (->> (downsample-latlon in-res out-res lat-hi lon-hi)
+          (apply (partial latlon->modis "5000")))) => [28 8 0 0])
+ ?modh ?modv ?sample ?line ?result
+ 28 8 1 4 [28 8 0 0]
+ 28 8 1 9 [28 8 0 0]
+ 28 8 1 10 [28 8 0 1]
+ 20 5 1 4 [20 5 0 0]
+ 5 5 1 4 [5 5 0 0])
+
+(fact "Test `downsample-latlon` precondition."
+  (downsample-latlon "5000" "500" 1 1) => (throws AssertionError)
+  (downsample-latlon "500" "5000" 1 1) => [0.9791666666666545 0.9793096704258003])
