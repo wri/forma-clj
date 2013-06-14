@@ -155,3 +155,36 @@
         (- ?period-new-res epoch :> ?cdm-period)
         (date/period->datetime t-res-out ?period-new-res :> ?date-str)
         (c/count ?count))))
+
+(defn forma->blue-raster
+  "Query ingests FORMA and static data, produces data according to schema
+   preferred for further processing by Blue Raster.
+
+   Usage:
+     (let [t-res \"16
+           s-res \"500\"
+           nodata -9999.0
+           extract-start \"2006-01-01\"
+           extract-end \"2006-02-02\"
+           src [[s-res 28 8 0 0 827 [0.1 0.2 0.3] 88500]]
+           static-src [[s-res 28 8 0 0 25 nil 350 100 nil]]]
+       (forma->blue-raster src static-src nodata t-res :extract-start
+                           extract-start :extract-end extract-end))
+     =>; [[\"500\" 28 8 0 0 9.99791666666666 101.54412568476158 \"IDN\"
+           25 88500 350 100 [15 20]]]"
+  [src static-src nodata t-res & {:keys [extract-start extract-end]
+                                  :or {extract-start "2005-12-19"
+                                       extract-end "2005-12-19"}}]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?lat ?lon ?iso ?vcf ?gadm2 ?ecoid ?hansen ?output]
+      (src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?prob-series ?gadm2)
+      (static-src ?s-res ?mod-h ?mod-v ?sample ?line ?vcf _ ?ecoid ?hansen _)
+      (o/clean-probs ?prob-series nodata :> ?clean-series)
+      (date/period->datetime t-res ?start :> ?series-start)
+      (count ?clean-series :> ?series-len)
+      (+ ?start ?series-len :> ?x)
+      (dec ?x :> ?end)
+      (date/period->datetime t-res ?end :> ?series-end)
+      (gadm2->iso ?gadm2 :> ?iso)
+      (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
+      (date/temporal-subvec* extract-start extract-end ?series-start ?series-end
+                             t-res ?clean-series :> ?output)))
