@@ -4,7 +4,7 @@
   (:use [cascalog.api]
         [forma.source.gadmiso :only (gadm->iso gadm2->iso)]
         [forma.gfw.cdm :only (latlon->tile, latlon-valid?, meters->maptile)]
-        [forma.utils :only (positions)])
+        [forma.utils :only (positions take-last*)])
   (:require [forma.postprocess.output :as o]
             [forma.reproject :as r]
             [forma.date-time :as date]
@@ -160,6 +160,10 @@
   "Query ingests FORMA and static data, produces data according to schema
    preferred for further processing by Blue Raster.
 
+   [NOTE: This query does not work properly in production - it trips
+   up this precondition in `temporal-subvec`:
+     (sorted-dates? get-end (inc-date series-end (read-string t-res)))].
+
    Usage:
      (let [t-res \"16
            s-res \"500\"
@@ -179,12 +183,14 @@
       (src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?prob-series ?gadm2)
       (static-src ?s-res ?mod-h ?mod-v ?sample ?line ?vcf _ ?ecoid ?hansen _)
       (o/clean-probs ?prob-series nodata :> ?clean-series)
-      (date/period->datetime t-res ?start :> ?series-start)
-      (count ?clean-series :> ?series-len)
-      (+ ?start ?series-len :> ?x)
-      (dec ?x :> ?end)
-      (date/period->datetime t-res ?end :> ?series-end)
+      (take-last* 2 ?clean-series :> ?output)
+      ;; (date/period->datetime t-res ?start :> ?series-start)
+      ;; (count ?clean-series :> ?series-len)
+      ;; (+ ?start ?series-len :> ?x)
+      ;; (dec ?x :> ?end)
+      ;; (date/period->datetime t-res ?end :> ?series-end)
       (gadm2->iso ?gadm2 :> ?iso)
       (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
-      (date/temporal-subvec* extract-start extract-end ?series-start ?series-end
-                             t-res ?clean-series :> ?output)))
+      ;; (date/temporal-subvec* extract-start extract-end ?series-start ?series-end
+      ;;                        t-res ?clean-series :> ?output)
+      ))

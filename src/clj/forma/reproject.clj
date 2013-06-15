@@ -442,10 +442,3 @@ Example usage:
          (apply latlon->rowcol step
                 lat-dir lon-dir
                 lat-corner lon-corner))))
-
-(defn downsample-latlon
-  [in-res out-res lat lon]
-  {:pre [(>= (Integer/parseInt out-res)
-             (Integer/parseInt in-res))]}
-  (->> (latlon->modis out-res lat lon)
-       (apply (partial modis->latlon out-res))))

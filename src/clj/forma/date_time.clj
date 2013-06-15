@@ -517,10 +517,6 @@ in which `string` lies (according to the supplied resolution, `res`)."
   "Wraps `temporal-subvec` to handle multiple series appropriately
    for use with Cascalog."
   [get-start get-end series-start series-end t-res & series]
-  (prn "xxxx")
-  (prn get-start get-end series-start series-end t-res)
   (let [t-subvec (partial temporal-subvec get-start get-end
                           series-start series-end t-res)]
     (vec (map vec (map t-subvec series)))))
-
-"2005-12-19" "2013-06-14" "2005-12-19" "2006-01-17" "16"
