@@ -444,8 +444,18 @@ Example usage:
                 lat-corner lon-corner))))
 
 (defn downsample-latlon
+  "Downsample a latlon tuple from one resolution to a lower one."
   [in-res out-res lat lon]
   {:pre [(>= (Integer/parseInt out-res)
              (Integer/parseInt in-res))]}
   (->> (latlon->modis out-res lat lon)
        (apply (partial modis->latlon out-res))))
+
+(defn downsample-modis
+  "Downsample a MODIS coordinate tuple from one resolution to a lower one."
+  [in-res out-res mod-h mod-v sample line]
+  (>= (Integer/parseInt out-res)
+             (Integer/parseInt in-res))
+  (->> (modis->latlon in-res mod-h mod-v sample line)
+       (apply (partial downsample-latlon in-res out-res))
+       (apply (partial latlon->modis out-res))))

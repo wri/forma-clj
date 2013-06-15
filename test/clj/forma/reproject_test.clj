@@ -196,3 +196,7 @@ direction, then half-stepping to the centroid."
 (fact "Test `downsample-latlon` precondition."
   (downsample-latlon "5000" "500" 1 1) => (throws AssertionError)
   (downsample-latlon "500" "5000" 1 1) => [0.9791666666666545 0.9793096704258003])
+
+(fact "Test `downsample-modis`."
+  (downsample-modis "500" "5000" 28 8 0 1) => [28 8 0 0]
+  (downsample-modis "5000" "500" 28 8 0 1) => (throws AssertionError))
