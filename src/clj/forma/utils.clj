@@ -451,6 +451,7 @@
   (every? nil? coll))
 
 (defn nils->neg9999*
+  "Replace `nil` with -9999.0 in collection in a Cascalog-safe way."
   [coll]
   (replace-all* nil -9999.0 coll))
 
@@ -467,3 +468,8 @@
 (defn ls
   [dir]
   (.listFiles (File. dir)))
+
+(defn take-last*
+  "Make `take-last` safe for use within a Cascalog query."
+  [n coll]
+  [(vec (take-last n coll))])
