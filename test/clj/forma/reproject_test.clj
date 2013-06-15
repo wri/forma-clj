@@ -103,7 +103,7 @@ well formed!"
  "1000" (roughly 926.625)
  "500"  (roughly 463.312)
  "250"  (roughly 231.66)
- "100"  (roughly 92.66))
+ "100"  (throws AssertionError))
 
 (facts
   "Lat lon conversions."
@@ -200,3 +200,23 @@ direction, then half-stepping to the centroid."
 (fact "Test `downsample-modis`."
   (downsample-modis "500" "5000" 28 8 0 1) => [28 8 0 0]
   (downsample-modis "5000" "500" 28 8 0 1) => (throws AssertionError))
+
+(fact "Test `pixels-per-degree`."
+  pixels-per-degree => 480)
+
+(tabular
+ (fact "Test `pixel-count->res`."
+   (pixel-count->res ?num) => ?result)
+ ?num ?result
+ 4800 "250"
+ 2400 "500"
+ 1200 "1000")
+
+(fact "Test `modis-res->degrees`."
+  (modis-res->degrees "250") => "0.002083333333333333"
+  (modis-res->degrees "500") => "0.004166666666666667"
+  (modis-res->degrees "1000") => "0.008333333333333333")
+
+(fact "Test `degrees->modis-res`."
+  (degrees->modis-res "0.004166666667") => "500"
+  (degrees->modis-res "0.05") => "6000")
