@@ -19,6 +19,10 @@
 (def h-tiles 36)
 (def v-tiles 18)
 
+(def degrees-per-tile 10)
+(def base-res "250")
+(def base-pix 4800) ;; given in MODIS data spec
+
 (defn pixels-at-res
   "Given a resolution string in meters, return the number of pixels in
   the row or column of a MODIS image at that resolution. Resolution
@@ -38,21 +42,15 @@
     (pixels-at-res \"5000\")
     ;=> 240"
   [res]
-  {:pre [(string? res)]
-   :post [(integer? %)]}
-    (let [base-res 250
-        base-px 4800 ;; given in MODIS data spec
-        res-numeric (java.lang.Integer/parseInt res)]
+  {:pre [(string? res)
+         (integer? (/ (Integer/parseInt res) (Integer/parseInt base-res)))]}
+  (let [base-res (Integer/parseInt base-res)
+        res-numeric (Double/parseDouble res)]
     (if (= res-numeric base-res)
       base-px
       (->> (/ res-numeric base-res)
-           (/ base-px)))))
-
-(comment
-  (def pixels-at-res
-    {"250" 4800
-     "500" 2400
-     "1000" 1200}))
+           (/ base-pix)
+           (int)))))
 
 (def dataset-info
   "Returns the temporal resolution of the supplied MODIS short product
@@ -459,3 +457,40 @@ Example usage:
   (->> (modis->latlon in-res mod-h mod-v sample line)
        (apply (partial downsample-latlon in-res out-res))
        (apply (partial latlon->modis out-res))))
+
+(defn pixel-count->res
+  [num-pix]
+  {:post [(pixels-at-res %)]}
+  (let [base-res (Integer/parseInt base-res)]
+    (->> (/ base-pix num-pix)
+         (* base-res)
+         (double)
+         (int)
+         (str))))
+
+(def pixels-per-degree
+  (-> (pixels-at-res base-res)
+      (/ degrees-per-tile)
+      (int)))
+
+(defn modis-res->degrees
+  [s-res]
+  {:pre [(string? s-res)]}
+  (->> (pixels-at-res (str s-res))
+       (/ degrees-per-tile)
+       double
+       str))
+
+(defn degrees->modis-res
+  "Given a resolution in degrees, returns the nominal resolution in
+   meters. Note that this is not an accurate conversion from degrees
+   to meters, rather it converts between degrees and the corresponding
+   MODIS resolution - a clean number like 500. In the case of 500m
+   pixels, the actual pixel size is 463 meters."
+  [deg]
+  (let [base-res (Integer/parseInt base-res)
+        deg (Double/parseDouble deg)]
+    (->> (* pixels-per-degree deg)
+         (* base-res)
+         (int)
+         (str))))
