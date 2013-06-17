@@ -459,6 +459,8 @@ Example usage:
        (apply (partial latlon->modis out-res))))
 
 (defn pixel-count->res
+  "Given the number of pixels for a MODIS 10x10 degree tile, convert to
+   the nominal MODIS resolution in meters."
   [num-pix]
   {:post [(pixels-at-res %)]}
   (let [base-res (Integer/parseInt base-res)]
@@ -468,12 +470,15 @@ Example usage:
          (int)
          (str))))
 
-(def pixels-per-degree
+(def base-pixels-per-degree
+  "Stores the number of pixels per degree at the base 250m
+   resolution - 480 pixels."
   (-> (pixels-at-res base-res)
       (/ degrees-per-tile)
       (int)))
 
 (defn modis-res->degrees
+  "Convert from MODIS resolution to resolution in degrees."
   [s-res]
   {:pre [(string? s-res)]}
   (->> (pixels-at-res (str s-res))
@@ -490,7 +495,7 @@ Example usage:
   [deg]
   (let [base-res (Integer/parseInt base-res)
         deg (Double/parseDouble deg)]
-    (->> (* pixels-per-degree deg)
+    (->> (* base-pixels-per-degree deg)
          (* base-res)
          (int)
          (str))))

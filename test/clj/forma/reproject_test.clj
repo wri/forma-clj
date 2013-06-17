@@ -201,8 +201,8 @@ direction, then half-stepping to the centroid."
   (downsample-modis "500" "5000" 28 8 0 1) => [28 8 0 0]
   (downsample-modis "5000" "500" 28 8 0 1) => (throws AssertionError))
 
-(fact "Test `pixels-per-degree`."
-  pixels-per-degree => 480)
+(fact "Test `base-pixels-per-degree`."
+  base-pixels-per-degree => 480)
 
 (tabular
  (fact "Test `pixel-count->res`."
