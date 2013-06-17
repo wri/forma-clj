@@ -8,6 +8,7 @@
         [forma.utils :only (positions)])
   (:require [forma.postprocess.output :as o]
             [forma.reproject :as r]
+            [forma.hadoop.predicate :as p]
             [forma.date-time :as date]
             [cascalog.ops :as c]))
 
@@ -175,6 +176,7 @@
         (date/period->datetime t-res-out ?period-new-res :> ?date-str)
         (c/count ?count))))
 
+<<<<<<< HEAD
 (defn forma->blue-raster
   "Prepare data for use by Blue Raster. Expects `src` to include GADM2
   and ecoregion fields already."
@@ -214,3 +216,19 @@
                   (c/count ?count))]
     (<- [?lat-str ?lon-str ?iso ?gadm2 ?date-str]
         (query ?lat-str ?lon-str ?iso ?gadm2 ?date-str _))))
+
+(defn gridify
+  "Downsample output to desired resolution given in meters. If desired
+  resolution is in degrees, use `r/degrees->modis-res` to convert to
+  corresponding MODIS resolution in meters."
+  [thresh nodata t-res out-s-res probs-gadm-src]
+  (<- [?lat ?lon ?iso ?gadm2 ?date ?count]
+      (probs-gadm-src ?s-res ?mod-h ?mod-v ?s ?l ?start-idx ?prob-series ?gadm2)
+      (o/clean-probs ?prob-series nodata :> ?clean-series)
+      (first-hit thresh ?clean-series :> ?first-hit-idx)
+      (+ ?start-idx ?first-hit-idx :> ?period)
+      (date/period->datetime t-res ?period :> ?date)
+      (r/downsample-modis ?s-res out-s-res ?mod-h ?mod-v ?s ?l :> ?mod-h-n ?mod-v-n ?s-n ?l-n)
+      (r/modis->latlon out-s-res ?mod-h-n ?mod-v-n ?s-n ?l-n :> ?lat ?lon)
+      (gadm2->iso ?gadm2 :> ?iso)
+      (c/count ?count)))

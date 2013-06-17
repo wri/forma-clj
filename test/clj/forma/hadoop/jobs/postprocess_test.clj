@@ -78,3 +78,15 @@ series."
     => (produces [["9.99791667" "101.54412568" "IDN" 88500 "2006-01-17"]])))
 
 (future-fact "Test `forma-website`. Need real data to make test more meaningful.")
+
+(fact "Test `gridify`."
+  (let [thresh 50
+        nodata -9999.0
+        t-res "16"
+        out-s-res "6000"
+        probs-gadm-src [["500" 28 8 0 0 827 [0.1 0.2 0.8 0.4 0.5] 88500]
+                        ["500" 28 8 0 1 827 [0.2 0.3 0.4 0.5 0.6] 88500]
+                        ["500" 28 8 0 2 827 [0.3 0.4 0.5 0.6 0.7] 88500]]]
+    (gridify thresh nodata t-res out-s-res probs-gadm-src))
+  => (produces [[9.974999999999993 101.56024276535798 "IDN" 88500 "2006-02-02" 1]
+                [9.974999999999993 101.56024276535798 "IDN" 88500 "2006-02-18" 2]]))

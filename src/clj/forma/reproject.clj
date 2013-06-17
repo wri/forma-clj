@@ -47,7 +47,7 @@
   (let [base-res (Integer/parseInt base-res)
         res-numeric (Double/parseDouble res)]
     (if (= res-numeric base-res)
-      base-px
+      base-pix
       (->> (/ res-numeric base-res)
            (/ base-pix)
            (int)))))
