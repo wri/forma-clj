@@ -50,7 +50,9 @@ $LAUNCHER "$PREPROCESSNS.PreprocessModis" "$STAGING/MOD13A1/" $PAILPATH "{20}*" 
 # 4 minutes w/25 high-memory for all data
 # 1h15 w/1 large instance for 1 tile
 echo "Preprocessing rain"
-$LAUNCHER "$PREPROCESSNS.PreprocessRain" "$ARCHIVE/PRECL" "$TMP/rain" $SRES $TRES
+rainraw="$ARCHIVE/precl"
+output="$TMP/rain-raw"
+$LAUNCHER "$PREPROCESSNS.PreprocessRain" $rainraw $output $SRES $TRES
 
 # 50 minutes w/5 high-memory for all data - one process took forever,
 # had to kill it. Default # of tasks now greater.
@@ -59,9 +61,9 @@ $LAUNCHER "$PREPROCESSNS.PreprocessRain" "$ARCHIVE/PRECL" "$TMP/rain" $SRES $TRE
 # With 25 high memory instances took 22 minutes, of which 12 were spent
 # waiting for copying to s3 to finish.
 echo "Exploding rain into MODIS pixels"
-rainoutput="$TMP/rain"
-$LAUNCHER "$PREPROCESSNS.ExplodeRain" "$TMP/rain" $rainoutput $SRES "$TILES"
-
+rain=$output
+output="$TMP/rain"
+$LAUNCHER "$PREPROCESSNS.ExplodeRain" $rain $output $SRES "$TILES"
 
 ####################
 # REST OF WORKFLOW #
