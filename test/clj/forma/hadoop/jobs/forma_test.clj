@@ -21,6 +21,7 @@
   (:require [forma.testing :as t]
             [forma.thrift :as thrift]
             [forma.utils :as u]
+            [forma.date-time :as date]
             [forma.schema :as schema])
   (:import [forma.schema DataChunk]))
 
@@ -62,8 +63,12 @@
   (thrift/DataChunk* "hansen" pixel-loc 100 t-res))
 
 (defn sample-fire-series
-  [start-idx length]
-  (thrift/TimeSeries* start-idx (vec (repeat length (thrift/FireValue* 0 0 0 0)))))
+  "Create a sample fire time series."
+  [start-idx length & defaults]
+  (thrift/TimeSeries* start-idx
+                      (vec (repeat length (if defaults
+                                            (apply thrift/FireValue* defaults)
+                                            (thrift/FireValue* 0 0 0 0))))))
 
 (def sample-hansen-src
   (let [bad-loc (thrift/ModisPixelLocation* s-res 29 8 0 0)]
@@ -97,10 +102,11 @@
   "Checks that fire-tap is trimming the fire timeseries correctly.
    Note that 828 is the period corresponding to 2006-01-01.
    Also note that the timeseries is a running sum."
-  (let [src [[(thrift/DataChunk* "fire" pixel-loc (sample-fire-series 825 5) "01")]]
-        est-start "2005-12-31"
-        est-end "2006-01-01"]
-    (fire-tap est-start est-end t-res src)) => (produces [[s-res 28 8 0 0 (sample-fire-series 827 2)]]))
+  (let [start-idx 827
+        len 5
+        src [[(thrift/DataChunk* "fire" pixel-loc (sample-fire-series start-idx len) "01")]]]
+    (fire-tap src) => (produces [[s-res 28 8 0 0
+                                  (sample-fire-series start-idx len)]])))
 
 (fact
   "Test `adjust-precl`"
@@ -298,28 +304,35 @@
                                     [3. 13. 13.] [4. 14. 14.]]]))
 
 (fact
-  "Check forma-tap. This test got crazy because it seems that comparing
-   thrift objects to one another doesn't work for checking a result."
-  (let [test-map (assoc test-map :est-start "2006-01-01" :est-end "2006-01-17")
-        dynamic-src [["500" 28 8 0 0 827 [1. 2. 10. 11.] [3. 4. 10. 11.]
-                      [5. 6. 10. 11.] [7. 8. 10. 11.]]
-                     ["500" 28 8 0 1 827 [1. 2. 10. 11.] [3. 4. 10. 11.]
-                      [5. 6. 10. 11.] [7. 8. 10. 11.]]]
-        fire-src [["500" 28 8 0 0 (sample-fire-series 827 3)]]
-        first-period [1. 4. 6. 8.]
-        second-period [1. 10. 10. 10.]
-        empty-fire (thrift/FireValue* 0 0 0 0)
-        forma-src (forma-tap test-map dynamic-src fire-src)]
-    (<- [?s-res ?period ?mh ?mv ?s ?l ?fire-vec ?trends-stats]
-        (forma-src ?s-res ?period ?mh ?mv ?s ?l ?forma-val)
+  "Check `forma-tap`. This test got crazy because it seems that
+   comparing thrift objects to one another within Cascalog doesn't
+   work for checking a result."
+  (let [test-map (assoc test-map :est-start "2010-01-01" :est-end "2010-01-17")
+        start-idx (date/datetime->period t-res "2005-12-19")
+        val-2 200
+        len 175
+        p1 (vec (map float (range len)))
+        p2 (vec (map float (range val-2 (+ val-2 len))))
+        dynamic-src [["500" 28 8 0 0 start-idx p1 p1 p1 p1]
+                     ["500" 28 8 0 1 start-idx p2 p2 p2 p2]]
+        fire-src [["500" 28 8 0 0 (sample-fire-series 709 350 0 0 0 1)]]
+        src (forma-tap test-map dynamic-src fire-src)
+        
+        est-start-idx (date/datetime->period "16" "2010-01-01")
+        ridx1a (- est-start-idx start-idx)
+        ridx1b (inc ridx1a)
+        ridx2a (+ val-2 ridx1a)
+        ridx2b (inc ridx2a)
+        res1a ["500" 920 28 8 0 0 [0 0 0 1] [0. ridx1a ridx1a ridx1a]]
+        res1b ["500" 921 28 8 0 0 [0 0 0 1] [0. ridx1b ridx1b ridx1b]]
+        res2a ["500" 920 28 8 0 1 [0 0 0 0] [val-2 ridx2a ridx2a ridx2a]]
+        res2b ["500" 921 28 8 0 1 [0 0 0 0] [val-2 ridx2b ridx2b ridx2b]]]
+    (<- [?s-res ?period ?mod-h ?mod-v ?sample ?line ?fire-vec ?trends-stats]
+        (src ?s-res ?period ?mod-h ?mod-v ?sample ?line ?forma-val)
         (thrift/unpack* ?forma-val :> ?forma-vec)
         (u/rest* ?forma-vec :> ?trends-stats)
         (first ?forma-vec :> ?fire-val)
-        (thrift/unpack* ?fire-val :> ?fire-vec))
-    => (produces [["500" 828 28 8 0 0 [0 0 0 0] first-period]
-                  ["500" 829 28 8 0 0 [0 0 0 0] second-period]
-                  ["500" 828 28 8 0 1 [0 0 0 0] first-period]
-                  ["500" 829 28 8 0 1 [0 0 0 0] second-period]])))
+        (thrift/unpack* ?fire-val :> ?fire-vec))))
 
 (def good-val
   (thrift/FormaValue* (thrift/FireValue* 1. 1. 1. 1.) 1. 1. 1. 1.))
