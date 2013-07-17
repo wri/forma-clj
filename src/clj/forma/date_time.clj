@@ -3,7 +3,7 @@
 ;; proper temporal comparison of two unrelated datasets.
 
 (ns forma.date-time
-  (:use [clj-time.core :only (date-time plus month year days)]
+  (:use [clj-time.core :only (now date-time plus month year days)]
         [forma.matrix.utils :only (sparse-expander)]
         [forma.utils :only (inc-eq? all-unique? contains-nils?)])
   (:require [clj-time.core :as time]
@@ -22,6 +22,15 @@
   with a call to `(clj-time.format/show-formatters)`."
   [dt format]
   (->> dt (f/unparse (f/formatters format))))
+
+(defn todays-date
+  "Returns current date as \"YYYY-MM-dd\".
+
+   Usage:
+     (todays-date)
+     ;=> \"2013-04-16\""
+  []
+  (unparse (now) :year-month-day))
 
 (defn convert
   "Converts the supplied string `s` between the two supplied
@@ -68,7 +77,7 @@
 ;; (It's important to note that time periods are NOT measured from the
 ;; activation date of a specific product. The first available NDVI
 ;; 16-day composite, for example, has a beginning date of February
-;; 18th 2001, or ordinal day 49, the 1st day of the 4th period as
+;; 18th 2000, or ordinal day 49, the 1st day of the 4th period as
 ;; measured from January 1st. With our reference of January 1st, This
 ;; dataset will receive an index of 3, and will match up with any
 ;; other data that falls within that 16-day period. This provides
@@ -137,6 +146,7 @@
 (def months (partial delta-periods month 1))
 (def sixteens (partial delta-periods ordinal 16))
 (def eights (partial delta-periods ordinal 8))
+(def ones (partial delta-periods ordinal 1))
 
 (defn periodize
   "Converts the supplied `org.joda.time.DateTime` object into a
@@ -147,7 +157,8 @@ resolution. `DateTime` objects can be created with `clj-time`'s
   (let [converter (case temporal-res
                         "32" months
                         "16" sixteens
-                        "8" eights)]
+                        "8" eights
+                        "1" ones)]
     (converter (time/epoch) date)))
 
 (defn datetime->period
