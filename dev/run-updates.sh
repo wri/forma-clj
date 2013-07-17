@@ -10,6 +10,7 @@ MODISLAYERS="[:ndvi]" # :reli
 TILES="[:all]" # "[[28 8]]"
 ESTSTART=$1 # "2013-02-18"
 ESTEND=$2 # "2013-03-06"
+FIRESTART="2000-11-01"
 
 ####################
 # Storage settings #
@@ -117,7 +118,7 @@ $LAUNCHER $RUNNERNS.MergeTrends $SRES $TRES $ESTEND $trendspail $output
 # update process.
 echo "Preprocessing fires"
 fireoutput="$TMP/fires"
-$LAUNCHER "$PREPROCESSNS.PreprocessFire" "$ARCHIVE/fires" $fireoutput 500 16 2000-11-01 $ESTSTART $ESTEND "$TILES"
+$LAUNCHER "$PREPROCESSNS.PreprocessFire" "$ARCHIVE/fires" $fireoutput 500 16 $FIRESTART "$TILES"
 
 # forma-tap
 
