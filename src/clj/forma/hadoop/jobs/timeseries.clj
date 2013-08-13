@@ -114,22 +114,25 @@
         (:distinct true))))
 
 (defn create-fire-series
-  "Aggregates fires into running sum timeseries."
-  [src t-res fires-start est-start est-end]
-  (let [[start end] (map (partial date/datetime->period t-res) [fires-start est-end])
+  "Aggregates fires into running sum timeseries.
+
+   N.B. The fact that fires start later than MODIS (i.e. 2000-11-01
+  vs. 2000-02-18) is ok given that the fires are a running sum and are
+  only used starting at the end of the training period. So the lack of
+  a running sum in early 2000 is unimportant."
+  [src t-res fires-start end-date]
+  (let [pedigree (thrift/epoch)
+        [start end] (map (partial date/datetime->period t-res) [fires-start end-date])
         length (inc (- end start))
-        mk-fire-tseries (p/vals->sparsevec start length (thrift/FireValue* 0 0 0 0))
         series-src (aggregate-fires src t-res)
         fire-sum-src (sum-fire-series series-src start length t-res)]
     (<- [?pixel-chunk]
         (fire-sum-src ?name ?s-res ?h ?v ?sample ?line ?fire-series)
-        (schema/adjust-fires est-start est-end t-res ?fire-series :> ?adjusted)
         (thrift/ModisPixelLocation* ?s-res ?h ?v ?sample ?line :> ?pixel-loc)
-        (thrift/DataChunk* ?name ?pixel-loc ?adjusted t-res :> ?pixel-chunk)
+        (thrift/DataChunk* ?name ?pixel-loc ?fire-series t-res :pedigree pedigree :> ?pixel-chunk)
         (:distinct false))))
 
 (defn fire-query
   "Returns a source of fire timeseries data chunk objects."
-  [src m-res t-res fires-start est-start est-end]
-  (-> src
-      (create-fire-series t-res fires-start est-start est-end)))
+  [src m-res t-res fires-start end-date]
+  (create-fire-series src t-res fires-start end-date))
