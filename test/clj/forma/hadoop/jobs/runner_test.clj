@@ -10,7 +10,8 @@
             [forma.date-time :as date]
             [cascalog.io :as io]
             [cascalog.ops :as c]
-            [forma.hadoop.pail :as p]))
+            [forma.hadoop.pail :as p]
+            [forma.hadoop.jobs.api :as api]))
 
 (def s-res "500")
 (def t-res "16")
@@ -19,13 +20,16 @@
 (def est-start "2005-12-19")
 (def est-end "2006-01-01")
 (def start-idx (date/datetime->period t-res modis-start))
+(def est-start-idx (date/datetime->period t-res est-start))
 (def end-idx (date/datetime->period t-res est-end))
 (def series (vec (range (inc (- end-idx start-idx)))))
 (def static-src [[s-res 28 8 0 0 50 -1 -1 -1 -1]])
+(def forma-gadm2-src [[s-res 28 8 0 0 est-start-idx [0.5 0.49 0.55 0.54 0.60 0.59 0.5] 88500]])
 
 (def ts-path (.getPath (io/temp-dir "ts-src")))
 (def static-path (.getPath (io/temp-dir "static-src")))
 (def output-path (.getPath (io/temp-dir "output-sink")))
+(def forma-gadm2-path (.getPath (io/temp-dir "forma-gadm2-sink")))
 
 (defn sample-fire-series
   "Create a sample fire time series. Duplicated from
@@ -370,3 +374,95 @@ functions are tested elsewhere."
                  (MergeProbs s-res t-res est-end probs-pail-path merge-probs-path))))
   1
   => 1)
+
+(fact "Test `get-sink-template`."
+  (get-sink-template :long api-config) => "%s/%s"
+  (get-sink-template :first api-config) => "%s/"
+  (get-sink-template :latest api-config) => "%s/")
+
+(fact "Test `get-template-fields"
+  (get-template-fields :long api-config) => ["?iso-extra" "?year"]
+  (get-template-fields :first api-config) => ["?iso-extra"]
+  (get-template-fields :latest api-config) => ["?iso-extra"])
+
+(fact "Test `get-query`."
+  (str (class (get-query :long api-config)))
+  => "class forma.hadoop.jobs.api$prob_series__GT_long_ts"
+  (str (class (get-query :first api-config)))
+  => "class forma.hadoop.jobs.api$prob_series__GT_first_hit"
+  (str (class (get-query :latest api-config)))
+  => "class forma.hadoop.jobs.api$prob_series__GT_latest")
+
+(fact "Test `get-output-path`."
+  (get-output-path "long" 20 false "/tmp/base-path")
+  => "/tmp/base-path/long/country/20"
+  (get-output-path "long" 20 true "/tmp/base-path")
+  => "/tmp/base-path/long/pantropical/20"
+  (get-output-path "long" 0 false "/tmp/base-path")
+  => "/tmp/base-path/long/country/0")
+
+(fact "Test `get-sink`."
+  (let [thresh 20
+        api-kw :long
+        output-base-path "/tmp/base-path/"
+        sink-template "%s/%s"
+        template-fields ["?iso-extra" "?year"]
+        out-fields ["?lat" "?lon" "?iso" "?gadm2" "?date" "?prob"]]
+    ;; base case - partition by sink-template (i.e. pantropical is false)
+    (get-sink api-kw thresh false output-base-path sink-template
+                template-fields out-fields)
+    => (let [out-path (get-output-path (name api-kw) thresh false output-base-path)]
+         (hfs-textline out-path :sinkmode :replace :sink-template sink-template
+                       :templatefields template-fields :outfields out-fields))
+    ;; pantropical is true - no templating necessary
+    (get-sink api-kw thresh true output-base-path sink-template
+              template-fields out-fields)
+    => (let [out-path (get-output-path (name api-kw) thresh true output-base-path)]
+         (hfs-textline out-path :sinkmode :replace))
+    ;; use :textline false -> use hfs-seqfile
+    (get-sink api-kw thresh false output-base-path sink-template
+                template-fields out-fields :textline false)
+    => (let [out-path (get-output-path (name api-kw) thresh false output-base-path)]
+         (hfs-seqfile out-path :sinkmode :replace :sink-template sink-template
+                       :templatefields template-fields :outfields out-fields))))
+
+(fact "Integration test of `ApiRunner`. Functions and queries are
+       tested elsewhere."
+  (let [_ (?- (hfs-seqfile forma-gadm2-path :sinkmode :replace) forma-gadm2-src)
+        base-output-path (.getPath (io/temp-dir "api"))
+        api-str "long"
+        api-kw (keyword api-str)]
+    ;; base case
+    (let [thresh 0 ;; default
+          pantropical true] ;; default
+      (ApiRunner api-kw s-res t-res forma-gadm2-path base-output-path
+                 :pantropical pantropical)
+      (hfs-textline (get-output-path api-str thresh pantropical base-output-path)))
+    ;; pantropical false
+    => (produces-some
+        [["9.99791666666666\t101.54412568476158\tIDN\t88500\t2005-12-19\t50"]])
+    (let [thresh 0 ;; default
+          pantropical false]
+      (ApiRunner api-kw s-res t-res forma-gadm2-path base-output-path
+                 :pantropical pantropical)
+      (hfs-textline
+       (str (get-output-path api-str thresh pantropical base-output-path)
+            "/IDN/2005")))
+    => (produces-some
+        [["9.99791666666666\t101.54412568476158\tIDN\t88500\t2005-12-19\t50"]])
+    ;; filter out <= 55
+    (let [thresh 55
+          pantropical true]
+      (ApiRunner api-kw s-res t-res forma-gadm2-path base-output-path
+                 :pantropical pantropical :thresh thresh)
+      (hfs-textline (get-output-path api-str thresh pantropical base-output-path)))
+    => (produces-some
+        [["9.99791666666666\t101.54412568476158\tIDN\t88500\t2006-02-18\t56"]])
+    ;; filter out <= 60 - i.e. no output tuples
+    (let [thresh 60
+          pantropical true]
+      (ApiRunner api-kw s-res t-res forma-gadm2-path base-output-path
+                 :pantropical pantropical :thresh thresh)
+      (slurp (str (get-output-path api-str thresh pantropical base-output-path)
+                  "/part-00000")))
+    => ""))
