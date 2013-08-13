@@ -164,13 +164,13 @@
 
 (defn get-output-path
   [api-str thresh base-path]
-  (format "%s/%s/pantropical/%s/seq" base-path api-str thresh))
+  (format "%s/%s/pantropical/%s" base-path api-str thresh))
 
 (defmain ApiRunner
   [api-str thresh s-res t-res forma-gadm2-path base-output-path]
   {:pre [(contains? (set [:long :first :latest]) (keyword api-str))]}
   (let [api-kw (keyword api-str)
-        est-map (get-est-map s-res t-res nil)
+        est-map (get-est-map s-res t-res)
         out-fields ["?lat" "?lon" "?iso" "?gadm2" "?date" "?prob"]
         src (hfs-seqfile forma-gadm2-path)
         sink-template (get-sink-template api-kw api-config)
