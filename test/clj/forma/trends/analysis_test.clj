@@ -18,7 +18,15 @@
     coeff  => (roughly -1.23824)
     t-test => (roughly -0.99763))
 
-  ;; Returns a pair of nil values in the presence of an exception
+  ;; Long-term statistics on NDVI, with constant rain as a
+  ;; cofactor. Given constant rain, it should be ignored and results
+  ;; should be the same as for NDVI alone.
+  (let [rain (repeat (count rain) 1)
+        [coeff t-test] (long-stats ndvi rain)]
+    coeff  => (roughly -1.14300)
+    t-test => (roughly -0.91826))
+
+  ;; Returns a pair of nil values in the presence of a singular matrix.
   (let [[coeff t-test] (long-stats [0])]
     coeff  => nil
     t-test => nil))
