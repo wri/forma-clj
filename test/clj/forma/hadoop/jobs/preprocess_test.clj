@@ -24,11 +24,11 @@
         _ (spit (str fire-path "/fires.csv") fire-str)
         counter (comp count first ??- hfs-seqfile)]
     
-    (PreprocessFire fire-path out-path "500" "16" "2000-11-01" "2005-12-31" "2012-12-31" :all)
+    (PreprocessFire fire-path out-path "500" "16" "2000-11-01" :all)
     (counter out-path) => 2
 
-    (PreprocessFire fire-path out-path "500" "16" "2000-11-01" "2005-12-31" "2012-12-31" [[28 8]])
+    (PreprocessFire fire-path out-path "500" "16" "2000-11-01" [[28 8]])
     (counter out-path) => 1
 
-    (PreprocessFire fire-path out-path "500" "16" "2000-11-01" "2005-12-31" "2012-12-31" [[28 8] [31 10]])
+    (PreprocessFire fire-path out-path "500" "16" "2000-11-01" [[28 8] [31 10]])
     (counter out-path) => 2))

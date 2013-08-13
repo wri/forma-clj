@@ -5,6 +5,7 @@
         [cascalog.io :only (with-fs-tmp)])
   (:require [forma.hadoop.predicate :as p]
             [forma.hadoop.io :as io]
+            [forma.date-time :as date]
             [forma.source.rain :as r]
             [forma.reproject :as reproj]
             [forma.thrift :as thrift]
@@ -129,13 +130,16 @@
   "Path for running FORMA fires processing. See the forma-clj wiki for
    more details. m-res is the desired output resolution, likely the
    resolution of the other MODIS data we are using (i.e. \"500\")"
-  ([path out-path m-res out-t-res start-date est-start est-end tiles-or-isos]
-     (let [tiles (parse-locations tiles-or-isos)
+  ([path out-path m-res out-t-res fires-start-date tiles-or-isos]
+     (let [end-date (date/todays-date)
+           tiles (parse-locations tiles-or-isos)
            fire-src (f/fire-source (hfs-textline path) tiles m-res)
            reproject-query (f/reproject-fires m-res fire-src)
-           ts-query (tseries/fire-query reproject-query m-res out-t-res start-date est-start est-end)
-           adjusted-fires (forma/fire-tap est-start est-end out-t-res ts-query)]
-       (?- (hfs-seqfile out-path :sinkmode :replace) adjusted-fires))))
+           ts-query (tseries/fire-query reproject-query m-res out-t-res
+                                        fires-start-date end-date)
+           fires-tap (forma/fire-tap ts-query)
+           sink (hfs-seqfile out-path :sinkmode :replace)]
+       (?- sink fires-tap))))
 
 (defmain PreprocessModis
   "Preprocess MODIS data from raw HDF files to pail.

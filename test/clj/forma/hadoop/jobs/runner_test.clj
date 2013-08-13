@@ -3,6 +3,7 @@
         [midje sweet cascalog]
         forma.hadoop.jobs.runner
         [forma.source.tilesets :only (tile-set country-tiles)]
+        [forma.hadoop.jobs.preprocess :only (PreprocessFire)]
         [cascalog.checkpoint :only (workflow)]
         [forma.schema :only (series->forma-values)])
   (:require [forma.hadoop.jobs.forma :as forma]
@@ -12,6 +13,7 @@
             [cascalog.ops :as c]
             [forma.hadoop.pail :as p]
             [forma.hadoop.jobs.api :as api]))
+            [forma.utils :as u]))
 
 (def s-res "500")
 (def t-res "16")
@@ -34,8 +36,17 @@
 (defn sample-fire-series
   "Create a sample fire time series. Duplicated from
    forma.hadoop.jobs.forma-test namespace."
-  [start-idx length]
-  (thrift/TimeSeries* start-idx (vec (repeat length (thrift/FireValue* 0 0 0 0)))))
+  [start-idx length & defaults]
+  (thrift/TimeSeries* start-idx
+                      (vec (repeat length (if defaults
+                                            (apply thrift/FireValue* defaults)
+                                            (thrift/FireValue* 0 0 0 0))))))
+
+(fact "Test `get-est-map`"
+  (map (get-est-map "500" "16") [:est-start :est-end]) => ["2005-12-19" nil]
+  (map (get-est-map "500" "16" :est-start "2006-01-01") [:est-start :est-end]) => ["2006-01-01" nil]
+  (map (get-est-map "500" "16" :est-start "2006-01-01" :est-end "2007-01-01")
+       [:est-start :est-end]) => ["2006-01-01" "2007-01-01"])
 
 (future-fact
  "sample-fire-series is not duplicated from forma.hadoop.jobs.forma-test
@@ -133,21 +144,31 @@ functions are tested elsewhere."
 (fact
   "Integration test of `FormaTap` defmain. All queries and functions used
    are tested elsewhere."
-  (let [fire-src [[s-res 28 8 0 0 (sample-fire-series 827 1)]]
-        dynamic-src [[s-res 28 8 0 0 827 [1.] [3.] [5.] [7.]]]
+  (let [est-start "2010-01-01"
+        est-end "2010-01-17"
+        p1 (vec (map float (range 10)))
+        p2 (vec (map float (range 10 20)))
+        dynamic-src [["500" 28 8 0 0 918 p1 p1 p1 p1]
+                     ["500" 28 8 0 1 918 p2 p2 p2 p2]]
+        fire-src [["500" 28 8 0 0 (sample-fire-series 900 30 0 0 0 1)]]
+        res1a ["500" 920 28 8 0 0 [0 0 0 1] [0. 2. 2. 2.]]
+        res1b ["500" 921 28 8 0 0 [0 0 0 1] [0. 3. 3. 3.]]
+        res2a ["500" 920 28 8 0 1 [0 0 0 0] [10. 12. 12. 12.]]
+        res2b ["500" 921 28 8 0 1 [0 0 0 0] [10. 13. 13. 13.]]
         fire-path (.getPath (io/temp-dir "fire-src"))
         dynamic-path (.getPath (io/temp-dir "dynamic-src"))
         output-path (.getPath (io/temp-dir "forma-src"))
         _ (?- (hfs-seqfile dynamic-path :sinkmode :replace) dynamic-src)
         _ (?- (hfs-seqfile fire-path :sinkmode :replace) fire-src)
-        _ (FormaTap s-res t-res est-end fire-path dynamic-path output-path)]
-    (let [src (hfs-seqfile output-path)]
-      (<- [?s-res ?pd ?mod-h ?mod-v ?sample ?line ?fire-vec
-           ?short ?long ?t-stat ?break]
-          (src ?s-res ?pd ?mod-h ?mod-v ?sample ?line ?forma-val)
-          (thrift/unpack ?forma-val :> ?fire-val ?short ?long ?t-stat ?break)
-          (thrift/unpack* ?fire-val :> ?fire-vec)))
-    => (produces [[s-res 827 28 8 0 0 [0 0 0 0] 1.0 3.0 5.0 7.0]])))
+        _ (FormaTap s-res t-res est-start est-end fire-path dynamic-path output-path)
+        src (hfs-seqfile output-path)]
+    (<- [?s-res ?period ?mod-h ?mod-v ?sample ?line ?fire-vec ?trends-stats]
+        (src ?s-res ?period ?mod-h ?mod-v ?sample ?line ?forma-val)
+        (thrift/unpack* ?forma-val :> ?forma-vec)
+        (u/rest* ?forma-vec :> ?trends-stats)
+        (first ?forma-vec :> ?fire-val)
+        (thrift/unpack* ?fire-val :> ?fire-vec))
+    => (produces [res1a res1b res2a res2b])))
 
 (fact
   "Integration test of `NeighborQuery` defmain. All queries and functions
@@ -290,8 +311,9 @@ functions are tested elsewhere."
 (fact
   "Test everything after preprocessing"
   (let [tmp-root "/tmp/run-test"
-        bad-pix-loc [s-res 28 8 0 1]
-        really-bad-pix-loc [s-res 28 8 0 2]
+        fires-start "2000-11-01"
+        bad-pix-loc [s-res 28 8 0 1] ;; coast
+        really-bad-pix-loc [s-res 28 8 0 2] ;; low vcf, coast
         loc (apply thrift/ModisPixelLocation* pix-loc)
         bad-loc (apply thrift/ModisPixelLocation* bad-pix-loc)
         really-bad-loc (apply thrift/ModisPixelLocation* really-bad-pix-loc)
@@ -307,20 +329,19 @@ functions are tested elsewhere."
                   (into bad-pix-loc [start-idx rain])
                   (into really-bad-pix-loc [start-idx rain])]
         len (count ndvi)
-        fire-src [(conj pix-loc (sample-fire-series start-idx len))
-                  (conj bad-pix-loc (sample-fire-series start-idx len))
-                  (conj really-bad-pix-loc (sample-fire-series start-idx len))]
+        fire-str (str "9.9979166,101.5441256,338.2,1.7,1.3,2013-02-02, 01:25,T,89,5.0       ,298.1,63\n"
+                      "9.9979166,101.5441256,338.2,1.7,1.3,2013-01-01, 01:25,T,89,5.0,298.1,63\n")
         static-src [(vec (concat pix-loc static))
                     (vec (concat bad-pix-loc bad-static))
                     (vec (concat really-bad-pix-loc really-bad-static))]
         ndvi-path (.getPath (io/temp-dir "ndvi-path"))
         rain-path (.getPath (io/temp-dir "rain-path"))
         static-path (.getPath (io/temp-dir "static-path"))
-        fire-path (.getPath (io/temp-dir "fire-path"))
+        fire-path (.getPath (io/temp-dir "raw-fires-path"))
         _ (?- (hfs-seqfile ndvi-path :sinkmode :replace) ndvi-src)
         _ (?- (hfs-seqfile rain-path :sinkmode :replace) rain-src)
         _ (?- (hfs-seqfile static-path :sinkmode :replace) static-src)
-        _ (?- (hfs-seqfile fire-path :sinkmode :replace)  fire-src)]
+        _ (spit (str fire-path "/fires.csv") fire-str)]
     
 
     (workflow [tmp-root]
@@ -344,10 +365,14 @@ functions are tested elsewhere."
               merge-trends
               ([:tmp-dirs merge-trends-path]
                  (MergeTrends s-res t-res est-end trends-pail-path merge-trends-path))
+
+              preprocess-fires
+              ([:tmp-dirs preprocess-fires-path]
+                 (PreprocessFire fire-path preprocess-fires-path s-res t-res fires-start [[28 8]]))
               
               formatap
               ([:tmp-dirs forma-tap-path]
-                 (FormaTap s-res t-res est-end fire-path merge-trends-path forma-tap-path))
+                 (FormaTap s-res t-res est-start est-end preprocess-fires-path merge-trends-path forma-tap-path))
 
               neighborquery
               ([:tmp-dirs neighbor-path]

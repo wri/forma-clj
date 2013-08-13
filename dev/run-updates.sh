@@ -10,6 +10,7 @@ MODISLAYERS="[:ndvi]" # :reli
 TILES="[:all]" # "[[28 8]]"
 ESTSTART=$1 # "2013-02-18"
 ESTEND=$2 # "2013-03-06"
+FIRESTART="2000-11-01"
 
 ####################
 # Storage settings #
@@ -50,7 +51,7 @@ $LAUNCHER "$PREPROCESSNS.PreprocessModis" "$STAGING/MOD13A1/" $PAILPATH "{20}*" 
 # 4 minutes w/25 high-memory for all data
 # 1h15 w/1 large instance for 1 tile
 echo "Preprocessing rain"
-rainraw="$ARCHIVE/precl"
+rainraw="$ARCHIVE/PRECL"
 output="$TMP/rain-raw"
 $LAUNCHER "$PREPROCESSNS.PreprocessRain" $rainraw $output $SRES $TRES
 
@@ -62,8 +63,8 @@ $LAUNCHER "$PREPROCESSNS.PreprocessRain" $rainraw $output $SRES $TRES
 # waiting for copying to s3 to finish.
 echo "Exploding rain into MODIS pixels"
 rain=$output
-output="$TMP/rain"
-$LAUNCHER "$PREPROCESSNS.ExplodeRain" $rain $output $SRES "$TILES"
+rainoutput="$TMP/rain"
+$LAUNCHER "$PREPROCESSNS.ExplodeRain" $rain $rainoutput $SRES "$TILES"
 
 ####################
 # REST OF WORKFLOW #
@@ -86,7 +87,7 @@ $LAUNCHER $RUNNERNS.TimeseriesFilter $SRES $TRES $ts $STATIC $output
 
 echo "Joining NDVI and rain series, adjusting length"
 ndvi=$output
-output="$TMP/adjusted"
+output="$S3OUT/adjusted"
 $LAUNCHER $RUNNERNS.AdjustSeries $SRES $TRES $ndvi $rainoutput $output
 
 # trends
@@ -117,7 +118,7 @@ $LAUNCHER $RUNNERNS.MergeTrends $SRES $TRES $ESTEND $trendspail $output
 # update process.
 echo "Preprocessing fires"
 fireoutput="$TMP/fires"
-$LAUNCHER "$PREPROCESSNS.PreprocessFire" "$ARCHIVE/fires" $fireoutput 500 16 2000-11-01 $ESTSTART $ESTEND "$TILES"
+$LAUNCHER "$PREPROCESSNS.PreprocessFire" "$ARCHIVE/fires" $fireoutput 500 16 $FIRESTART "$TILES"
 
 # forma-tap
 

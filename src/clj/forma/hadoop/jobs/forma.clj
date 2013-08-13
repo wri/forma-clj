@@ -69,12 +69,14 @@
 (defn fire-tap
   "Accepts an est-map and a query source of fire timeseries. Note that
   this won't work, pulling directly from the pail!"
-  [est-start est-end t-res fire-src]
-  (<- [?s-res ?h ?v ?sample ?line ?adjusted-ts]
+  [fire-src]
+  (<- [?s-res ?h ?v ?sample ?line ?fire-series]
       (fire-src ?fire-pixel)
       (thrift/unpack ?fire-pixel :> _ ?pixel-loc ?ts _ _ _)
-      (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)
-      (schema/adjust-fires est-start est-end t-res ?ts :> ?adjusted-ts)))
+      (thrift/unpack ?ts :> ?start _ ?array-val)
+      (thrift/unpack* ?array-val :> ?fire-vec)
+      (thrift/TimeSeries* ?start ?fire-vec :> ?fire-series)
+      (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)))
 
 (defn filter-query
   "Use a join with `static-src` - already filtered by VCF and
@@ -304,14 +306,28 @@
 
   Note that all values internally discuss timeseries, and that !!fire
   is an ungrounding variable. This triggers a left join with the trend
-  result variables, even when there are no fires for a particular pixel."
-  [{:keys [t-res est-start nodata]} dynamic-src fire-src]
-  (<- [?s-res ?period ?mh ?mv ?s ?l ?forma-val]
-      (fire-src ?s-res ?mh ?mv ?s ?l !!fire)
-      (dynamic-src ?s-res ?mh ?mv ?s ?l ?start-idx ?short-s ?long-s ?t-stat-s ?break-s)
-      (schema/forma-seq nodata !!fire ?short-s ?long-s ?t-stat-s ?break-s :> ?forma-seq)
-      (p/index ?forma-seq :zero-index ?start-idx :> ?period ?forma-val)
-      (:distinct false)))
+  result variables, even when there are no fires for a particular pixel.
+
+  Also note that the various time series are expected to be long - for
+  `dynamic-src`, they should start at the end of the training
+  period (e.g. 2005-12-19). For fires, they should be full time series
+  back to the early 2000s and run longer than the trends series. The
+  fire series will be truncated to match the trends
+  series. Pre-truncated fire series will not work as the indexing will
+  be off."
+  [{:keys [t-res est-start est-end nodata]} dynamic-src fire-src]
+  (let [start (date/datetime->period t-res est-start)
+        end (date/datetime->period t-res est-end)]
+    (<- [?s-res ?period ?mod-h ?mod-v ?sample ?line ?forma-val] ;; ?forma-val ?period
+        (fire-src ?s-res ?mod-h ?mod-v ?sample ?line !!fire-series)
+        (dynamic-src ?s-res ?mod-h ?mod-v ?sample ?line
+                     ?start-idx ?short-s ?long-s ?t-stat-s ?break-s)
+        (schema/adjust-fires-simple ?start-idx ?short-s !!fire-series :> !adjusted-fires)
+        (schema/forma-seq nodata !adjusted-fires ?short-s ?long-s ?t-stat-s ?break-s :> ?forma-seq)
+        (p/index ?forma-seq :zero-index ?start-idx :> ?period ?forma-val)
+        (<= ?period end)
+        (>= ?period start)
+        (:distinct false))))
 
 (defmapcatop [process-neighbors [num-neighbors]]
   "Processes all neighbors... Returns the index within the chunk, the
@@ -437,3 +453,9 @@
         (date/period->key ?t-res ?start :> ?start-key)
         (merge-series-wrapper [t-res nodata] ?created ?start-key ?prob-series
                               :> ?start-final ?merged-series))))
+
+(defn probs-gadm2
+  [probs-src gadm2-src]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-final ?merged-series ?gadm2]
+      (probs-src ?s-res ?mod-h ?mod-v ?sample ?line ?start-final ?merged-series)
+      (gadm2-src ?s-res ?mod-h ?mod-v ?sample ?line ?gadm2)))
