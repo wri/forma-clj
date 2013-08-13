@@ -97,29 +97,33 @@
   "Returns a Cascalog query that generates data for the `first-hit`
    API endpoint. Takes a source of FORMA output already joined with
    GADM. Filters out any pixels that do not meet the threshold."
-  [est-map src & [thresh]]
-  (let [thresh (or thresh 0)
-        t-res (:t-res est-map)
-        nodata (:nodata est-map)
-        est-start (:est-start est-map)
-        clean-src (api-prep-query src t-res nodata)]
-    (<- [?lat ?lon ?iso ?iso-extra ?gadm2 ?date ?prob]
-        (clean-src ?lat ?lon ?iso ?iso-extra ?gadm2 ?start-idx ?clean-series)
-        (get-hit-period-and-value ?start-idx thresh ?clean-series :> ?period ?prob)
-        (date/period->datetime t-res ?period :> ?date))))
+  ([est-map src]
+     (let [thresh 0]
+       (prob-series->first-hit est-map src thresh)))
+  ([est-map src thresh]
+     (let [t-res (:t-res est-map)
+           nodata (:nodata est-map)
+           est-start (:est-start est-map)
+           clean-src (api-prep-query src t-res nodata)]
+       (<- [?lat ?lon ?iso ?iso-extra ?gadm2 ?date ?prob]
+           (clean-src ?lat ?lon ?iso ?iso-extra ?gadm2 ?start-idx ?clean-series)
+           (get-hit-period-and-value ?start-idx thresh ?clean-series :> ?period ?prob)
+           (date/period->datetime t-res ?period :> ?date)))))
 
 (defn prob-series->latest
   "Returns a Cascalog query that generates data for the `latest`
    API endpoint. Takes a source of FORMA output already joined with
    GADM. Filters out any pixels that do not meet the threshold."
-  [est-map src & [thresh]]
-  (let [thresh (or thresh 0)
-        t-res (:t-res est-map)
-        nodata (:nodata est-map)
-        est-start (:est-start est-map)
-        clean-src (api-prep-query src t-res nodata)]
-    (<- [?lat ?lon ?iso ?iso-extra ?gadm2 ?date ?prob]
-        (clean-src ?lat ?lon ?iso ?iso-extra ?gadm2 ?start-idx ?clean-series)
-        (latest-hit? thresh ?clean-series)
-        (get-hit-period-and-value ?start-idx thresh ?clean-series :> ?period ?prob)
-        (date/period->datetime t-res ?period :> ?date))))
+  ([est-map src]
+     (let [thresh 0]
+       (prob-series->latest est-map src thresh)))
+  ([est-map src thresh]
+     (let [t-res (:t-res est-map)
+           nodata (:nodata est-map)
+           est-start (:est-start est-map)
+           clean-src (api-prep-query src t-res nodata)]
+       (<- [?lat ?lon ?iso ?iso-extra ?gadm2 ?date ?prob]
+           (clean-src ?lat ?lon ?iso ?iso-extra ?gadm2 ?start-idx ?clean-series)
+           (latest-hit? thresh ?clean-series)
+           (get-hit-period-and-value ?start-idx thresh ?clean-series :> ?period ?prob)
+           (date/period->datetime t-res ?period :> ?date)))))
