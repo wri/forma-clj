@@ -8,7 +8,8 @@
   (:require [forma.hadoop.jobs.forma :as forma]
             [forma.utils :as utils]
             [forma.thrift :as thrift]
-            [forma.hadoop.pail :as p]))
+            [forma.hadoop.pail :as p]
+            [forma.hadoop.jobs.api :as api]))
 
 (defn run-params [k est-end]
   (-> {"500-16" {:est-start "2005-12-19"
@@ -26,6 +27,17 @@
                  :min-coast-dist 3
                  :nodata -9999.0}}
       (get k)))
+
+(def api-config
+  {:long {:query api/prob-series->long-ts
+          :template-fields ["?iso-extra" "?year"]
+          :sink-template "%s/%s"}
+   :first {:query api/prob-series->first-hit
+           :template-fields ["?iso-extra"]
+           :sink-template "%s/"}
+   :latest {:query api/prob-series->latest
+            :template-fields ["?iso-extra"]
+            :sink-template "%s/"}})
 
 (defn get-est-map
   [s-res t-res & [est-end]]
@@ -140,3 +152,33 @@
         probs-dc-src (p/split-chunk-tap probs-pail-path [data-name (format "%s-%s" s-res t-res)])
         sink (hfs-seqfile output-path :sinkmode :replace)]
     (?- sink (forma/probs-datachunks->series est-map probs-dc-src))))
+
+(defn get-sink-template
+  [api-kw api-config]
+  (:sink-template (api-kw api-config)))
+
+(defn get-template-fields
+  [api-kw api-config]
+  (:template-fields (api-kw api-config)))
+
+(defn get-query
+  [api-kw api-config]
+  (:query (api-kw api-config)))
+
+(defn get-output-path
+  [api-str thresh base-path]
+  (format "%s/%s/pantropical/%s/seq" base-path api-str thresh))
+
+(defmain ApiRunner
+  [api-str thresh s-res t-res forma-gadm2-path base-output-path]
+  {:pre [(contains? (set [:long :first :latest]) (keyword api-str))]}
+  (let [api-kw (keyword api-str)
+        est-map (get-est-map s-res t-res nil)
+        out-fields ["?lat" "?lon" "?iso" "?gadm2" "?date" "?prob"]
+        src (hfs-seqfile forma-gadm2-path)
+        sink-template (get-sink-template api-kw api-config)
+        template-fields (get-template-fields api-kw api-config)
+        query (get-query api-kw api-config)
+        out-path (get-output-path api-str thresh base-output-path)
+        sink (hfs-seqfile out-path :sinkmode :replace)]
+    (?- sink (query est-map src :thresh thresh :pantropical true))))
