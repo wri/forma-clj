@@ -467,3 +467,8 @@
 (defn ls
   [dir]
   (.listFiles (File. dir)))
+
+(defn constant?
+  "Returns true if all elements in the supplied collection are equal."
+  [coll]
+  (= 1 (-> coll set count)))
