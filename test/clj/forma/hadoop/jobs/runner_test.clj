@@ -12,7 +12,7 @@
             [cascalog.io :as io]
             [cascalog.ops :as c]
             [forma.hadoop.pail :as p]
-            [forma.hadoop.jobs.api :as api]))
+            [forma.hadoop.jobs.api :as api]
             [forma.utils :as u]))
 
 (def s-res "500")

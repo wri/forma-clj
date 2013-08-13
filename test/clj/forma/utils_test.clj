@@ -269,3 +269,9 @@
 (facts "Check `nils->neg9999*`."
   (nils->neg9999* [1 2 3]) => [[1 2 3]]
   (nils->neg9999* [1 nil 3]) => [[1 -9999.0 3]])
+
+(fact "Check `constant?`."
+  (constant? [1 2 3]) => false
+  (constant? [1 1 1]) => true
+  (let [n (rand)]
+    (constant? [n n n])) => true)

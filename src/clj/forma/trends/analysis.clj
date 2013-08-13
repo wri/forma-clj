@@ -123,7 +123,8 @@
     (long-stats ndvi rain) => (-1.2382 -0.9976)
     (long-stats ndvi)      => (-1.1430 -0.9183)"
   [ts & cofactors]
-  (let [time-step (utils/idx ts)
+  (let [cofactors (remove utils/constant? cofactors)
+        time-step (utils/idx ts)
         X (if (empty? cofactors)
             (i/matrix time-step)
             (apply i/bind-columns time-step cofactors))]
