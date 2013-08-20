@@ -111,12 +111,16 @@
     (?- sink (forma/neighbor-query est-map val-src))))
 
 (defmain BetaDataPrep
-  [s-res t-res dynamic-path static-path output-path]
-  (let [est-map (get-est-map s-res t-res)
+  [s-res t-res dynamic-path static-path output-path super-ecoregions]
+  (let [super-ecoregions (if (string? super-ecoregions)
+                           (read-string super-ecoregions)
+                           super-ecoregions)
+        est-map (get-est-map s-res t-res)
         dynamic-src (hfs-seqfile dynamic-path)
         static-src (hfs-seqfile static-path)
         sink (hfs-seqfile output-path :sinkmode :replace)]
-    (?- sink (forma/beta-data-prep est-map dynamic-src static-src))))
+    (?- sink (forma/beta-data-prep est-map dynamic-src static-src
+                                   :super-ecoregions super-ecoregions))))
 
 (defmain GenBetas
   [s-res t-res est-start dynamic-path output-path]
@@ -126,13 +130,17 @@
     (?- sink (forma/beta-gen est-map dynamic-src))))
 
 (defmain EstimateForma
-  [s-res t-res beta-path dynamic-path static-path output-path]
-  (let [est-map (get-est-map s-res t-res)
+  [s-res t-res beta-path dynamic-path static-path output-path super-ecoregions]
+  (let [super-ecoregions (if (string? super-ecoregions)
+                           (read-string super-ecoregions)
+                           super-ecoregions)
+        est-map (get-est-map s-res t-res)
         beta-src (hfs-seqfile beta-path)
         dynamic-src (hfs-seqfile dynamic-path)
         static-src (hfs-seqfile static-path)
         sink (hfs-seqfile output-path :sinkmode :replace)]
-    (?- sink (forma/forma-estimate est-map beta-src dynamic-src static-src))))
+    (?- sink (forma/forma-estimate est-map beta-src dynamic-src static-src
+                                   :super-ecoregions super-ecoregions))))
 
 (defmain ProbsPail
   [s-res t-res est-end probs-path output-path & pedigree] ;; pedigree helps w/testing

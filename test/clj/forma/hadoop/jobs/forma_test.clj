@@ -334,6 +334,12 @@
         (first ?forma-vec :> ?fire-val)
         (thrift/unpack* ?fire-val :> ?fire-vec))))
 
+(fact "Check `eco-and-super`."
+  (let [src [[1 10101]]]
+    (<- [?a ?ecoregion]
+        (src ?a ?ecoid)
+        (eco-and-super ?ecoid :> ?ecoregion))) => (produces [[1 10101]
+                                                             [1 21]]))
 (def good-val
   (thrift/FormaValue* (thrift/FireValue* 1. 1. 1. 1.) 1. 1. 1. 1.))
 
@@ -341,10 +347,10 @@
   (thrift/FormaValue* (thrift/FireValue* 1. 1. 1. 1.) -9999. 1. 1. 1.))
 
 (def static-src
-  [["500" 28 8 0 0 25 0 1 100 20]   ;; all good
-   ["500" 28 8 0 1 25 0 1 100 0]    ;; drop b/c of coast-dist
-   ["500" 28 8 0 2 25 0 1 100 20]   ;; dyn. has nodata in forma-val
-   ["500" 28 8 0 3 25 0 1 100 20]]) ;; dyn. has nodata in neighbor-val
+  [["500" 28 8 0 0 25 0 10101 100 20]   ;; all good
+   ["500" 28 8 0 1 25 0 10101 100 0]    ;; drop b/c of coast-dist
+   ["500" 28 8 0 2 25 0 10101 100 20]   ;; dyn. has nodata in forma-val
+   ["500" 28 8 0 3 25 0 10101 100 20]]) ;; dyn. has nodata in neighbor-val
 
 (def dynamic-src
   [["500" 827 28 8 0 0 good-val good-val]  ;; ok
@@ -363,7 +369,15 @@
   (let [prepped-src (beta-data-prep test-map dynamic-src static-src)
         result [["500" 827 28 8 0 0]]]
     (<- [?s-res ?pd ?mod-h ?mod-v ?s ?l]
-     (prepped-src ?s-res ?pd ?mod-h ?mod-v ?s ?l _ _ _ _)) => (produces result)))
+        (prepped-src ?s-res ?pd ?mod-h ?mod-v ?s ?l _ _ _ _)) => (produces result)))
+
+(fact "Check `beta-data-prep` using super-ecoregions."
+  (let [prepped-src (beta-data-prep test-map dynamic-src static-src
+                                    :super-ecoregions true)
+        result [["500" 827 28 8 0 0 21]
+                ["500" 827 28 8 0 0 10101]]]
+    (<- [?s-res ?pd ?mod-h ?mod-v ?s ?l ?ecoregion]
+        (prepped-src ?s-res ?pd ?mod-h ?mod-v ?s ?l _ _ ?ecoregion _)) => (produces result)))
 
 (def val-src
   (let [forma-val-1 (thrift/FormaValue* (thrift/FireValue* 0 0 0 0) 1. 2. 3. 4.)
@@ -443,23 +457,23 @@
                 (static-src ?s-res ?modh ?modv ?s ?l ?eco ?hansen)
                 (val-src ?s-res ?pd ?modh ?modv ?s ?l ?f-val ?n-val))]
     (beta-gen test-map src))
-  => (produces [["500" 0 [0.0461579756378782 0.2702105185383453 0.0 0.0
-                          0.27021000610469403 0.15424237795011647
-                          0.20040035431283554 0.24655959531908314
-                          0.2927166905266345 0.1913702772241395 0.0 0.0
-                          0.19137137571486193 0.37939550810758377
-                          0.12270652470850073 0.42555344181381133
-                          0.16886473505952238 0.4717113982458025
-                          0.21502319891919813 0.5178704313235151
-                          0.2611812750199875]]
-                ["500" 1 [0.039240667914858106 0.0 0.0 0.0 0.0
-                          0.16182677835169845 0.2010738403141789
-                          0.2403191044886442 0.279566649855779
-                          0.392469357622685 0.0 0.0 0.39246900048887245
-                          0.3123627337378208 0.0392468727065963
-                          0.3516091392518591 0.07849384810832613
-                          0.3908570303909329 0.11774050517175123
-                          0.43010312243974663 0.15698786428781983]]]))
+  => (produces-some [["500" 0 [0.0461579756378782 0.2702105185383453 0.0 0.0
+                               0.27021000610469403 0.15424237795011647
+                               0.20040035431283554 0.24655959531908314
+                               0.2927166905266345 0.1913702772241395 0.0 0.0
+                               0.19137137571486193 0.37939550810758377
+                               0.12270652470850073 0.42555344181381133
+                               0.16886473505952238 0.4717113982458025
+                               0.21502319891919813 0.5178704313235151
+                               0.2611812750199875]]
+                     ["500" 1 [0.039240667914858106 0.0 0.0 0.0 0.0
+                               0.16182677835169845 0.2010738403141789
+                               0.2403191044886442 0.279566649855779
+                               0.392469357622685 0.0 0.0 0.39246900048887245
+                               0.3123627337378208 0.0392468727065963
+                               0.3516091392518591 0.07849384810832613
+                               0.3908570303909329 0.11774050517175123
+                               0.43010312243974663 0.15698786428781983]]]))
 
 (fact "Test `apply-betas`."
   (let [forma-val (thrift/FormaValue* (thrift/FireValue* 0 0 0 0) 1. 2. 3. 4.)
@@ -485,14 +499,21 @@
 
 (fact "Test `forma-estimate`."
   (let [beta-src [["500" 0 (vec (repeat 21 0.5))]
-                ["500" 1 (vec (repeat 21 0.75))]]
-      static-src [["500" 28 8 0 0 25 0 1 0 0]]
+                  ["500" 21 (vec (repeat 21 0.55))]
+                  ["500" 10101 (vec (repeat 21 0.75))]]
+      static-src [["500" 28 8 0 0 25 0 10101 0 0]]
       forma-val (thrift/FormaValue* (thrift/FireValue* 0 0 0 0) 1. 2. 3. 4.)
       neighbor-val (thrift/NeighborValue* (thrift/FireValue* 1 0 0 1) 1 -1. 2. -15. -2. -2. 6. -12. 8.)
       dyn-src [["500" 827 28 8 0 0 forma-val neighbor-val]
                ["500" 829 28 8 0 0 forma-val neighbor-val]]]
-    (forma-estimate test-map beta-src dyn-src static-src))
-  => (produces [["500" 28 8 0 0 827 [0.0953494648991095 -9999.0 0.0953494648991095]]]))
+
+    ;; no super-ecoregions
+    (forma-estimate test-map beta-src dyn-src static-src)
+    => (produces [["500" 28 8 0 0 827 [0.0953494648991095 -9999.0 0.0953494648991095]]])
+
+    ;; use super-ecoregions
+    (forma-estimate test-map beta-src dyn-src static-src :super-ecoregions true)
+    => (produces [["500" 28 8 0 0 827 [0.16110894957658545 -9999.0 0.16110894957658545]]])))
 
 (fact "Test `probs->datachunks."
   (let [pedigree 1

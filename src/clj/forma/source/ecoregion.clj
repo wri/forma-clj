@@ -98,7 +98,7 @@
   ecoregion meets the `HITS-THRESHOLD`. If so, return the original
   ecoid. Otherwise, return the super-region id."
   [ecoid & {:keys [super-ecoregions] :or {super-ecoregions false}}]
-  (let [hit-share (get-hit-share)]
+  (let [hit-share (get-hit-share ecoid)]
     (if (and super-ecoregions
              hit-share
              (>= HITS-THRESHOLD hit-share))
