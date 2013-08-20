@@ -200,18 +200,27 @@ functions are tested elsewhere."
         neighbor-src [[s-res 827 28 8 0 0 forma-val neighbor-val]
                       [s-res 827 28 8 0 1 forma-val neighbor-val]
                       [s-res 900 28 8 0 0 forma-val neighbor-val]]
-        static-src [[s-res 28 8 0 0 25 14000 1000 100 20]
-                    [s-res 28 8 0 1 25 14000 1000 100 1]]
+        static-src [[s-res 28 8 0 0 25 14000 10101 100 20]
+                    [s-res 28 8 0 1 25 14000 10101 100 1]]
         neighbor-path (.getPath (io/temp-dir "neighbor-src"))
         static-path (.getPath (io/temp-dir "static-src"))
         output-path (.getPath (io/temp-dir "beta-data-src"))
         _ (?- (hfs-seqfile neighbor-path :sinkmode :replace) neighbor-src)
         _ (?- (hfs-seqfile static-path :sinkmode :replace) static-src)]
-    (BetaDataPrep s-res t-res neighbor-path static-path output-path)
+    ;; no super-ecoregions
+    (BetaDataPrep s-res t-res neighbor-path static-path output-path false)
     (let [src (hfs-seqfile output-path)]
       (<- [?s-res ?pd ?mod-h ?mod-v ?sample ?line ?hansen ?ecoid]
-          (src ?s-res ?pd ?mod-h ?mod-v ?sample ?line _ _ ?hansen ?ecoid)))
-    => (produces [[s-res 827 28 8 0 0 1000 100]])))
+          (src ?s-res ?pd ?mod-h ?mod-v ?sample ?line _ _ ?hansen ?ecoid))
+      => (produces [[s-res 827 28 8 0 0 10101 100]]))
+
+    ;; use super-ecoregions
+    (BetaDataPrep s-res t-res neighbor-path static-path output-path true)
+    (let [src (hfs-seqfile output-path)]
+      (<- [?s-res ?pd ?mod-h ?mod-v ?sample ?line ?hansen ?ecoid]
+          (src ?s-res ?pd ?mod-h ?mod-v ?sample ?line _ _ ?hansen ?ecoid))
+      => (produces [[s-res 827 28 8 0 0 21 100]
+                    [s-res 827 28 8 0 0 10101 100]]))))
 
 (fact
   "Integration test of `GenBetas` defmain. All queries and functions
@@ -245,19 +254,10 @@ functions are tested elsewhere."
                                       1. 2. 3. 4.)
         neighbor-val (thrift/NeighborValue* (thrift/FireValue* 1 1 1 1)
                                             1 1. 2. 3. 4. 5. 6. 7. 8. 9.)
-        beta-src [["500" 1000 [0.11842551448466368 0.11842586443146805
-                               0.1184259896040349 0.11842585137116168
-                               0.11842584951322709 0.11842584885467246
-                               0.23685185941367817 0.35527734116779586
-                               0.4737032372673255 0.11842582139264606
-                               0.11842582044881808 0.118425835272797
-                               0.11842581441993594 0.1184258039325292
-                               0.23685165512279985 0.35527741717744016
-                               0.4737032025455936 0.5921290128620343
-                               0.7105544981645566 0.8289803917212081
-                               0.947406494802988]]]
+        beta-src [["500" 21 (repeat 21 0.33)]
+                  ["500" 10101 (repeat 21 0.75)]]
         neighbor-src [[s-res 827 28 8 0 0 forma-val neighbor-val]]
-        static-src [[s-res 28 8 0 0 25 14000 1000 100 20]]
+        static-src [[s-res 28 8 0 0 25 14000 10101 100 20]]
         neighbor-path (.getPath (io/temp-dir "to-estimate-src"))
         beta-path (.getPath (io/temp-dir "beta-src"))
         static-path (.getPath (io/temp-dir "static-src"))
@@ -265,9 +265,16 @@ functions are tested elsewhere."
         _ (?- (hfs-seqfile beta-path :sinkmode :replace) beta-src)
         _ (?- (hfs-seqfile neighbor-path :sinkmode :replace) neighbor-src)
         _ (?- (hfs-seqfile static-path :sinkmode :replace) static-src)]
-    (EstimateForma s-res t-res beta-path neighbor-path static-path output-path)
-    (hfs-seqfile output-path))
-  => (produces [["500" 28 8 0 0 827 [0.9999999999996823]]]))
+
+    ;; no super-ecoregions
+    (EstimateForma s-res t-res beta-path neighbor-path static-path output-path false)
+    (hfs-seqfile output-path)
+    => (produces [["500" 28 8 0 0 827 [1.0]]])
+
+    ;; use super-ecoregions
+    (EstimateForma s-res t-res beta-path neighbor-path static-path output-path true)
+    (hfs-seqfile output-path)
+    => (produces [["500" 28 8 0 0 827 [0.9999999868914351]]])))
 
 (fact "Integration test of `ProbsPail` defmain. All queries and
 functions are tested elsewhere."
@@ -319,9 +326,10 @@ functions are tested elsewhere."
         really-bad-loc (apply thrift/ModisPixelLocation* really-bad-pix-loc)
         ndvi [6269 3115 3542 4885 3088 5780 1987 4961 5367 5645 6926 6254 8017 1591 9045 3502 6807 3108 95 4808 689 4925 8934 4019 44 3409 5599 31 2240 4185 8251 6402 6610 252 7432 9661 1980 2544 7034 7540 1212 376 1600 8949 8880 7486 5145 6025 173 497 7555 4785 1354 550 796 5020 4757 5558 8664 1940 4127 115 620 1783 9401 2393 2359 1111 3477 2589 3204 4816 7416 5401 3158 1043 4641 9848 500 2122 9168 3335 4193 9417 7676 3272 4024 6537 314 8806 5435 9746 556 7241 5264 6625 92 4602 9264 4009 809 7434 2202 4103 2235 3432 6548 3240 9461 1783 6373 1278 3538 182 8904 805 3605 4440 7370 4471 7609 8296 5302 5591 6353 5599 4204 1903 3855 4386 3672 4837 5486 2533 5451 7380]
         rain [7 4 7 0 8 4 9 2 0 2 3 5 2 2 8 3 8 5 1 4 8 2 7 4 1 1 4 1 1 5 5 7 9 3 5 9 3 2 2 6 5 3 2 9 8 8 1 3 3 4 1 9 7 2 8 0 2 7 9 8 3 8 7 4 2 6 4 8 9 3 1 6 3 8 3 7 0 6 4 4 2 0 7 0 3 9 9 4 2 0 2 8 1 1 6 7 1 0 1 6 6 6 9 4 6 8 4 1 7 8 8 2 3 2 2 2 3 5 1 4 2 7 6 0 6 9 1 0 5 5 2 9 6 6 8 9]
-        static [25 14000 1000 100 20]
-        bad-static [25 14000 1000 100 0] ;; coast
-        really-bad-static [0 14000 1000 0 0] ;; low vcf, coast
+        super-ecoregions true
+        static [25 14000 10101 100 20]
+        bad-static [25 14000 10101 100 0] ;; coast
+        really-bad-static [0 10101 1000 0 0] ;; low vcf, coast
         ndvi-src [[(thrift/DataChunk* "ndvi" loc (thrift/TimeSeries* start-idx ndvi) t-res)]
                   [(thrift/DataChunk* "ndvi" bad-loc (thrift/TimeSeries* start-idx ndvi) t-res)]
                   [(thrift/DataChunk* "ndvi" really-bad-loc (thrift/TimeSeries* start-idx ndvi) t-res)]]
@@ -380,7 +388,7 @@ functions are tested elsewhere."
 
               betadataprep
               ([:tmp-dirs beta-data-path]
-                 (BetaDataPrep s-res t-res neighbor-path static-path beta-data-path))
+                 (BetaDataPrep s-res t-res neighbor-path static-path beta-data-path super-ecoregions))
 
               genbetas
               ([:tmp-dirs beta-path]
@@ -388,7 +396,7 @@ functions are tested elsewhere."
 
               estimateforma
               ([:tmp-dirs probs-path]
-                 (EstimateForma s-res t-res beta-path neighbor-path static-path probs-path))
+                 (EstimateForma s-res t-res beta-path neighbor-path static-path probs-path super-ecoregions))
 
               probs-pail
               ([:tmp-dirs probs-pail-path]
@@ -398,7 +406,7 @@ functions are tested elsewhere."
               ([:tmp-dirs merge-probs-path]
                  (MergeProbs s-res t-res est-end probs-pail-path merge-probs-path))))
   1
-  => 1) 
+  => 1)
 
 (fact "Test `get-sink-template`."
   (get-sink-template :long api-config) => "%s/%s"

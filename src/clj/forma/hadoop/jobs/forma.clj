@@ -1,6 +1,7 @@
 (ns forma.hadoop.jobs.forma
   (:use cascalog.api
-        [forma.hadoop.pail :only (split-chunk-tap)])
+        [forma.hadoop.pail :only (split-chunk-tap)]
+        [forma.source.ecoregion :only (get-ecoregion get-super-ecoregion)])
   (:require [cascalog.ops :as c]
             [forma.matrix.walk :as w]
             [forma.reproject :as r]
@@ -356,27 +357,51 @@
         (process-neighbors [neighbors] ?window nodata :> ?win-idx ?val ?neighbor-val)
         (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line))))
 
+(defmapcatop eco-and-super
+  "Wrapper for `get-ecoregion` returns an ecoid and its associated
+  super-ecoregion.
+
+  This is needed when using super-ecoregions to correct estimation
+  because 1) pixels that fall into sparsely cleared ecoregions need to
+  be associated with a super-ecoregion for estimation, and 2) pixels
+  that fall into non-sparsely cleared ecoregions don't need the
+  super-ecoregion when the betas are applied for classification, but
+  need to be included in the estimation of the betas for the
+  super-ecoregion.
+
+  For example, a pixel in a heavily cleared part of north-eastern
+  Brazil could be part of a super-ecoregion that is used to classify a
+  pixel in a sparsely-cleared section of Guyana"
+  [ecoid]
+  [ecoid (get-super-ecoregion ecoid)])
+
 (defn beta-data-prep
   "Prep data for generating betas, retaining only data for the training
    period and dropping coastal pixels and pixels with nodata values in
    thrift objects"
-  [{:keys [nodata t-res est-start min-coast-dist]} dynamic-src static-src]
-  (let [first-idx (date/datetime->period t-res est-start)]
-    (<- [?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?eco ?hansen]
-        (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
-        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco ?hansen ?coast-dist)
-        (thrift/obj-contains-nodata? nodata ?val :> false)
-        (thrift/obj-contains-nodata? nodata ?neighbor-val :> false)        
-        (= ?pd first-idx)
-        (>= ?coast-dist min-coast-dist)
-        (:distinct false))))
+  [{:keys [nodata t-res est-start min-coast-dist]} dynamic-src static-src
+   & {:keys [super-ecoregions] :or {super-ecoregions false}}]
+  (let [first-idx (date/datetime->period t-res est-start)
+        clean-data (<- [?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?ecoid ?hansen]
+                       (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
+                       (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?ecoid ?hansen ?coast-dist)
+                       (thrift/obj-contains-nodata? nodata ?val :> false)
+                       (thrift/obj-contains-nodata? nodata ?neighbor-val :> false)        
+                       (= ?pd first-idx)
+                       (>= ?coast-dist min-coast-dist)
+                       (:distinct false))]
+    (if (not super-ecoregions)
+      clean-data
+      (<- [?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?ecoregion ?hansen]
+          (clean-data ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?ecoid ?hansen)
+          (eco-and-super ?ecoid :> ?ecoregion)))))
 
 (defn beta-gen
   "query to return the beta vector associated with each ecoregion"
   [{:keys [t-res est-start ridge-const convergence-thresh max-iterations]} src]
   (let [first-idx (date/datetime->period t-res est-start)]
-    (<- [?s-res ?eco ?beta]
-        (src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?eco ?hansen)
+    (<- [?s-res ?ecoregion ?beta]
+        (src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?ecoregion ?hansen)
         (classify/logistic-beta-wrap
          [ridge-const convergence-thresh max-iterations]
          ?hansen ?val ?neighbor-val :> ?beta)
@@ -411,14 +436,16 @@
 (defn forma-estimate
   "query to end all queries: estimate the probabilities for each
   period after the training period."
-  [{:keys [nodata]} beta-src dynamic-src static-src]
+  [{:keys [nodata]} beta-src dynamic-src static-src
+   & {:keys [super-ecoregions] :or {super-ecoregions false}}]
   (let [betas (classify/beta-dict beta-src)]
     (<- [?s-res ?mod-h ?mod-v ?s ?l ?start-idx ?prob-series]
         (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
         (thrift/obj-contains-nodata? nodata ?val :> false)
         (thrift/obj-contains-nodata? nodata ?neighbor-val :> false)
-        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?eco _ _)
-        (apply-betas [betas] ?eco ?val ?neighbor-val :> ?prob)
+        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?ecoregion _ _)
+        (get-ecoregion ?ecoregion :super-ecoregions super-ecoregions :> ?final-eco)
+        (apply-betas [betas] ?final-eco ?val ?neighbor-val :> ?prob)
         (consolidate-timeseries nodata ?pd ?prob :> ?pd-series ?prob-series)
         (first ?pd-series :> ?start-idx)
         (:distinct false))))
