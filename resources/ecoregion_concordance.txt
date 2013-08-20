@@ -1,0 +1,199 @@
+ecoid	ecoregion	country1	country2	regionid	region	pixels	hits
+10101	"Admiralty Islands lowland rain forests"	"Papua New Guinea"	"Papua New Guinea"	21	"New Guinea and Islands"	4693	6
+10102	"Banda Sea Islands moist deciduous forests"	"Indonesia"	"Indonesia"	27	"Other Indonesia"	12852	49
+10103	"Biak-Numfoor rain forests"	"Indonesia"	"Indonesia"	21	"New Guinea and Islands"	6254	8
+10104	"Buru rain forests"	"Indonesia"	"Indonesia"	27	"Other Indonesia"	30483	83
+10105	"Central Range montane rain forests"	"Indonesia"	"Papua New Guinea"	21	"New Guinea and Islands"	715583	123
+10106	"Halmahera rain forests"	"Indonesia"	"Indonesia"	27	"Other Indonesia"	91052	448
+10107	"Huon Peninsula montane rain forests"	"Papua New Guinea"	"Papua New Guinea"	21	"New Guinea and Islands"	57713	11
+10108	"Yapen rain forests"	"Indonesia"	"Indonesia"	21	"New Guinea and Islands"	4913	1
+10110	"Louisiade Archipelago rain forests"	"Papua New Guinea"	"Papua New Guinea"	21	"New Guinea and Islands"	2508	3
+10111	"New Britain-New Ireland lowland rain forests"	"Papua New Guinea"	"Papua New Guinea"	21	"New Guinea and Islands"	119879	758
+10112	"New Britain-New Ireland montane rain forests"	"Papua New Guinea"	"Papua New Guinea"	21	"New Guinea and Islands"	49848	0
+10115	"Northern New Guinea lowland rain and freshwater swamp forests"	"Indonesia"	"Papua New Guinea"	21	"New Guinea and Islands"	502850	496
+10116	"Northern New Guinea montane rain forests"	"Indonesia"	"Papua New Guinea"	21	"New Guinea and Islands"	94456	12
+10117	"Queensland tropical rain forests"	"Australia"	"Australia"	2	"AustraliaNZ"	98386	273
+10118	"Seram rain forests"	"Indonesia"	"Indonesia"	27	"Other Indonesia"	62471	191
+10119	"Solomon Islands rain forests"	"Papua New Guinea"	"Solomon Islands"	21	"New Guinea and Islands"	111992	51
+10120	"Southeastern Papuan rain forests"	"Papua New Guinea"	"Papua New Guinea"	21	"New Guinea and Islands"	312635	223
+10121	"Southern New Guinea freshwater swamp forests"	"Papua New Guinea"	"Indonesia"	21	"New Guinea and Islands"	316383	2725
+10122	"Southern New Guinea lowland rain forests"	"Indonesia"	"Papua New Guinea"	21	"New Guinea and Islands"	488425	3490
+10123	"Sulawesi lowland rain forests"	"Indonesia"	"Indonesia"	27	"Other Indonesia"	296477	2853
+10124	"Sulawesi montane rain forests"	"Indonesia"	"Indonesia"	27	"Other Indonesia"	302715	336
+10125	"Trobriand Islands rain forests"	"Papua New Guinea"	"Papua New Guinea"	21	"New Guinea and Islands"	11253	4
+10126	"Vanuatu rain forests"	"Vanuatu"	"Vanuatu"	21	"New Guinea and Islands"	948	1
+10127	"Vogelkop montane rain forests"	"Indonesia"	"Indonesia"	21	"New Guinea and Islands"	92942	16
+10128	"Vogelkop-Aru lowland rain forests"	"Indonesia"	"Indonesia"	21	"New Guinea and Islands"	290010	682
+30101	"Albertine Rift montane forests"	"Democratic Republic of the Congo"	"Democratic Republic of the Congo"	12	"Central and East Africa"	223579	194
+30102	"Atlantic Equatorial coastal forests"	"Gabon"	"Cameroon"	12	"Central and East Africa"	730593	588
+30103	"Cameroonian Highlands forests"	"Cameroon"	"Cameroon"	12	"Central and East Africa"	72708	17
+30104	"Central Congolian lowland forests"	"Democratic Republic of the Congo"	"Democratic Republic of the Congo"	12	"Central and East Africa"	1886209	87
+30105	"Comoros forests"	"Comoros"	"Comoros"	12	"Central and East Africa"	3772	5
+30106	"Cross-Niger transition forests"	"Nigeria"	"Nigeria"	13	"Coastal West Africa"	6947	54
+30107	"Cross-Sanaga-Bioko coastal forests"	"Cameroon"	"Nigeria"	12	"Central and East Africa"	182644	337
+30108	"East African montane forests"	"Kenya"	"Kenya"	12	"Central and East Africa"	68775	143
+30109	"Eastern Arc forests"	"Tanzania"	"Tanzania"	12	"Central and East Africa"	27811	507
+30110	"Eastern Congolian swamp forests"	"Democratic Republic of the Congo"	"Democratic Republic of the Congo"	12	"Central and East Africa"	412280	79
+30111	"Eastern Guinean forests"	"Ghana"	"Ghana"	13	"Coastal West Africa"	214618	1402
+30114	"Guinean montane forests"	"Guinea"	"Guinea"	13	"Coastal West Africa"	8648	3
+30117	"Madagascar lowland forests"	"Madagascar"	"Madagascar"	12	"Central and East Africa"	372383	207
+30118	"Madagascar subhumid forests"	"Madagascar"	"Madagascar"	12	"Central and East Africa"	183033	127
+30121	"Mount Cameroon and Bioko montane forests"	"Cameroon"	"Equatorial Guinea"	13	"Coastal West Africa"	2022	2
+30122	"Niger Delta swamp forests"	"Nigeria"	"Nigeria"	13	"Coastal West Africa"	33663	48
+30123	"Nigerian lowland forests"	"Nigeria"	"Nigeria"	13	"Coastal West Africa"	78838	793
+30124	"Northeastern Congolian lowland forests"	"Democratic Republic of the Congo"	"Democratic Republic of the Congo"	12	"Central and East Africa"	2331316	305
+30125	"Northern Zanzibar-Inhambane coastal forest mosaic"	"Somalia"	"Kenya"	12	"Central and East Africa"	1300	99
+30126	"Northwestern Congolian lowland forests"	"Cameroon"	"Republic of Congo"	12	"Central and East Africa"	1831808	311
+30127	"Sao Tome, Principe and Annobon moist lowland forests"	"Sao Tome and Principe"	"Sao Tome and Principe"	13	"Coastal West Africa"	1980	0
+30129	"Western Congolian swamp forests"	"Democratic Republic of the Congo"	"Republic of Congo"	12	"Central and East Africa"	563848	83
+30130	"Western Guinean lowland forests"	"C(te d'Ivoire"	"Guinea"	13	"Coastal West Africa"	668606	1390
+40101	"Andaman Islands rain forests"	"India"	"India"	32	"Southern Asia and Myanmar"	17364	51
+40102	"Borneo lowland rain forests"	"Indonesia"	"Indonesia"	5	"Borneo lowland rain forests"	1438006	25562
+40103	"Borneo montane rain forests"	"Indonesia"	"Malaysia"	27	"Other Indonesia"	505844	659
+40104	"Borneo peat swamp forests"	"Malaysia"	"Indonesia"	6	"Borneo peat swamp forests"	192510	7599
+40105	"Brahmaputra Valley semi-evergreen forests"	"India"	"India"	32	"Southern Asia and Myanmar"	47684	390
+40106	"Cardamom Mountains rain forests"	"Cambodia"	"Cambodia"	10	"Cardamom Mountains rain forests"	129874	7736
+40107	"Chao Phraya freshwater swamp forests"	"Thailand"	"Thailand"	41	"West SE Asia"	9214	94
+40108	"Chao Phraya lowland moist deciduous forests"	"Thailand"	"Thailand"	41	"West SE Asia"	13964	312
+40109	"Chin Hills-Arakan Yoma montane forests"	"Myanmar"	"Myanmar"	32	"Southern Asia and Myanmar"	128406	801
+40111	"Eastern highlands moist deciduous forests"	"India"	"India"	32	"Southern Asia and Myanmar"	378472	776
+40112	"Eastern Java-Bali montane rain forests"	"Indonesia"	"Indonesia"	27	"Other Indonesia"	45056	83
+40113	"Eastern Java-Bali rain forests"	"Indonesia"	"Indonesia"	27	"Other Indonesia"	47813	333
+40114	"Greater Negros-Panay rain forests"	"Philippines"	"Philippines"	15	"East SE Asia"	23907	83
+40115	"Himalayan subtropical broadleaf forests"	"Nepal"	"Nepal"	32	"Southern Asia and Myanmar"	77942	33
+40116	"Irrawaddy freshwater swamp forests"	"Myanmar"	"Myanmar"	32	"Southern Asia and Myanmar"	2938	2
+40117	"Irrawaddy moist deciduous forests"	"Myanmar"	"Myanmar"	32	"Southern Asia and Myanmar"	230497	1963
+40118	"Jian Nan subtropical evergreen forests"	"China"	"China"	16	"Jian Nan subtropical evergreen forests"	1787222	4871
+40119	"Kayah-Karen montane rain forests"	"Myanmar"	"Myanmar"	17	"Kayah-Karen montane rain forests"	448146	5686
+40120	"Lower Gangetic Plains moist deciduous forests"	"India"	"India"	32	"Southern Asia and Myanmar"	75546	274
+40121	"Luang Prabang montane rain forests"	"Laos"	"Laos"	41	"West SE Asia"	252878	3768
+40122	"Luzon montane rain forests"	"Philippines"	"Philippines"	15	"East SE Asia"	30294	13
+40123	"Luzon rain forests"	"Philippines"	"Philippines"	15	"East SE Asia"	155240	527
+40124	"Malabar Coast moist forests"	"India"	"India"	32	"Southern Asia and Myanmar"	60525	20
+40125	"Maldives-Lakshadweep-Chagos Archipelago tropical moist forests"	"Philippines"	"Philippines"	32	"Southern Asia and Myanmar"	589	0
+40126	"Meghalaya subtropical forests"	"India"	"India"	32	"Southern Asia and Myanmar"	127338	206
+40127	"Mentawai Islands rain forests"	"Indonesia"	"Indonesia"	27	"Other Indonesia"	20185	17
+40128	"Mindanao montane rain forests"	"Philippines"	"Philippines"	15	"East SE Asia"	54659	38
+40129	"Mindanao-Eastern Visayas rain forests"	"Philippines"	"Philippines"	15	"East SE Asia"	181938	404
+40130	"Mindoro rain forests"	"Philippines"	"Philippines"	15	"East SE Asia"	19432	71
+40131	"Mizoram-Manipur-Kachin rain forests"	"Myanmar"	"India"	41	"West SE Asia"	540900	2968
+40132	"Myanmar coastal rain forests"	"Myanmar"	"Myanmar"	32	"Southern Asia and Myanmar"	135824	1561
+40133	"Nicobar Islands rain forests"	"India"	"India"	32	"Southern Asia and Myanmar"	1784	8
+40134	"North Western Ghats moist deciduous forests"	"India"	"India"	32	"Southern Asia and Myanmar"	38564	28
+40135	"North Western Ghats montane rain forests"	"India"	"India"	32	"Southern Asia and Myanmar"	74936	42
+40136	"Northern Annamites rain forests"	"Laos"	"Vietnam"	41	"West SE Asia"	181309	1026
+40137	"Northern Indochina subtropical forests"	"China"	"Myanmar"	24	"Northern Indochina subtropical forests"	1397593	7877
+40138	"Northern Khorat Plateau moist deciduous forests"	"Thailand"	"Thailand"	41	"West SE Asia"	16532	1313
+40139	"Northern Thailand-Laos moist deciduous forests"	"Thailand"	"Laos"	41	"West SE Asia"	125442	1144
+40140	"Northern Triangle subtropical forests"	"Myanmar"	"Myanmar"	41	"West SE Asia"	236167	195
+40141	"Northern Vietnam lowland rain forests"	"Vietnam"	"Vietnam"	15	"East SE Asia"	23533	228
+40142	"Orissa semi-evergreen forests"	"India"	"India"	32	"Southern Asia and Myanmar"	5976	6
+40143	"Palawan rain forests"	"Philippines"	"Philippines"	15	"East SE Asia"	30477	99
+40144	"Peninsular Malaysian montane rain forests"	"Malaysia"	"Malaysia"	15	"East SE Asia"	76779	101
+40145	"Peninsular Malaysian peat swamp forests"	"Malaysia"	"Malaysia"	15	"East SE Asia"	12437	1335
+40146	"Peninsular Malaysian rain forests"	"Malaysia"	"Malaysia"	28	"Peninsular Malaysian rain forests"	374886	25488
+40147	"Red River freshwater swamp forests"	"Vietnam"	"Vietnam"	15	"East SE Asia"	734	3
+40149	"South China-Vietnam subtropical evergreen forests"	"China"	"China"	31	"South China-Vietnam subtropical evergreen forests"	268618	5178
+40150	"South Western Ghats moist deciduous forests"	"India"	"India"	32	"Southern Asia and Myanmar"	48069	86
+40151	"South Western Ghats montane rain forests"	"India"	"India"	32	"Southern Asia and Myanmar"	79003	51
+40152	"Southern Annamites montane rain forests"	"Vietnam"	"Vietnam"	41	"West SE Asia"	161947	855
+40153	"Southwest Borneo freshwater swamp forests"	"Indonesia"	"Indonesia"	27	"Other Indonesia"	92371	1747
+40154	"Sri Lanka lowland rain forests"	"Sri Lanka"	"Sri Lanka"	32	"Southern Asia and Myanmar"	46192	43
+40155	"Sri Lanka montane rain forests"	"Sri Lanka"	"Sri Lanka"	32	"Southern Asia and Myanmar"	7929	0
+40156	"Sulu Archipelago rain forests"	"Philippines"	"Philippines"	15	"East SE Asia"	4536	10
+40157	"Sumatran freshwater swamp forests"	"Indonesia"	"Indonesia"	34	"Sumatran freshwater swamp forests"	28796	4710
+40158	"Sumatran lowland rain forests"	"Indonesia"	"Indonesia"	35	"Sumatran lowland rain forests"	675896	27125
+40159	"Sumatran montane rain forests"	"Indonesia"	"Indonesia"	27	"Other Indonesia"	270803	99
+40160	"Sumatran peat swamp forests"	"Indonesia"	"Indonesia"	36	"Sumatran peat swamp forests"	187806	26651
+40161	"Sundaland heath forests"	"Indonesia"	"Indonesia"	37	"Sundaland heath forests"	180147	5852
+40162	"Sundarbans freshwater swamp forests"	"India"	"Bangladesh"	32	"Southern Asia and Myanmar"	5123	0
+40163	"Tenasserim-South Thailand semi-evergreen rain forests"	"Myanmar"	"Thailand"	39	"Tenasserim-South Thailand semi-evergreen rain forests"	279988	5968
+40164	"Tonle Sap freshwater swamp forests"	"Vietnam"	"Cambodia"	41	"West SE Asia"	28025	155
+40165	"Tonle Sap-Mekong peat swamp forests"	"Vietnam"	"Vietnam"	41	"West SE Asia"	17190	603
+40166	"Upper Gangetic Plains moist deciduous forests"	"India"	"India"	32	"Southern Asia and Myanmar"	24211	29
+40167	"Western Java montane rain forests"	"Indonesia"	"Indonesia"	27	"Other Indonesia"	84730	48
+40168	"Western Java rain forests"	"Indonesia"	"Indonesia"	27	"Other Indonesia"	72127	368
+40169	"Hainan Island monsoon rain forests"	"China"	"China"	41	"West SE Asia"	36719	732
+40170	"Nansei Islands subtropical evergreen forests"	"Japan"	"Japan"	23	"Northeast Asia"	7400	5
+40171	"South Taiwan monsoon rain forests"	"Taiwan"	""	15	"East SE Asia"	6350	3
+40172	"Taiwan subtropical evergreen forests"	"Taiwan"	"Taiwan"	15	"East SE Asia"	94662	13
+60101	"Araucaria moist forests"	"Brazil"	"Brazil"	26	"Other Andean South America"	596180	2190
+60102	"Atlantic Coast restingas"	"Brazil"	"Brazil"	7	"Brazil Atlantic and Interior"	5795	92
+60103	"Bahia coastal forests"	"Brazil"	"Brazil"	3	"Bahia coastal forests"	189089	19011
+60104	"Bahia interior forests"	"Brazil"	"Brazil"	4	"Bahia interior forests"	298188	15381
+60105	"Bolivian Yungas"	"Bolivia"	"Bolivia"	26	"Other Andean South America"	381375	102
+60106	"Caatinga Enclaves moist forests"	"Brazil"	"Brazil"	7	"Brazil Atlantic and Interior"	5173	158
+60107	"Caqueta moist forests"	"Colombia"	"Colombia"	14	"Colombia"	805074	3080
+60108	"Catatumbo moist forests"	"Colombia"	"Venezuela"	25	"Northern South America"	42030	426
+60109	"Cauca Valley montane forests"	"Colombia"	"Colombia"	14	"Colombia"	79342	245
+60111	"Central American Atlantic moist forests"	"Nicaragua"	"Nicaragua"	11	"Central America and Caribbean"	247451	3508
+60112	"Central American montane forests"	"Guatemala"	"Guatemala"	11	"Central America and Caribbean"	29832	9
+60113	"Chiapas montane forests"	"Mexico"	"Mexico"	11	"Central America and Caribbean"	20628	3
+60114	"Chimalapas montane forests"	"Mexico"	"Mexico"	11	"Central America and Caribbean"	7365	0
+60115	"Choc?-Dari?n moist forests"	"Colombia"	"Colombia"	11	"Central America and Caribbean"	221507	655
+60117	"Cordillera La Costa montane forests"	"Venezuela"	"Venezuela"	25	"Northern South America"	43255	401
+60118	"Cordillera Oriental montane forests"	"Colombia"	"Colombia"	14	"Colombia"	205268	455
+60119	"Costa Rican seasonal moist forests"	"Costa Rica"	"Costa Rica"	11	"Central America and Caribbean"	23692	28
+60120	"Cuban moist forests"	"Cuba"	"Cuba"	11	"Central America and Caribbean"	42216	2
+60121	"Eastern Cordillera real montane forests"	"Ecuador"	"Ecuador"	26	"Other Andean South America"	282102	649
+60122	"Eastern Panamanian montane forests"	"Panama"	"Colombia"	14	"Colombia"	10214	14
+60124	"Guianan Highlands moist forests"	"Venezuela"	"Venezuela"	25	"Northern South America"	652302	495
+60125	"Guianan moist forests"	"Suriname"	"Brazil"	25	"Northern South America"	2081880	2158
+60126	"Gurupa varzeﬂ"	"Brazil"	"Brazil"	8	"Brazil Eastern Amazon"	19158	78
+60127	"Hispaniolan moist forests"	"Dominican Republic"	"Haiti"	11	"Central America and Caribbean"	64122	375
+60128	"Iquitos varzeﬂ"	"Peru"	"Brazil"	26	"Other Andean South America"	459017	2692
+60129	"Isthmian-Atlantic moist forests"	"Nicaragua"	"Costa Rica"	11	"Central America and Caribbean"	130154	1911
+60130	"Isthmian-Pacific moist forests"	"Panama"	"Costa Rica"	11	"Central America and Caribbean"	44142	215
+60131	"Jamaican moist forests"	"Jamaica"	"Jamaica"	11	"Central America and Caribbean"	27019	31
+60132	"Japurﬂ-Solimoes-Negro moist forests"	"Brazil"	"Colombia"	9	"Brazil Western Amazon"	1216012	1713
+60133	"Juruﬂ-Purus moist forests"	"Brazil"	"Brazil"	9	"Brazil Western Amazon"	1119035	210
+60134	"Leeward Islands moist forests"	"Guadeloupe"	"Virgin Islands, U.S."	11	"Central America and Caribbean"	2100	2
+60135	"Madeira-Tapaj?s moist forests"	"Brazil"	"Brazil"	18	"Madeira-Tapaj?s moist forests"	2895905	118482
+60136	"Magdalena Valley montane forests"	"Colombia"	"Colombia"	14	"Colombia"	262578	894
+60137	"Magdalena-Urabﬂ moist forests"	"Colombia"	"Colombia"	14	"Colombia"	66743	1027
+60138	"Maraj? varzeﬂ"	"Brazil"	"Brazil"	8	"Brazil Eastern Amazon"	246430	1773
+60139	"Maranh?o Baba?u forests"	"Brazil"	"Brazil"	19	"Maranh?o Baba?u forests"	331241	10936
+60140	"Mato Grosso seasonal forests"	"Brazil"	"Brazil"	20	"Mato Grosso seasonal forests"	1342698	157155
+60141	"Monte Alegre varzeﬂ"	"Brazil"	"Brazil"	9	"Brazil Western Amazon"	254198	974
+60142	"Napo moist forests"	"Peru"	"Ecuador"	26	"Other Andean South America"	1079276	2935
+60143	"Negro-Branco moist forests"	"Venezuela"	"Brazil"	9	"Brazil Western Amazon"	895721	1504
+60144	"Northeastern Brazil restingas"	"Brazil"	"Brazil"	7	"Brazil Atlantic and Interior"	7501	297
+60145	"Northwestern Andean montane forests"	"Colombia"	"Ecuador"	14	"Colombia"	188956	419
+60146	"Oaxacan montane forests"	"Mexico"	"Mexico"	11	"Central America and Caribbean"	25720	0
+60147	"Orinoco Delta swamp forests"	"Venezuela"	"Guyana"	25	"Northern South America"	106907	488
+60148	"Pantanos de Centla"	"Mexico"	"Mexico"	11	"Central America and Caribbean"	35298	148
+60149	"Guianan freshwater swamp forests"	"Suriname"	"Suriname"	25	"Northern South America"	23886	71
+60150	"Alto Paranﬂ Atlantic forests"	"Brazil"	"Brazil"	1	"Alto Paranﬂ Atlantic forests"	659960	27700
+60151	"Pernambuco coastal forests"	"Brazil"	"Brazil"	7	"Brazil Atlantic and Interior"	10384	505
+60152	"Pernambuco interior forests"	"Brazil"	"Brazil"	7	"Brazil Atlantic and Interior"	10168	864
+60153	"Peruvian Yungas"	"Peru"	"Peru"	26	"Other Andean South America"	404097	29
+60154	"Pet?n-Veracruz moist forests"	"Guatemala"	"Mexico"	29	"Pet?n-Veracruz moist forests"	408862	6183
+60155	"Puerto Rican moist forests"	"Puerto Rico"	"Puerto Rico"	11	"Central America and Caribbean"	18780	20
+60156	"Purus varzeﬂ"	"Brazil"	"Brazil"	26	"Other Andean South America"	773113	1327
+60157	"Purus-Madeira moist forests"	"Brazil"	"Brazil"	30	"Purus-Madeira moist forests"	784982	9443
+60158	"Rio Negro campinarana"	"Brazil"	"Brazil"	25	"Northern South America"	414127	717
+60159	"Santa Marta montane forests"	"Colombia"	"Colombia"	14	"Colombia"	14581	4
+60160	"Serra do Mar coastal forests"	"Brazil"	"Brazil"	7	"Brazil Atlantic and Interior"	295704	1305
+60161	"Sierra de los Tuxtlas"	"Mexico"	""	11	"Central America and Caribbean"	5791	7
+60162	"Sierra Madre de Chiapas moist forests"	"Mexico"	"Guatemala"	11	"Central America and Caribbean"	27393	82
+60163	"Solim?es-Japurﬂ moist forests"	"Colombia"	"Peru"	26	"Other Andean South America"	758943	826
+60164	"South Florida rocklands"	"United States"	"United States"	22	"North America"	2189	0
+60165	"Southern Andean Yungas"	"Argentina"	"Bolivia"	26	"Other Andean South America"	231316	901
+60166	"Southwest Amazon moist forests"	"Brazil"	"Brazil"	33	"Southwest Amazon moist forests"	3293809	12714
+60167	"Talamancan montane forests"	"Panama"	"Panama"	11	"Central America and Caribbean"	58361	20
+60168	"Tapaj?s-Xingu moist forests"	"Brazil"	"Brazil"	38	"Tapaj?s-Xingu moist forests"	1472888	29820
+60169	"Pantepui"	"Venezuela"	"Venezuela"	9	"Brazil Western Amazon"	219298	60
+60170	"Tocantins/Pindare moist forests"	"Brazil"	"Brazil"	40	"Tocantins/Pindare moist forests"	519735	39315
+60171	"Trinidad and Tobago moist forests"	"Trinidad and Tobago"	"Trinidad and Tobago"	11	"Central America and Caribbean"	13658	135
+60173	"Uatuma-Trombetas moist forests"	"Brazil"	"Brazil"	8	"Brazil Eastern Amazon"	2027836	3717
+60174	"Ucayali moist forests"	"Peru"	"Peru"	26	"Other Andean South America"	470812	1256
+60175	"Venezuelan Andes montane forests"	"Venezuela"	"Venezuela"	14	"Colombia"	67487	170
+60176	"Veracruz moist forests"	"Mexico"	"Mexico"	11	"Central America and Caribbean"	62735	0
+60177	"Veracruz montane forests"	"Mexico"	"Mexico"	11	"Central America and Caribbean"	14087	0
+60178	"Western Ecuador moist forests"	"Ecuador"	"Ecuador"	26	"Other Andean South America"	38754	737
+60179	"Windward Islands moist forests"	"Martinique"	"Martinique"	11	"Central America and Caribbean"	4021	9
+60180	"Xingu-Tocantins-Araguaia moist forests"	"Brazil"	"Brazil"	42	"Xingu-Tocantins-Araguaia moist forests"	980035	71177
+60181	"Yucatﬂn moist forests"	"Mexico"	"Mexico"	11	"Central America and Caribbean"	284047	1530
+60182	"Guianan piedmont and lowland moist forests"	"Venezuela"	"Venezuela"	9	"Brazil Western Amazon"	992431	3707
+80101	"Guizhou Plateau broadleaf and mixed forests"	"China"	"China"	41	"West SE Asia"	423828	3
+80102	"Yunnan Plateau subtropical evergreen forests"	"China"	"China"	41	"West SE Asia"	471981	388
