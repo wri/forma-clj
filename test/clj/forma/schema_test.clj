@@ -143,11 +143,7 @@ truncated on both ends."
    even with a `nodata` value embedded in the neighbor values."
   (let [nodata -9999.0]
     (combine-neighbors nodata neighbors))
-  => (neighbor-value (thrift/FireValue* 3 2 2 3) 2
-                                                 1.5 1.
-                                                 2.5 2.
-                                                 3.5 3.
-                                                 4.5 5.)
+  => (neighbor-value (thrift/FireValue* 3 2 2 3) 2 1.5 1. 2.5 2. 3.5 3. 4.5 5.)
   (let [nodata -9999.0
         neighbors [(thrift/FormaValue* (thrift/FireValue* 2 1 1 2) nodata 4. nodata 6.)
                    (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) nodata 4. nodata 6.)]]
