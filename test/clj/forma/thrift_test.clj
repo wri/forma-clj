@@ -22,7 +22,7 @@
   (let [x (NeighborValue. (FireValue. 1 1 1 1) 1 2.0 3.0 4.0 5.0 6.0 7.0)]
     (doto x
       (.setAvgParamBreak 8.0)
-      (.setMinParamBreak 9.0))
+      (.setMaxParamBreak 9.0))
     (NeighborValue* (FireValue. 1 1 1 1) 1 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0) => x))
 
 (fact "Check creating and unpacking FireValue objects."

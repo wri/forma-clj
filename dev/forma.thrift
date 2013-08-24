@@ -26,6 +26,7 @@ struct NeighborValue {
   8: double minTStat;
   9: optional double avgParamBreak;
   10: optional double minParamBreak;
+  11: optional double maxParamBreak;
 }
 
 # Collection Wrappers
