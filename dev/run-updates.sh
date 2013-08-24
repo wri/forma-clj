@@ -8,6 +8,7 @@ SRES="500"
 TRES="16"
 MODISLAYERS="[:ndvi]" # :reli
 TILES="[:all]" # "[[28 8]]"
+TRAININGEND="2005-12-19"
 ESTSTART=$1 # "2013-02-18"
 ESTEND=$2 # "2013-03-06"
 FIRESTART="2000-11-01"
@@ -131,15 +132,30 @@ $LAUNCHER $RUNNERNS.FormaTap $SRES $TRES $ESTSTART $ESTEND $fireoutput $dynamic 
 
 echo "Merging neighbors"
 dynamic=$output
-output="$TMP/neighbors"
-$LAUNCHER $RUNNERNS.NeighborQuery $SRES $TRES $dynamic $output
+neighbors="$TMP/neighbors"
+$LAUNCHER $RUNNERNS.NeighborQuery $SRES $TRES $dynamic $neighbors
+
+# beta-data-prep
+
+echo "Beta data prep - only keep data through training period"
+dynamic=$neighbors
+output="$TMP/beta-data"
+#$LAUNCHER $RUNNERNS.BetaDataPrep $SRES $TRES $dynamic $STATIC $output true
+
+# gen-betas
+
+echo "Generating beta vectors"
+dynamic=$output
+output="$S3OUT/betas"
+#$LAUNCHER $RUNNERNS.GenBetas $SRES $TRES $TRAININGEND $dynamic $output
 
 # forma-estimate
 
 echo "Classify pixels using beta vectors"
-dynamic=$output
+dynamic=$neighbors
 output="$S3OUT/estimated"
-$LAUNCHER $RUNNERNS.EstimateForma $SRES $TRES $BETAS $dynamic $STATIC $output
+betas="$S3OUT/betas"
+$LAUNCHER $RUNNERNS.EstimateForma $SRES $TRES $betas $dynamic $STATIC $output true
 
 # probs-pail
 

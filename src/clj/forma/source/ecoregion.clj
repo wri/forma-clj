@@ -104,3 +104,14 @@
              (>= HITS-THRESHOLD hit-share))
       (get-super-ecoregion ecoid)
       ecoid)))
+
+(defn matches-super-ecoregion?
+  "Checks whether the supplied ecoregion falls inside a given super-ecoregion."
+  [ecoid match]
+  (= match (get-super-ecoregion ecoid)))
+
+(defn super-ecoregion->ecoregions
+  "Given a super-ecoregion, return a list of the ecoregions inside it."
+  [super-ecoregion]
+  (let [ecoregions (keys eco-dict)]
+    (filter #(matches-super-ecoregion? % super-ecoregion) ecoregions)))
