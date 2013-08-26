@@ -41,6 +41,7 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
   private static final org.apache.thrift.protocol.TField MIN_TSTAT_FIELD_DESC = new org.apache.thrift.protocol.TField("minTStat", org.apache.thrift.protocol.TType.DOUBLE, (short)8);
   private static final org.apache.thrift.protocol.TField AVG_PARAM_BREAK_FIELD_DESC = new org.apache.thrift.protocol.TField("avgParamBreak", org.apache.thrift.protocol.TType.DOUBLE, (short)9);
   private static final org.apache.thrift.protocol.TField MIN_PARAM_BREAK_FIELD_DESC = new org.apache.thrift.protocol.TField("minParamBreak", org.apache.thrift.protocol.TType.DOUBLE, (short)10);
+  private static final org.apache.thrift.protocol.TField MAX_PARAM_BREAK_FIELD_DESC = new org.apache.thrift.protocol.TField("maxParamBreak", org.apache.thrift.protocol.TType.DOUBLE, (short)11);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -58,6 +59,7 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
   public double minTStat; // required
   public double avgParamBreak; // optional
   public double minParamBreak; // optional
+  public double maxParamBreak; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -70,7 +72,8 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
     AVG_TSTAT((short)7, "avgTStat"),
     MIN_TSTAT((short)8, "minTStat"),
     AVG_PARAM_BREAK((short)9, "avgParamBreak"),
-    MIN_PARAM_BREAK((short)10, "minParamBreak");
+    MIN_PARAM_BREAK((short)10, "minParamBreak"),
+    MAX_PARAM_BREAK((short)11, "maxParamBreak");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -105,6 +108,8 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
           return AVG_PARAM_BREAK;
         case 10: // MIN_PARAM_BREAK
           return MIN_PARAM_BREAK;
+        case 11: // MAX_PARAM_BREAK
+          return MAX_PARAM_BREAK;
         default:
           return null;
       }
@@ -154,8 +159,9 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
   private static final int __MINTSTAT_ISSET_ID = 6;
   private static final int __AVGPARAMBREAK_ISSET_ID = 7;
   private static final int __MINPARAMBREAK_ISSET_ID = 8;
-  private BitSet __isset_bit_vector = new BitSet(9);
-  private _Fields optionals[] = {_Fields.AVG_PARAM_BREAK,_Fields.MIN_PARAM_BREAK};
+  private static final int __MAXPARAMBREAK_ISSET_ID = 9;
+  private BitSet __isset_bit_vector = new BitSet(10);
+  private _Fields optionals[] = {_Fields.AVG_PARAM_BREAK,_Fields.MIN_PARAM_BREAK,_Fields.MAX_PARAM_BREAK};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
@@ -178,6 +184,8 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
     tmpMap.put(_Fields.AVG_PARAM_BREAK, new org.apache.thrift.meta_data.FieldMetaData("avgParamBreak", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.DOUBLE)));
     tmpMap.put(_Fields.MIN_PARAM_BREAK, new org.apache.thrift.meta_data.FieldMetaData("minParamBreak", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.DOUBLE)));
+    tmpMap.put(_Fields.MAX_PARAM_BREAK, new org.apache.thrift.meta_data.FieldMetaData("maxParamBreak", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.DOUBLE)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(NeighborValue.class, metaDataMap);
@@ -232,6 +240,7 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
     this.minTStat = other.minTStat;
     this.avgParamBreak = other.avgParamBreak;
     this.minParamBreak = other.minParamBreak;
+    this.maxParamBreak = other.maxParamBreak;
   }
 
   public NeighborValue deepCopy() {
@@ -259,6 +268,8 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
     this.avgParamBreak = 0.0;
     setMinParamBreakIsSet(false);
     this.minParamBreak = 0.0;
+    setMaxParamBreakIsSet(false);
+    this.maxParamBreak = 0.0;
   }
 
   public FireValue getFireValue() {
@@ -492,6 +503,29 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
     __isset_bit_vector.set(__MINPARAMBREAK_ISSET_ID, value);
   }
 
+  public double getMaxParamBreak() {
+    return this.maxParamBreak;
+  }
+
+  public NeighborValue setMaxParamBreak(double maxParamBreak) {
+    this.maxParamBreak = maxParamBreak;
+    setMaxParamBreakIsSet(true);
+    return this;
+  }
+
+  public void unsetMaxParamBreak() {
+    __isset_bit_vector.clear(__MAXPARAMBREAK_ISSET_ID);
+  }
+
+  /** Returns true if field maxParamBreak is set (has been assigned a value) and false otherwise */
+  public boolean isSetMaxParamBreak() {
+    return __isset_bit_vector.get(__MAXPARAMBREAK_ISSET_ID);
+  }
+
+  public void setMaxParamBreakIsSet(boolean value) {
+    __isset_bit_vector.set(__MAXPARAMBREAK_ISSET_ID, value);
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case FIRE_VALUE:
@@ -574,6 +608,14 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
       }
       break;
 
+    case MAX_PARAM_BREAK:
+      if (value == null) {
+        unsetMaxParamBreak();
+      } else {
+        setMaxParamBreak((Double)value);
+      }
+      break;
+
     }
   }
 
@@ -609,6 +651,9 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
     case MIN_PARAM_BREAK:
       return Double.valueOf(getMinParamBreak());
 
+    case MAX_PARAM_BREAK:
+      return Double.valueOf(getMaxParamBreak());
+
     }
     throw new IllegalStateException();
   }
@@ -640,6 +685,8 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
       return isSetAvgParamBreak();
     case MIN_PARAM_BREAK:
       return isSetMinParamBreak();
+    case MAX_PARAM_BREAK:
+      return isSetMaxParamBreak();
     }
     throw new IllegalStateException();
   }
@@ -747,6 +794,15 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
         return false;
     }
 
+    boolean this_present_maxParamBreak = true && this.isSetMaxParamBreak();
+    boolean that_present_maxParamBreak = true && that.isSetMaxParamBreak();
+    if (this_present_maxParamBreak || that_present_maxParamBreak) {
+      if (!(this_present_maxParamBreak && that_present_maxParamBreak))
+        return false;
+      if (this.maxParamBreak != that.maxParamBreak)
+        return false;
+    }
+
     return true;
   }
 
@@ -803,6 +859,11 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
     builder.append(present_minParamBreak);
     if (present_minParamBreak)
       builder.append(minParamBreak);
+
+    boolean present_maxParamBreak = true && (isSetMaxParamBreak());
+    builder.append(present_maxParamBreak);
+    if (present_maxParamBreak)
+      builder.append(maxParamBreak);
 
     return builder.toHashCode();
   }
@@ -915,6 +976,16 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
         return lastComparison;
       }
     }
+    lastComparison = Boolean.valueOf(isSetMaxParamBreak()).compareTo(typedOther.isSetMaxParamBreak());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetMaxParamBreak()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.maxParamBreak, typedOther.maxParamBreak);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     return 0;
   }
 
@@ -980,6 +1051,12 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
       if (!first) sb.append(", ");
       sb.append("minParamBreak:");
       sb.append(this.minParamBreak);
+      first = false;
+    }
+    if (isSetMaxParamBreak()) {
+      if (!first) sb.append(", ");
+      sb.append("maxParamBreak:");
+      sb.append(this.maxParamBreak);
       first = false;
     }
     sb.append(")");
@@ -1107,6 +1184,14 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
+          case 11: // MAX_PARAM_BREAK
+            if (schemeField.type == org.apache.thrift.protocol.TType.DOUBLE) {
+              struct.maxParamBreak = iprot.readDouble();
+              struct.setMaxParamBreakIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
           default:
             org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
         }
@@ -1158,6 +1243,11 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
         oprot.writeDouble(struct.minParamBreak);
         oprot.writeFieldEnd();
       }
+      if (struct.isSetMaxParamBreak()) {
+        oprot.writeFieldBegin(MAX_PARAM_BREAK_FIELD_DESC);
+        oprot.writeDouble(struct.maxParamBreak);
+        oprot.writeFieldEnd();
+      }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
     }
@@ -1206,7 +1296,10 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
       if (struct.isSetMinParamBreak()) {
         optionals.set(9);
       }
-      oprot.writeBitSet(optionals, 10);
+      if (struct.isSetMaxParamBreak()) {
+        optionals.set(10);
+      }
+      oprot.writeBitSet(optionals, 11);
       if (struct.isSetFireValue()) {
         struct.fireValue.write(oprot);
       }
@@ -1237,12 +1330,15 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
       if (struct.isSetMinParamBreak()) {
         oprot.writeDouble(struct.minParamBreak);
       }
+      if (struct.isSetMaxParamBreak()) {
+        oprot.writeDouble(struct.maxParamBreak);
+      }
     }
 
     @Override
     public void read(org.apache.thrift.protocol.TProtocol prot, NeighborValue struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
-      BitSet incoming = iprot.readBitSet(10);
+      BitSet incoming = iprot.readBitSet(11);
       if (incoming.get(0)) {
         struct.fireValue = new FireValue();
         struct.fireValue.read(iprot);
@@ -1283,6 +1379,10 @@ public class NeighborValue implements org.apache.thrift.TBase<NeighborValue, Nei
       if (incoming.get(9)) {
         struct.minParamBreak = iprot.readDouble();
         struct.setMinParamBreakIsSet(true);
+      }
+      if (incoming.get(10)) {
+        struct.maxParamBreak = iprot.readDouble();
+        struct.setMaxParamBreakIsSet(true);
       }
     }
   }

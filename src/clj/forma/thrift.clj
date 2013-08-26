@@ -103,7 +103,8 @@
   (get-avg-tstat [x])
   (get-min-tstat [x])
   (get-avg-param-break [x])
-  (get-min-param-break [x]))
+  (get-min-param-break [x])
+  (get-max-param-break [x]))
 
 ;; Protocol for packing an Clojure data structure into a Thrift object.
 (defprotocol IPackable
@@ -211,10 +212,10 @@
 (defn NeighborValue*
   "Create a NeighborValue."
   [fire ncount avg-short min-short avg-long min-long avg-stat min-stat
-   & [avg-break min-break]]
+   & [avg-break max-break]]
   {:pre [(instance? forma.schema.FireValue fire)
          (or (nil? avg-break) (float? avg-break))
-         (or (nil? min-break) (float? min-break))
+         (or (nil? max-break) (float? max-break))
          (integer? ncount)
          (every? float?
                  [avg-short min-short avg-long min-long avg-stat min-stat])]}
@@ -223,9 +224,9 @@
     (if avg-break
       (doto n-value
         (.setAvgParamBreak avg-break)))
-    (if min-break
+    (if max-break
       (doto n-value
-        (.setMinParamBreak min-break)))
+        (.setMaxParamBreak max-break)))
     n-value))
 
 (defn FireValue*
@@ -365,7 +366,8 @@
   (get-avg-tstat [x] (.getAvgTStat x))
   (get-min-tstat [x] (.getMinTStat x))
   (get-avg-param-break [x] (.getAvgParamBreak x))
-  (get-min-param-break [x] (.getMinParamBreak x)))
+  (get-min-param-break [x] (.getMinParamBreak x))
+  (get-max-param-break [x] (.getMaxParamBreak x)))
 
 (extend-protocol IPackable
   java.lang.Iterable
@@ -432,7 +434,9 @@
   (unpack [x] (vec (map #(.getFieldValue x %) (keys (FormaValue/metaDataMap)))))
 
   NeighborValue
-  (unpack [x] (vec (map #(.getFieldValue x %) (keys (NeighborValue/metaDataMap)))))
+  (unpack [x] (vec (map #(.getFieldValue x %)
+                        (filter #(not= "MIN_PARAM_BREAK" (str %)) ;; deprecated field
+                                (keys (NeighborValue/metaDataMap))))))
 
   FireArray
   (unpack [x] (->> x .getFires vec))
