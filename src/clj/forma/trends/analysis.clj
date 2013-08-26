@@ -62,6 +62,14 @@
   `hansen-stat` will return nil, which will be filtered in the
   subsequent cascalog join.
 
+  Interpretation: A large break will tend to generate a large break
+  statistic. From Hansen (1992):
+
+      Under the alternative hypothesis of parameter instability,
+      however, the cumulative sums will develop a nonzero mean in
+      parts of the sample, so Sn will not behave like a random walk,
+      and the test statistic will tend to be large
+
   Example:
     (hansen-stat ndvi) => 0.9113
 
