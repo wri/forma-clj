@@ -77,7 +77,10 @@ echo "source ~/.git-completion.bash" >> .bashrc
 # simple leiningen install via 'li'
 echo "alias li='cd /home/hadoop/bin; wget https://raw.github.com/technomancy/leiningen/preview/bin/lein; chmod u+x lein; ./lein; cd /home/hadoop;'" >> /home/hadoop/.bashrc
 
+# clone forma-clj repo
+echo "alias gc='git clone git://github.com/reddmetrics/forma-clj.git'" >> /home/hadoop/.bashrc
+
 # alias to do standard forma-clj setup
-setup="li; git clone git://github.com/reddmetrics/forma-clj.git; cd forma-clj; uj; cd ~/;"
+setup="li; gc; cd forma-clj; uj; cd ~/;"
 
 exit 0
