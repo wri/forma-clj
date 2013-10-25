@@ -187,10 +187,13 @@
    not, nor do a handful of observations that have extra fields (14 or
    19, instead of the expected 12)."
   [line field-count]
-  (let [fire-fields (seq (.split line ","))]
-      (and
-       (number? (read-string (first fire-fields)))
-       (= field-count (count fire-fields)))))
+  (let [fire-fields (seq (.split line ","))
+        counter #(count (clojure.string/split % #"\."))
+        period-split-set (set (map counter fire-fields))]
+    (and
+     (every? #(>= 2 %) period-split-set) ;; ignore if extra periods in numbers
+     (number? (read-string (first fire-fields))) ;; ignore if header
+     (= field-count (count fire-fields))))) ;; ignore if missing/extra fields
 
 (defn keep-fire?
   "Returns true if the latlon for the fire falls within a tile in tile-set.
