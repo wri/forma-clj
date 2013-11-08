@@ -7,11 +7,12 @@
 SRES="500"
 TRES="16"
 MODISLAYERS="[:ndvi]" # :reli
-TILES="[:all]" # "[[28 8]]"
+TILES="[:all]" # "[[28 8] [32 9]"
 TRAININGEND="2005-12-19"
 ESTSTART=$1 # "2013-02-18"
 ESTEND=$2 # "2013-03-06"
 FIRESTART="2000-11-01"
+SUPERECO=false # by default, do not use super-ecoregions
 
 ####################
 # Storage settings #
@@ -46,7 +47,7 @@ echo "Processing data to generate FORMA from $ESTSTART to $ESTEND"
 
 echo "Preprocessing MODIS data"
 # 5 minutes w/5 high-memory for 2 periods
-$LAUNCHER "$PREPROCESSNS.PreprocessModis" "$STAGING/MOD13A1/" $PAILPATH "{20}*" "$TILES" $MODISLAYERS
+$LAUNCHER "$PREPROCESSNS.PreprocessModis" "$STAGING/MOD13A1/" $PAILPATH "{20}*" "$TILES" "$MODISLAYERS"
 
 # 7 minutes w/5 high-memory for all data
 # 4 minutes w/25 high-memory for all data
@@ -155,7 +156,7 @@ echo "Classify pixels using beta vectors"
 dynamic=$neighbors
 output="$S3OUT/estimated"
 betas="$S3OUT/betas"
-$LAUNCHER $RUNNERNS.EstimateForma $SRES $TRES $betas $dynamic $STATIC $output true
+$LAUNCHER $RUNNERNS.EstimateForma $SRES $TRES $betas $dynamic $STATIC $output $SUPERECO
 
 # probs-pail
 
@@ -170,3 +171,10 @@ echo "Merge probability time series, outputting to sequence files in $S3OUT/merg
 dynamic=$output
 output="$S3OUT/merged-estimated"
 $LAUNCHER $RUNNERNS.MergeProbs $SRES $TRES $ESTEND $dynamic $output
+
+# add gadm2
+
+echo "Merging in gadm2 field"
+dynamic=$output
+output="$S3OUT/merged-estimated-gadm2"
+$LAUNCHER $RUNNERNS.ProbsGadm2 $dynamic $STATIC $output
