@@ -94,8 +94,8 @@
                 50)"
   [src nodata zoom tres tres-out start thresh]
   (let [epoch (date/datetime->period tres-out "2000-01-01")]
-    (<- [?x ?y ?z ?p ?iso ?gadm2 ?lat ?lon]
-        (src ?sres ?modh ?modv ?s ?l ?start-period ?prob-series ?gadm2)
+    (<- [?x ?y ?z ?p ?iso ?gadm2 ?ecoregion ?lat ?lon]
+        (src ?sres ?modh ?modv ?s ?l ?start-period ?prob-series ?gadm2 ?ecoregion)
         (gadm2->iso ?gadm2 :> ?iso)
         (o/clean-probs ?prob-series nodata :> ?clean-series)
         (first-hit thresh ?clean-series :> ?first-hit-idx)
