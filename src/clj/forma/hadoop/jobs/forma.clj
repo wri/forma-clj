@@ -483,7 +483,7 @@
 
 (defn probs-gadm2
   [probs-src gadm2-src static-src]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-final ?merged-series ?gadm2]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-final ?merged-series ?gadm2 ?ecoid]
       (probs-src ?s-res ?mod-h ?mod-v ?sample ?line ?start-final ?merged-series)
       (gadm2-src ?s-res ?mod-h ?mod-v ?sample ?line ?gadm2)
       (static-src ?s-res ?mod-h ?mod-v ?sample ?line _ _ ?ecoid _ _)))
