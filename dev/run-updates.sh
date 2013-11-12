@@ -146,17 +146,19 @@ output="$TMP/beta-data"
 
 # gen-betas
 
-echo "Generating beta vectors"
-dynamic=$output
-output="$S3OUT/betas"
+#echo "Generating beta vectors"
+#dynamic=$output
+#output="$S3OUT/betas"
 #$LAUNCHER $RUNNERNS.GenBetas $SRES $TRES $TRAININGEND $dynamic $output
+# if you're re-generating betas, make sure you put them in 
+# s3n://pailbucket/all-betas when they're ready
 
 # forma-estimate
 
 echo "Classify pixels using beta vectors"
 dynamic=$neighbors
 output="$S3OUT/estimated"
-betas="$S3OUT/betas"
+betas="$BETAS"
 $LAUNCHER $RUNNERNS.EstimateForma $SRES $TRES $betas $dynamic $STATIC $output $SUPERECO
 
 # probs-pail
