@@ -189,8 +189,9 @@
     (?- sink (query est-map src :thresh thresh :pantropical true))))
 
 (defmain ProbsGadm2
-  [probs-path gadm2-path output-path]
+  [probs-path gadm2-path static-path output-path]
   (let [probs-src (hfs-seqfile probs-path)
         gadm-src (hfs-seqfile gadm2-path)
+        static-src (hfs-seqfile static-path)
         sink (hfs-seqfile output-path :sinkmode :replace)]
-    (?- sink (forma/probs-gadm2 probs-src gadm-src))))
+    (?- sink (forma/probs-gadm2 probs-src gadm-src static-src))))

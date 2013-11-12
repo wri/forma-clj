@@ -25,7 +25,8 @@
 (def est-start-idx (date/datetime->period t-res est-start))
 (def end-idx (date/datetime->period t-res est-end))
 (def series (vec (range (inc (- end-idx start-idx)))))
-(def static-src [[s-res 28 8 0 0 50 -1 -1 -1 -1]])
+(def static-src [[s-res 28 8 0 0 50 -1 -1 40158 -1]])
+(def gadm2-src [(concat pix-loc [88341])])
 (def forma-gadm2-src [[s-res 28 8 0 0 est-start-idx [0.5 0.49 0.55 0.54 0.60 0.59 0.5] 88500]])
 
 (def ts-path (.getPath (io/temp-dir "ts-src")))
@@ -342,6 +343,7 @@ functions are tested elsewhere."
         static-src [(vec (concat pix-loc static))
                     (vec (concat bad-pix-loc bad-static))
                     (vec (concat really-bad-pix-loc really-bad-static))]
+        gadm2-path (.getPath (io/temp-dir "gadm2-path"))
         ndvi-path (.getPath (io/temp-dir "ndvi-path"))
         rain-path (.getPath (io/temp-dir "rain-path"))
         static-path (.getPath (io/temp-dir "static-path"))
@@ -349,6 +351,7 @@ functions are tested elsewhere."
         _ (?- (hfs-seqfile ndvi-path :sinkmode :replace) ndvi-src)
         _ (?- (hfs-seqfile rain-path :sinkmode :replace) rain-src)
         _ (?- (hfs-seqfile static-path :sinkmode :replace) static-src)
+        _ (?- (hfs-seqfile gadm2-path :sinkmode :replace) gadm2-src)
         _ (spit (str fire-path "/fires.csv") fire-str)]
     
 
@@ -404,7 +407,11 @@ functions are tested elsewhere."
               
               merge-probs
               ([:tmp-dirs merge-probs-path]
-                 (MergeProbs s-res t-res est-end probs-pail-path merge-probs-path))))
+                 (MergeProbs s-res t-res est-end probs-pail-path merge-probs-path))
+
+              probs-gadm2
+              ([:tmp-dirs probs-gadm2-path]
+                 (ProbsGadm2 merge-probs-path gadm2-path static-path probs-gadm2-path))))
   1
   => 1)
 

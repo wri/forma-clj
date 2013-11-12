@@ -21,6 +21,7 @@ SUPERECO=false # by default, do not use super-ecoregions
 TMP="/tmp"
 STAGING="s3n://formastaging"
 STATIC="s3n://pailbucket/all-static-seq/all"
+GADM2="s3n://pailbucket/all-static-seq/vcf-filtered/gadm2"
 ARCHIVE="s3n://modisfiles"
 S3OUT="s3n://pailbucket/output/run-20`date +%y-%m-%d`" # store output by date of run
 PAILPATH="s3n://pailbucket/all-master"
@@ -176,5 +177,5 @@ $LAUNCHER $RUNNERNS.MergeProbs $SRES $TRES $ESTEND $dynamic $output
 
 echo "Merging in gadm2 field"
 dynamic=$output
-output="$S3OUT/merged-estimated-gadm2"
-$LAUNCHER $RUNNERNS.ProbsGadm2 $dynamic $STATIC $output
+output="$S3OUT/merged-estimated-gadm2-eco"
+$LAUNCHER $RUNNERNS.ProbsGadm2 $dynamic $GADM2 $STATIC $output

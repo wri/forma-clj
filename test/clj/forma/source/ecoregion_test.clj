@@ -45,8 +45,8 @@
   (get-ecoregion 10111 :super-ecoregions false) => 10111)
 
 (fact "Check `matches-super-ecoregion?`."
-  (matches-super-ecoregion? 10101 25) => true
-  (matches-super-ecoregion? 10101 24) => false)
+  (matches-super-ecoregion? 10101 21) => true
+  (matches-super-ecoregion? 10101 -1) => false)
 
 (fact "Check `super-ecoregion->ecoregions`."
   (super-ecoregion->ecoregions 25) => [60108 60147 60117 60149 60124 60125 60158]
