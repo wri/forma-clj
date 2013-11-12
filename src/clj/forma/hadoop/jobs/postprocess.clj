@@ -94,7 +94,7 @@
                 50)"
   [src nodata zoom tres tres-out start thresh]
   (let [epoch (date/datetime->period tres-out "2000-01-01")]
-    (<- [?x ?y ?z ?p ?iso ?gadm2 ?ecoregion ?lat ?lon]
+    (<- [?x ?y ?z ?p ?date-str ?iso ?gadm2 ?ecoregion ?lat ?lon]
         (src ?sres ?modh ?modv ?s ?l ?start-period ?prob-series ?gadm2 ?ecoregion)
         (gadm2->iso ?gadm2 :> ?iso)
         (o/clean-probs ?prob-series nodata :> ?clean-series)
@@ -103,6 +103,7 @@
         (date/shift-resolution tres tres-out ?period :> ?period-new-res)
         (- ?period-new-res epoch :> ?rp)
         (min-period ?rp :> ?p)
+        (date/period->datetime tres-out ?period-new-res :> ?date-str)
         (r/modis->latlon ?sres ?modh ?modv ?s ?l :> ?lat ?lon)
         (latlon-valid? ?lat ?lon)
         (latlon->tile ?lat ?lon zoom :> ?x ?y ?z))))
