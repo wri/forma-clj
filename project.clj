@@ -1,4 +1,4 @@
-(defproject forma/forma "0.2.0-SNAPSHOT"
+(defproject forma/forma "1.0.0-SNAPSHOT"
   :description "[FORMA](http://goo.gl/4YTBw) gone Functional."
   :repositories {"conjars" "http://conjars.org/repo/"}
   :source-paths ["src/clj"]
