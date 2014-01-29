@@ -1,6 +1,6 @@
 #!/bin/bash
 # 
-# EMR bootstrap task for our gdal stuff.
+# EMR bootstrap task
 
 set -e
 
@@ -49,7 +49,7 @@ echo "export LD_LIBRARY_PATH=/usr/local/fwtools/usr/lib:$hadoop_lib:\$LD_LIBRARY
 echo "export JAVA_LIBRARY_PATH=$hadoop_lib:\$JAVA_LIBRARY_PATH" >> /home/hadoop/.bashrc
 
 # Convenient 'repl' command
-echo "alias repl='screen -Lm hadoop jar /home/hadoop/forma-clj/target/forma-0.2.0-SNAPSHOT-standalone.jar clojure.main'" >> /home/hadoop/.bashrc
+echo "alias repl='screen -Lm hadoop jar /home/hadoop/forma-clj/target/forma-1.0.0-SNAPSHOT-standalone.jar clojure.main'" >> /home/hadoop/.bashrc
 
 # Setup for git
 sudo apt-get -y --force-yes install git
