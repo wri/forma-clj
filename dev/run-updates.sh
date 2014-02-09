@@ -31,7 +31,7 @@ BETAS="s3n://pailbucket/all-betas"
 # Constants #
 #############
 
-FORMAJAR="target/forma-0.2.0-SNAPSHOT-standalone.jar"
+FORMAJAR="target/forma-1.0.0-SNAPSHOT-standalone.jar"
 LAUNCHER="hadoop jar $FORMAJAR"
 PREPROCESSNS="forma.hadoop.jobs.preprocess"
 RUNNERNS="forma.hadoop.jobs.runner"
