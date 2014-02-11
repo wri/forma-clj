@@ -156,3 +156,37 @@
         (- ?period-new-res epoch :> ?cdm-period)
         (date/period->datetime t-res-out ?period-new-res :> ?date-str)
         (c/count ?count))))
+
+(defn forma->blue-raster
+  "Prepare data for use by Blue Raster. Expects `src` to include GADM2
+  and ecoregion fields already."
+  [src static-src nodata]
+  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?lat ?lon ?iso ?vcf ?gadm2
+       ?ecoid ?hansen ?clean-series]
+      (src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?prob-series ?gadm2 ?ecoid)
+      (static-src ?s-res ?mod-h ?mod-v ?sample ?line ?vcf _ _ ?hansen _)
+      (o/clean-probs ?prob-series nodata :> ?clean-series)
+      (gadm2->iso ?gadm2 :> ?iso)
+      (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)))
+
+(defn forma-download
+  "Prepare data for bulk download from S3. Expects `src` to include
+  GADM2 and ecoregion fields already. Count operation forces reduce
+  step, which avoids producing the thousands of output files that
+  would otherwise be created by all the mappers."
+  [src thresh t-res nodata]
+  (let [format-str "%.8f"
+        query (<- [?lat-str ?lon-str ?iso ?gadm2 ?date-str ?count]
+                  (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-final
+                       ?prob-series ?gadm2 ?ecoid)
+                  (gadm2->iso ?gadm2 :> ?iso)
+                  (o/clean-probs ?prob-series nodata :> ?clean-series)
+                  (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
+                  (format format-str ?lat :> ?lat-str)
+                  (format format-str ?lon :> ?lon-str)
+                  (first-hit thresh ?clean-series :> ?first-hit-idx)
+                  (+ ?start-final ?first-hit-idx :> ?period)
+                  (date/period->datetime t-res ?period :> ?date-str)
+                  (c/count ?count))]
+    (<- [?lat-str ?lon-str ?iso ?gadm2 ?date-str]
+        (query ?lat-str ?lon-str ?iso ?gadm2 ?date-str _))))

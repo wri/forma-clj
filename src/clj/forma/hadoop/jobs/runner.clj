@@ -9,7 +9,8 @@
             [forma.utils :as utils]
             [forma.thrift :as thrift]
             [forma.hadoop.pail :as p]
-            [forma.hadoop.jobs.api :as api]))
+            [forma.hadoop.jobs.api :as api]
+            [forma.hadoop.jobs.postprocess :as postprocess]))
 
 (defn run-params [k est-start est-end]
   (-> {"500-16" {:est-start (or est-start "2005-12-19")
@@ -195,3 +196,38 @@
         static-src (hfs-seqfile static-path)
         sink (hfs-seqfile output-path :sinkmode :replace)]
     (?- sink (forma/probs-gadm2 probs-src gadm-src static-src))))
+
+(defmain Cdm
+  "Convert output to common data model for use on GFW website.
+
+   Sample parameters:
+     thresh: 50
+     z: 17
+     nodata: -9999.0
+     t-res: \"16\"
+     out-t-res: \"32\"
+     est-start: \"2005-12-19\"
+     thresh: 50"
+  [thresh z t-res out-t-res est-start nodata src-path output-path]
+  (let [z (Integer/parseInt z)
+        thresh (Integer/parseInt thresh)
+        nodata (Float/parseFloat nodata)
+        src (hfs-seqfile src-path)
+        sink (hfs-textline output-path :sinkmode :replace)]
+    (?- sink (postprocess/forma->cdm src nodata z t-res out-t-res est-start thresh))))
+
+(defmain BlueRaster
+  [nodata src-path static-path output-path]
+  (let [nodata (Float/parseFloat nodata)
+        src (hfs-seqfile src-path)
+        static-src (hfs-seqfile static-path)
+        sink (hfs-textline output-path :sinkmode :replace)]
+    (?- sink (postprocess/forma->blue-raster src static-src nodata))))
+
+(defmain FormaDownload
+  [thresh t-res nodata src-path output-path]
+  (let [thresh (Integer/parseInt thresh)
+        nodata (Float/parseFloat nodata)
+        src (hfs-seqfile src-path)
+        sink (hfs-textline output-path :sinkmode :replace)]
+    (?- sink (postprocess/forma-download src thresh t-res nodata))))
