@@ -4,8 +4,11 @@
 # Configurable #
 ################
 
+THRESH=50
+VERSION="1.0"
 SRES="500"
 TRES="16"
+CDMTRES="32"
 MODISLAYERS="[:ndvi]" # :reli
 TILES="[:all]" # "[[28 8] [32 9]"
 TRAININGEND="2005-12-19"
@@ -13,6 +16,7 @@ ESTSTART=$1 # "2013-02-18"
 ESTEND=$2 # "2013-03-06"
 FIRESTART="2000-11-01"
 SUPERECO=false # by default, do not use super-ecoregions
+NODATA=-9999.0
 
 ####################
 # Storage settings #
@@ -26,6 +30,8 @@ ARCHIVE="s3n://modisfiles"
 S3OUT="s3n://pailbucket/output/run-20`date +%y-%m-%d`" # store output by date of run
 PAILPATH="s3n://pailbucket/all-master"
 BETAS="s3n://pailbucket/all-betas"
+BLUERASTER="s3n://wriforma/20`date +%y-%m-%d`/$TRAININGEND-to-$ESTEND"
+DOWNLOAD="s3n://forma/$VERSION/"
 
 #############
 # Constants #
@@ -175,9 +181,29 @@ dynamic=$output
 output="$S3OUT/merged-estimated"
 $LAUNCHER $RUNNERNS.MergeProbs $SRES $TRES $ESTEND $dynamic $output
 
-# add gadm2
+# add gadm2 & ecoregion ids
 
-echo "Merging in gadm2 field"
+echo "Merging in gadm2 and eco fields"
 dynamic=$output
-output="$S3OUT/merged-estimated-gadm2-eco"
-$LAUNCHER $RUNNERNS.ProbsGadm2 $dynamic $GADM2 $STATIC $output
+gadm2eco="$S3OUT/merged-estimated-gadm2-eco"
+$LAUNCHER $RUNNERNS.ProbsGadm2 $dynamic $GADM2 $STATIC $gadm2eco
+
+# convert to common data model
+
+echo "Converting to common data model"
+srcpath=$gadm2eco
+output="$S3OUT/cdm"
+$LAUNCHER $RUNNERNS.Cdm $THRESH $Z $TRES $CDMTRES $ESTSTART $srcpath $output
+
+# convert to CDM
+
+echo "Converting to common data model"
+srcpath=$gadm2eco
+output="$BLUERASTER"
+$LAUNCHER $RUNNERNS.BlueRaster $THRESH $Z $TRES $CDMTRES $ESTSTART $srcpath $output
+
+# prep data for FORMA download
+echo "Prepping data for FORMA download link"
+srcpath=$gadm2eco
+output=$DOWNLOAD
+$LAUNCHER $RUNNERNS.FormaDownload $THRESH $TRES $NODATA $srcpath $output

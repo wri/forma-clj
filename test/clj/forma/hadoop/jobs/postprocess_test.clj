@@ -43,3 +43,16 @@ series."
     (probs->country-stats thresh nodata t-res t-res-out src))
   => (produces [["IDN" 72 "2006-01-01" 1]
                 ["IDN" 73 "2006-02-01" 1]]))
+
+(fact "Test `forma->blue-raster`."
+  (let [nodata -9999.0
+        src [["500" 28 8 0 0 827 [0.1 0.2 0.3] 88500 2]]
+        static-src [["500" 28 8 0 0 50 -1 2 1 4]]]
+    (forma->blue-raster src static-src nodata)) => (produces [["500" 28 8 0 0 9.99791666666666 101.54412568476158 "IDN" 50 88500 2 1 [10 15 20]]]))
+
+(fact "Test `forma-download`."
+  (let [thresh 50
+      t-res "16"
+      nodata -9999.0
+      src [["500" 28 8 0 0 827 [0.1 0.9 0.75] 88500 2]]]
+    (forma-download src thresh t-res nodata)) => (produces [["9.99791667" "101.54412568" "IDN" 88500 "2006-01-01"]]))

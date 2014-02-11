@@ -533,3 +533,9 @@
         dc-src [["" dc1] ["" dc2]]]
     (probs-datachunks->series test-map dc-src))
   => (produces [(into loc-vec [827 [0.1 0.2 0.1 0.11 0.12]])]))
+
+(fact "Test `probs-gadm2`"
+  (let [probs-src [["500" 28 8 0 0 827 [0.1 0.2 0.3]]]
+        gadm2-src [["500" 28 8 0 0 1]]
+        static-src [["500" 28 8 0 0 -1 -1 2 -1 -1]]]
+    (probs-gadm2 probs-src gadm2-src static-src)) => (produces [["500" 28 8 0 0 827 [0.1 0.2 0.3] 1 2]]))
