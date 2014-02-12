@@ -11,12 +11,15 @@ TRES="16"
 CDMTRES="32"
 MODISLAYERS="[:ndvi]" # :reli
 TILES="[:all]" # "[[28 8] [32 9]"
+
+RUNDATE="20`date + %y-%m-%d`"
 TRAININGEND="2005-12-19"
 ESTSTART=$1 # "2013-02-18"
 ESTEND=$2 # "2013-03-06"
 FIRESTART="2000-11-01"
 SUPERECO=false # by default, do not use super-ecoregions
 NODATA=-9999.0
+ZOOM=17
 
 ####################
 # Storage settings #
@@ -27,11 +30,11 @@ STAGING="s3n://formastaging"
 STATIC="s3n://pailbucket/all-static-seq/all"
 GADM2="s3n://pailbucket/all-static-seq/vcf-filtered/gadm2"
 ARCHIVE="s3n://modisfiles"
-S3OUT="s3n://pailbucket/output/run-20`date +%y-%m-%d`" # store output by date of run
+S3OUT="s3n://pailbucket/output/run-$RUNDATE" # store output by date of run
 PAILPATH="s3n://pailbucket/all-master"
 BETAS="s3n://pailbucket/all-betas"
-BLUERASTER="s3n://wriforma/20`date +%y-%m-%d`/$TRAININGEND-to-$ESTEND"
-DOWNLOAD="s3n://forma/$VERSION/"
+GADM2ECO="$S3OUT/merged-estimated-gadm2-eco"
+BLUERASTER="s3n://wriforma/$RUNDATE/$TRAININGEND-to-$ESTEND"
 
 #############
 # Constants #
@@ -185,25 +188,24 @@ $LAUNCHER $RUNNERNS.MergeProbs $SRES $TRES $ESTEND $dynamic $output
 
 echo "Merging in gadm2 and eco fields"
 dynamic=$output
-gadm2eco="$S3OUT/merged-estimated-gadm2-eco"
 $LAUNCHER $RUNNERNS.ProbsGadm2 $dynamic $GADM2 $STATIC $gadm2eco
 
 # convert to common data model
 
 echo "Converting to common data model"
-srcpath=$gadm2eco
+srcpath=$GADM2ECO
 output="$S3OUT/cdm"
-$LAUNCHER $RUNNERNS.Cdm $THRESH $Z $TRES $CDMTRES $ESTSTART $srcpath $output
+$LAUNCHER $RUNNERNS.Cdm $THRESH $ZOOM $TRES $CDMTRES $TRAININGEND $NODATA $srcpath $output
 
-# convert to CDM
+# convert for Blue Raster
 
-echo "Converting to common data model"
-srcpath=$gadm2eco
+echo "Converting for Blue Raster"
+srcpath=$GADM2ECO
 output="$BLUERASTER"
-$LAUNCHER $RUNNERNS.BlueRaster $THRESH $Z $TRES $CDMTRES $ESTSTART $srcpath $output
+$LAUNCHER $RUNNERNS.BlueRaster $NODATA $srcpath $STATIC $output
 
 # prep data for FORMA download
 echo "Prepping data for FORMA download link"
-srcpath=$gadm2eco
-output=$DOWNLOAD
+srcpath=$GADM2ECO
+output="$S3OUT/forma-site-$THRESH"
 $LAUNCHER $RUNNERNS.FormaDownload $THRESH $TRES $NODATA $srcpath $output
