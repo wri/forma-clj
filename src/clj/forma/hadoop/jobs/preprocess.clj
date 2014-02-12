@@ -1,14 +1,18 @@
 (ns forma.hadoop.jobs.preprocess
   (:use cascalog.api
-        [forma.hadoop.pail :only (to-pail)]
+        [forma.hadoop.pail :only (to-pail split-chunk-tap)]
         [forma.source.tilesets :only (tile-set)]
         [cascalog.io :only (with-fs-tmp)])
   (:require [forma.hadoop.predicate :as p]
             [forma.hadoop.io :as io]
+            [forma.date-time :as date]
             [forma.source.rain :as r]
+            [forma.reproject :as reproj]
+            [forma.thrift :as thrift]
             [forma.hadoop.jobs.forma :as forma]
             [forma.source.fire :as f]
             [forma.source.static :as s]
+            [forma.hadoop.predicate :as p]
             [forma.source.hdf :as hdf]
             [forma.hadoop.jobs.timeseries :as tseries]
             [forma.static :as static]
@@ -102,6 +106,19 @@
                                   pix-tap)
            (to-pail pail-path)))))
 
+(defmain ExplodeStatic
+  "Explode DataChunks from a pail into individual pixels."
+  [dataset s-res pail-path out-path]
+  (let [src (split-chunk-tap pail-path [dataset (format "%s-00" s-res)])
+        sink (hfs-seqfile out-path)]
+    (?<- sink [?s-res ?mod-h ?mod-v ?sample ?line ?val]
+         (src _ ?dc)
+         (thrift/unpack ?dc :> _ ?tile-loc ?data _ _ _)
+         (thrift/unpack* ?data :> ?data-value)
+         (p/index ?data-value :> ?pixel-idx ?val)
+         (thrift/unpack ?tile-loc :> ?s-res ?mod-h ?mod-v ?id ?size)
+         (reproj/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line))))
+
 ;; ## Fires Processing
 ;;
 ;; Note that the preprocessing performed by `fire-chunker` is going to
@@ -113,13 +130,16 @@
   "Path for running FORMA fires processing. See the forma-clj wiki for
    more details. m-res is the desired output resolution, likely the
    resolution of the other MODIS data we are using (i.e. \"500\")"
-  ([path out-path m-res out-t-res start-date est-start est-end tiles-or-isos]
-     (let [tiles (parse-locations tiles-or-isos)
+  ([path out-path m-res out-t-res fires-start-date tiles-or-isos]
+     (let [end-date (date/todays-date)
+           tiles (parse-locations tiles-or-isos)
            fire-src (f/fire-source (hfs-textline path) tiles m-res)
            reproject-query (f/reproject-fires m-res fire-src)
-           ts-query (tseries/fire-query reproject-query m-res out-t-res start-date est-start est-end)
-           adjusted-fires (forma/fire-tap est-start est-end out-t-res ts-query)]
-       (?- (hfs-seqfile out-path :sinkmode :replace) adjusted-fires))))
+           ts-query (tseries/fire-query reproject-query m-res out-t-res
+                                        fires-start-date end-date)
+           fires-tap (forma/fire-tap ts-query)
+           sink (hfs-seqfile out-path :sinkmode :replace)]
+       (?- sink fires-tap))))
 
 (defmain PreprocessModis
   "Preprocess MODIS data from raw HDF files to pail.

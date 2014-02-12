@@ -38,9 +38,14 @@
             FireValue FormaValue IntArray LocationProperty
             LocationPropertyValue LongArray ModisChunkLocation
             ModisPixelLocation ShortArray TimeSeries FormaArray
-            NeighborValue]
+            NeighborValue Pedigree]
            [java.util ArrayList]
            [org.apache.thrift TBase TUnion]))
+
+(defn epoch  
+  []
+  "Return seconds since epoch."
+  (int (/ (System/currentTimeMillis) 1000)))
 
 ;; Protocols for accessing Thrift object fields:
 (defprotocol ITUnion
@@ -98,7 +103,8 @@
   (get-avg-tstat [x])
   (get-min-tstat [x])
   (get-avg-param-break [x])
-  (get-min-param-break [x]))
+  (get-min-param-break [x])
+  (get-max-param-break [x]))
 
 ;; Protocol for packing an Clojure data structure into a Thrift object.
 (defprotocol IPackable
@@ -206,10 +212,10 @@
 (defn NeighborValue*
   "Create a NeighborValue."
   [fire ncount avg-short min-short avg-long min-long avg-stat min-stat
-   & [avg-break min-break]]
+   & [avg-break max-break]]
   {:pre [(instance? forma.schema.FireValue fire)
          (or (nil? avg-break) (float? avg-break))
-         (or (nil? min-break) (float? min-break))
+         (or (nil? max-break) (float? max-break))
          (integer? ncount)
          (every? float?
                  [avg-short min-short avg-long min-long avg-stat min-stat])]}
@@ -218,9 +224,9 @@
     (if avg-break
       (doto n-value
         (.setAvgParamBreak avg-break)))
-    (if min-break
+    (if max-break
       (doto n-value
-        (.setMinParamBreak min-break)))
+        (.setMaxParamBreak max-break)))
     n-value))
 
 (defn FireValue*
@@ -268,28 +274,27 @@
                (instance? ShortArray vals)
                (instance? FireArray vals)
                (instance? FormaArray vals)
-               (coll? vals))]}
+               (coll? vals))
+           (let [len (if (coll? vals)
+                       (count vals)
+                       (count (unpack vals)))]
+             (= len (inc (- end start))))]}
     (let [series (if (coll? vals) (pack vals) vals)]
       (TimeSeries. start end (mk-array-value series)))))
 
 (defn FormaValue*
   "Create a FormaValue."
-  [fire short long tstat & break]
+  [fire short long tstat break]
   {:pre [(instance? forma.schema.FireValue fire)
-         (every? float? [short long tstat])
-         (or (not break) (float? (first break)))]}
-  (let [[break] break
-        forma-value (FormaValue. fire short long tstat)]
-    (if break
-      (doto forma-value
-        (.setParamBreak break)))
-    forma-value))
+         (every? float? [short long tstat break])]}
+  (FormaValue. fire short long tstat break))
 
 (defn DataChunk*
   "Create a DataChunk."
-  [name loc val res & {:keys [date] :or {date nil}}]
+  [name loc val res & {:keys [date pedigree] :or {date nil pedigree (epoch)}}]
   {:pre  [(every? string? [name res])
           (or (nil? date) (string? date))
+          (or (nil? pedigree) (integer? pedigree))
           (LocationPropertyValue? loc)
           (DataValue? val)]}
   (let [loc (mk-location-prop loc)
@@ -300,6 +305,9 @@
     (if date
       (doto chunk
         (.setDate date)))
+    (if pedigree
+      (doto chunk
+        (.setPedigree (Pedigree. pedigree))))
     chunk))
 
 (extend-protocol ITUnion
@@ -358,7 +366,8 @@
   (get-avg-tstat [x] (.getAvgTStat x))
   (get-min-tstat [x] (.getMinTStat x))
   (get-avg-param-break [x] (.getAvgParamBreak x))
-  (get-min-param-break [x] (.getMinParamBreak x)))
+  (get-min-param-break [x] (.getMinParamBreak x))
+  (get-max-param-break [x] (.getMaxParamBreak x)))
 
 (extend-protocol IPackable
   java.lang.Iterable
@@ -425,7 +434,9 @@
   (unpack [x] (vec (map #(.getFieldValue x %) (keys (FormaValue/metaDataMap)))))
 
   NeighborValue
-  (unpack [x] (vec (map #(.getFieldValue x %) (keys (NeighborValue/metaDataMap)))))
+  (unpack [x] (vec (map #(.getFieldValue x %)
+                        (filter #(not= "MIN_PARAM_BREAK" (str %)) ;; deprecated field
+                                (keys (NeighborValue/metaDataMap))))))
 
   FireArray
   (unpack [x] (->> x .getFires vec))
@@ -442,7 +453,10 @@
   ;;     [name loc data t-res date]))
   
   ArrayValue
-  (unpack [x] (->> x .getFieldValue unpack)))
+  (unpack [x] (->> x .getFieldValue unpack))
+
+  Pedigree
+  (unpack [x] (->> x .getTrueAsOfSecs)))
 
 (defn count-vals
   "Return the count of elements in the supplied Tnrift object."
@@ -455,3 +469,11 @@
   calling this within a Cascalog query."
   [x]
   (vector (unpack x)))
+
+(defn obj-contains-nodata?
+  "Check whether any fields in thrift object contain nodata value"
+  [nodata obj]
+  (-> obj
+      (unpack)
+      (set)
+      (contains? nodata)))

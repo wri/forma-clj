@@ -87,6 +87,27 @@
   (adjust-fires "2005-12-19" "2006-03-01" "16" (f-series 830))
   => (throws AssertionError))
 
+(fact "Check `adjust-fires-simple`. Ensure that the fires series is
+truncated on both ends."
+  (let [start-idx 827
+        fire-start 825
+        fire-fn #(thrift/FireValue* 0 0 0 %)
+        fire-series (thrift/TimeSeries* fire-start (map fire-fn (range 10)))
+        model-series (range 5)]
+
+    ;; short model-series
+    (adjust-fires-simple start-idx model-series fire-series) =>
+    (thrift/TimeSeries* start-idx (map fire-fn (range 2 7)))
+
+    ;; short fires
+    (adjust-fires-simple 827 model-series (thrift/TimeSeries* (inc start-idx) (map fire-fn (range 2)))) =>
+    (thrift/TimeSeries* (inc start-idx) (map fire-fn (range 2)))
+
+    (let [f (thrift/TimeSeries* 998 (map #(thrift/FireValue* 0 0 0 %) (range 2)))
+          s (range 173)]
+      (adjust-fires-simple start-idx s f)) =>
+      (thrift/TimeSeries* 998 (map #(thrift/FireValue* 0 0 0 %) (range 2)))))
+    
 (fact
  "Test for `add-fires`"
  (let []
@@ -115,18 +136,14 @@
   (merge-neighbors -9999.0 bad-neighbor good-forma) => (neighbor-value good-forma)
   (merge-neighbors -9999.0 good-neighbor bad-forma) => good-neighbor
   (merge-neighbors -9999.0 good-neighbor good-forma)
-  => (neighbor-value (thrift/FireValue* 3 2 2 3) 2 2. 1. 3. 2. 4. 3. 5. 4.))
+  => (neighbor-value (thrift/FireValue* 3 2 2 3) 2 2. 1. 3. 2. 4. 3. 5. 6.))
 
 (facts
   "Checks that `combine-neighbors` functions properly,
    even with a `nodata` value embedded in the neighbor values."
   (let [nodata -9999.0]
     (combine-neighbors nodata neighbors))
-  => (neighbor-value (thrift/FireValue* 3 2 2 3) 2
-                                                 1.5 1.
-                                                 2.5 2.
-                                                 3.5 3.
-                                                 4.5 4.)
+  => (neighbor-value (thrift/FireValue* 3 2 2 3) 2 1.5 1. 2.5 2. 3.5 3. 4.5 5.)
   (let [nodata -9999.0
         neighbors [(thrift/FormaValue* (thrift/FireValue* 2 1 1 2) nodata 4. nodata 6.)
                    (thrift/FormaValue* (thrift/FireValue* 2 1 1 2) nodata 4. nodata 6.)]]

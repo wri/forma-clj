@@ -25,7 +25,11 @@
      expected-length)
     => false
     (valid-fire? "-16.701,137.752,338.2,1.7,1.3,2012-11-04, 01:25,T,89,5.0       ,298.1,63" expected-length) => true
-    (valid-fire? "0.585,100.415,331.3,1.2,1.1,2012-09-18, 06:40,A,84,5.0A,75,5.0       ,302.4,26.3" expected-length) => false))
+    (valid-fire? "0.585,100.415,331.3,1.2,1.1,2012-09-18, 06:40,A,84,5.0A,75,5.0       ,302.4,26.3" expected-length) => false
+    ;; check for extra decimal places in fire numbers
+    (valid-fire? "-16.701.1,137.752,338.2,1.7,1.3,2012-11-04, 01:25,T,89,5.0       ,298.1,63" expected-length) => false
+    (valid-fire? "-16.701,137.752,338.2.2,1.7,1.3,2012-11-04, 01:25,T,89,5.0       ,298.1,63" expected-length) => false)
+)
 
 (future-fact
  "Test `fire-source`. Source mimics formatting of an input file.

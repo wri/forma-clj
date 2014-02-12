@@ -18,7 +18,15 @@
     coeff  => (roughly -1.23824)
     t-test => (roughly -0.99763))
 
-  ;; Returns a pair of nil values in the presence of an exception
+  ;; Long-term statistics on NDVI, with constant rain as a
+  ;; cofactor. Given constant rain, it should be ignored and results
+  ;; should be the same as for NDVI alone.
+  (let [rain (repeat (count rain) 1)
+        [coeff t-test] (long-stats ndvi rain)]
+    coeff  => (roughly -1.14300)
+    t-test => (roughly -0.91826))
+
+  ;; Returns a pair of nil values in the presence of a singular matrix.
   (let [[coeff t-test] (long-stats [0])]
     coeff  => nil
     t-test => nil))
@@ -48,3 +56,15 @@
   time-series that yield a singular first-order-condition matrix."
   (hansen-stat (i/matrix ndvi)) => (roughly 0.911317)
   (hansen-stat (repeat 100 0))  => nil)
+
+(fact "Test `short-stat`."
+  (short-stat 30 10 ndvi) => -63.334638487208096)
+
+(facts
+  "Test `short-stat-all`. Last value in output should be the same as
+   the output for `short-stat` (which uses `(reduce min stats)` to
+   select output). `short-stat-all` on the other hand uses
+   `(reductions min stats)`, so the result should contain
+   `(- (count ndvi) 29 9)` => 233 values given the input for these tests."
+  (last (short-stat-all 30 10 ndvi)) => -63.334638487208096
+  (count   (short-stat-all 30 10 ndvi)) => 233)

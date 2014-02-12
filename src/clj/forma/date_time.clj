@@ -3,7 +3,9 @@
 ;; proper temporal comparison of two unrelated datasets.
 
 (ns forma.date-time
-  (:use [clj-time.core :only (date-time month year)])
+  (:use [clj-time.core :only (now date-time plus month year days)]
+        [forma.matrix.utils :only (sparse-expander)]
+        [forma.utils :only (inc-eq? all-unique? contains-nils?)])
   (:require [clj-time.core :as time]
             [clj-time.format :as f]))
 
@@ -20,6 +22,15 @@
   with a call to `(clj-time.format/show-formatters)`."
   [dt format]
   (->> dt (f/unparse (f/formatters format))))
+
+(defn todays-date
+  "Returns current date as \"YYYY-MM-dd\".
+
+   Usage:
+     (todays-date)
+     ;=> \"2013-04-16\""
+  []
+  (unparse (now) :year-month-day))
 
 (defn convert
   "Converts the supplied string `s` between the two supplied
@@ -38,7 +49,7 @@
   to `(clj-time.format/show-formatters)`.
 
   For example:
-    (within? \"2005-12-01\" \"2011-01-02\" \"2011-01-01\")
+    (within-dates? \"2005-12-01\" \"2011-01-02\" \"2011-01-01\")
     ;=> true"
   [start end dt & {:keys [format]
                    :or {format :year-month-day}}]
@@ -66,7 +77,7 @@
 ;; (It's important to note that time periods are NOT measured from the
 ;; activation date of a specific product. The first available NDVI
 ;; 16-day composite, for example, has a beginning date of February
-;; 18th 2001, or ordinal day 49, the 1st day of the 4th period as
+;; 18th 2000, or ordinal day 49, the 1st day of the 4th period as
 ;; measured from January 1st. With our reference of January 1st, This
 ;; dataset will receive an index of 3, and will match up with any
 ;; other data that falls within that 16-day period. This provides
@@ -135,6 +146,7 @@
 (def months (partial delta-periods month 1))
 (def sixteens (partial delta-periods ordinal 16))
 (def eights (partial delta-periods ordinal 8))
+(def ones (partial delta-periods ordinal 1))
 
 (defn periodize
   "Converts the supplied `org.joda.time.DateTime` object into a
@@ -145,7 +157,8 @@ resolution. `DateTime` objects can be created with `clj-time`'s
   (let [converter (case temporal-res
                         "32" months
                         "16" sixteens
-                        "8" eights)]
+                        "8" eights
+                        "1" ones)]
     (converter (time/epoch) date)))
 
 (defn datetime->period
@@ -215,7 +228,11 @@ in which `string` lies (according to the supplied resolution, `res`)."
 
 (defn shift-resolution
   "Takes a period at `from-res`, returns the corresponding period at
-  `to-res`."
+  `to-res`.
+
+  By converting a period to a date, we get the first date within a
+  period. Converting date to period, we get the period in which that
+  first date falls, at the new resolution."
   [from-res to-res period]
   (->> period
        (period->datetime from-res)
@@ -268,16 +285,6 @@ in which `string` lies (according to the supplied resolution, `res`)."
            "8" [ordinal 8]
            "1" [ordinal 1])))
 
-(defn convert-period-res
-  "Convert a period from in-res to corresponding period at out-res.
-
-   By converting a period to a date, we get the first date within a
-   period. Converting date to period, we get the period in which that
-   first date falls, at the new resolution."
-  [res-in res-out period]
-  (->> (period->datetime res-in period)
-       (datetime->period res-out)))
-
 (defn date-str->vec-idx
   "Return the index of a vector that corresponds to a given date.
    Returns `nil` if date does not correspond to a period in the vector.
@@ -319,11 +326,14 @@ in which `string` lies (according to the supplied resolution, `res`)."
          period that contains it, given a temporal resolution.
 
    Usage:
-     (date-str->vec-idx \"16\" \"2000-01-01\" [2 4 6] \"2000-01-18\")
-     => 4
-   
-     (date-str->vec-idx \"16\" \"2000-01-01\" [2 4 6] \"2012-05-01\")
-     => nil"
+     (get-val-at-date \"16\" \"2000-01-01\" [2 4 6] \"2000-01-17\")
+     ;=> 4
+
+     (get-val-at-date \"16\" \"2000-01-01\" [2 4 6] \"2005-01-01\" :out-of-val -1)
+     ;=> -1
+
+     (get-val-at-date \"16\" \"2000-01-01\" [2 4 6] \"2005-01-01\" :out-of-val 0)
+     ;=> 2"
   [t-res start-dt v dt & {:keys [out-of-bounds-val out-of-bounds-idx]}]
   (let [idx (date-str->vec-idx t-res start-dt v dt)]
     (if idx
@@ -332,3 +342,183 @@ in which `string` lies (according to the supplied resolution, `res`)."
           (if out-of-bounds-idx
             (nth v out-of-bounds-idx))
           nil))))
+
+(defn key->period
+  "Convert a date keyword to a period.
+
+   Usage:
+     (key->period \"16\" :2006-01-01)
+     ;=> 827"
+  [t-res k]
+  (datetime->period t-res (name k)))
+
+(defn period->key
+  "Convert a period to a date keyword.
+
+   Usage:
+     (period->key \"16\" 827)
+     ;=> :2006-01-01"
+  [t-res pd]
+  (keyword (period->datetime t-res pd)))
+
+(defn key-span
+  "Returns a list of date keys, beginning and end date inclusive.  The
+  first and last keys represent the periods that start just before the
+  supplied boundary dates.
+
+  Example:
+    (key-span :2005-12-31 :2006-01-18 \"16\")
+    => (:2005-12-19 :2006-01-01 :2006-01-17)"
+  [init-key end-key t-res]
+  (let [init-idx (key->period t-res init-key)
+        end-idx  (inc (key->period t-res end-key))]
+    (map (partial period->key t-res)
+         (range init-idx end-idx))))
+
+(defn consecutive?
+  "Checks whether a collection of date keys is consecutive (i.e. has no gaps or repetition).
+
+   Usage:
+     (consecutive? \"16\" [:2006-01-01 :2006-01-17]) => true
+     (consecutive? \"16\" [:2006-01-01 :2006-01-01]) => false
+     (consecutive? \"16\" [:2006-01-01 :2007-21-31]) => false"
+  [t-res date-coll]
+  (let [pds (map (partial key->period t-res) (sort date-coll))
+        tuples (partition 2 1 pds)]
+    (every? true? (map inc-eq? tuples))))
+
+(defn ts-vec->ts-map
+  "Accepts a date key (a la :2012-01-01) for the first element in a
+   time series, plus a temporal resolution and a collection. Returns a
+   map containing dates as keys and series elements as values.
+
+   Usage:
+     (ts-vec->ts-map :2006-01-01 \"16\" [1 2 3])
+     ;=> {:2006-01-01 1 :2006-01-17 2 :2006-02-02 3}"
+  [init-date-key t-res coll]
+  (let [init (key->period t-res init-date-key)
+        end-key  (period->key t-res (+ init (count coll)))]
+    (zipmap (key-span init-date-key end-key t-res) coll)))
+
+(defn ts-map->ts-vec
+  "Accepts a temporal resolution, time series map, and a nodata value.
+   Returns the corresponding time series as a vector.
+
+   If :consecutive is false (default), holes in the time series will be
+   filled with the nodata value. If :consecutive is true, holes in the
+   time series will trip the precondition.
+
+  Usage:
+    (ts-map->ts-vec \"16\" {:2006-01-01 1 :2006-01-17 2 :2006-02-02 3} -9999.0)
+    ;=> [1 2 3]
+
+    (ts-map->ts-vec \"16\" {:2006-01-01 1 :2006-01-17 2 :2006-02-18 3} -9999.0)
+    ;=> [1 2 -9999.0 3]
+
+    (ts-map->ts-vec \"16\" {:2006-01-01 1 :2006-01-17 2 :2006-02-18 3} -9999.0
+    :consecutive true)
+    ;=> throws AssertionError"
+  [t-res m nodata & {:keys [consecutive] :or {consecutive false}}]
+  {:pre [(or (false? consecutive)
+             (consecutive? t-res (keys m)))]}
+  (let [date-ks (sort (keys m))
+        pds-vals (for [k date-ks]
+                   [(key->period t-res k) (k m)])]
+    (sparse-expander nodata pds-vals)))
+
+(defn get-ts-map-start-idx
+  "Given a map of dates and values, return the first date converted to a period.
+
+   Usage:
+     (get-ts-map-start-idx \"16\" {:2006-01-01 1 :2006-01-17 2 :2006-02-18 3})
+     ;=> 828"
+  [t-res ts-map]
+  (key->period t-res (first (sort (keys ts-map)))))
+
+(defn inc-date
+  "Increment `date-str` by n days. Defaults to 1 day.
+
+   Usage:
+     (inc-date \"2000-01-01\")
+     ;=> \"2000-01-02\"
+
+     (inc-date \"2000-01-01\" 10)
+     ;=> \"2000-01-11\""
+  [date-str & [n]]
+  (-> date-str
+      (parse :year-month-day)
+      (plus (days (or n 1)))
+      (unparse :year-month-day)))
+
+(defn date-str->millis
+  "Converts a :year-month-day datestring to milliseconds from epoch."
+  ([date-str]
+     {:pre [(string? date-str)]}
+     (-> date-str
+         (parse :year-month-day)
+         (msecs-from-epoch))))
+
+(defn sorted-dates?
+  "Checks that supplied date strings or elements of date vector are
+   ordered by date. They need not be consecutive."
+  ([date-vec]
+     {:pre [(coll? date-vec)
+            (every? string? date-vec)]}
+     (= (map date-str->millis date-vec)
+        (reductions max (map date-str->millis date-vec))))
+  ([d1 d2]
+     {:pre [(every? string? [d1 d2])]}
+     (apply <= (map date-str->millis [d1 d2]))))
+
+(defn date-intervals-overlap?
+  "Checks whether the supplied date intervals overlap temporally
+   (closed interval used)."
+  [start1 end1 start2 end2]
+  ;; intervals are ordered correctly (older to newer)
+  {:pre [(sorted-dates? start1 end1)
+         (sorted-dates? start2 end2)]}
+  (let [end1-inc (inc-date end1)
+        end2-inc (inc-date end2)]
+    (or (or (within-dates? start2 end2-inc start1) ;; 1 starts w/in 2
+            (within-dates? start2 end2-inc end1)) ;; 1 ends w/in 2
+        (or (within-dates? start1 end1-inc start2) ;; 2 starts w/in 1
+            (within-dates? start1 end1-inc end2))))) ;; 2 ends w/in 1
+
+(defn period-intervals-overlap?
+  "Checks whether the supplied period intervals overlap temporally
+   (closed interval used)."
+  [start1 end1 start2 end2 t-res]
+  {:pre [(map pos? [start1 end1 start2 end2])
+         (<= start1 end1)
+         (<= start2 end2)]}
+  (let [[start1 end1 start2 end2] (map (partial period->datetime t-res)
+                                       [start1 end1 start2 end2])]
+    (date-intervals-overlap? start1 end1 start2 end2)))
+
+(defn temporal-subvec
+  "Extract values from `get-start` (inclusive) to `get-end` (exclusive)
+   in a series based on the temporal resolution and supplied series start
+   and end.
+   
+   Usage:
+     (temporal-subvec \"2005-01-01\" \"2005-01-17\" \"2005-01-01\" \"2005-02-18\" \"16\" [1 2 3 4])
+     ;=> [1 2]"
+  [get-start get-end series-start series-end t-res series]
+  {:pre [(coll? series)
+         (every? true? (map string? [get-start get-end series-start series-end]))
+         (sorted-dates? get-start get-end) ;; properly ordered
+         (sorted-dates? series-start series-end) ;; properly ordered
+         (sorted-dates? series-start get-start) ;; get-start w/in interval (closed)
+         ;; get-end is w/in interval (closed)
+         (sorted-dates? get-end (inc-date series-end (read-string t-res)))]}
+  (let [dates (drop-last 1 (key-span (keyword get-start) (keyword get-end) t-res))
+        series-map (ts-vec->ts-map (keyword series-start) t-res series)]
+    (vec (map series-map dates))))
+
+(defn temporal-subvec*
+  "Wraps `temporal-subvec` to handle multiple series appropriately
+   for use with Cascalog."
+  [get-start get-end series-start series-end t-res & series]
+  (let [t-subvec (partial temporal-subvec get-start get-end
+                          series-start series-end t-res)]
+    (vec (map vec (map t-subvec series)))))

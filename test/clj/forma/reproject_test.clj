@@ -5,6 +5,16 @@
         [forma.matrix.utils :only (rowcol->idx)]))
 
 (tabular
+ (fact "`pixels-at-res` test."
+   (pixels-at-res ?res) => ?result)
+ ?res ?result
+ "250" 4800
+ "500" 2400
+ "1000" 1200
+ "5000" 240
+ "251" (throws AssertionError))
+
+(tabular
  (fact "chunk-dims test. Currently, chunk-size has to be a
  whole-number multiple of the width of the MODIS tile. We also can't
  have negative or 0 chunk sizes."
@@ -57,7 +67,7 @@
   (tile-position "1000" 24000 2 1231) => [31 41]
   (tile-position "500" 24000 2 1231) => [1231 20]
   (tile-position "500" 24000 -2 1) => (throws AssertionError)
-  (tile-position "123" 24000 2 1) => (throws NullPointerException)
+  (tile-position "123" 24000 2 1) => (throws AssertionError)
 
   "Fully defined cell dimension version."
   (tile-position 10 10 0 0 1) => [1 0]
@@ -93,7 +103,7 @@ well formed!"
  "1000" (roughly 926.625)
  "500"  (roughly 463.312)
  "250"  (roughly 231.66)
- "100"  (throws NullPointerException))
+ "100"  (roughly 92.66))
 
 (facts
   "Lat lon conversions."
@@ -168,3 +178,21 @@ direction, then half-stepping to the centroid."
  "1000" [29 10 100 1120] [8479 14095]
  "500" [25 7 2399 2399]  [24000 19495]
  "250" [29 10 3432 1222] [37177 57608])
+
+(tabular
+ (fact "Test `downsample-latlon`."
+   (let [in-res "500"
+         out-res "5000"
+         [lat-hi lon-hi] (modis->latlon in-res 28 8 1 4)]
+     (->> (downsample-latlon in-res out-res lat-hi lon-hi)
+          (apply (partial latlon->modis "5000")))) => [28 8 0 0])
+ ?modh ?modv ?sample ?line ?result
+ 28 8 1 4 [28 8 0 0]
+ 28 8 1 9 [28 8 0 0]
+ 28 8 1 10 [28 8 0 1]
+ 20 5 1 4 [20 5 0 0]
+ 5 5 1 4 [5 5 0 0])
+
+(fact "Test `downsample-latlon` precondition."
+  (downsample-latlon "5000" "500" 1 1) => (throws AssertionError)
+  (downsample-latlon "500" "5000" 1 1) => [0.9791666666666545 0.9793096704258003])

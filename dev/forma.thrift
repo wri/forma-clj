@@ -12,7 +12,7 @@ struct FormaValue {
   2: double shortDrop;
   3: double longDrop;
   4: double tStat;
-  5: optional double paramBreak;
+  5: double paramBreak;
 }
 
 struct NeighborValue {
@@ -26,6 +26,7 @@ struct NeighborValue {
   8: double minTStat;
   9: optional double avgParamBreak;
   10: optional double minParamBreak;
+  11: optional double maxParamBreak;
 }
 
 # Collection Wrappers
@@ -105,10 +106,15 @@ struct LocationProperty {
   1: LocationPropertyValue property;
 }
 
+struct Pedigree {
+  1: required i32 trueAsOfSecs;
+}
+
 struct DataChunk {
   1: string dataset;
   2: LocationProperty locationProperty;
   3: DataValue chunkValue;
   4: string temporalRes;
   5: optional string date;
+  6: optional Pedigree pedigree;
 }

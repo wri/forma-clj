@@ -62,6 +62,14 @@
   `hansen-stat` will return nil, which will be filtered in the
   subsequent cascalog join.
 
+  Interpretation: A large break will tend to generate a large break
+  statistic. From Hansen (1992):
+
+      Under the alternative hypothesis of parameter instability,
+      however, the cumulative sums will develop a nonzero mean in
+      parts of the sample, so Sn will not behave like a random walk,
+      and the test statistic will tend to be large
+
   Example:
     (hansen-stat ndvi) => 0.9113
 
@@ -81,7 +89,7 @@
           (i/trace))
       nil)))
 
-;; Long-term trend characteristic; supporting functions 
+;; Long-term trend characteristic; supporting functions
 
 (defn trend-characteristics
   "returns a nested vector of (1) the OLS coefficients from regressing
@@ -123,7 +131,8 @@
     (long-stats ndvi rain) => (-1.2382 -0.9976)
     (long-stats ndvi)      => (-1.1430 -0.9183)"
   [ts & cofactors]
-  (let [time-step (utils/idx ts)
+  (let [cofactors (remove utils/constant? cofactors)
+        time-step (utils/idx ts)
         X (if (empty? cofactors)
             (i/matrix time-step)
             (apply i/bind-columns time-step cofactors))]
@@ -189,8 +198,17 @@
   time-series.
 
   Example:
-    (short-stat 30 10 ndvi) => -63.3346"
+    (short-stat 30 10 ndvi) => -63.334638487208096"
   [long-block short-block ts]
   (->> (windowed-trend long-block ts)
        (utils/moving-average short-block)
        (reduce min)))
+
+(defn short-stat-all
+  "Similar to short stat, but returns a collection of values, where
+  each value represents the largest short-term drop seen in the moving
+  averages of the trends data up to the current moving average block."
+  [long-block short-block ts]
+  (->> (windowed-trend long-block ts)
+       (utils/moving-average short-block)
+       (reductions min)))

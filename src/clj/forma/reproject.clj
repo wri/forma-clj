@@ -19,10 +19,40 @@
 (def h-tiles 36)
 (def v-tiles 18)
 
-(def pixels-at-res
-  {"250" 4800
-   "500" 2400
-   "1000" 1200})
+(defn pixels-at-res
+  "Given a resolution string in meters, return the number of pixels in
+  the row or column of a MODIS image at that resolution. Resolution
+  need not be one of the canonical MODIS resolutions (250, 500 or
+  1000m), but it must be an integer multiple of 250.
+
+  Usage:
+    (pixels-at-res \"250\")
+    ;=> 4800
+
+    (pixels-at-res \"500\")
+    ;=> 2400
+
+    (pixels-at-res \"1000\")
+    ;=> 1200
+
+    (pixels-at-res \"5000\")
+    ;=> 240"
+  [res]
+  {:pre [(string? res)]
+   :post [(integer? %)]}
+    (let [base-res 250
+        base-px 4800 ;; given in MODIS data spec
+        res-numeric (java.lang.Integer/parseInt res)]
+    (if (= res-numeric base-res)
+      base-px
+      (->> (/ res-numeric base-res)
+           (/ base-px)))))
+
+(comment
+  (def pixels-at-res
+    {"250" 4800
+     "500" 2400
+     "1000" 1200}))
 
 (def dataset-info
   "Returns the temporal resolution of the supplied MODIS short product
@@ -285,14 +315,12 @@ Example usage:
 (defn latlon->modis
   "Converts the supplied latitude and longitude into MODIS pixel
   coordinates at the supplied resolution. The resolution is
-  expected to be either 1000, 500, or 250.
+  expected to be an integer multiple of MODIS' 250m base resolution.
 
-Example usage:
-
+  Example usage:
     (latlon->modis \"1000\" 29.89583 -115.2290)
     ;=> [8 6 12 12]"
   [modis-res lat lon]
-  {:pre [(contains? pixels-at-res modis-res)]}
   (->> (latlon->sinu-xy lat lon)
        (apply sinu-xy->global-mags)
        (apply global-mags->modis modis-res)))
@@ -414,3 +442,10 @@ Example usage:
          (apply latlon->rowcol step
                 lat-dir lon-dir
                 lat-corner lon-corner))))
+
+(defn downsample-latlon
+  [in-res out-res lat lon]
+  {:pre [(>= (Integer/parseInt out-res)
+             (Integer/parseInt in-res))]}
+  (->> (latlon->modis out-res lat lon)
+       (apply (partial modis->latlon out-res))))

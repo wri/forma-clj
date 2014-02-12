@@ -119,3 +119,122 @@ month    1       12)
   (get-val-at-date "16" "2000-01-01" [1 2 3] "2001-01-01") => nil
   (get-val-at-date "16" "2000-01-01" [2 4 6] "2005-01-01" :out-of-bounds-val 5) => 5
   (get-val-at-date "16" "2000-01-01" [2 4 6] "2005-01-01" :out-of-bounds-idx 0) => 2)
+
+(fact "Check key->period."
+  (key->period "16" :2005-12-31) => 827
+  (key->period "16" :2005-12-19) => 827
+  (key->period "16" :2000-02-18) => 693
+  (key->period "32" :2005-12-31) => 431
+  (key->period "32" :2000-02-18) => 361)
+
+(fact "Check period->key."
+  (period->key "16" 827) => :2005-12-19
+  (period->key "16" 693) => :2000-02-18
+  (period->key "32" 431) => :2005-12-01
+  (period->key "32" 361) => :2000-02-01)
+
+(fact "Check key-span."
+  (key-span :2005-12-31 :2006-01-18 "16") => [:2005-12-19 :2006-01-01 :2006-01-17])
+
+(fact "Check consecutive?"
+  (consecutive? "16" [:2006-01-01 :2006-01-17]) => true
+  (consecutive? "16" [:2006-01-01 :2006-01-01]) => false
+  (consecutive? "16" [:2006-01-01 :2007-12-31]) => false)
+
+(fact "Check ts-vec->ts-map."
+  (ts-vec->ts-map :2005-12-19 "16" [1 2 3])
+  => {:2005-12-19 1 :2006-01-01 2 :2006-01-17 3})
+
+(fact "Check ts-map->ts-vec."
+  (ts-map->ts-vec "16" {:2005-12-19 1 :2006-01-01 2 :2006-01-17 3} -9999.0) => [1 2 3]
+  (ts-map->ts-vec "16" {:2005-12-19 1 :2006-01-01 2 :2006-02-02 3} -9999.0) => [1 2 -9999.0 3]
+  (ts-map->ts-vec "16" {:2005-12-19 1 :2006-01-01 2 :2006-02-02 3} -9999.0 :consecutive true) => (throws AssertionError))
+
+(fact "Check get-ts-map-start-idx"
+  (get-ts-map-start-idx "16" {:2005-12-19 1 :2000-02-18 47}) => 693)
+
+(tabular
+ (fact "Check ts-vec->ts-map"
+   (ts-vec->ts-map ?date ?t-res ?coll) => ?result)
+ ?date ?t-res ?coll ?result
+ :2012-01-01 "16" [1 2 3] {:2012-01-01 1 :2012-01-17 2 :2012-02-02 3}
+ :2012-01-01 "16" [3 2 1] {:2012-01-01 3 :2012-01-17 2 :2012-02-02 1})
+
+(tabular
+ (fact "Check ts-map->ts-vec"
+   (ts-map->ts-vec ?t-res ?m ?nodata) => ?result)
+ ?t-res ?m ?nodata ?result
+ "16" {:2012-01-01 1 :2012-01-17 2} -9999.0 [1 2]
+ "16" {:2012-01-01 1 :2012-02-02 2} -9999.0 [1 -9999.0 2]
+ "32" {:2012-01-01 1 :2012-02-01 2} -9999.0 [1 2]
+ "32" {:2012-01-01 1 :2012-03-01 2} -9999.0 [1 -9999.0 2])
+
+(fact "Check inc-date"
+  (inc-date "2000-01-01") => "2000-01-02"
+  (inc-date "2000-01-01" 10) => "2000-01-11")
+
+(fact "Check date-str->millis"
+  (date-str->millis "2000-01-01")
+  => (msecs-from-epoch (parse "2000-01-01" :year-month-day))
+  (date-str->millis ["2000-01-01"]) => (throws AssertionError)
+    (date-str->millis 1) => (throws AssertionError))
+
+(fact "Check sorted-dates?"
+  (sorted-dates? "2005-01-01" "2005-01-01") => true
+  (sorted-dates? "2005-01-01" "2004-01-01") => false
+  (sorted-dates? ["2005-01-01" "2005-01-01"]) => true
+  (sorted-dates? ["2005-01-01" "2005-01-01" "2006-01-01"]) => true
+  (sorted-dates? ["2005-01-01" "2006-01-01" "2007-01-01"]) => true
+  (sorted-dates? ["2005-01-01" "2004-01-01"]) => false
+  (sorted-dates? ["2005-01-01" "2004-01-01" "2005-01-01"]) => false
+  (sorted-dates? [1 "2005-01-01"]) => (throws AssertionError)
+  (sorted-dates? 1 2) => (throws AssertionError))
+
+(facts "Check `date-intervals-overlap?`"
+  (date-intervals-overlap? "2006-06-01" "2006-08-01" "2006-01-01" "2007-01-01") => true
+  (date-intervals-overlap? "2006-01-01" "2007-01-01" "2006-06-01" "2006-08-01") => true
+  (date-intervals-overlap? "2006-01-01" "2006-01-01" "2006-01-01" "2007-01-01") => true
+  (date-intervals-overlap? "2006-01-01" "2007-01-01" "2006-01-01" "2006-01-01") => true
+  (date-intervals-overlap? "2007-01-01" "2007-01-01" "2006-01-01" "2007-01-01") => true
+  (date-intervals-overlap? "2006-01-01" "2007-01-01" "2007-01-01" "2007-01-01") => true
+  (date-intervals-overlap? "2005-01-01" "2007-01-01" "2006-01-01" "2007-01-01") => true
+  (date-intervals-overlap? "2006-01-01" "2007-01-01" "2005-01-01" "2007-01-01") => true
+  (date-intervals-overlap? "2005-01-01" "2008-01-01" "2006-01-01" "2007-01-01") => true
+  (date-intervals-overlap? "2006-01-01" "2007-01-01" "2005-01-01" "2008-01-01") => true
+  (date-intervals-overlap? "2005-01-01" "2008-01-01" "2006-01-01" "2007-01-01") => true
+  (date-intervals-overlap? "2006-01-01" "2007-01-01" "2005-01-01" "2008-01-01") => true
+  (date-intervals-overlap? "2005-01-01" "2008-01-01" "2000-01-01" "2001-01-01") => false
+  (date-intervals-overlap? "2000-01-01" "2001-01-01" "2005-01-01" "2008-01-01") => false
+  (date-intervals-overlap? "2010-01-01" "2000-01-01" "2006-01-01" "2007-01-01")
+  => (throws AssertionError)
+  (date-intervals-overlap? "2006-01-01" "2007-01-01" "2010-01-01" "2000-01-01")
+  => (throws AssertionError))
+
+(tabular
+ (fact "Check `period-intervals-overlap?`"
+   (let [t-res "16"]
+     (period-intervals-overlap? ?start1 ?end1 ?start2 ?end2 t-res) => ?result))
+ ?start1 ?end1 ?start2 ?end2 ?result
+ 1 2 3 4 false
+ 3 4 1 2 false
+ 1 2 2 4 true
+ 2 4 1 2 true
+ 2 1 3 4 (throws AssertionError)
+ 3 4 2 1 (throws AssertionError)
+ -1 1 3 4 (throws AssertionError))
+
+(tabular
+ (fact "Check `temporal-subvec`."
+   (temporal-subvec ?get-start ?get-end "2005-01-01" "2005-02-18" "16" ?series)
+   => ?result)
+ ?get-start ?get-end ?series ?result
+ "2005-01-01" "2005-02-18" [1 2 3 4] [1 2 3]
+ "2005-01-01" "2005-02-02" [1 2 3 4] [1 2]
+ "2005-01-01" "2005-01-17" [1 2 3 4] [1]
+ "2000-01-01" "2005-02-18" [1 2 3 4] (throws AssertionError) ;; starts early
+ "2005-01-01" "2006-02-18" [1 2 3 4] (throws AssertionError) ;; ends late
+ "2000-01-01" "2010-02-18" [1 2 3 4] (throws AssertionError)) ;; interval too wide
+
+(fact "Check `temporal-subvec*`."
+  (temporal-subvec* "2005-01-01" "2005-02-02" "2005-01-01"
+                    "2005-02-18" "16" [1 2 3 4] [5 6 7 8]) => [[1 2] [5 6]])

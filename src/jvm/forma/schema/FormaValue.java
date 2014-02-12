@@ -47,7 +47,7 @@ public class FormaValue implements org.apache.thrift.TBase<FormaValue, FormaValu
   public double shortDrop; // required
   public double longDrop; // required
   public double tStat; // required
-  public double paramBreak; // optional
+  public double paramBreak; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -125,7 +125,6 @@ public class FormaValue implements org.apache.thrift.TBase<FormaValue, FormaValu
   private static final int __TSTAT_ISSET_ID = 2;
   private static final int __PARAMBREAK_ISSET_ID = 3;
   private BitSet __isset_bit_vector = new BitSet(4);
-  private _Fields optionals[] = {_Fields.PARAM_BREAK};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
@@ -137,7 +136,7 @@ public class FormaValue implements org.apache.thrift.TBase<FormaValue, FormaValu
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.DOUBLE)));
     tmpMap.put(_Fields.T_STAT, new org.apache.thrift.meta_data.FieldMetaData("tStat", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.DOUBLE)));
-    tmpMap.put(_Fields.PARAM_BREAK, new org.apache.thrift.meta_data.FieldMetaData("paramBreak", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+    tmpMap.put(_Fields.PARAM_BREAK, new org.apache.thrift.meta_data.FieldMetaData("paramBreak", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.DOUBLE)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(FormaValue.class, metaDataMap);
@@ -150,7 +149,8 @@ public class FormaValue implements org.apache.thrift.TBase<FormaValue, FormaValu
     FireValue fireValue,
     double shortDrop,
     double longDrop,
-    double tStat)
+    double tStat,
+    double paramBreak)
   {
     this();
     this.fireValue = fireValue;
@@ -160,6 +160,8 @@ public class FormaValue implements org.apache.thrift.TBase<FormaValue, FormaValu
     setLongDropIsSet(true);
     this.tStat = tStat;
     setTStatIsSet(true);
+    this.paramBreak = paramBreak;
+    setParamBreakIsSet(true);
   }
 
   /**
@@ -446,8 +448,8 @@ public class FormaValue implements org.apache.thrift.TBase<FormaValue, FormaValu
         return false;
     }
 
-    boolean this_present_paramBreak = true && this.isSetParamBreak();
-    boolean that_present_paramBreak = true && that.isSetParamBreak();
+    boolean this_present_paramBreak = true;
+    boolean that_present_paramBreak = true;
     if (this_present_paramBreak || that_present_paramBreak) {
       if (!(this_present_paramBreak && that_present_paramBreak))
         return false;
@@ -482,7 +484,7 @@ public class FormaValue implements org.apache.thrift.TBase<FormaValue, FormaValu
     if (present_tStat)
       builder.append(tStat);
 
-    boolean present_paramBreak = true && (isSetParamBreak());
+    boolean present_paramBreak = true;
     builder.append(present_paramBreak);
     if (present_paramBreak)
       builder.append(paramBreak);
@@ -587,12 +589,10 @@ public class FormaValue implements org.apache.thrift.TBase<FormaValue, FormaValu
     sb.append("tStat:");
     sb.append(this.tStat);
     first = false;
-    if (isSetParamBreak()) {
-      if (!first) sb.append(", ");
-      sb.append("paramBreak:");
-      sb.append(this.paramBreak);
-      first = false;
-    }
+    if (!first) sb.append(", ");
+    sb.append("paramBreak:");
+    sb.append(this.paramBreak);
+    first = false;
     sb.append(")");
     return sb.toString();
   }
@@ -707,11 +707,9 @@ public class FormaValue implements org.apache.thrift.TBase<FormaValue, FormaValu
       oprot.writeFieldBegin(T_STAT_FIELD_DESC);
       oprot.writeDouble(struct.tStat);
       oprot.writeFieldEnd();
-      if (struct.isSetParamBreak()) {
-        oprot.writeFieldBegin(PARAM_BREAK_FIELD_DESC);
-        oprot.writeDouble(struct.paramBreak);
-        oprot.writeFieldEnd();
-      }
+      oprot.writeFieldBegin(PARAM_BREAK_FIELD_DESC);
+      oprot.writeDouble(struct.paramBreak);
+      oprot.writeFieldEnd();
       oprot.writeFieldStop();
       oprot.writeStructEnd();
     }

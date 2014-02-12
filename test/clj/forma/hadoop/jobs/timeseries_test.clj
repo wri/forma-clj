@@ -5,7 +5,7 @@
   (:require [forma.hadoop.io :as io]
             [forma.schema :as schema]
             [forma.thrift :as thrift]            
-            [forma.date-time :as d]))
+            [forma.date-time :as date]))
 
 (defn test-chunks
   "Returns a sample input to the timeseries creation buffer, or a
@@ -14,7 +14,7 @@
   tuples equal to the supplied value for `periods`."
   [dataset periods chunk-size]
   (for [period (range periods)
-        :let [date (d/period->datetime "32" period)
+        :let [date (date/period->datetime "32" period)
               location (thrift/ModisChunkLocation* "1000" 8 6 0 chunk-size)
               chunk (into [] (range chunk-size))]]
     ["path" (thrift/DataChunk* dataset location chunk "32" date)]))
@@ -26,8 +26,8 @@
   tuples equal to the supplied value for `periods`."
   [start-pd periods]
   (for [period (range start-pd (+ start-pd periods))
-        :let [date (d/period->datetime "1" period)
-              location (thrift/ModisPixelLocation* "500" 1 6 10 10)
+        :let [date (date/period->datetime "1" period)
+              location (thrift/ModisPixelLocation* "500" 28 8 0 0)
               tuple (thrift/FireValue* 1 1 1 1)]]
     [(thrift/DataChunk* "fire" location tuple "16" :date date)]))
 
@@ -72,7 +72,7 @@
              ["" (mk-data "2000-02-02")]]]
     (<- [?name ?s-res ?mod-h ?mod-v ?sample ?line ?start ?end ?t-res ?series]
         ((extract-tseries *missing-val* src) ?dc)
-        (thrift/unpack ?dc :> ?name ?loc ?data-val ?t-res _)
+        (thrift/unpack ?dc :> ?name ?loc ?data-val ?t-res _ _)
         (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
         (thrift/unpack ?data-val :> ?start ?end ?series-arr)
         (thrift/unpack* ?series-arr :> ?series)))
@@ -89,12 +89,12 @@
         (running-fire-sum 0 ?fire-vals :> ?vals)) => (produces result)))
 
 (def START-DAY
-  "2005-12-03 at daily resolution"
-  13111)
+  "2000-01-01 at daily resolution"
+  (date/datetime->period "1" "2000-01-01"))
 
 (def START-PERIOD
-  "Corresponds to period starting 2005-12-03 at 16-day resolution"
-  826)
+  "Corresponds to period starting 2000-01-01 at 16-day resolution"
+  (date/datetime->period "16" (date/period->datetime "1" START-DAY)))
 
 (def SERIES-LENGTH
   "Length of fire series, in days"
@@ -112,27 +112,42 @@
   "Test aggregate-fires"
   (let [src (test-fires START-DAY SERIES-LENGTH)]
     (aggregate-fires src T-RES))
-  => (produces [["fire" "2005-12-03" "500" 1 6 10 10 (thrift/FireValue* 16 16 16 16)]
-                ["fire" "2005-12-19" "500" 1 6 10 10 (thrift/FireValue* 13 13 13 13)]
-                ["fire" "2006-01-01" "500" 1 6 10 10 (thrift/FireValue* 1 1 1 1)]]))
+  => (produces [["fire" "2000-01-01" "500" 28 8 0 0 (thrift/FireValue* 16 16 16 16)]
+                ["fire" "2000-01-17" "500" 28 8 0 0 (thrift/FireValue* 14 14 14 14)]]))
 
 (fact
   "Test sum-fire-series"
   (let [src (test-fires START-DAY SERIES-LENGTH)]
     (-> (aggregate-fires src T-RES)
         (sum-fire-series START-PERIOD NUM-PERIODS T-RES)))
-  => (let [TS (thrift/TimeSeries* 826 [(thrift/FireValue* 16 16 16 16)
-                                       (thrift/FireValue* 29 29 29 29)
-                                       (thrift/FireValue* 30 30 30 30)
-                                       (thrift/FireValue* 30 30 30 30)])]
-       (produces [["fire" "500" 1 6 10 10 TS]])))
+  => (let [TS (thrift/TimeSeries* START-PERIOD [(thrift/FireValue* 16 16 16 16)
+                                                (thrift/FireValue* 30 30 30 30)
+                                                (thrift/FireValue* 30 30 30 30)
+                                                (thrift/FireValue* 30 30 30 30)])]
+       (produces [["fire" "500" 28 8 0 0 TS]])))
 
 (fact
   "Test create-fire-series. Should return a monotonically increasing
-   series truncated to 2006-01-01"
-  (-> (test-fires START-DAY SERIES-LENGTH)
-      (create-fire-series "16" "2000-11-01" "2005-12-19" "2006-01-01"))
-  => (let [loc (thrift/ModisPixelLocation* "500" 1 6 10 10)
-           FS (thrift/TimeSeries* 827 [(thrift/FireValue* 29 29 29 29)
-                                       (thrift/FireValue* 30 30 30 30)])]
-       (produces [[(thrift/DataChunk* "fire" loc FS "16")]])))
+   series."
+  (let [t-res "16"
+        start-idx 709
+        fire-start "2000-11-01"
+        start-day (date/datetime->period "1" fire-start)
+        end-date (date/todays-date)
+        today (date/datetime->period "1" (date/todays-date)) ;; day number
+        len (- today start-day)
+        src (test-fires start-day len)
+        [start end data] (->> (create-fire-series src t-res fire-start end-date)
+                              ??-
+                              flatten
+                              first
+                              thrift/unpack
+                              (#(nth % 2))
+                              thrift/unpack)
+        fire-series (thrift/unpack data)
+        today-period (date/datetime->period t-res (date/todays-date))
+        first-fire-count (first (thrift/unpack (first (thrift/unpack data))))
+        last-fire-count (first (thrift/unpack (last (thrift/unpack data))))]
+    today-period => end
+    first-fire-count => 15
+    last-fire-count => len))
