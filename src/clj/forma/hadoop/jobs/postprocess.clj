@@ -10,6 +10,8 @@
             [forma.date-time :as date]
             [cascalog.ops :as c]))
 
+(def DEFAULT-DISCOUNT 1)
+
 (defn split-line
   "Split a line of text using the supplied regular expression"
   [line re]
@@ -68,6 +70,11 @@
         (identity period :> ?p)
         (meters->maptile ?xm ?ym zoom :> ?x ?y ?z))))
 
+
+(defn discount
+  [disc coll]
+  [(vec (map (partial * disc) coll))])
+
 (defn forma->cdm
   "Returns a Cascalog generator that transforms FORMA data into map
     tile coordinates.  `start` - Estimation start period date string.
@@ -92,12 +99,15 @@
                 \"32\"
                 \"2005-12-31\"
                 50)"
-  [src nodata zoom tres tres-out start thresh]
-  (let [epoch (date/datetime->period tres-out "2000-01-01")]
-    (<- [?x ?y ?z ?p ?date-str ?iso ?gadm2 ?ecoregion ?lat ?lon]
-        (src ?sres ?modh ?modv ?s ?l ?start-period ?prob-series ?gadm2 ?ecoregion)
+  [src nodata zoom tres tres-out start thresh & [disc-map]]
+  (let [epoch (date/datetime->period tres-out "2000-01-01")
+        disc-map (or disc-map {})]
+    (<- [?x ?y ?z ?p ?date-str ?iso ?gadm2 ?ecoid ?lat ?lon]
+        (src ?sres ?modh ?modv ?s ?l ?start-period ?prob-series ?gadm2 ?ecoid)
+        (get disc-map ?ecoid DEFAULT-DISCOUNT :> ?disc)
+        (discount ?disc ?prob-series :> ?series)
+        (o/clean-probs ?series nodata :> ?clean-series)
         (gadm2->iso ?gadm2 :> ?iso)
-        (o/clean-probs ?prob-series nodata :> ?clean-series)
         (first-hit thresh ?clean-series :> ?first-hit-idx)
         (+ ?start-period ?first-hit-idx :> ?period)
         (date/shift-resolution tres tres-out ?period :> ?period-new-res)
@@ -160,27 +170,33 @@
 (defn forma->blue-raster
   "Prepare data for use by Blue Raster. Expects `src` to include GADM2
   and ecoregion fields already."
-  [src static-src nodata]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?lat ?lon ?iso ?vcf ?gadm2
-       ?ecoid ?hansen ?clean-series]
-      (src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?prob-series ?gadm2 ?ecoid)
-      (static-src ?s-res ?mod-h ?mod-v ?sample ?line ?vcf _ _ ?hansen _)
-      (o/clean-probs ?prob-series nodata :> ?clean-series)
-      (gadm2->iso ?gadm2 :> ?iso)
-      (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)))
+  [src static-src nodata & [disc-map]]
+  (let [disc-map (or disc-map {})]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?lat ?lon ?iso ?vcf ?gadm2
+         ?ecoid ?hansen ?clean-series]
+        (src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?prob-series ?gadm2 ?ecoid)
+        (static-src ?s-res ?mod-h ?mod-v ?sample ?line ?vcf _ _ ?hansen _)
+        (get disc-map ?ecoid DEFAULT-DISCOUNT :> ?disc)
+        (discount ?disc ?prob-series :> ?series)
+        (o/clean-probs ?series nodata :> ?clean-series)
+        (gadm2->iso ?gadm2 :> ?iso)
+        (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon))))
 
 (defn forma-download
   "Prepare data for bulk download from S3. Expects `src` to include
   GADM2 and ecoregion fields already. Count operation forces reduce
   step, which avoids producing the thousands of output files that
   would otherwise be created by all the mappers."
-  [src thresh t-res nodata]
+  [src thresh t-res nodata & [disc-map]]
   (let [format-str "%.8f"
+        disc-map (or disc-map {})
         query (<- [?lat-str ?lon-str ?iso ?gadm2 ?date-str ?count]
                   (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-final
                        ?prob-series ?gadm2 ?ecoid)
+                  (get disc-map ?ecoid DEFAULT-DISCOUNT :> ?disc)
+                  (discount ?disc ?prob-series :> ?series)
+                  (o/clean-probs ?series nodata :> ?clean-series)
                   (gadm2->iso ?gadm2 :> ?iso)
-                  (o/clean-probs ?prob-series nodata :> ?clean-series)
                   (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
                   (format format-str ?lat :> ?lat-str)
                   (format format-str ?lon :> ?lon-str)

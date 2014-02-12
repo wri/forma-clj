@@ -332,32 +332,33 @@ functions are tested elsewhere."
         out-t-res "32"
         z "17"
         nodata (str nodata)
-        probs-gadm2-src [["500" 28 8 0 0 827 [0.4 0.5 0.6] 88341 1]]
+        probs-gadm2-src [(concat pix-loc [827 [0.1 0.8 0.75] 88341 1])]
         probs-gadm2-path (.getPath (io/temp-dir "probs-gadm2-src"))
         _ (?- (hfs-seqfile probs-gadm2-path :sinkmode :replace) probs-gadm2-src)]
-    (Cdm thresh z t-res out-t-res est-start nodata probs-gadm2-path output-path)
+    (Cdm thresh z s-res t-res out-t-res est-start nodata probs-gadm2-path output-path)
     (hfs-textline output-path)) => (produces
                                     [[(str "102507\t61877\t17\t72\t2006-01-01\t"
                                            "IDN\t88341\t1\t"
                                            "9.99791666666666\t101.54412568476158")]]))
 
-(fact "Integration test of `BlueRaster`."
+(fact
   (let [nodata (str nodata)
-        src [["500" 28 8 0 0 827 [0.1 0.2 0.3] 88500 -1]]
+        src [(concat pix-loc [827 [0.1 0.2 0.6] 88500 40150])]
         src-path (.getPath (io/temp-dir "probs-gadm2-src"))
-        _ (?- (hfs-seqfile src-path :sinkmode :replace) src)]
-    (BlueRaster nodata src-path static-path output-path)
-    (hfs-textline output-path)) => (produces [[(str "500\t28\t8\t0\t0\t9.99791666666666"
-                                                    "\t101.54412568476158\tIDN\t50"
-                                                    "\t88500\t-1\t40158\t[10 15 20]")]]))
+        _ (?- (hfs-seqfile src-path :sinkmode :replace) src)
+        _ (?- (hfs-seqfile static-path :sinkmode :replace) static-src)]
+    (BlueRaster s-res t-res nodata src-path static-path output-path)
+    (hfs-textline output-path)) =>
+    (produces [[(str "500\t28\t8\t0\t0\t9.99791666666666\t101.54412568476158"
+                     "\tIDN\t50\t88500\t40150\t40158\t[5 8 15]")]]))
 
-(fact "Integration teset `FormaDownload`."
+(fact "Integration test `FormaDownload`."
   (let [thresh "50"
         nodata (str nodata)
-        src [["500" 28 8 0 0 827 [0.5 0.6 0.7] 88500 -1]]
+        src [(concat pix-loc [ 827 [0.5 0.6 0.7] 88500 -1])]
         src-path (.getPath (io/temp-dir "probs-gadm2-src"))
         _ (?- (hfs-seqfile src-path :sinkmode :replace) src)]
-    (FormaDownload thresh t-res nodata src-path output-path)
+    (FormaDownload thresh s-res t-res nodata src-path output-path)
     (hfs-textline output-path)) => (produces [[(str "9.99791667\t101.54412568\tIDN"
                                                     "\t88500\t2005-12-19")]]))
 

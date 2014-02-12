@@ -26,7 +26,9 @@
                  :convergence-thresh 1e-6
                  :max-iterations 500
                  :min-coast-dist 3
-                 :nodata -9999.0}}
+                 :nodata -9999.0
+                 :discount-map {60122 0.5 60147 0.5 30109 0.5 40134 0.5 40150 0.5
+                                40131 0.5 40136 0.5 40126 0.5 30130 0.5 40141 0.5}}}
       (get k)))
 
 (def api-config
@@ -208,26 +210,30 @@
      out-t-res: \"32\"
      est-start: \"2005-12-19\"
      thresh: 50"
-  [thresh z t-res out-t-res est-start nodata src-path output-path]
+  [thresh z s-res t-res out-t-res est-start nodata src-path output-path]
   (let [z (Integer/parseInt z)
+        thresh (Integer/parseInt thresh)
+        nodata (Float/parseFloat nodata)
+        disc-map (:discount-map (get-est-map s-res t-res))
+        src (hfs-seqfile src-path)
+        sink (hfs-textline output-path :sinkmode :replace)]
+    (?- sink (postprocess/forma->cdm src nodata z t-res out-t-res est-start
+                                     thresh disc-map))))
+
+(defmain BlueRaster
+  [s-res t-res nodata src-path static-path output-path]
+  (let [nodata (Float/parseFloat nodata)
+        disc-map (:discount-map (get-est-map s-res t-res))
+        src (hfs-seqfile src-path)
+        static-src (hfs-seqfile static-path)
+        sink (hfs-textline output-path :sinkmode :replace)]
+    (?- sink (postprocess/forma->blue-raster src static-src nodata disc-map))))
+
+(defmain FormaDownload
+  [thresh s-res t-res nodata src-path output-path]
+  (let [disc-map (:discount-map (get-est-map s-res t-res))
         thresh (Integer/parseInt thresh)
         nodata (Float/parseFloat nodata)
         src (hfs-seqfile src-path)
         sink (hfs-textline output-path :sinkmode :replace)]
-    (?- sink (postprocess/forma->cdm src nodata z t-res out-t-res est-start thresh))))
-
-(defmain BlueRaster
-  [nodata src-path static-path output-path]
-  (let [nodata (Float/parseFloat nodata)
-        src (hfs-seqfile src-path)
-        static-src (hfs-seqfile static-path)
-        sink (hfs-textline output-path :sinkmode :replace)]
-    (?- sink (postprocess/forma->blue-raster src static-src nodata))))
-
-(defmain FormaDownload
-  [thresh t-res nodata src-path output-path]
-  (let [thresh (Integer/parseInt thresh)
-        nodata (Float/parseFloat nodata)
-        src (hfs-seqfile src-path)
-        sink (hfs-textline output-path :sinkmode :replace)]
-    (?- sink (postprocess/forma-download src thresh t-res nodata))))
+    (?- sink (postprocess/forma-download src thresh t-res nodata disc-map))))
