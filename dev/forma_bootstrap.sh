@@ -78,7 +78,7 @@ echo "source ~/.git-completion.bash" >> .bashrc
 echo "alias li='cd /home/hadoop/bin; wget https://raw.github.com/technomancy/leiningen/preview/bin/lein; chmod u+x lein; ./lein; cd /home/hadoop;'" >> /home/hadoop/.bashrc
 
 # clone forma-clj repo
-echo "alias gc='git clone git://github.com/reddmetrics/forma-clj.git'" >> /home/hadoop/.bashrc
+echo "alias gc='git clone git://github.com/wri/forma-clj.git'" >> /home/hadoop/.bashrc
 
 # alias to do standard forma-clj setup
 setup="li; gc; cd forma-clj; uj; cd ~/;"
