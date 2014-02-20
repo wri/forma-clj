@@ -195,17 +195,17 @@ $LAUNCHER $RUNNERNS.ProbsGadm2 $dynamic $GADM2 $STATIC $gadm2eco
 echo "Converting to common data model"
 srcpath=$GADM2ECO
 output="$S3OUT/cdm"
-$LAUNCHER $RUNNERNS.Cdm $THRESH $ZOOM $TRES $CDMTRES $TRAININGEND $NODATA $srcpath $output
+$LAUNCHER $RUNNERNS.Cdm $THRESH $ZOOM $SRES $TRES $CDMTRES $TRAININGEND $NODATA $srcpath $output
 
 # convert for Blue Raster
 
 echo "Converting for Blue Raster"
 srcpath=$GADM2ECO
 output="$BLUERASTER"
-$LAUNCHER $RUNNERNS.BlueRaster $NODATA $srcpath $STATIC $output
+$LAUNCHER $RUNNERNS.BlueRaster $SRES $TRES $NODATA $srcpath $STATIC $output
 
 # prep data for FORMA download
 echo "Prepping data for FORMA download link"
 srcpath=$GADM2ECO
 output="$S3OUT/forma-site-$THRESH"
-$LAUNCHER $RUNNERNS.FormaDownload $THRESH $TRES $NODATA $srcpath $output
+$LAUNCHER $RUNNERNS.FormaDownload $THRESH $SRES $TRES $NODATA $srcpath $output
