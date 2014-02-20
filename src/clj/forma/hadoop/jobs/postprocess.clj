@@ -102,7 +102,7 @@
   [src nodata zoom tres tres-out start thresh & [disc-map]]
   (let [epoch (date/datetime->period tres-out "2000-01-01")
         disc-map (or disc-map {})]
-    (<- [?x ?y ?z ?p ?date-str ?iso ?gadm2 ?ecoid ?lat ?lon]
+    (<- [?x ?y ?z ?p]
         (src ?sres ?modh ?modv ?s ?l ?start-period ?prob-series ?gadm2 ?ecoid)
         (get disc-map ?ecoid DEFAULT-DISCOUNT :> ?disc)
         (discount ?disc ?prob-series :> ?series)

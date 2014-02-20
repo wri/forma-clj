@@ -36,8 +36,7 @@ series."
 
     (let [disc-map {40158 0.8}]
       (forma->cdm raw-output nodata 17 "16" "32" "2005-12-19" 50 disc-map))
-    => (produces [[102591 65206 17 74 "2006-03-01" "IDN" 88500
-                    40158 0.9062499999999973 101.7773143389889]])))
+    => (produces [[102591 65206 17 74]])))
 
 (fact "Test `probs->country-stats."
   (let [thresh 50
