@@ -12,7 +12,7 @@ CDMTRES="32"
 MODISLAYERS="[:ndvi]" # :reli
 TILES="[:all]" # "[[28 8] [32 9]"
 
-RUNDATE="20`date + %y-%m-%d`"
+RUNDATE="20`date +%y-%m-%d`"
 TRAININGEND="2005-12-19"
 ESTSTART=$1 # "2013-02-18"
 ESTEND=$2 # "2013-03-06"
@@ -188,7 +188,7 @@ $LAUNCHER $RUNNERNS.MergeProbs $SRES $TRES $ESTEND $dynamic $output
 
 echo "Merging in gadm2 and eco fields"
 dynamic=$output
-$LAUNCHER $RUNNERNS.ProbsGadm2 $dynamic $GADM2 $STATIC $gadm2eco
+$LAUNCHER $RUNNERNS.ProbsGadm2 $dynamic $GADM2 $STATIC $GADM2ECO
 
 # convert to common data model
 
