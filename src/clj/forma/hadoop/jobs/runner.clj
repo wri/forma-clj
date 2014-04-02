@@ -200,26 +200,27 @@
         sink (hfs-seqfile output-path :sinkmode :replace)]
     (?- sink (forma/probs-gadm2 probs-src gadm-src static-src))))
 
-(defmain Cdm
+(defmain FormaWebsite
   "Convert output to common data model for use on GFW website.
 
    Sample parameters:
      thresh: 50
      z: 17
+     min-zoom: 7
      nodata: -9999.0
      t-res: \"16\"
      out-t-res: \"32\"
-     est-start: \"2005-12-19\"
-     thresh: 50"
-  [thresh z s-res t-res out-t-res est-start nodata src-path output-path]
+     est-start: \"2005-12-19\""
+  [thresh z min-zoom s-res t-res out-t-res est-start nodata src-path output-path]
   (let [z (Integer/parseInt z)
+        min-zoom (Integer/parseInt min-zoom)
         thresh (Integer/parseInt thresh)
         nodata (Float/parseFloat nodata)
         disc-map (:discount-map (get-est-map s-res t-res))
         src (hfs-seqfile src-path)
         sink (hfs-textline output-path :sinkmode :replace)]
-    (?- sink (postprocess/forma->cdm src nodata z t-res out-t-res est-start
-                                     thresh disc-map))))
+    (?- sink (postprocess/forma->website src nodata z min-zoom t-res out-t-res est-start
+                                         thresh disc-map))))
 
 (defmain BlueRaster
   [s-res t-res nodata src-path static-path output-path]

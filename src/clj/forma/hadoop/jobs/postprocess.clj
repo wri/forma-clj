@@ -3,7 +3,8 @@
    common data model et al."
   (:use [cascalog.api]
         [forma.source.gadmiso :only (gadm->iso gadm2->iso)]
-        [forma.gfw.cdm :only (latlon->tile, latlon-valid?, meters->maptile)]
+        [forma.gfw.cdm :only (latlon->tile, latlon-valid?, meters->maptile,
+                                            gen-all-zooms, agg-periods-counts)]
         [forma.utils :only (positions)])
   (:require [forma.postprocess.output :as o]
             [forma.reproject :as r]
@@ -117,6 +118,13 @@
         (r/modis->latlon ?sres ?modh ?modv ?s ?l :> ?lat ?lon)
         (latlon-valid? ?lat ?lon)
         (latlon->tile ?lat ?lon zoom :> ?x ?y ?z))))
+
+(defn forma->website
+  "Do full prep of FORMA data for the website, generating all zoom levels."
+  [src nodata zoom min-zoom tres tres-out start thresh & [disc-map]]
+  (let [cdm-src (forma->cdm src nodata zoom tres tres-out start thresh disc-map)
+        zoom-src (gen-all-zooms cdm-src min-zoom)]
+    (agg-periods-counts zoom-src)))
 
 (defn spark-hits
   "Prep for generate counts by country, for spark graphs on GFW site.
