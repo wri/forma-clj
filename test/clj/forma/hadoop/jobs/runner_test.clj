@@ -327,21 +327,22 @@ functions are tested elsewhere."
     (ProbsGadm2 probs-path gadm2-path static-path output-path)
     (hfs-seqfile output-path)) => (produces [["500" 28 8 0 0 827 [0.1 0.2 0.3] 88341 -1]]))
 
-(fact "Integration test of `Cdm`."
+(fact "Integration test of `FormaWebsite`."
   (let [thresh "50"
         out-t-res "32"
         z "17"
+        min-zoom "14"
         nodata (str nodata)
-        probs-gadm2-src [(concat pix-loc [827 [0.1 0.8 0.75] 88341 1])]
-        probs-gadm2-path (.getPath (io/temp-dir "probs-gadm2-src"))
-        _ (?- (hfs-seqfile probs-gadm2-path :sinkmode :replace) probs-gadm2-src)]
-    (Cdm thresh z s-res t-res out-t-res est-start nodata probs-gadm2-path output-path)
-    (hfs-textline output-path)) => (produces
-                                    [[(str "102507\t61877\t17\t72\t2006-01-01\t"
-                                           "IDN\t88341\t1\t"
-                                           "9.99791666666666\t101.54412568476158")]]))
+        src [(concat pix-loc [827 [0.1 0.8 0.75] 88341 1])]
+        src-path (.getPath (io/temp-dir "probs-gadm2-src"))
+        _ (?- (hfs-seqfile src-path :sinkmode :replace) src)]
+    (FormaWebsite thresh z min-zoom s-res t-res out-t-res est-start nodata src-path output-path)
+    (hfs-textline output-path)) => (produces [["12813\t7734\t14\t{72}\t{1}"]
+                                              ["25626\t15469\t15\t{72}\t{1}"]
+                                              ["51253\t30938\t16\t{72}\t{1}"]
+                                              ["102507\t61877\t17\t{72}\t{1}"]]))
 
-(fact
+(fact "Integration test for BlueRaster."
   (let [nodata (str nodata)
         src [(concat pix-loc [827 [0.1 0.2 0.6] 88500 40150])]
         src-path (.getPath (io/temp-dir "probs-gadm2-src"))
@@ -460,6 +461,10 @@ functions are tested elsewhere."
                  (ProbsGadm2 merge-probs-path gadm2-path static-path probs-gadm2-path))))
   1
   => 1)
+
+(future-fact "Add FormaWebsite to full integration test")
+(future-fact "Add BlueRaster to full integration test")
+(future-fact "Add FormaDownload to full integration test")
 
 (fact "Test `get-sink-template`."
   (get-sink-template :long api-config) => "%s/%s"
