@@ -179,17 +179,6 @@
       (clojure.string/replace "," " ")
       (read-string)))
 
-(defn agg-xyz
-  []
-  (<- [?x ?y ?z ?period ?count :> ?x2int ?y2int ?z-new ?periods ?counts]
-      (/ ?x 2 :> ?x2)
-      (/ ?y 2 :> ?y2)
-      (math/floor ?x2 :> ?x2int)
-      (math/floor ?y2 :> ?y2int)
-      (dec ?z :> ?z-new)
-      (agg-sort-by-date ?period ?count :> ?periods-counts)
-      (split-vecs ?periods-counts :> ?periods ?counts)))
-
 (defn zoom-out
   "Calculate x or y value at next zoom level."
   [n]
