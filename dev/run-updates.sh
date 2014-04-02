@@ -12,7 +12,7 @@ CDMTRES="32"
 MODISLAYERS="[:ndvi]" # :reli
 TILES="[:all]" # "[[28 8] [32 9]"
 
-RUNDATE="20`date + %y-%m-%d`"
+RUNDATE="20`date +%y-%m-%d`"
 TRAININGEND="2005-12-19"
 ESTSTART=$1 # "2013-02-18"
 ESTEND=$2 # "2013-03-06"
@@ -20,6 +20,7 @@ FIRESTART="2000-11-01"
 SUPERECO=false # by default, do not use super-ecoregions
 NODATA=-9999.0
 ZOOM=17
+MINZOOM=7
 
 ####################
 # Storage settings #
@@ -188,14 +189,14 @@ $LAUNCHER $RUNNERNS.MergeProbs $SRES $TRES $ESTEND $dynamic $output
 
 echo "Merging in gadm2 and eco fields"
 dynamic=$output
-$LAUNCHER $RUNNERNS.ProbsGadm2 $dynamic $GADM2 $STATIC $gadm2eco
+$LAUNCHER $RUNNERNS.ProbsGadm2 $dynamic $GADM2 $STATIC $GADM2ECO
 
 # convert to common data model
 
-echo "Converting to common data model"
+echo "Prepping for website"
 srcpath=$GADM2ECO
-output="$S3OUT/cdm"
-$LAUNCHER $RUNNERNS.Cdm $THRESH $ZOOM $SRES $TRES $CDMTRES $TRAININGEND $NODATA $srcpath $output
+output="$S3OUT/gfw-site"
+$LAUNCHER $RUNNERNS.Cdm $THRESH $ZOOM $MINZOOM $SRES $TRES $CDMTRES $TRAININGEND $NODATA $srcpath $output
 
 # convert for Blue Raster
 
