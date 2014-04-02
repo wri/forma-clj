@@ -20,6 +20,7 @@ FIRESTART="2000-11-01"
 SUPERECO=false # by default, do not use super-ecoregions
 NODATA=-9999.0
 ZOOM=17
+MINZOOM=7
 
 ####################
 # Storage settings #
@@ -192,10 +193,10 @@ $LAUNCHER $RUNNERNS.ProbsGadm2 $dynamic $GADM2 $STATIC $GADM2ECO
 
 # convert to common data model
 
-echo "Converting to common data model"
+echo "Prepping for website"
 srcpath=$GADM2ECO
-output="$S3OUT/cdm"
-$LAUNCHER $RUNNERNS.Cdm $THRESH $ZOOM $SRES $TRES $CDMTRES $TRAININGEND $NODATA $srcpath $output
+output="$S3OUT/gfw-site"
+$LAUNCHER $RUNNERNS.Cdm $THRESH $ZOOM $MINZOOM $SRES $TRES $CDMTRES $TRAININGEND $NODATA $srcpath $output
 
 # convert for Blue Raster
 
