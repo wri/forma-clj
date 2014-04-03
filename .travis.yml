@@ -15,7 +15,7 @@ before_install:
   - jblas=libjblas.tar.gz
   -
   - # install libhdf4
-  - sudo aptitude -fy install libhdf4-dev
+  - sudo apt-get -fy install libhdf4-dev
   -
   - # install FWTools, (GDAL 1.8.0)
   - wget -S -T 10 -t 5 http://reddconfig.s3.amazonaws.com/$fwtools
