@@ -20,7 +20,7 @@ FIRESTART="2000-11-01"
 SUPERECO=false # by default, do not use super-ecoregions
 NODATA=-9999.0
 ZOOM=17
-MINZOOM=7
+MINZOOM=6
 
 ####################
 # Storage settings #
