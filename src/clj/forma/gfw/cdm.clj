@@ -166,16 +166,16 @@
   "Format vector as string array format for PostgreSQL."
   [v]
   (-> (str v)
-      (clojure.string/replace "[" "{")
-      (clojure.string/replace "]" "}")
+      (clojure.string/replace "[" "\"{")
+      (clojure.string/replace "]" "}\"")
       (clojure.string/replace " " ",")))
 
 (defn arr-str->vec
   "Convert PostgreSQL array string to vector. Reverses `array-ify`."
   [s]
   (-> s
-      (clojure.string/replace "{" "[")
-      (clojure.string/replace "}" "]")
+      (clojure.string/replace "\"{" "[")
+      (clojure.string/replace "}\"" "]")
       (clojure.string/replace "," " ")
       (read-string)))
 

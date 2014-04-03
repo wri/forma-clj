@@ -337,10 +337,10 @@ functions are tested elsewhere."
         src-path (.getPath (io/temp-dir "probs-gadm2-src"))
         _ (?- (hfs-seqfile src-path :sinkmode :replace) src)]
     (FormaWebsite thresh z min-zoom s-res t-res out-t-res est-start nodata src-path output-path)
-    (hfs-textline output-path)) => (produces [["12813\t7734\t14\t{72}\t{1}"]
-                                              ["25626\t15469\t15\t{72}\t{1}"]
-                                              ["51253\t30938\t16\t{72}\t{1}"]
-                                              ["102507\t61877\t17\t{72}\t{1}"]]))
+    (hfs-textline output-path)) => (produces [["12813\t7734\t14\t\"{72}\"\t\"{1}\""]
+                                              ["25626\t15469\t15\t\"{72}\"\t\"{1}\""]
+                                              ["51253\t30938\t16\t\"{72}\"\t\"{1}\""]
+                                              ["102507\t61877\t17\t\"{72}\"\t\"{1}\""]]))
 
 (fact "Integration test for BlueRaster."
   (let [nodata (str nodata)
