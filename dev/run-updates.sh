@@ -196,7 +196,7 @@ $LAUNCHER $RUNNERNS.ProbsGadm2 $dynamic $GADM2 $STATIC $GADM2ECO
 echo "Prepping for website"
 srcpath=$GADM2ECO
 output="$S3OUT/gfw-site"
-$LAUNCHER $RUNNERNS.Cdm $THRESH $ZOOM $MINZOOM $SRES $TRES $CDMTRES $TRAININGEND $NODATA $srcpath $output
+$LAUNCHER $RUNNERNS.FormaWebsite $THRESH $ZOOM $MINZOOM $SRES $TRES $CDMTRES $TRAININGEND $NODATA $srcpath $output
 
 # convert for Blue Raster
 
