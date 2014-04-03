@@ -7,8 +7,8 @@ before_install:
   - nativepath=/home/$USER/native/Linux-amd64-64
   - fwtools_path=/usr/local/fwtools/usr/lib
   -
-  - mkdir -p $nativepath
-  - mkdir -p $fwtools_path
+  - sudo mkdir -p $nativepath
+  - sudo mkdir -p $fwtools_path
   -
   - fwtools=FWTools-linux-x86_64-4.0.0.tar.gz
   - gdal=linuxnative.tar.gz
