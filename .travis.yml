@@ -2,7 +2,7 @@ language: clojure
 script: lein2 midje
 lein: lein2
 jdk:
-  - oraclejdk7
+  - openjdk6
 before_install:
   - nativepath=/home/$USER/native/Linux-amd64-64
   - fwtools_path=/usr/local/fwtools/usr/lib
