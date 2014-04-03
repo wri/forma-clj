@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/wri/forma-clj.svg?branch=master)](https://travis-ci.org/wri/forma-clj)
+
 # What is FORMA?
 
 The Forest Monitoring for Action ([FORMA](http://www.cgdev.org/section/initiatives/_active/forestmonitoringforactionforma)) project provides free and open forest clearing alert data derived from MODIS satellite imagery every 16 days beginning in 2006. FORMA is a project of [World Resources Institute](http://wri.org) and was developed by the [Center for Global Development](http://www.cgdev.org).
