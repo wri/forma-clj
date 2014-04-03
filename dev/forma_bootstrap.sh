@@ -75,7 +75,7 @@ curl https://raw.github.com/git/git/master/contrib/completion/git-completion.bas
 echo "source ~/.git-completion.bash" >> .bashrc
 
 # simple leiningen install via 'li'
-echo "alias li='cd /home/hadoop/bin; wget https://raw.github.com/technomancy/leiningen/preview/bin/lein; chmod u+x lein; ./lein; cd /home/hadoop;'" >> /home/hadoop/.bashrc
+echo "alias li='cd /home/hadoop/bin; wget https://raw.github.com/technomancy/leiningen/preview/bin/lein --no-check-certificate; chmod u+x lein; ./lein; cd /home/hadoop;'" >> /home/hadoop/.bashrc
 
 # clone forma-clj repo
 echo "alias gc='git clone git://github.com/wri/forma-clj.git'" >> /home/hadoop/.bashrc
