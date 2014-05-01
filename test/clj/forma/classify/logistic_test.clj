@@ -55,3 +55,6 @@
    (to-double-rowmat [1 2]) (to-double-rowmat [0 0]) (to-double-rowmat [0.5])
    (to-double-rowmat nil) (to-double-rowmat [0 0]) (throws AssertionError)
    (to-double-rowmat [1 2]) (to-double-rowmat nil) (throws AssertionError))
+
+(fact "Force failure - checking Travis notifications"
+  1 => 2)
