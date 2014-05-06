@@ -19,6 +19,10 @@ sudo apt-get -y --force-yes install screen
 sudo apt-get -y --force-yes install exim4
 sudo apt-get -y --force-yes install tmux
 
+# add stuff for notifications
+sudo apt-get -y install python-pip
+sudo pip install awscli
+
 # Install htop - helpful for monitoring slave nodes
 sudo apt-get -y --force-yes install htop
 
