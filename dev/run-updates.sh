@@ -211,12 +211,25 @@ srcpath=$GADM2ECO
 output="$BLUERASTER"
 $LAUNCHER $RUNNERNS.BlueRaster $SRES $TRES $NODATA $srcpath $STATIC $output
 
-# set blue raster path public
+# convert for David
+
+echo "Converting for David"
+srcpath=$GADM2ECO
+output="$S3OUT/david"
+$LAUNCHER $RUNNERNS.FormaDavid $NODATA $srcpath $output
+
+# set paths public
 BRPATH=$(echo $BLUERASTER | tr -s "s3n" "s3")
 s3cmd setacl $BRPATH --acl-public --recursive
+
+DWPATH=$(echo $S3OUT/david | tr -s "s3n" "s3")
+s3cmd setacl $DWPATH --acl-public --recursive
 
 # notify blue raster about new data
 aws ses send-email --subject "FORMA data updated" --from datalab@wri.org --to aallegretti@blueraster.com --text "Please check for new data at $BLUERASTER." --region us-east-1
 
 # notify datalab that update is complete
 aws ses send-email --subject "FORMA data updated" --from datalab@wri.org --to datalab@wri.org --text "New FORMA data available at $S3OUT." --region us-east-1
+
+# notify David about update
+aws ses send-email --subject "FORMA data updated" --from datalab@wri.org --to wheelrdr@gmail.com --text "New FORMA data available at $DWPATH" --region us-east-1

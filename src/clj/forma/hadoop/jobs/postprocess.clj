@@ -214,3 +214,11 @@
                   (c/count ?count))]
     (<- [?lat-str ?lon-str ?iso ?gadm2 ?date-str]
         (query ?lat-str ?lon-str ?iso ?gadm2 ?date-str _))))
+
+(defn forma->david
+  "Prep data for David."
+  [nodata src]
+  (<- [?lat ?lon ?clean-probs ?gadm2 ?ecoid]
+      (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-final ?merged-series ?gadm2 ?ecoid)
+      (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
+      (o/clean-probs ?merged-series nodata :> ?clean-probs)))
