@@ -10,6 +10,7 @@
   :jvm-opts ["-XX:MaxPermSize=128M"
              "-XX:+UseConcMarkSweepGC"
              "-Xms1024M" "-Xmx1048M" "-server"]
+  :main nil
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [org.clojure/tools.cli "0.1.0"]
                  [org.clojure/tools.logging "0.2.3"]
@@ -26,11 +27,10 @@
                  [backtype/dfs-datastores-cascading "1.2.0"]
                  [org.apache.thrift/libthrift "0.8.0"
                   :exclusions [org.slf4j/slf4j-api]]
-                 [net.lingala.zip4j/zip4j "1.3.1"]
-]
+                 [net.lingala.zip4j/zip4j "1.3.1"]]
   :aot [forma.hadoop.pail, forma.schema, #"forma.hadoop.jobs.*"]
-  :profiles {:dev {:dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]
-                                  [cascalog/midje-cascalog "1.10.2-SNAPSHOT"]
+  :profiles {:provided {:dependencies [[org.apache.hadoop/hadoop-core "0.20.2-dev"]]}
+             :dev {:dependencies [[cascalog/midje-cascalog "1.10.2-SNAPSHOT"]
                                   [incanter/incanter-charts "1.3.0"]]
                    :plugins [[lein-swank "1.4.4"]
                              [lein-midje "3.0-beta1"]

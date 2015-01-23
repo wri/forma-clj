@@ -12,7 +12,7 @@ CDMTRES="32"
 MODISLAYERS="[:ndvi]" # :reli
 TILES="[:all]" # "[[28 8] [32 9]"
 
-RUNDATE="20`date + %y-%m-%d`"
+RUNDATE="20`date +%y-%m-%d`"
 TRAININGEND="2005-12-19"
 ESTSTART=$1 # "2013-02-18"
 ESTEND=$2 # "2013-03-06"
@@ -20,6 +20,7 @@ FIRESTART="2000-11-01"
 SUPERECO=false # by default, do not use super-ecoregions
 NODATA=-9999.0
 ZOOM=17
+MINZOOM=6
 
 ####################
 # Storage settings #
@@ -188,24 +189,34 @@ $LAUNCHER $RUNNERNS.MergeProbs $SRES $TRES $ESTEND $dynamic $output
 
 echo "Merging in gadm2 and eco fields"
 dynamic=$output
-$LAUNCHER $RUNNERNS.ProbsGadm2 $dynamic $GADM2 $STATIC $gadm2eco
+$LAUNCHER $RUNNERNS.ProbsGadm2 $dynamic $GADM2 $STATIC $GADM2ECO
 
 # convert to common data model
 
-echo "Converting to common data model"
+echo "Prepping for website"
 srcpath=$GADM2ECO
-output="$S3OUT/cdm"
-$LAUNCHER $RUNNERNS.Cdm $THRESH $ZOOM $TRES $CDMTRES $TRAININGEND $NODATA $srcpath $output
+output="$S3OUT/gfw-site"
+$LAUNCHER $RUNNERNS.FormaWebsite $THRESH $ZOOM $MINZOOM $SRES $TRES $CDMTRES $TRAININGEND $NODATA $srcpath $output
+
+# prep data for FORMA download
+echo "Prepping data for FORMA download link"
+srcpath=$GADM2ECO
+output="$S3OUT/forma-site-$THRESH"
+$LAUNCHER $RUNNERNS.FormaDownload $THRESH $SRES $TRES $NODATA $srcpath $output
 
 # convert for Blue Raster
 
 echo "Converting for Blue Raster"
 srcpath=$GADM2ECO
 output="$BLUERASTER"
-$LAUNCHER $RUNNERNS.BlueRaster $NODATA $srcpath $STATIC $output
+$LAUNCHER $RUNNERNS.BlueRaster $SRES $TRES $NODATA $srcpath $STATIC $output
 
-# prep data for FORMA download
-echo "Prepping data for FORMA download link"
-srcpath=$GADM2ECO
-output="$S3OUT/forma-site-$THRESH"
-$LAUNCHER $RUNNERNS.FormaDownload $THRESH $TRES $NODATA $srcpath $output
+# set blue raster path public
+BRPATH=$(echo $BLUERASTER | tr -s "s3n" "s3")
+s3cmd setacl $BRPATH --acl-public --recursive
+
+# notify blue raster about new data
+aws ses send-email --subject "FORMA data updated" --from datalab@wri.org --to aallegretti@blueraster.com --text "Please check for new data at $BLUERASTER." --region us-east-1
+
+# notify datalab that update is complete
+aws ses send-email --subject "FORMA data updated" --from datalab@wri.org --to datalab@wri.org --text "New FORMA data available at $S3OUT." --region us-east-1

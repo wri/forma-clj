@@ -3,12 +3,16 @@
    common data model et al."
   (:use [cascalog.api]
         [forma.source.gadmiso :only (gadm->iso gadm2->iso)]
-        [forma.gfw.cdm :only (latlon->tile, latlon-valid?, meters->maptile)]
+        [forma.gfw.cdm :only (latlon->tile, latlon-valid?, meters->maptile,
+                                            gen-all-zooms, agg-periods-counts)]
         [forma.utils :only (positions)])
   (:require [forma.postprocess.output :as o]
             [forma.reproject :as r]
+            [forma.hadoop.predicate :as p]
             [forma.date-time :as date]
             [cascalog.ops :as c]))
+
+(def DEFAULT-DISCOUNT 1)
 
 (defn split-line
   "Split a line of text using the supplied regular expression"
@@ -68,6 +72,11 @@
         (identity period :> ?p)
         (meters->maptile ?xm ?ym zoom :> ?x ?y ?z))))
 
+
+(defn discount
+  [disc coll]
+  [(vec (map (partial * disc) coll))])
+
 (defn forma->cdm
   "Returns a Cascalog generator that transforms FORMA data into map
     tile coordinates.  `start` - Estimation start period date string.
@@ -92,12 +101,15 @@
                 \"32\"
                 \"2005-12-31\"
                 50)"
-  [src nodata zoom tres tres-out start thresh]
-  (let [epoch (date/datetime->period tres-out "2000-01-01")]
-    (<- [?x ?y ?z ?p ?date-str ?iso ?gadm2 ?ecoregion ?lat ?lon]
-        (src ?sres ?modh ?modv ?s ?l ?start-period ?prob-series ?gadm2 ?ecoregion)
+  [src nodata zoom tres tres-out start thresh & [disc-map]]
+  (let [epoch (date/datetime->period tres-out "2000-01-01")
+        disc-map (or disc-map {})]
+    (<- [?x ?y ?z ?p]
+        (src ?sres ?modh ?modv ?s ?l ?start-period ?prob-series ?gadm2 ?ecoid)
+        (get disc-map ?ecoid DEFAULT-DISCOUNT :> ?disc)
+        (discount ?disc ?prob-series :> ?series)
+        (o/clean-probs ?series nodata :> ?clean-series)
         (gadm2->iso ?gadm2 :> ?iso)
-        (o/clean-probs ?prob-series nodata :> ?clean-series)
         (first-hit thresh ?clean-series :> ?first-hit-idx)
         (+ ?start-period ?first-hit-idx :> ?period)
         (date/shift-resolution tres tres-out ?period :> ?period-new-res)
@@ -107,6 +119,13 @@
         (r/modis->latlon ?sres ?modh ?modv ?s ?l :> ?lat ?lon)
         (latlon-valid? ?lat ?lon)
         (latlon->tile ?lat ?lon zoom :> ?x ?y ?z))))
+
+(defn forma->website
+  "Do full prep of FORMA data for the website, generating all zoom levels."
+  [src nodata zoom min-zoom tres tres-out start thresh & [disc-map]]
+  (let [cdm-src (forma->cdm src nodata zoom tres tres-out start thresh disc-map)
+        zoom-src (gen-all-zooms cdm-src min-zoom)]
+    (agg-periods-counts zoom-src)))
 
 (defn spark-hits
   "Prep for generate counts by country, for spark graphs on GFW site.
@@ -157,30 +176,37 @@
         (date/period->datetime t-res-out ?period-new-res :> ?date-str)
         (c/count ?count))))
 
+<<<<<<< HEAD
 (defn forma->blue-raster
   "Prepare data for use by Blue Raster. Expects `src` to include GADM2
   and ecoregion fields already."
-  [src static-src nodata]
-  (<- [?s-res ?mod-h ?mod-v ?sample ?line ?lat ?lon ?iso ?vcf ?gadm2
-       ?ecoid ?hansen ?clean-series]
-      (src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?prob-series ?gadm2 ?ecoid)
-      (static-src ?s-res ?mod-h ?mod-v ?sample ?line ?vcf _ _ ?hansen _)
-      (o/clean-probs ?prob-series nodata :> ?clean-series)
-      (gadm2->iso ?gadm2 :> ?iso)
-      (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)))
+  [src static-src nodata & [disc-map]]
+  (let [disc-map (or disc-map {})]
+    (<- [?s-res ?mod-h ?mod-v ?sample ?line ?lat ?lon ?iso ?vcf ?gadm2
+         ?ecoid ?hansen ?clean-series]
+        (src ?s-res ?mod-h ?mod-v ?sample ?line ?start ?prob-series ?gadm2 ?ecoid)
+        (static-src ?s-res ?mod-h ?mod-v ?sample ?line ?vcf _ _ ?hansen _)
+        (get disc-map ?ecoid DEFAULT-DISCOUNT :> ?disc)
+        (discount ?disc ?prob-series :> ?series)
+        (o/clean-probs ?series nodata :> ?clean-series)
+        (gadm2->iso ?gadm2 :> ?iso)
+        (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon))))
 
 (defn forma-download
   "Prepare data for bulk download from S3. Expects `src` to include
   GADM2 and ecoregion fields already. Count operation forces reduce
   step, which avoids producing the thousands of output files that
   would otherwise be created by all the mappers."
-  [src thresh t-res nodata]
+  [src thresh t-res nodata & [disc-map]]
   (let [format-str "%.8f"
+        disc-map (or disc-map {})
         query (<- [?lat-str ?lon-str ?iso ?gadm2 ?date-str ?count]
                   (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-final
                        ?prob-series ?gadm2 ?ecoid)
+                  (get disc-map ?ecoid DEFAULT-DISCOUNT :> ?disc)
+                  (discount ?disc ?prob-series :> ?series)
+                  (o/clean-probs ?series nodata :> ?clean-series)
                   (gadm2->iso ?gadm2 :> ?iso)
-                  (o/clean-probs ?prob-series nodata :> ?clean-series)
                   (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
                   (format format-str ?lat :> ?lat-str)
                   (format format-str ?lon :> ?lon-str)
@@ -190,3 +216,19 @@
                   (c/count ?count))]
     (<- [?lat-str ?lon-str ?iso ?gadm2 ?date-str]
         (query ?lat-str ?lon-str ?iso ?gadm2 ?date-str _))))
+
+(defn gridify
+  "Downsample output to desired resolution given in meters. If desired
+  resolution is in degrees, use `r/degrees->modis-res` to convert to
+  corresponding MODIS resolution in meters."
+  [thresh nodata t-res out-s-res probs-gadm-src]
+  (<- [?lat ?lon ?iso ?gadm2 ?date ?count]
+      (probs-gadm-src ?s-res ?mod-h ?mod-v ?s ?l ?start-idx ?prob-series ?gadm2)
+      (o/clean-probs ?prob-series nodata :> ?clean-series)
+      (first-hit thresh ?clean-series :> ?first-hit-idx)
+      (+ ?start-idx ?first-hit-idx :> ?period)
+      (date/period->datetime t-res ?period :> ?date)
+      (r/downsample-modis ?s-res out-s-res ?mod-h ?mod-v ?s ?l :> ?mod-h-n ?mod-v-n ?s-n ?l-n)
+      (r/modis->latlon out-s-res ?mod-h-n ?mod-v-n ?s-n ?l-n :> ?lat ?lon)
+      (gadm2->iso ?gadm2 :> ?iso)
+      (c/count ?count)))

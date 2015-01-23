@@ -1,0 +1,36 @@
+language: clojure
+script: lein2 midje
+lein: lein2
+jdk:
+  - openjdk6
+before_install:
+  - nativepath=/home/$USER/native/Linux-amd64-64
+  - fwtools_path=/usr/local/fwtools/usr/lib
+  -
+  - sudo mkdir -p $nativepath
+  - sudo mkdir -p $fwtools_path
+  -
+  - fwtools=FWTools-linux-x86_64-4.0.0.tar.gz
+  - gdal=linuxnative.tar.gz
+  - jblas=libjblas.tar.gz
+  -
+  - # install libhdf4
+  - sudo apt-get -fy install libhdf4-dev
+  -
+  - # install FWTools, (GDAL 1.8.0)
+  - wget -S -T 10 -t 5 http://reddconfig.s3.amazonaws.com/$fwtools
+  - sudo tar -C $fwtools_path --strip-components=2 -xvzf $fwtools
+  - sudo chown --recursive $USER $fwtools_path
+  -
+  - # Download native Java bindings for gdal and jblas
+  - wget -S -T 10 -t 5 http://reddconfig.s3.amazonaws.com/$gdal
+  - wget -S -T 10 -t 5 http://reddconfig.s3.amazonaws.com/$jblas
+  -
+  - # Untar everything into native library path
+  - sudo tar -C $nativepath --strip-components=2 -xvzf $gdal
+  - sudo tar -C $nativepath --strip-components=1 -xvzf $jblas
+  - sudo chown --recursive $USER $nativepath
+  -
+  - export LD_LIBRARY_PATH=$nativepath
+  - export LD_LIBRARY_PATH=$fwtools_path:$LD_LIBRARY_PATH
+  - export JAVA_LIBRARY_PATH=$nativepath:$JAVA_LIBRARY_PATH
