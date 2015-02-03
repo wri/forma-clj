@@ -11,13 +11,17 @@ jblas=libjblas.tar.gz
 sources=/etc/apt/sources.list
 hadoop_lib=/home/hadoop/native/Linux-amd64-64
 
-# make sure apt repos are up to date
-#sudo apt-get update
+# only use stable repos
+sudo echo "deb http://http.us.debian.org/debian   squeeze         main contrib non-free" > sources.list
+sudo echo "deb http://security.debian.org         squeeze/updates main contrib non-free" >> sources.list
+sudo mv /etc/apt/sources.list /etc/apt/sources.list.backup
+sudo mv sources.list /etc/apt/
+
+# make sure apt repos & keys are up to date
+# http://askubuntu.com/a/86445
 echo "updating keys"
-gpg --keyserver pgpkeys.mit.edu --recv-key 8B48AD6246925553
-gpg -a --export 8B48AD6246925553 | sudo apt-key add -
-gpg --keyserver pgpkeys.mit.edu --recv-key 6FB2A1C265FFB764
-gpg -a --export 6FB2A1C265FFB764 | sudo apt-key add -
+sudo apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 8B48AD6246925553
+sudo apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 6FB2A1C265FFB764
 echo "apt-get update"
 sudo apt-get update
 
@@ -27,7 +31,7 @@ echo "Installing screen et al."
 # http://stackoverflow.com/questions/8170691/automate-install-mysql-server-and-postfix-remotely
 # http://serverfault.com/questions/238679/unable-to-force-debian-to-do-unattended-install-libc6-wants-interactive-confi
 sudo DEBIAN_FRONTEND=noninteractive apt-get install --yes --force-yes screen
-sudo apt-get -y --force-yes install exim4
+sudo DEBIAN_FRONTEND=noninteractive apt-get install --yes --force-yes exim4
 #sudo apt-get -y --force-yes install tmux
 
 # add stuff for notifications
@@ -96,7 +100,7 @@ curl https://raw.github.com/git/git/master/contrib/completion/git-completion.bas
 echo "source ~/.git-completion.bash" >> .bashrc
 
 # simple leiningen install via 'li'
-echo "alias li='cd /home/hadoop/bin; wget https://raw.github.com/technomancy/leiningen/preview/bin/lein --no-check-certificate; chmod u+x lein; ./lein; cd /home/hadoop;'" >> /home/hadoop/.bashrc
+echo "alias li='cd /home/hadoop/bin; wget https://raw.githubusercontent.com/technomancy/leiningen/2.4.3/bin/lein --no-check-certificate; chmod u+x lein; ./lein; cd /home/hadoop;'" >> /home/hadoop/.bashrc
 
 # clone forma-clj repo
 echo "alias gc='git clone git://github.com/wri/forma-clj.git'" >> /home/hadoop/.bashrc
