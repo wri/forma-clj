@@ -217,8 +217,9 @@
 
 (defn forma->david
   "Prep data for David."
-  [nodata src]
-  (<- [?lat ?lon ?clean-probs ?gadm2 ?ecoid]
+  [nodata src static-src]
+  (<- [?lat ?lon ?clean-probs ?gadm2 ?ecoid ?hansen]
       (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-final ?merged-series ?gadm2 ?ecoid)
+      (static-src ?s-res ?mod-h ?mod-v ?sample ?line _ _ _ ?hansen _)
       (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
       (o/clean-probs ?merged-series nodata :> ?clean-probs)))
