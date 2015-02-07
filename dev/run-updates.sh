@@ -222,7 +222,7 @@ $LAUNCHER $RUNNERNS.FormaDavid $NODATA $srcpath $STATIC $output
 BRPATH=$(echo $BLUERASTER | tr -s "s3n" "s3")
 s3cmd setacl $BRPATH --acl-public --recursive
 
-DWPATH=$(echo $S3OUT/david | tr -s "s3n" "s3")
+DWPATH=$(echo $S3OUT/david | sed 's/s3n/s3/g')
 s3cmd setacl $DWPATH --acl-public --recursive
 
 # notify blue raster about new data
