@@ -241,8 +241,9 @@
     (?- sink (postprocess/forma-download src thresh t-res nodata disc-map))))
 
 (defmain FormaDavid
-  [nodata src-path output-path]
+  [nodata src-path static-path output-path]
   (let [nodata (Float/parseFloat nodata)
         src (hfs-seqfile src-path)
+        static (hfs-seqfile static-path)
         sink (hfs-textline output-path :sinkmode :replace)]
-    (?- sink (postprocess/forma->david nodata src))))
+    (?- sink (postprocess/forma->david nodata src static))))

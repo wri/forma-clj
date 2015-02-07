@@ -216,7 +216,7 @@ $LAUNCHER $RUNNERNS.BlueRaster $SRES $TRES $NODATA $srcpath $STATIC $output
 echo "Converting for David"
 srcpath=$GADM2ECO
 output="$S3OUT/david"
-$LAUNCHER $RUNNERNS.FormaDavid $NODATA $srcpath $output
+$LAUNCHER $RUNNERNS.FormaDavid $NODATA $srcpath $STATIC $output
 
 # set paths public
 BRPATH=$(echo $BLUERASTER | tr -s "s3n" "s3")
