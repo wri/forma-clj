@@ -227,9 +227,12 @@ s3cmd setacl $DWPATH --acl-public --recursive
 
 # notify blue raster about new data
 aws ses send-email --subject "FORMA data updated" --from datalab@wri.org --to aallegretti@blueraster.com --text "Please check for new data at $BLUERASTER." --region us-east-1
+aws ses send-email --subject "FORMA data updated" --from datalab@wri.org --to cgabris@blueraster.com --text "Please check for new data at $BLUERASTER." --region us-east-1
+aws ses send-email --subject "FORMA data updated" --from datalab@wri.org --to cphang@blueraster.com --text "Please check for new data at $BLUERASTER." --region us-east-1
 
 # notify datalab that update is complete
 aws ses send-email --subject "FORMA data updated" --from datalab@wri.org --to datalab@wri.org --text "New FORMA data available at $S3OUT." --region us-east-1
+aws ses send-email --subject "FORMA data updated" --from datalab@wri.org --to bguzder-williams@wri.org --text "New FORMA data available at $S3OUT." --region us-east-1
 
 # notify David about update
 aws ses send-email --subject "FORMA data updated" --from datalab@wri.org --to wheelrdr@gmail.com --text "New FORMA data available at $DWPATH" --region us-east-1
