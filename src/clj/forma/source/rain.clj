@@ -113,7 +113,8 @@
   [step]
   (<- [?filename ?file :> ?date ?raindata]
       ((unpack-rain step) ?file :> ?month ?raindata)
-      (to-datestring ?filename ?month :> ?date)))
+      (to-datestring ?filename ?month :> ?date)
+      (:distinct true)))
 
 ;; TODO: Merge into hadoop.predicate. We want to generalize that
 ;; pattern of taking a 2d array and cutting it up into pixels.
@@ -152,7 +153,8 @@
         (unpack ?filename ?file :> ?date ?raindata)
         (all-nodata? nodata ?raindata :> false)
         ((to-rows step) ?raindata :> ?row ?row-data)
-        (p/index ?row-data :> ?col ?val))))
+        (p/index ?row-data :> ?col ?val)
+        (:distinct true))))
 
 (defn read-rain
   [ascii-map path]
@@ -238,7 +240,8 @@
       (src ?row ?col ?start ?rain)
       ((explode-rain s-res) ?row ?col :> ?modh ?modv ?sample ?line)
       (p/add-fields s-res :> ?s-res)
-      (u/within-tileset? tiles ?modh ?modv)))
+      (u/within-tileset? tiles ?modh ?modv)
+      (:distinct true)))
 
 (defn mk-rain-series
   "Given a source of semi-raw rain data (date, row, column and value),
@@ -251,7 +254,8 @@
         (date/datetime->period t-res ?date :> ?period)
         (double ?val :> ?val-dbl)
         (consolidate-timeseries nodata ?period ?val-dbl :> ?periods ?series)
-        (first ?periods :> ?start-period))))
+        (first ?periods :> ?start-period)
+        (:distinct true))))
 
 (defn stretch-rain
   "Given a base temporal resolution, a target temporal resolution and a
@@ -280,8 +284,8 @@
     (<- [?row ?col ?new-start ?stretched]
         (series-src ?row ?col ?start ?series)
         (u/replace-from-left* nodata ?series :default 0 :> ?clean-series)
-        (stretch-rain rain-t-res out-t-res ?start ?clean-series :> ?new-start ?stretched)
-        (:distinct false))))
+        (stretch-rain rain-t-res out-t-res ?start ?clean-series
+                      :> ?new-start ?stretched))))
 
 (defn resample-rain
   "A Cascalog query that takes a tap emitting rain tuples and a tap emitting
@@ -337,7 +341,8 @@
         (double ?float-val :> ?val)
         (pix-tap :>> mod-coords)
         (p/add-fields "precl" "32" m-res :> ?dataset ?t-res ?m-res)
-        (r/wgs84-indexer :<< (into [m-res ascii-map] mod-coords) :> ?row ?col))))
+        (r/wgs84-indexer :<< (into [m-res ascii-map] mod-coords) :> ?row ?col)
+        (:distinct true))))
 
 (defn rain-chunks
   "Cascalog subquery to fully process a WGS84 float array at the

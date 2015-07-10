@@ -156,7 +156,8 @@
        :> ?datestring _ _ ?s-lat ?s-lon ?s-kelvin _ _ _ ?s-conf)
       (not= "YYYYMMDD" ?datestring)
       (monthly-datestring ?datestring :> ?date)
-      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)))
+      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
+      (:distinct true)))
 
 (defn fire-source-daily
   "Returns a Cascalog query that creates tuples for daily fires.
@@ -177,7 +178,8 @@
       ((p/mangle #",") ?line
        :> ?s-lat ?s-lon ?s-kelvin _ _ ?datestring _ _ ?s-conf _ _ _)
       (daily-datestring ?datestring :> ?date)
-      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)))
+      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
+      (:distinct true)))
 
 (defn valid-fire?
   "Check whether a fire observation is valid. A valid observation starts
@@ -228,7 +230,8 @@
         ((p/mangle #",") ?line
          :> ?s-lat ?s-lon ?s-kelvin _ _ ?date _ _ ?s-conf _ _ _)
         (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
-        (keep-fire? s-res tile-set ?lat ?lon))))
+        (keep-fire? s-res tile-set ?lat ?lon)
+        (:distinct true))))
 
 (defn reproject-fires
   "Returns a Cascalog query that creates DataChunk Thrift objects for fires."
@@ -238,4 +241,6 @@
       (src ?dataset ?date ?t-res ?lat ?lon ?tuple)
       (r/latlon->modis ?m-res ?lat ?lon :> ?h ?v ?sample ?line)
       (thrift/ModisPixelLocation* ?m-res ?h ?v ?sample ?line :> ?pixel-loc)
-      (thrift/DataChunk* ?dataset ?pixel-loc ?tuple ?t-res :date ?date  :> ?pixel-chunk)))
+      (thrift/DataChunk* ?dataset ?pixel-loc ?tuple ?t-res :date ?date
+                         :> ?pixel-chunk)
+      (:distinct true)))

@@ -53,8 +53,7 @@
         val-src (<- [?name ?t-res ?date ?s-res ?h ?v ?id ?size ?data]
                     (tile-chunk-src _ ?tile-chunk)
                     (thrift/unpack ?tile-chunk :> ?name ?tile-loc ?data ?t-res ?date _)
-                    (thrift/unpack ?tile-loc :> ?s-res ?h ?v ?id ?size)
-                     (:distinct false))
+                    (thrift/unpack ?tile-loc :> ?s-res ?h ?v ?id ?size))
         ts-src (<- [?name ?t-res ?s-res ?h ?v ?id ?size ?pixel-idx ?ts]
                    (val-src ?name ?t-res ?date ?s-res ?h ?v ?id ?size ?val)
                    (mk-tseries ?t-res ?date ?val :> ?pixel-idx ?start ?end ?series)
@@ -63,8 +62,7 @@
         (ts-src ?name ?t-res ?s-res ?h ?v ?id ?size ?pixel-idx ?ts)
         (r/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line)
         (thrift/ModisPixelLocation* ?s-res ?h ?v ?sample ?line :> ?pixel-loc)
-        (thrift/DataChunk* ?name ?pixel-loc ?ts ?t-res :> ?pixel-chunk)
-        (:distinct false))))
+        (thrift/DataChunk* ?name ?pixel-loc ?ts ?t-res :> ?pixel-chunk))))
 
 (def ^:dynamic *missing-val*
   -9999)
@@ -131,8 +129,8 @@
     (<- [?pixel-chunk]
         (fire-sum-src ?name ?s-res ?h ?v ?sample ?line ?fire-series)
         (thrift/ModisPixelLocation* ?s-res ?h ?v ?sample ?line :> ?pixel-loc)
-        (thrift/DataChunk* ?name ?pixel-loc ?fire-series t-res :pedigree pedigree :> ?pixel-chunk)
-        (:distinct false))))
+        (thrift/DataChunk* ?name ?pixel-loc ?fire-series t-res
+                           :pedigree pedigree :> ?pixel-chunk))))
 
 (defn fire-query
   "Returns a source of fire timeseries data chunk objects."

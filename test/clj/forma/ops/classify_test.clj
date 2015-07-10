@@ -31,8 +31,7 @@
     (<- [?s-res ?eco ?beta]
         (src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?eco ?hansen)
         ((logistic-beta-wrap ridge-const convergence-thresh max-iterations)
-         ?hansen ?val ?neighbor-val :> ?beta)
-        (:distinct false))))
+         ?hansen ?val ?neighbor-val :> ?beta))))
 
 (fact
   "Check beta-dict"

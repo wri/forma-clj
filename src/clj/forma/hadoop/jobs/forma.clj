@@ -26,7 +26,8 @@
       (chunk-src _ ?chunk)
       (thrift/unpack ?chunk :> _ ?loc ?data _ _ _)
       (thrift/get-field-value ?data :> ?val)
-      (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
+      (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
+      (:distinct true)))
 
 (defn consolidate-static
   "Due to an issue with Pail, we consolidate separate sequence files
@@ -42,7 +43,8 @@
       (gadm-src   ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
       (border-src ?s-res ?mod-h ?mod-v ?sample ?line ?coast-dist)
       (>= ?vcf vcf-limit)
-      (humid/in-humid-tropics? ?ecoid)))
+      (humid/in-humid-tropics? ?ecoid)
+      (:distinct true)))
 
 (defn screen-by-tileset
   [src tile-set]
@@ -50,7 +52,8 @@
       (src ?pail-path ?pixel-chunk)
       (thrift/unpack ?pixel-chunk :> _ ?pixel-loc _ _ _ _)
       (thrift/unpack ?pixel-loc :> _ ?h ?v _ _)
-      (u/within-tileset? tile-set ?h ?v)))
+      (u/within-tileset? tile-set ?h ?v)
+      (:distinct true)))
 
 (defn adjust-precl
   "Given a base temporal resolution, a target temporal resolution and a
@@ -64,8 +67,7 @@
           (stretch/ts-expander base-t-res target-t-res ?ts-obj :> ?expanded-ts-obj)
           (thrift/unpack ?expanded-ts-obj :> ?new-start-idx _ ?arr-val)
           (thrift/unpack* ?arr-val :> ?expanded-series)
-          (u/map-round* ?expanded-series :> ?rounded-series)
-          (:distinct false))))
+          (u/map-round* ?expanded-series :> ?rounded-series))))
 
 (defn fire-tap
   "Accepts an est-map and a query source of fire timeseries. Note that
@@ -77,7 +79,8 @@
       (thrift/unpack ?ts :> ?start _ ?array-val)
       (thrift/unpack* ?array-val :> ?fire-vec)
       (thrift/TimeSeries* ?start ?fire-vec :> ?fire-series)
-      (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)))
+      (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)
+      (:distinct true)))
 
 (defn filter-query
   "Use a join with `static-src` - already filtered by VCF and
@@ -100,7 +103,8 @@
       (thrift/unpack ?ts-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
 
       ;; filter on vcf-limit - ensures join & filter actually happens
-      (>= ?vcf vcf-limit)))
+      (>= ?vcf vcf-limit)
+      (:distinct true)))
 
 (defn training-3000s?
   "Returns true if all values in the training period are -3000s"
@@ -123,7 +127,8 @@
       (u/replace-from-left* nodata ?precl :default nodata :all-types true :> ?precl-clean)
       (schema/adjust ?p-start ?precl-clean
                      ?n-start ?ndvi-clean
-                     :> ?start-idx ?precl-ts ?ndvi-ts)))
+                     :> ?start-idx ?precl-ts ?ndvi-ts)
+      (:distinct true)))
 
 (defn series-end
   "Return the relative index of the final element of a collection
@@ -208,8 +213,7 @@
         (telescoping-trends-wrapper est-map ?start ?clean-ndvi ?precl
                                     :> ?end-idxs ?short ?long ?t-stat ?break)
         (p/add-fields start-idx :> ?start-idx)
-        (reduce max ?end-idxs :> ?end-idx)
-        (:distinct false))))
+        (reduce max ?end-idxs :> ?end-idx))))
 
 (defn trends->datachunks
   "Query converts trends output to DataChunk thrift objects suitable for pail.
@@ -227,7 +231,8 @@
         (schema/series->forma-values nil ?short-n ?long-n ?t-stat-n ?break-n :> ?forma-vals)
         (thrift/TimeSeries* ?start ?end ?forma-vals :> ?fv-series)
         (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?loc)
-        (thrift/DataChunk* data-name ?loc ?fv-series t-res :pedigree pedigree :> ?dc))))
+        (thrift/DataChunk* data-name ?loc ?fv-series t-res :pedigree pedigree :> ?dc)
+        (:distinct true))))
 
 (defn merge-sorted
   "Given tuples of time series sorted by Pedigree (or any other index),
@@ -329,8 +334,7 @@
         (schema/forma-seq nodata !adjusted-fires ?short-s ?long-s ?t-stat-s ?break-s :> ?forma-seq)
         (p/index ?forma-seq :zero-index ?start-idx :> ?period ?forma-val)
         (<= ?period end)
-        (>= ?period start)
-        (:distinct false))))
+        (>= ?period start))))
 
 (defn process-neighbors
   "Processes all neighbors... Returns the index within the chunk, the
@@ -359,7 +363,8 @@
     (<- [?s-res ?period ?mod-h ?mod-v ?sample ?line ?val ?neighbor-val]
         (src ?s-res ?period ?mod-h ?mod-v ?win-col ?win-row ?window)
         ((process-neighbors neighbors) ?window nodata :> ?win-idx ?val ?neighbor-val)
-        (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line))))
+        (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)
+        (:distinct true))))
 
 (defmapcatfn eco-and-super
   "Wrapper for `get-ecoregion` returns an ecoid and its associated
@@ -392,13 +397,13 @@
                        (thrift/obj-contains-nodata? nodata ?val :> false)
                        (thrift/obj-contains-nodata? nodata ?neighbor-val :> false)
                        (= ?pd first-idx)
-                       (>= ?coast-dist min-coast-dist)
-                       (:distinct false))]
+                       (>= ?coast-dist min-coast-dist))]
     (if (not super-ecoregions)
       clean-data
       (<- [?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?ecoregion ?hansen]
           (clean-data ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?ecoid ?hansen)
-          (eco-and-super ?ecoid :> ?ecoregion)))))
+          (eco-and-super ?ecoid :> ?ecoregion)
+          (:distinct true)))))
 
 (defn beta-gen
   "query to return the beta vector associated with each ecoregion"
@@ -407,8 +412,7 @@
     (<- [?s-res ?ecoregion ?beta]
         (src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?ecoregion ?hansen)
         ((classify/logistic-beta-wrap ridge-const convergence-thresh max-iterations)
-         ?hansen ?val ?neighbor-val :> ?beta)
-        (:distinct false))))
+         ?hansen ?val ?neighbor-val :> ?beta))))
 
 (defn apply-betas [betas]
   (mapfn [eco val neighbor-val]
@@ -450,8 +454,7 @@
         (get-ecoregion ?ecoregion :super-ecoregions super-ecoregions :> ?final-eco)
         ((apply-betas betas) ?final-eco ?val ?neighbor-val :> ?prob)
         (consolidate-timeseries nodata ?pd ?prob :> ?pd-series ?prob-series)
-        (first ?pd-series :> ?start-idx)
-        (:distinct false))))
+        (first ?pd-series :> ?start-idx))))
 
 (defn probs->datachunks
   "Query converts probability series into TimeSeries DataChunk objects
@@ -465,7 +468,8 @@
         (u/replace-all* 'NA nodata ?prob-series :> ?no-na-probs)
         (thrift/TimeSeries* ?start-idx ?no-na-probs :> ?ts)
         (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?loc)
-        (thrift/DataChunk* data-name ?loc ?ts t-res :pedigree pedigree :> ?dc))))
+        (thrift/DataChunk* data-name ?loc ?ts t-res :pedigree pedigree :> ?dc)
+        (:distinct true))))
 
 (defn probs-datachunks->series
   [est-map pail-src]
@@ -489,4 +493,5 @@
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-final ?merged-series ?gadm2 ?ecoid]
       (probs-src ?s-res ?mod-h ?mod-v ?sample ?line ?start-final ?merged-series)
       (gadm2-src ?s-res ?mod-h ?mod-v ?sample ?line ?gadm2)
-      (static-src ?s-res ?mod-h ?mod-v ?sample ?line _ _ ?ecoid _ _)))
+      (static-src ?s-res ?mod-h ?mod-v ?sample ?line _ _ ?ecoid _ _)
+      (:distinct true)))

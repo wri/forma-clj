@@ -38,7 +38,8 @@
   [forma-src gadm2-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?gadm2 ?start-idx ?prob-series]
       (forma-src ?s-res ?mod-h ?mod-v ?sample ?line ?start-idx ?prob-series)
-      (gadm2-src ?s-res ?mod-h ?mod-v ?sample ?line ?gadm2)))
+      (gadm2-src ?s-res ?mod-h ?mod-v ?sample ?line ?gadm2)
+      (:distinct true)))
 
 (defn hansen-latlon->cdm
   "Returns a Cascalog query that transforms Hansen latlon data into map tile
@@ -54,7 +55,8 @@
         ((c/each #'read-string) ?lat-str ?lon-str :> ?lat ?lon)
         (latlon-valid? ?lat ?lon) ;; Skip if lat/lon invalid.
         (identity period :> ?p)
-        (latlon->tile ?lat ?lon zoom :> ?x ?y ?z))))
+        (latlon->tile ?lat ?lon zoom :> ?x ?y ?z)
+        (:distinct true))))
 
 (defn hansen-xy->cdm
   "Returns a Cascalog query that transforms Hansen xy data into map tile
@@ -69,7 +71,8 @@
         (split-line ?line #"," :> ?xm-str ?ym-str _)
         ((c/each #'read-string) ?xm-str ?ym-str :> ?xm ?ym)
         (identity period :> ?p)
-        (meters->maptile ?xm ?ym zoom :> ?x ?y ?z))))
+        (meters->maptile ?xm ?ym zoom :> ?x ?y ?z)
+        (:distinct true))))
 
 
 (defn discount
@@ -117,7 +120,8 @@
         (date/period->datetime tres-out ?period-new-res :> ?date-str)
         (r/modis->latlon ?sres ?modh ?modv ?s ?l :> ?lat ?lon)
         (latlon-valid? ?lat ?lon)
-        (latlon->tile ?lat ?lon zoom :> ?x ?y ?z))))
+        (latlon->tile ?lat ?lon zoom :> ?x ?y ?z)
+        (:distinct true))))
 
 (defn forma->website
   "Do full prep of FORMA data for the website, generating all zoom levels."
@@ -149,6 +153,7 @@
         (date/shift-resolution tres tres-out ?period :> ?period-new-res)
         (- ?period-new-res epoch :> ?rp)
         (min-period ?rp :> ?p)
+        (:distinct true)
         (:trap (hfs-seqfile "s3n://formatemp/output/spark-trapped")))))
 
 (defn spark-graphify
@@ -188,7 +193,8 @@
         (discount ?disc ?prob-series :> ?series)
         (o/clean-probs ?series nodata :> ?clean-series)
         (gadm2->iso ?gadm2 :> ?iso)
-        (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon))))
+        (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
+        (:distinct true))))
 
 (defn forma-download
   "Prepare data for bulk download from S3. Expects `src` to include
@@ -222,4 +228,5 @@
       (src ?s-res ?mod-h ?mod-v ?sample ?line ?start-final ?merged-series ?gadm2 ?ecoid)
       (static-src ?s-res ?mod-h ?mod-v ?sample ?line _ _ _ ?hansen _)
       (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
-      (o/clean-probs ?merged-series nodata :> ?clean-probs)))
+      (o/clean-probs ?merged-series nodata :> ?clean-probs)
+      (:distinct true)))

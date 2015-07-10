@@ -1,6 +1,7 @@
 (ns forma.source.ecoregion
   (:use cascalog.api)
-  (:require [clojure.java.io :as io]
+  (:require [clojure.string :as s]
+            [clojure.java.io :as io]
             [forma.utils :as u]
             [cascalog.logic.ops :as c]))
 
@@ -42,7 +43,7 @@
   (let [[ecoid ecoregion country1 country2 regionid region pixels hits] (split-line line)
         [ecoid regionid pixels hits] (map #(Integer/parseInt %) [ecoid regionid pixels hits])
         hit-share (double (/ hits pixels))
-        region-clean (clojure.string/replace region "\"" "")]
+        region-clean (s/replace region "\"" "")]
     {ecoid {:regionid regionid :pixels pixels :hits hits :hit-share hit-share :region region-clean}}))
 
 (def eco-dict
@@ -77,7 +78,8 @@
         (pixel-count-src ?regionid ?region ?pixels-sum)
         (hit-count-src ?regionid ?region ?hits-sum)
         (div ?hits-sum ?pixels-sum :> ?share)
-        (clojure.string/replace ?region "\"" "" :> ?region-clean))))
+        (s/replace ?region "\"" "" :> ?region-clean)
+        (:distinct true))))
 
 ;; causes out of memory error for some reason
 (comment

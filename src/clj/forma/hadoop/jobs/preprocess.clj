@@ -117,7 +117,8 @@
          (thrift/unpack* ?data :> ?data-value)
          (p/index ?data-value :> ?pixel-idx ?val)
          (thrift/unpack ?tile-loc :> ?s-res ?mod-h ?mod-v ?id ?size)
-         (reproj/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line))))
+         (reproj/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line)
+         (:distinct true))))
 
 ;; ## Fires Processing
 ;;

@@ -119,7 +119,7 @@
 (def converter
   "Converts between a textline with two numbers encoded as strings and
    their integer representations."
-  (<- [?textline :> ?country ?admin]
+  1(<- [?textline :> ?country ?admin]
       ((mangle #",") ?textline :> ?country ?admin-s)
       (u/strings->floats ?admin-s :> ?admin)))
 
@@ -141,7 +141,8 @@
       (thrift/unpack* ?data :> ?data-value)
       (index ?data-value :> ?pixel-idx ?val)
       (thrift/unpack ?tile-loc :> ?s-res ?h ?v ?id ?size)
-      (r/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line)))
+      (r/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line)
+      (:distinct true)))
 
 (defn chunkify
   "Return a Cascalog predicate macro that emits a tile DataChunk of a specified size.
