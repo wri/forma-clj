@@ -2,7 +2,7 @@
   (:use cascalog.api
         [forma.hadoop.pail :only (split-chunk-tap)]
         [forma.source.ecoregion :only (get-ecoregion get-super-ecoregion)])
-  (:require [cascalog.ops :as c]
+  (:require [cascalog.logic.ops :as c]
             [forma.matrix.walk :as w]
             [forma.reproject :as r]
             [forma.date-time :as date]
@@ -26,7 +26,8 @@
       (chunk-src _ ?chunk)
       (thrift/unpack ?chunk :> _ ?loc ?data _ _ _)
       (thrift/get-field-value ?data :> ?val)
-      (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)))
+      (thrift/unpack ?loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
+      (:distinct true)))
 
 (defn consolidate-static
   "Due to an issue with Pail, we consolidate separate sequence files
@@ -42,7 +43,8 @@
       (gadm-src   ?s-res ?mod-h ?mod-v ?sample ?line ?gadm)
       (border-src ?s-res ?mod-h ?mod-v ?sample ?line ?coast-dist)
       (>= ?vcf vcf-limit)
-      (humid/in-humid-tropics? ?ecoid)))
+      (humid/in-humid-tropics? ?ecoid)
+      (:distinct true)))
 
 (defn screen-by-tileset
   [src tile-set]
@@ -50,7 +52,8 @@
       (src ?pail-path ?pixel-chunk)
       (thrift/unpack ?pixel-chunk :> _ ?pixel-loc _ _ _ _)
       (thrift/unpack ?pixel-loc :> _ ?h ?v _ _)
-      (u/within-tileset? tile-set ?h ?v)))
+      (u/within-tileset? tile-set ?h ?v)
+      (:distinct true)))
 
 (defn adjust-precl
   "Given a base temporal resolution, a target temporal resolution and a
@@ -64,8 +67,7 @@
           (stretch/ts-expander base-t-res target-t-res ?ts-obj :> ?expanded-ts-obj)
           (thrift/unpack ?expanded-ts-obj :> ?new-start-idx _ ?arr-val)
           (thrift/unpack* ?arr-val :> ?expanded-series)
-          (u/map-round* ?expanded-series :> ?rounded-series)
-          (:distinct false))))
+          (u/map-round* ?expanded-series :> ?rounded-series))))
 
 (defn fire-tap
   "Accepts an est-map and a query source of fire timeseries. Note that
@@ -77,7 +79,8 @@
       (thrift/unpack ?ts :> ?start _ ?array-val)
       (thrift/unpack* ?array-val :> ?fire-vec)
       (thrift/TimeSeries* ?start ?fire-vec :> ?fire-series)
-      (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)))
+      (thrift/unpack ?pixel-loc :> ?s-res ?h ?v ?sample ?line)
+      (:distinct true)))
 
 (defn filter-query
   "Use a join with `static-src` - already filtered by VCF and
@@ -100,7 +103,8 @@
       (thrift/unpack ?ts-loc :> ?s-res ?mod-h ?mod-v ?sample ?line)
 
       ;; filter on vcf-limit - ensures join & filter actually happens
-      (>= ?vcf vcf-limit)))
+      (>= ?vcf vcf-limit)
+      (:distinct true)))
 
 (defn training-3000s?
   "Returns true if all values in the training period are -3000s"
@@ -123,7 +127,8 @@
       (u/replace-from-left* nodata ?precl :default nodata :all-types true :> ?precl-clean)
       (schema/adjust ?p-start ?precl-clean
                      ?n-start ?ndvi-clean
-                     :> ?start-idx ?precl-ts ?ndvi-ts)))
+                     :> ?start-idx ?precl-ts ?ndvi-ts)
+      (:distinct true)))
 
 (defn series-end
   "Return the relative index of the final element of a collection
@@ -178,7 +183,7 @@
     (into [(first all-trends-but-short) (vec short-stats)]
           (take-last 3 all-trends-but-short))))
 
-(defmapcatop telescoping-trends-wrapper
+(defmapcatfn telescoping-trends-wrapper
   "Wrapper for `telescoping-trends` makes it easier to test that
    function outside of the Cascalog context."
   [est-map ts-start-period val-ts rain-ts]
@@ -208,8 +213,7 @@
         (telescoping-trends-wrapper est-map ?start ?clean-ndvi ?precl
                                     :> ?end-idxs ?short ?long ?t-stat ?break)
         (p/add-fields start-idx :> ?start-idx)
-        (reduce max ?end-idxs :> ?end-idx)
-        (:distinct false))))
+        (reduce max ?end-idxs :> ?end-idx))))
 
 (defn trends->datachunks
   "Query converts trends output to DataChunk thrift objects suitable for pail.
@@ -227,7 +231,8 @@
         (schema/series->forma-values nil ?short-n ?long-n ?t-stat-n ?break-n :> ?forma-vals)
         (thrift/TimeSeries* ?start ?end ?forma-vals :> ?fv-series)
         (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?loc)
-        (thrift/DataChunk* data-name ?loc ?fv-series t-res :pedigree pedigree :> ?dc))))
+        (thrift/DataChunk* data-name ?loc ?fv-series t-res :pedigree pedigree :> ?dc)
+        (:distinct true))))
 
 (defn merge-sorted
   "Given tuples of time series sorted by Pedigree (or any other index),
@@ -259,11 +264,13 @@
           (into [start-idx])
           (vector))))
 
-(defbufferop [merge-series-wrapper [t-res nodata]]
-  "defbufferop wrapper for `merge-series`."
-  [tuples]
-  (let [consecutive true]
-    (merge-series t-res nodata tuples :consecutive consecutive)))
+(defn merge-series-wrapper
+  "defbufferfn wrapper for `merge-series`."
+  [t-res nodata]
+  (bufferfn
+   [tuples]
+   (let [consecutive true]
+     (merge-series t-res nodata tuples :consecutive consecutive))))
 
 (defn array-val->series
   "Given an ArrayValue of FormaValues (the product of unpacking the
@@ -297,9 +304,9 @@
         (thrift/unpack ?data :> ?start ?end ?array-val)
         (array-val->series ?array-val :> _ ?short ?long ?t-stat ?break)
         (date/period->key ?t-res ?start :> ?start-key)
-        (merge-series-wrapper [t-res nodata] ?created ?start-key ?short
-                              ?long ?t-stat ?break :> ?start-final ?short-final
-                              ?long-final ?t-stat-final ?break-final))))
+        ((merge-series-wrapper t-res nodata) ?created ?start-key ?short
+         ?long ?t-stat ?break :> ?start-final ?short-final
+         ?long-final ?t-stat-final ?break-final))))
 
 (defn forma-tap
   "Accepts an est-map and sources for dynamic and fires data,
@@ -327,21 +334,22 @@
         (schema/forma-seq nodata !adjusted-fires ?short-s ?long-s ?t-stat-s ?break-s :> ?forma-seq)
         (p/index ?forma-seq :zero-index ?start-idx :> ?period ?forma-val)
         (<= ?period end)
-        (>= ?period start)
-        (:distinct false))))
+        (>= ?period start))))
 
-(defmapcatop [process-neighbors [num-neighbors]]
+(defn process-neighbors
   "Processes all neighbors... Returns the index within the chunk, the
   value, and the aggregate of the neighbors."
-  [window nodata]
-  (for [[idx [val neighbors]]
-        (->> (w/neighbor-scan num-neighbors window)
-             (map-indexed vector))
-        :when val]
-    [idx val (->> neighbors
-                  (apply concat)
-                  (filter identity)
-                  (schema/combine-neighbors nodata))]))
+  [num-neighbors]
+  (mapcatfn
+   [window nodata]
+   (for [[idx [val neighbors]]
+         (->> (w/neighbor-scan num-neighbors window)
+              (map-indexed vector))
+         :when val]
+     [idx val (->> neighbors
+                   (apply concat)
+                   (filter identity)
+                   (schema/combine-neighbors nodata))])))
 
 (defn neighbor-query
   "final query that walks the neighbors and spits out the values."
@@ -354,10 +362,11 @@
                                nil)]
     (<- [?s-res ?period ?mod-h ?mod-v ?sample ?line ?val ?neighbor-val]
         (src ?s-res ?period ?mod-h ?mod-v ?win-col ?win-row ?window)
-        (process-neighbors [neighbors] ?window nodata :> ?win-idx ?val ?neighbor-val)
-        (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line))))
+        ((process-neighbors neighbors) ?window nodata :> ?win-idx ?val ?neighbor-val)
+        (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line)
+        (:distinct true))))
 
-(defmapcatop eco-and-super
+(defmapcatfn eco-and-super
   "Wrapper for `get-ecoregion` returns an ecoid and its associated
   super-ecoregion.
 
@@ -386,15 +395,15 @@
                        (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
                        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?ecoid ?hansen ?coast-dist)
                        (thrift/obj-contains-nodata? nodata ?val :> false)
-                       (thrift/obj-contains-nodata? nodata ?neighbor-val :> false)        
+                       (thrift/obj-contains-nodata? nodata ?neighbor-val :> false)
                        (= ?pd first-idx)
-                       (>= ?coast-dist min-coast-dist)
-                       (:distinct false))]
+                       (>= ?coast-dist min-coast-dist))]
     (if (not super-ecoregions)
       clean-data
       (<- [?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?ecoregion ?hansen]
           (clean-data ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?ecoid ?hansen)
-          (eco-and-super ?ecoid :> ?ecoregion)))))
+          (eco-and-super ?ecoid :> ?ecoregion)
+          (:distinct true)))))
 
 (defn beta-gen
   "query to return the beta vector associated with each ecoregion"
@@ -402,17 +411,15 @@
   (let [first-idx (date/datetime->period t-res est-start)]
     (<- [?s-res ?ecoregion ?beta]
         (src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?ecoregion ?hansen)
-        (classify/logistic-beta-wrap
-         [ridge-const convergence-thresh max-iterations]
-         ?hansen ?val ?neighbor-val :> ?beta)
-        (:distinct false))))
+        ((classify/logistic-beta-wrap ridge-const convergence-thresh max-iterations)
+         ?hansen ?val ?neighbor-val :> ?beta))))
 
-(defmapop [apply-betas [betas]]
-  [eco val neighbor-val]
-  (let [beta (((comp keyword str) eco) betas)]
-    (classify/logistic-prob-wrap beta val neighbor-val)))
+(defn apply-betas [betas]
+  (mapfn [eco val neighbor-val]
+         (let [beta (((comp keyword str) eco) betas)]
+           (classify/logistic-prob-wrap beta val neighbor-val))))
 
-(defbufferop consolidate-timeseries
+(defn consolidate-timeseries [nodata]
   "Orders tuples by the second incoming field, inserting a supplied
    nodata value (first incoming field) where there are holes in the
    timeseries.
@@ -423,15 +430,15 @@
                 [1 829 2 3 4]]]
       (??- (<- [?id ?per-ts ?f1-ts ?f2-ts ?f3-ts]
         (src ?id ?period ?f1 ?f2 ?f3)
-        (consolidate-timeseries nodata ?period ?f1 ?f2 ?f3 :> ?per-ts ?f1-ts ?f2-ts ?f3-ts))))
+        ((consolidate-timeseries nodata) ?period ?f1 ?f2 ?f3 :> ?per-ts ?f1-ts ?f2-ts ?f3-ts))))
      ;=> (([1 [827 -9999 829] [1 -9999 2] [2 -9999 3] [3 -9999 4]]))"
-  [tuples]
-  (let [nodata (ffirst tuples)
-        field-count (count (first tuples))
-        sorted-tuples (sort-by second tuples)
-        idxs (vec (map second sorted-tuples))]
-    [(vec (map #(mu/sparsify % nodata idxs sorted-tuples)
-               (range 1 field-count)))]))
+  (bufferfn
+   [tuples]
+   (let [field-count (count (first tuples))
+         sorted-tuples (sort-by first tuples)
+         idxs (vec (map first sorted-tuples))]
+     [(vec (map #(mu/sparsify % nodata idxs sorted-tuples)
+                (range 0 field-count)))])))
 
 (defn forma-estimate
   "query to end all queries: estimate the probabilities for each
@@ -445,10 +452,9 @@
         (thrift/obj-contains-nodata? nodata ?neighbor-val :> false)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?ecoregion _ _)
         (get-ecoregion ?ecoregion :super-ecoregions super-ecoregions :> ?final-eco)
-        (apply-betas [betas] ?final-eco ?val ?neighbor-val :> ?prob)
-        (consolidate-timeseries nodata ?pd ?prob :> ?pd-series ?prob-series)
-        (first ?pd-series :> ?start-idx)
-        (:distinct false))))
+        ((apply-betas betas) ?final-eco ?val ?neighbor-val :> ?prob)
+        ((consolidate-timeseries nodata) ?pd ?prob :> ?pd-series ?prob-series)
+        (first ?pd-series :> ?start-idx))))
 
 (defn probs->datachunks
   "Query converts probability series into TimeSeries DataChunk objects
@@ -462,7 +468,8 @@
         (u/replace-all* 'NA nodata ?prob-series :> ?no-na-probs)
         (thrift/TimeSeries* ?start-idx ?no-na-probs :> ?ts)
         (thrift/ModisPixelLocation* ?s-res ?mod-h ?mod-v ?sample ?line :> ?loc)
-        (thrift/DataChunk* data-name ?loc ?ts t-res :pedigree pedigree :> ?dc))))
+        (thrift/DataChunk* data-name ?loc ?ts t-res :pedigree pedigree :> ?dc)
+        (:distinct true))))
 
 (defn probs-datachunks->series
   [est-map pail-src]
@@ -478,12 +485,13 @@
         (thrift/unpack ?data :> ?start ?end ?array-val)
         (thrift/unpack* ?array-val :> ?prob-series)
         (date/period->key ?t-res ?start :> ?start-key)
-        (merge-series-wrapper [t-res nodata] ?created ?start-key ?prob-series
-                              :> ?start-final ?merged-series))))
+        ((merge-series-wrapper t-res nodata) ?created ?start-key ?prob-series
+         :> ?start-final ?merged-series))))
 
 (defn probs-gadm2
   [probs-src gadm2-src static-src]
   (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start-final ?merged-series ?gadm2 ?ecoid]
       (probs-src ?s-res ?mod-h ?mod-v ?sample ?line ?start-final ?merged-series)
       (gadm2-src ?s-res ?mod-h ?mod-v ?sample ?line ?gadm2)
-      (static-src ?s-res ?mod-h ?mod-v ?sample ?line _ _ ?ecoid _ _)))
+      (static-src ?s-res ?mod-h ?mod-v ?sample ?line _ _ ?ecoid _ _)
+      (:distinct true)))

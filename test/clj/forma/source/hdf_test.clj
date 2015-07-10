@@ -4,7 +4,7 @@
         forma.testing
         [midje sweet cascalog])
   (:require [forma.hadoop.io :as io]
-            [cascalog.ops :as c]))
+            [cascalog.logic.ops :as c]))
 
 (def hdf-path
   (dev-path "/testdata/MOD13A3/MOD13A3.A2000032.h03v11.005.2006271174459.hdf"))
@@ -58,7 +58,7 @@ error."
          subquery  (<- [?dataset ?chunkid ?chunk]
                        (src ?filename ?hdf)
                        (unpack-modis [[:ndvi]] ?hdf :> ?dataset ?freetile)
-                       (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk))]
+                       ((raster-chunks chunk-size) ?freetile :> ?chunkid ?chunk))]
      (<- [?count]
          (subquery ?dataset ?chunkid ?chunk)
          (c/count ?count))) => (produces [[?num-chunks]]))
@@ -76,7 +76,7 @@ error."
     (<- [?productname ?tileid ?date]
         (source _ ?hdf)
         (unpack-modis [[:ndvi]] ?hdf :> ?dataset ?freetile)
-        (meta-values [ks] ?freetile :> ?productname ?tileid ?date))
+        ((meta-values ks) ?freetile :> ?productname ?tileid ?date))
     => (produces [xs])))
 
 (fact "split-id tests."

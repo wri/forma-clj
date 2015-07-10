@@ -87,8 +87,8 @@ function, as per the documentation."
 
 (fact
   "Check `sparsify`"
-  (sparsify 1 -9999 [3 5] [[-9999 3 4 5] [-9999 5 5 6]]) => [3 -9999 5]
-  (sparsify 2 -9999 [3 5] [[-9999 3 4 5] [-9999 5 5 6]]) => [4 -9999 5])
+  (sparsify 0 -9999 [3 5] [[3 4 5] [5 5 6]]) => [3 -9999 5]
+  (sparsify 1 -9999 [3 5] [[3 4 5] [5 5 6]]) => [4 -9999 5])
 
 (tabular
  (fact "idx and rowcol conversion for squares."
@@ -138,4 +138,3 @@ function, as per the documentation."
 (facts "matrix-of test."
   (matrix-of 2 1 4) => [2 2 2 2]
   (matrix-of 0 2 2) => [[0 0] [0 0]])
-

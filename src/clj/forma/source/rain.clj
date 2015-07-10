@@ -8,17 +8,15 @@
 ;;     [?dataset ?spatial-res ?temporal-res ?tilestring ?date ?chunkid ?chunk-pix]
 
 (ns forma.source.rain
-  (:use cascalog.api
-        [clojure.contrib.math :only (floor)]
-        [clojure.contrib.combinatorics :only (cartesian-product)]
-        [forma.hadoop.io :only (hfs-wholefile)]
-        [forma.hadoop.jobs.forma :only (consolidate-timeseries)]
-        [forma.thrift :as thrift]
-        [forma.hadoop.io :as fio]
-        [clojure.math.numeric-tower :only (round)])
-  (:require [forma.reproject :as r]
+  (:use cascalog.api)
+  (:require [clojure.math.numeric-tower :refer [floor round]]
+            [forma.hadoop.io :refer [hfs-wholefile]]
+            [forma.hadoop.jobs.forma :refer [consolidate-timeseries]]
+            [forma.thrift :as thrift]
+            [forma.hadoop.io :as fio]
+            [forma.reproject :as r]
             [forma.utils :as u]
-            [cascalog.io :as io]
+            [cascalog.cascading.io :as io]
             [forma.source.static :as static]
             [forma.hadoop.predicate :as p]
             [forma.date-time :as date]
@@ -83,15 +81,17 @@
          (take-nth 2)
          (map-indexed tupleize))))
 
-(defmapcatop [unpack-rain [step]]
+(defn unpack-rain
   "Unpacks a PREC/L binary file for a given year, and returns a lazy
   sequence of 2-tuples, in the form of (month, data). Assumes that
   binary files are packaged as hadoop BytesWritable objects."
-  [stream]
-  (let [bytes        (io/get-bytes stream)
-        rainbuf-size (* 24 (floats-for-step 0.5))]
-    (->> (u/input-stream bytes rainbuf-size)
-         (rain-tuples step))))
+  [step]
+  (mapcatfn
+   [stream]
+   (let [bytes        (io/get-bytes stream)
+         rainbuf-size (* 24 (floats-for-step 0.5))]
+     (->> (u/input-stream bytes rainbuf-size)
+          (rain-tuples step)))))
 
 (defn to-datestring
   "Processes an NOAA PRECL filename and integer month index, and
@@ -112,20 +112,23 @@
     precl_mon_v1.0.lnx.YYYY.gri0.5m(.gz, optionally)."
   [step]
   (<- [?filename ?file :> ?date ?raindata]
-      (unpack-rain [step] ?file :> ?month ?raindata)
-      (to-datestring ?filename ?month :> ?date)))
+      ((unpack-rain step) ?file :> ?month ?raindata)
+      (to-datestring ?filename ?month :> ?date)
+      (:distinct true)))
 
 ;; TODO: Merge into hadoop.predicate. We want to generalize that
 ;; pattern of taking a 2d array and cutting it up into pixels.
-(defmapcatop [to-rows [step]]
+(defn to-rows
   "Converts a month's worth of PRECL data, stored in a vector,
   into single rows of data, based on the supplied step size. `to-rows`
   outputs 2-tuples of the form `[row-idx, row-array]`."
-  [coll]
-  (let [[row-length] (r/dimensions-for-step step)]
-    (->> coll
-         (partition row-length)
-         (map-indexed vector))))
+  [step]
+  (mapcatfn
+   [coll]
+   (let [[row-length] (r/dimensions-for-step step)]
+     (->> coll
+          (partition row-length)
+          (map-indexed vector)))))
 
 (defn all-nodata?
   "Check whether every element in a collection is a nodata value.
@@ -149,9 +152,10 @@
         (source ?filename ?file)
         (unpack ?filename ?file :> ?date ?raindata)
         (all-nodata? nodata ?raindata :> false)
-        (to-rows [step] ?raindata :> ?row ?row-data)
-        (p/index ?row-data :> ?col ?val))))
-  
+        ((to-rows step) ?raindata :> ?row ?row-data)
+        (p/index ?row-data :> ?col ?val)
+        (:distinct true))))
+
 (defn read-rain
   [ascii-map path]
   (let [file-tap (fio/hfs-wholefile path)
@@ -187,6 +191,25 @@
     [[init-row (+ num-pix init-row)]
      [init-col (+ num-pix init-col)]]))
 
+(defn cartesian-product
+  "All the ways to take one item from each sequence"
+  [& seqs]
+  (let [v-original-seqs (vec seqs)
+	step
+	(fn step [v-seqs]
+	  (let [increment
+		(fn [v-seqs]
+		  (loop [i (dec (count v-seqs)), v-seqs v-seqs]
+		    (if (= i -1) nil
+			(if-let [rst (next (v-seqs i))]
+			  (assoc v-seqs i rst)
+			  (recur (dec i) (assoc v-seqs i (v-original-seqs i)))))))]
+	    (when v-seqs
+              (cons (map first v-seqs)
+                    (lazy-seq (step (increment v-seqs)))))))]
+    (when (every? first seqs)
+      (lazy-seq (step v-original-seqs)))))
+
 (defn fill-rect
   "accepts two tuples of length 2 that define the extent of a
   rectangle.  returns all integer pairs within the rectangle.  The
@@ -196,16 +219,18 @@
   (let [[rs cs] (map (partial apply range) [row-range col-range])]
     (cartesian-product rs cs)))
 
-(defmapcatop [explode-rain [s-res]]
+(defn explode-rain
   "Accepts the row and column of a rain pixel, as defined by the
   PRECL data set, along with the rain time series associated with
   that pixel.  Returns the series and coordinates (h, v, s, l) for all
   MODIS pixels within the rain pixel.  Note that this also depends on
   the spatial resolution, which should be supplied as a string."
-  [rain-row rain-col]
-  (let [[h v tile-row tile-col] (rain-rowcol->modispos rain-row rain-col)]
-    (vec (map (partial apply conj [h v])
-         (apply fill-rect (rainpos->modis-range s-res tile-row tile-col))))))
+  [s-res]
+  (mapcatfn
+   [rain-row rain-col]
+   (let [[h v tile-row tile-col] (rain-rowcol->modispos rain-row rain-col)]
+     (vec (map (partial apply conj [h v])
+               (apply fill-rect (rainpos->modis-range s-res tile-row tile-col)))))))
 
 (defn exploder
   "Explodes rain pixel timeseries at native resolution and returns a
@@ -213,9 +238,10 @@
   [s-res tiles src]
   (<- [?s-res ?modh ?modv ?sample ?line ?start ?rain]
       (src ?row ?col ?start ?rain)
-      (explode-rain [s-res] ?row ?col :> ?modh ?modv ?sample ?line)
+      ((explode-rain s-res) ?row ?col :> ?modh ?modv ?sample ?line)
       (p/add-fields s-res :> ?s-res)
-      (u/within-tileset? tiles ?modh ?modv)))
+      (u/within-tileset? tiles ?modh ?modv)
+      (:distinct true)))
 
 (defn mk-rain-series
   "Given a source of semi-raw rain data (date, row, column and value),
@@ -227,8 +253,9 @@
         (src ?date ?row ?col ?val)
         (date/datetime->period t-res ?date :> ?period)
         (double ?val :> ?val-dbl)
-        (consolidate-timeseries nodata ?period ?val-dbl :> ?periods ?series)
-        (first ?periods :> ?start-period))))
+        ((consolidate-timeseries nodata) ?period ?val-dbl :> ?periods ?series)
+        (first ?periods :> ?start-period)
+        (:distinct true))))
 
 (defn stretch-rain
   "Given a base temporal resolution, a target temporal resolution and a
@@ -244,21 +271,21 @@
 
 (defn rain-tap
   "Accepts a source of rain pixels and their associated rain time
-  series, along with a spatial resolution, nodata value, base temporal 
-  resolution and target resolution. Returns a tap that contains the 
-  rain row and column, as well as the stretched and rounded series. 
-  
-  Nodata values are replaced by the immediately preceeding good value 
-  so that they don't interfere with the stretching process (which includes 
-  averaging values where periods span months). A default of 0 is used in 
+  series, along with a spatial resolution, nodata value, base temporal
+  resolution and target resolution. Returns a tap that contains the
+  rain row and column, as well as the stretched and rounded series.
+
+  Nodata values are replaced by the immediately preceeding good value
+  so that they don't interfere with the stretching process (which includes
+  averaging values where periods span months). A default of 0 is used in
   the case of a missing value at the beginning of the rain timeseries."
   [rain-src s-res nodata rain-t-res out-t-res]
   (let [series-src (mk-rain-series rain-src nodata)]
     (<- [?row ?col ?new-start ?stretched]
         (series-src ?row ?col ?start ?series)
         (u/replace-from-left* nodata ?series :default 0 :> ?clean-series)
-        (stretch-rain rain-t-res out-t-res ?start ?clean-series :> ?new-start ?stretched)
-        (:distinct false))))
+        (stretch-rain rain-t-res out-t-res ?start ?clean-series
+                      :> ?new-start ?stretched))))
 
 (defn resample-rain
   "A Cascalog query that takes a tap emitting rain tuples and a tap emitting
@@ -281,7 +308,7 @@
   Arguments:
     m-res - The MODIS resolution as a string.
     ascii-map - A map containing values for step and nodata values.
-    file-tap - Cascalog generator that emits rain tuples  [date row col value]. 
+    file-tap - Cascalog generator that emits rain tuples  [date row col value].
     pix-tap - Cascalog generator that emits MODIS pixel tuples [h v sample line].
     args - Optional memory file-tap of rain tuples used for testing.
 
@@ -297,10 +324,10 @@
     ?val - The rain value.
 
   Example usage:
-    > (??- 
+    > (??-
         (let [tile-seq #{[8 6]}
              file-tap nil
-             test-rain-data [[\"2000-01-01\" 239 489 100]] 
+             test-rain-data [[\"2000-01-01\" 239 489 100]]
              pix-tap [[8 6 0 0]]
              ascii-map {:corner [0 -90] :travel [+ +] :step 0.5 :nodata -999}
              m-res \"500\"]
@@ -308,13 +335,14 @@
   [m-res {:keys [step nodata] :as ascii-map} file-tap pix-tap & args]
   (let [[test-rain-vals] args
         rain-vals (if (not test-rain-vals) (rain-values step nodata file-tap) test-rain-vals)
-        mod-coords ["?mod-h" "?mod-v" "?sample" "?line"]]    
+        mod-coords ["?mod-h" "?mod-v" "?sample" "?line"]]
     (<- [?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val]
         (rain-vals !date ?row ?col ?float-val)
         (double ?float-val :> ?val)
         (pix-tap :>> mod-coords)
         (p/add-fields "precl" "32" m-res :> ?dataset ?t-res ?m-res)
-        (r/wgs84-indexer :<< (into [m-res ascii-map] mod-coords) :> ?row ?col))))
+        (r/wgs84-indexer :<< (into [m-res ascii-map] mod-coords) :> ?row ?col)
+        (:distinct true))))
 
 (defn rain-chunks
   "Cascalog subquery to fully process a WGS84 float array at the

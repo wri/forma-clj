@@ -1,8 +1,9 @@
 (ns forma.source.ecoregion
   (:use cascalog.api)
-  (:require [clojure.java.io :as io]
+  (:require [clojure.string :as s]
+            [clojure.java.io :as io]
             [forma.utils :as u]
-            [cascalog.ops :as c]))
+            [cascalog.logic.ops :as c]))
 
 ;; This namespace helps us deal with the fact that some ecoregions
 ;; have very sparse training data relative to the number of
@@ -12,7 +13,7 @@
 
 ;; This namespace uses a dataset of David Wheeler's super-regions -
 ;; defined in WRI FORMA Note #15 (June 2013) - to replace a pixel's
-;; ecoid with the id of a super-ecoregion that may be adequately 
+;; ecoid with the id of a super-ecoregion that may be adequately
 
 ;; Assumes use of 500m data. The number of pixels vs. number of hits
 ;; will be different for a different resolution.
@@ -42,7 +43,7 @@
   (let [[ecoid ecoregion country1 country2 regionid region pixels hits] (split-line line)
         [ecoid regionid pixels hits] (map #(Integer/parseInt %) [ecoid regionid pixels hits])
         hit-share (double (/ hits pixels))
-        region-clean (clojure.string/replace region "\"" "")]
+        region-clean (s/replace region "\"" "")]
     {ecoid {:regionid regionid :pixels pixels :hits hits :hit-share hit-share :region region-clean}}))
 
 (def eco-dict
@@ -77,7 +78,8 @@
         (pixel-count-src ?regionid ?region ?pixels-sum)
         (hit-count-src ?regionid ?region ?hits-sum)
         (div ?hits-sum ?pixels-sum :> ?share)
-        (clojure.string/replace ?region "\"" "" :> ?region-clean))))
+        (s/replace ?region "\"" "" :> ?region-clean)
+        (:distinct true))))
 
 ;; causes out of memory error for some reason
 (comment

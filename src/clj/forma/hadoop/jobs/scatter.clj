@@ -4,7 +4,7 @@
         [forma.source.tilesets :only (tile-set country-tiles)]
         [forma.hadoop.pail :only (to-pail ?pail- split-chunk-tap)]
         [cascalog.checkpoint :only (workflow)])
-  (:require [cascalog.ops :as c]
+  (:require [cascalog.logic.ops :as c]
             [forma.reproject :as r]
             [forma.schema :as schema]
             [forma.hadoop.predicate :as p]

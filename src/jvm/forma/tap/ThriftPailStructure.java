@@ -1,7 +1,7 @@
 package forma.tap;
 
 /** User: sritchie Date: 4/8/12 Time: 4:33 PM */
-import backtype.hadoop.pail.PailStructure;
+import com.backtype.hadoop.pail.PailStructure;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TDeserializer;
 import org.apache.thrift.TException;
@@ -56,4 +56,3 @@ public abstract class ThriftPailStructure<T extends Comparable> implements PailS
     }
 
 }
-

@@ -1,4 +1,4 @@
-(ns forma.hadoop.jobs.runner
+<(ns forma.hadoop.jobs.runner
   "This namespace includes defmains needed for running the various
    steps in the FORMA workflow. They can be used from the REPL or
    shell, and arguments are parsed appropriately. See tests for usage
@@ -110,7 +110,8 @@
   (let [est-map (get-est-map s-res t-res)
         val-src (let [src (hfs-seqfile forma-val-path)]
                   (<- [?s-res ?period ?modh ?modv ?sample ?line ?forma-val]
-                      (src ?s-res ?period ?modh ?modv ?sample ?line ?forma-val)))
+                      (src ?s-res ?period ?modh ?modv ?sample ?line ?forma-val)
+                      (:distinct true)))
         sink (hfs-seqfile output-path :sinkmode :replace)]
     (?- sink (forma/neighbor-query est-map val-src))))
 

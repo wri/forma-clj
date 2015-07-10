@@ -38,7 +38,7 @@
   fires. In this step, it represents a single fire. The 'temp330' is set to 1
   if the fire is greater than 330 degrees Kelvin. The 'conf50' is set to 1 if
   the fire confidence is greater than 50. If 'temp330' and 'conf50' are both 1,
-  the 'bothPreds' is set to 1. For a single fire, the 'count' is set to 1. 
+  the 'bothPreds' is set to 1. For a single fire, the 'count' is set to 1.
 
   At the end of this step, we have a single Pail full of DataChunk objects, one
   per fire, each which represents the fire in MODIS pixel coordinates.
@@ -81,7 +81,7 @@
 
   Example usage:
     > (monthly->standard 19770202)
-    1977-02-02"  
+    1977-02-02"
   [date-str]
   (convert date-str :basic-date :year-month-day))
 
@@ -104,9 +104,9 @@
             (fire-characteristics ?conf ?kelvin :> ?tuple)))"
   (<- [?conf ?kelvin :> ?tuple]
       (p/full-count ?conf :> ?count)
-      (p/filtered-count [330] ?kelvin :> ?temp-330)
-      (p/filtered-count [50] ?conf :> ?conf-50)
-      (p/bi-filtered-count [50 330] ?conf ?kelvin :> ?both-preds)
+      ((p/filtered-count 330) ?kelvin :> ?temp-330)
+      ((p/filtered-count 50) ?conf :> ?conf-50)
+      ((p/bi-filtered-count 50 330) ?conf ?kelvin :> ?both-preds)
       (thrift/FireValue* ?temp-330 ?conf-50 ?both-preds ?count :> ?tuple)))
 
 (def fire-pred
@@ -128,7 +128,7 @@
   Example usage:
     > (let [src [[\"1\" \"2\" \"331\" \"51\"]]]
            (??<-
-            [?dataset ?t-res ?lat ?lon ?fire-tuple]
+            [?dataset ?t-res ?lat ?lon ?tuple]
             (src ?s-lat ?s-lon ?s-kelvin ?s-conf)
             (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)))"
  (<- [?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple]
@@ -152,11 +152,12 @@
   [src]
   (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
       (src ?line)
-      (p/mangle [#"\s+"] ?line
-                :> ?datestring _ _ ?s-lat ?s-lon ?s-kelvin _ _ _ ?s-conf)
+      ((p/mangle #"\s+") ?line
+       :> ?datestring _ _ ?s-lat ?s-lon ?s-kelvin _ _ _ ?s-conf)
       (not= "YYYYMMDD" ?datestring)
       (monthly-datestring ?datestring :> ?date)
-      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)))
+      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
+      (:distinct true)))
 
 (defn fire-source-daily
   "Returns a Cascalog query that creates tuples for daily fires.
@@ -174,10 +175,11 @@
   [src]
   (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
       (src ?line)
-      (p/mangle [#","] ?line
-                :> ?s-lat ?s-lon ?s-kelvin _ _ ?datestring _ _ ?s-conf _ _ _)
+      ((p/mangle #",") ?line
+       :> ?s-lat ?s-lon ?s-kelvin _ _ ?datestring _ _ ?s-conf _ _ _)
       (daily-datestring ?datestring :> ?date)
-      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)))
+      (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
+      (:distinct true)))
 
 (defn valid-fire?
   "Check whether a fire observation is valid. A valid observation starts
@@ -225,10 +227,12 @@
     (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
         (src ?line)
         (valid-fire? ?line expected-fields)
-        (p/mangle [#","] ?line
-                  :> ?s-lat ?s-lon ?s-kelvin _ _ ?date _ _ ?s-conf _ _ _)
-        (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
-        (keep-fire? s-res tile-set ?lat ?lon))))
+        ((p/mangle #",") ?line
+         :> ?s-lat ?s-lon ?s-kelvin _ _ ?date _ _ ?s-conf _ _ _)
+        (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :>
+                   ?dataset ?t-res ?lat ?lon ?tuple)
+        (keep-fire? s-res tile-set ?lat ?lon)
+        (:distinct true))))
 
 (defn reproject-fires
   "Returns a Cascalog query that creates DataChunk Thrift objects for fires."
@@ -238,4 +242,6 @@
       (src ?dataset ?date ?t-res ?lat ?lon ?tuple)
       (r/latlon->modis ?m-res ?lat ?lon :> ?h ?v ?sample ?line)
       (thrift/ModisPixelLocation* ?m-res ?h ?v ?sample ?line :> ?pixel-loc)
-      (thrift/DataChunk* ?dataset ?pixel-loc ?tuple ?t-res :date ?date  :> ?pixel-chunk)))
+      (thrift/DataChunk* ?dataset ?pixel-loc ?tuple ?t-res :date ?date
+                         :> ?pixel-chunk)
+      (:distinct true)))

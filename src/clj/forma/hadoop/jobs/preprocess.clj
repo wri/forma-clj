@@ -1,12 +1,13 @@
 (ns forma.hadoop.jobs.preprocess
-  (:use cascalog.api
-        [forma.hadoop.pail :only (to-pail split-chunk-tap)]
-        [forma.source.tilesets :only (tile-set)]
-        [cascalog.io :only (with-fs-tmp)])
-  (:require [forma.hadoop.predicate :as p]
+  (:use cascalog.api)
+  (:require [cascalog.cascading.io :refer [with-fs-tmp]]
+            [cascalog.logic.ops :as c]
+            [forma.hadoop.predicate :as p]
             [forma.hadoop.io :as io]
+            [forma.hadoop.pail :refer [to-pail split-chunk-tap]]
             [forma.date-time :as date]
             [forma.source.rain :as r]
+            [forma.source.tilesets :refer [tile-set]]
             [forma.reproject :as reproj]
             [forma.thrift :as thrift]
             [forma.hadoop.jobs.forma :as forma]
@@ -16,17 +17,16 @@
             [forma.source.hdf :as hdf]
             [forma.hadoop.jobs.timeseries :as tseries]
             [forma.static :as static]
-            [cascalog.ops :as c]
             [forma.utils :as utils]))
 
 (defn parse-locations
   "Parse collection of tile vectors or iso codes into set of tiles. Tiles
-   and iso codes are typically supplied to defmains via the command line,
-   and may therefore be strings."
+  and iso codes are typically supplied to defmains via the command line,
+  and may therefore be strings."
   [tiles-or-isos]
   {:pre [(let [tiles-or-isos (utils/arg-parser tiles-or-isos)] ;; handle str
            (or (= :all tiles-or-isos) ;; check for :all kw
-               (every? #(or (coll? %) (keyword? %)) tiles-or-isos)))] 
+               (every? #(or (coll? %) (keyword? %)) tiles-or-isos)))]
    :post [(let [not-kw? (comp not keyword? first)] ;; handle incorrect nesting
             (every? not-kw? %))]}
   (let [tiles-or-isos (utils/arg-parser tiles-or-isos) ;; handle string colls
@@ -117,7 +117,8 @@
          (thrift/unpack* ?data :> ?data-value)
          (p/index ?data-value :> ?pixel-idx ?val)
          (thrift/unpack ?tile-loc :> ?s-res ?mod-h ?mod-v ?id ?size)
-         (reproj/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line))))
+         (reproj/tile-position ?s-res ?size ?id ?pixel-idx :> ?sample ?line)
+         (:distinct true))))
 
 ;; ## Fires Processing
 ;;
@@ -131,15 +132,15 @@
    more details. m-res is the desired output resolution, likely the
    resolution of the other MODIS data we are using (i.e. \"500\")"
   ([path out-path m-res out-t-res fires-start-date tiles-or-isos]
-     (let [end-date (date/todays-date)
-           tiles (parse-locations tiles-or-isos)
-           fire-src (f/fire-source (hfs-textline path) tiles m-res)
-           reproject-query (f/reproject-fires m-res fire-src)
-           ts-query (tseries/fire-query reproject-query m-res out-t-res
-                                        fires-start-date end-date)
-           fires-tap (forma/fire-tap ts-query)
-           sink (hfs-seqfile out-path :sinkmode :replace)]
-       (?- sink fires-tap))))
+   (let [end-date (date/todays-date)
+         tiles (parse-locations tiles-or-isos)
+         fire-src (f/fire-source (hfs-textline path) tiles m-res)
+         reproject-query (f/reproject-fires m-res fire-src)
+         ts-query (tseries/fire-query reproject-query m-res out-t-res
+                                      fires-start-date end-date)
+         fires-tap (forma/fire-tap ts-query)
+         sink (hfs-seqfile out-path :sinkmode :replace)]
+     (?- sink fires-tap))))
 
 (defmain PreprocessModis
   "Preprocess MODIS data from raw HDF files to pail.
@@ -147,7 +148,7 @@
    Usage:
      hadoop jar target/forma-0.2.0-SNAPSHOT-standalone.jar s3n://formastaging/MOD13A1 \\
      s3n://pailbucket/all-master \"{2012}*\" \"[:all]\""
-  [input-path pail-path date tiles-or-isos subsets]  
+  [input-path pail-path date tiles-or-isos subsets]
   (let [subsets (->> (utils/arg-parser subsets)
                      (filter (partial contains? (set static/forma-subsets))))
         tiles (parse-locations tiles-or-isos)

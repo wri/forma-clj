@@ -7,7 +7,7 @@
   (:use cascalog.api
         [midje sweet cascalog])
   (:use forma.hadoop.jobs.api :reload)
-  (:require [cascalog.ops :as c]
+  (:require [cascalog.logic.ops :as c]
             [forma.reproject :as r]
             [forma.date-time :as date]
             [forma.utils :as u]))

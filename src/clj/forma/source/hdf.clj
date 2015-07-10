@@ -10,18 +10,18 @@
 ;; to match tuples up and combine them in various ways.
 
 (ns forma.source.hdf
-  (:use cascalog.api
-        [cascalog.util :only (uuid)]
-        [forma.hadoop.pail :only (to-pail)]
-        [forma.reproject :only (spatial-res temporal-res tilestring->hv)])
-  (:require [clojure.set :as set]
+  (:use cascalog.api)
+  (:require [cascalog.logic.ops :as c]
+            [cascalog.cascading.io :as io]
+            [clojure.java.io :as java.io]
+            [clojure.set :as set]
+            [forma.hadoop.pail :refer [to-pail]]
+            [forma.reproject :refer [spatial-res temporal-res tilestring->hv]]
             [forma.utils :as u]
             [forma.thrift :as thrift]
             [forma.hadoop.predicate :as p]
             [forma.hadoop.io :as fio]
-            [cascalog.ops :as c]
-            [cascalog.io :as io]
-            [clojure.java.io :as java.io])
+            [jackknife.core :refer [uuid]])
   (:import [org.gdal.gdal gdal Dataset Band]))
 
 ;; ## MODIS Introduction
@@ -89,7 +89,7 @@
   ([^Dataset modis key]
      (into {} (.GetMetadata_Dict modis key))))
 
-;; The "SUBDATASETS" metadata dictionary contains 
+;; The "SUBDATASETS" metadata dictionary contains
 ;;
 ;; The paths to these are contained within the "SUBDATASETS" metadata
 ;; dictionary of the wrapping archive. This dictionary contains 18
@@ -151,22 +151,24 @@
 
 ;; TODO: Update documentation with return value.
 
-(defmapcatop [unpack-modis [to-keep]]
+(defn unpack-modis [to-keep]
   "Stateful approach to unpacking HDF files. Registers all gdal
-formats, Creates a temp directory, then saves the byte array to
-disk. This byte array is processed with gdal. On teardown, the temp
-directory is destroyed. Function returns the decompressed MODIS file
-as a 1-tuple."
-  {:stateful true}
-  ([] (io/temp-dir "hdf"))
-  ([tdir stream]
-     (let [bytes    (io/get-bytes stream)
-           temp-hdf (java.io/file tdir (uuid))]
-       (java.io/copy bytes temp-hdf)
-       (->> (subdataset-names temp-hdf)
-            (filter (dataset-filter to-keep))
-            (map make-subdataset))))
-  ([tdir] (io/delete-file-recursively tdir)))
+   formats, Creates a temp directory, then saves the byte array to
+   disk. This byte array is processed with gdal. On teardown, the temp
+   directory is destroyed. Function returns the decompressed MODIS
+   file as a 1-tuple."
+  (mapcatop
+   (prepfn
+    [_ _]
+    (let [tdir (io/temp-dir "hdf")]
+      {:operate (fn [stream]
+                  (let [bytes    (io/get-bytes stream)
+                        temp-hdf (java.io/file tdir (uuid))]
+                    (java.io/copy bytes temp-hdf)
+                    (->> (subdataset-names temp-hdf)
+                         (filter (dataset-filter to-keep))
+                         (map make-subdataset))))
+       :cleanup (fn [] (io/delete-file-recursively tdir))}))))
 
 ;; ### Raster Chunking
 ;;
@@ -175,19 +177,21 @@ as a 1-tuple."
 ;;functions to scale directly with pixel count, rather than with
 ;;number of datasets processed.
 
-(defmapcatop [raster-chunks [chunk-size]]  
+(defn raster-chunks
   "Unpacks the data inside of a MODIS band and partitions it into
   chunks sized according to the supplied value. Specifically, returns
   a lazy sequence of 2-tuples of the form `[chunk-index, vector]`."
-  [^Dataset data]
-  (let [^Band band (.GetRasterBand data 1)
-        width  (.GetXSize band)
-        height (.GetYSize band)
-        ret (int-array (* width height))]
-    (.ReadRaster band 0 0 width height ret)
-    (map-indexed (fn [idx xs]
-                   [idx (vec xs)])
-                 (partition chunk-size ret))))
+  [chunk-size]
+  (mapcatfn
+   [^Dataset data]
+   (let [^Band band (.GetRasterBand data 1)
+         width  (.GetXSize band)
+         height (.GetYSize band)
+         ret (int-array (* width height))]
+     (.ReadRaster band 0 0 width height ret)
+     (map-indexed (fn [idx xs]
+                    [idx (vec xs)])
+                  (partition chunk-size ret)))))
 
 ;; ### Metadata Parsing
 ;;
@@ -196,11 +200,12 @@ as a 1-tuple."
 ;; tuple, described above. The following functions provide
 ;; MODIS-specific facilities for making this happen.
 
-(defmapop [meta-values [meta-keys]]
+(defn meta-values
   "Returns metadata values for a given unpacked MODIS Dataset,
   corresponding to the supplied seq of keys."
-  [dataset]
-  (map (metadata dataset) meta-keys))
+  [meta-keys]
+  (mapfn [dataset]
+         (map (metadata dataset) meta-keys)))
 
 ;; The MODLAND Tile ID is an 8 digit integer, such as 51018009, that
 ;; is used to specify a gridded product's projection, horizontal and
@@ -256,11 +261,12 @@ as a 1-tuple."
     (<- [?datachunk]
         (source _ ?hdf)
         (unpack-modis [datasets] ?hdf :> ?dataset ?freetile)
-        (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk)
-        (meta-values [ks] ?freetile :> ?productname ?tileid ?date)
+        ((raster-chunks chunk-size) ?freetile :> ?chunkid ?chunk)
+        ((meta-values ks) ?freetile :> ?productname ?tileid ?date)
         (split-id ?tileid :> ?mod-h ?mod-v)
         ((c/juxt #'spatial-res #'temporal-res) ?productname :> ?s-res ?t-res)
-        (chunkifier ?dataset ?date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk))))
+        (chunkifier ?dataset ?date ?s-res ?t-res ?mod-h ?mod-v ?chunkid ?chunk :> ?datachunk)
+        (:distinct true))))
 
 (defn modis-chunker
   "Cascalog job that takes set of dataset identifiers, a chunk size, a

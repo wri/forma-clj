@@ -1,7 +1,7 @@
 (ns forma.source.static
   (:use cascalog.api
         [forma.static :only (static-datasets)])
-  (:require [cascalog.ops :as c]
+  (:require [cascalog.logic.ops :as c]
             [forma.reproject :as r]
             [forma.schema :as schema]
             [forma.thrift :as thrift]
@@ -55,7 +55,8 @@
         (p/break ?textline :> ?row ?col ?val)
         (pixel-tap ?mod-h ?mod-v ?sample ?line)
         (r/wgs84-indexer m-res ascii-info ?mod-h ?mod-v ?sample ?line :> ?row ?col)
-        (p/add-fields dataset m-res "00" nil :> ?dataset ?m-res ?t-res !date))))
+        (p/add-fields dataset m-res "00" nil :> ?dataset ?m-res ?t-res !date)
+        (:distinct true))))
 
 (defn downsample-modis
   "Returns a cascalog query designed to pair each value on an ASCII
@@ -120,7 +121,9 @@
         (count ?data :> ?count)
         (= ?count chunk-size)
         (thrift/ModisChunkLocation* ?s-res ?h ?v ?id chunk-size :> ?tile-loc)
-        (thrift/DataChunk* ?dataset ?tile-loc ?data ?t-res :date !date :> ?tile-chunk))))
+        (thrift/DataChunk* ?dataset ?tile-loc ?data ?t-res :date !date
+                           :> ?tile-chunk)
+        (:distinct true))))
 
 (defn static-chunks
   "TODO: DOCS!"

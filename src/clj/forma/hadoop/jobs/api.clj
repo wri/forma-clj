@@ -7,14 +7,14 @@
   (:use cascalog.api
         [forma.source.gadmiso :only (gadm2->iso)]
         [forma.hadoop.jobs.postprocess :only (first-hit)])
-  (:require [cascalog.ops :as c]
+  (:require [cascalog.logic.ops :as c]
             [forma.postprocess.output :as o]
             [forma.reproject :as r]
             [forma.date-time :as date]
             [forma.utils :as u]
             [forma.hadoop.predicate :as p]))
 
-(defmapcatop wide->long
+(defmapcatfn wide->long
   "Convert a series from wide to long form.
 
    Usage:
@@ -66,7 +66,8 @@
       (r/modis->latlon ?s-res ?mod-h ?mod-v ?sample ?line :> ?lat ?lon)
       (gadm2->iso ?gadm2 :> ?iso)
       (p/add-fields ?iso :> ?iso-extra)
-      (o/clean-probs ?prob-series nodata :> ?clean-series)))
+      (o/clean-probs ?prob-series nodata :> ?clean-series)
+      (:distinct true)))
 
 (defn ever-crosses-thresh?
   [thresh series]
@@ -91,7 +92,8 @@
         (ever-crosses-thresh? thresh ?clean-series)
         (wide->long ?start-idx ?clean-series :> ?period ?prob)
         (date/period->datetime t-res ?period :> ?date)
-        (date/convert ?date :year-month-day :year :> ?year))))
+        (date/convert ?date :year-month-day :year :> ?year)
+        (:distinct true))))
 
 (defn prob-series->first-hit
   "Returns a Cascalog query that generates data for the `first-hit`
@@ -108,7 +110,8 @@
        (<- [?lat ?lon ?iso ?iso-extra ?gadm2 ?date ?prob]
            (clean-src ?lat ?lon ?iso ?iso-extra ?gadm2 ?start-idx ?clean-series)
            (get-hit-period-and-value ?start-idx thresh ?clean-series :> ?period ?prob)
-           (date/period->datetime t-res ?period :> ?date)))))
+           (date/period->datetime t-res ?period :> ?date)
+           (:distinct true)))))
 
 (defn prob-series->latest
   "Returns a Cascalog query that generates data for the `latest`
@@ -126,4 +129,5 @@
            (clean-src ?lat ?lon ?iso ?iso-extra ?gadm2 ?start-idx ?clean-series)
            (latest-hit? thresh ?clean-series)
            (get-hit-period-and-value ?start-idx thresh ?clean-series :> ?period ?prob)
-           (date/period->datetime t-res ?period :> ?date)))))
+           (date/period->datetime t-res ?period :> ?date)
+           (:distinct true)))))

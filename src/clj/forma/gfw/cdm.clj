@@ -8,9 +8,9 @@
 
   http://www.maptiler.org/google-maps-coordinates-tile-bounds-projection/globalmaptiles.py
   "
-  (:use [cascalog.api])
+  (:use cascalog.api)
   (require [clojure.math.numeric-tower :as math]
-           [cascalog.ops :as c]))
+           [cascalog.logic.ops :as c]))
 
 ;; Exact radius of the Earth in meters for the WGS84 datum.
 (def radius 6378137)
@@ -51,7 +51,7 @@
           yt-flipped (-> (- (math/expt 2 zoom) 1)
                           (- yt))]
       [xt yt-flipped zoom]))
-    
+
   (latlon->meters
     [this]
     "Returns this alert coordinates as meters."
@@ -65,7 +65,7 @@
                  (/ (/ Math/PI 180))
                  (* (/ origin-shift 180)))]
       [ym xm]))
-  
+
   (meters->pixels
     [this]
     "Returns this alert coordinates as pixels."
@@ -90,8 +90,8 @@
                  (Math/ceil)
                  (- 1)
                  (int))]
-      [yt xt]))   
-  
+      [yt xt]))
+
     (resolution
      [this]
      "Returns this alert map resolution in meters per pixel."
@@ -147,7 +147,7 @@
                        (- yt))]
     [xt yt-flipped zoom]))
 
-(defbufferop agg-sort-by-date
+(defbufferfn agg-sort-by-date
   "Aggregate dates and counts by xyz coordinate, sorting the counts by
   date. See usage example in tests."
   [tuples]
@@ -156,7 +156,7 @@
 
 (defn split-vecs
   "Split vector of nested vectors into two vectors of vectors. For use with
-   output of `agg-sort-by-date` defbufferop.
+   output of `agg-sort-by-date` defbufferfn.
 
    See usage example in tests."
   [v]
@@ -192,8 +192,9 @@
      [[x y z]]
      (conj (gen-tiles (zoom-out x) (zoom-out y) (dec z) min-z) [x y z])))
 
-(defmapcatop gen-tiles-mapcat
-  "Wrap `gen-tiles` in `mapcatop` so each zoom level is emitted on a new line."
+(defmapcatfn gen-tiles-mapcat
+  "Wrap `gen-tiles` in `mapcatop` so each zoom level is emitted on a
+  new line."
   [x y z min-z]
   (gen-tiles x y z min-z))
 
