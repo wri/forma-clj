@@ -1,10 +1,11 @@
 (ns forma.source.rain-test
   (:use [forma.source.rain] :reload)
   (:use cascalog.api
-        [midje sweet cascalog]
-        [forma.static :only (static-datasets)]
-        [forma.hadoop.io :only (hfs-wholefile)])
-  (:require [forma.testing :as t])
+        [midje sweet cascalog])
+  (:require [cascalog.logic.ops :as c]
+            [forma.static :refer [static-datasets]]
+            [forma.hadoop.io :refer [hfs-wholefile]]
+            [forma.testing :as t])
   (:import  [java.io InputStream]
             [java.util.zip GZIPInputStream]))
 
@@ -143,7 +144,7 @@
              ["2000-02-01" 0 1 8.25]
              ["2000-05-01" 0 1 9.25]]
         tiles #{[18 17]}
-        tap (cascalog.ops/first-n (rain-tap src "500" -9999.0 "32" "16") 5)]
+        tap (c/first-n (rain-tap src "500" -9999.0 "32" "16") 5)]
     (<- [?row ?col ?start ?series] (tap ?row ?col ?start ?series)))
   => (produces [[0 0 690 [1 1 2 2 2 2 2 4 5]]
                 [0 1 690 [7 7 8 8 8 8 8 9 9]]]))

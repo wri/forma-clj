@@ -419,7 +419,7 @@
          (let [beta (((comp keyword str) eco) betas)]
            (classify/logistic-prob-wrap beta val neighbor-val))))
 
-(defbufferfn consolidate-timeseries
+(defn consolidate-timeseries [nodata]
   "Orders tuples by the second incoming field, inserting a supplied
    nodata value (first incoming field) where there are holes in the
    timeseries.
@@ -430,15 +430,15 @@
                 [1 829 2 3 4]]]
       (??- (<- [?id ?per-ts ?f1-ts ?f2-ts ?f3-ts]
         (src ?id ?period ?f1 ?f2 ?f3)
-        (consolidate-timeseries nodata ?period ?f1 ?f2 ?f3 :> ?per-ts ?f1-ts ?f2-ts ?f3-ts))))
+        ((consolidate-timeseries nodata) ?period ?f1 ?f2 ?f3 :> ?per-ts ?f1-ts ?f2-ts ?f3-ts))))
      ;=> (([1 [827 -9999 829] [1 -9999 2] [2 -9999 3] [3 -9999 4]]))"
-  [tuples]
-  (let [nodata (ffirst tuples)
-        field-count (count (first tuples))
-        sorted-tuples (sort-by second tuples)
-        idxs (vec (map second sorted-tuples))]
-    [(vec (map #(mu/sparsify % nodata idxs sorted-tuples)
-               (range 1 field-count)))]))
+  (bufferfn
+   [tuples]
+   (let [field-count (count (first tuples))
+         sorted-tuples (sort-by first tuples)
+         idxs (vec (map first sorted-tuples))]
+     [(vec (map #(mu/sparsify % nodata idxs sorted-tuples)
+                (range 0 field-count)))])))
 
 (defn forma-estimate
   "query to end all queries: estimate the probabilities for each
@@ -453,7 +453,7 @@
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?ecoregion _ _)
         (get-ecoregion ?ecoregion :super-ecoregions super-ecoregions :> ?final-eco)
         ((apply-betas betas) ?final-eco ?val ?neighbor-val :> ?prob)
-        (consolidate-timeseries nodata ?pd ?prob :> ?pd-series ?prob-series)
+        ((consolidate-timeseries nodata) ?pd ?prob :> ?pd-series ?prob-series)
         (first ?pd-series :> ?start-idx))))
 
 (defn probs->datachunks

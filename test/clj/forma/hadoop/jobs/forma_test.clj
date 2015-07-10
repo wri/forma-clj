@@ -494,7 +494,7 @@
              [1 829 2 3 4]]]
     (<- [?id ?per-ts ?f1-ts ?f2-ts ?f3-ts]
         (src ?id ?period ?f1 ?f2 ?f3)
-        (consolidate-timeseries nodata ?period ?f1 ?f2 ?f3 :> ?per-ts ?f1-ts ?f2-ts ?f3-ts))
+        ((consolidate-timeseries nodata) ?period ?f1 ?f2 ?f3 :> ?per-ts ?f1-ts ?f2-ts ?f3-ts))
     => (produces [[1 [827 -9999 829] [1 -9999 2] [2 -9999 3] [3 -9999 4]]])))
 
 (fact "Test `forma-estimate`."

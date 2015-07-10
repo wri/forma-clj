@@ -104,9 +104,9 @@
             (fire-characteristics ?conf ?kelvin :> ?tuple)))"
   (<- [?conf ?kelvin :> ?tuple]
       (p/full-count ?conf :> ?count)
-      (p/filtered-count [330] ?kelvin :> ?temp-330)
-      (p/filtered-count [50] ?conf :> ?conf-50)
-      (p/bi-filtered-count [50 330] ?conf ?kelvin :> ?both-preds)
+      ((p/filtered-count 330) ?kelvin :> ?temp-330)
+      ((p/filtered-count 50) ?conf :> ?conf-50)
+      ((p/bi-filtered-count 50 330) ?conf ?kelvin :> ?both-preds)
       (thrift/FireValue* ?temp-330 ?conf-50 ?both-preds ?count :> ?tuple)))
 
 (def fire-pred
@@ -128,7 +128,7 @@
   Example usage:
     > (let [src [[\"1\" \"2\" \"331\" \"51\"]]]
            (??<-
-            [?dataset ?t-res ?lat ?lon ?fire-tuple]
+            [?dataset ?t-res ?lat ?lon ?tuple]
             (src ?s-lat ?s-lon ?s-kelvin ?s-conf)
             (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)))"
  (<- [?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple]
@@ -229,7 +229,8 @@
         (valid-fire? ?line expected-fields)
         ((p/mangle #",") ?line
          :> ?s-lat ?s-lon ?s-kelvin _ _ ?date _ _ ?s-conf _ _ _)
-        (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
+        (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :>
+                   ?dataset ?t-res ?lat ?lon ?tuple)
         (keep-fire? s-res tile-set ?lat ?lon)
         (:distinct true))))
 

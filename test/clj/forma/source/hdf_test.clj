@@ -4,7 +4,7 @@
         forma.testing
         [midje sweet cascalog])
   (:require [forma.hadoop.io :as io]
-            [cascalog.ops :as c]))
+            [cascalog.logic.ops :as c]))
 
 (def hdf-path
   (dev-path "/testdata/MOD13A3/MOD13A3.A2000032.h03v11.005.2006271174459.hdf"))

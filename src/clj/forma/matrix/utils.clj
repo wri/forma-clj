@@ -171,10 +171,10 @@
    sparsely expanded.
 
   Usage:
-    (sparsify 1 -9999 [3 5] [[-9999 3 4 5] [-9999 5 5 6]])
+    (sparsify 1 -9999 [3 5] [[3 4 5] [5 5 6]])
     ;=> [3 -9999 5]
 
-    (sparsify 2 -9999 [3 5] [[-9999 3 4 5] [-9999 5 5 6]])
+    (sparsify 2 -9999 [3 5] [[3 4 5] [5 5 6]])
     ;=> [4 -9999 5]"
   [field-idx nodata idxs sorted-tuples]
   (->> (vec (map #(nth % field-idx) sorted-tuples))

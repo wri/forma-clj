@@ -253,7 +253,7 @@
         (src ?date ?row ?col ?val)
         (date/datetime->period t-res ?date :> ?period)
         (double ?val :> ?val-dbl)
-        (consolidate-timeseries nodata ?period ?val-dbl :> ?periods ?series)
+        ((consolidate-timeseries nodata) ?period ?val-dbl :> ?periods ?series)
         (first ?periods :> ?start-period)
         (:distinct true))))
 

@@ -2,9 +2,9 @@
   (:use [forma.hadoop.predicate] :reload)
   (:use forma.testing
         cascalog.api
-        [cascalog.ops :only (lazy-generator)]
         [midje sweet cascalog])
-  (:require [cascalog.io :as io]))
+  (:require [cascalog.cascading.io :as io]
+            [cascalog.logic.ops :refer [lazy-generator]]))
 
 ;; Generates combinations of `mod-h`, `mod-v`, `sample` and `line` for
 ;; use in buffers.

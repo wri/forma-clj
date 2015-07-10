@@ -119,7 +119,7 @@
 (def converter
   "Converts between a textline with two numbers encoded as strings and
    their integer representations."
-  1(<- [?textline :> ?country ?admin]
+  (<- [?textline :> ?country ?admin]
       ((mangle #",") ?textline :> ?country ?admin-s)
       (u/strings->floats ?admin-s :> ?admin)))
 

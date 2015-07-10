@@ -9,8 +9,8 @@
   (:require [forma.hadoop.jobs.forma :as forma]
             [forma.thrift :as thrift]
             [forma.date-time :as date]
-            [cascalog.io :as io]
-            [cascalog.ops :as c]
+            [cascalog.cascading.io :as io]
+            [cascalog.logic.ops :as c]
             [forma.hadoop.pail :as p]
             [forma.hadoop.jobs.api :as api]
             [forma.utils :as u]))
@@ -400,7 +400,7 @@ functions are tested elsewhere."
         _ (?- (hfs-seqfile static-path :sinkmode :replace) static-src)
         _ (?- (hfs-seqfile gadm2-path :sinkmode :replace) gadm2-src)
         _ (spit (str fire-path "/fires.csv") fire-str)]
-    
+
 
     (workflow [tmp-root]
 
@@ -419,7 +419,7 @@ functions are tested elsewhere."
               trends-pail
               ([:tmp-dirs trends-pail-path]
                  (TrendsPail s-res t-res est-end trends-path trends-pail-path))
-              
+
               merge-trends
               ([:tmp-dirs merge-trends-path]
                  (MergeTrends s-res t-res est-end trends-pail-path merge-trends-path))
@@ -427,7 +427,7 @@ functions are tested elsewhere."
               preprocess-fires
               ([:tmp-dirs preprocess-fires-path]
                  (PreprocessFire fire-path preprocess-fires-path s-res t-res fires-start [[28 8]]))
-              
+
               formatap
               ([:tmp-dirs forma-tap-path]
                  (FormaTap s-res t-res est-start est-end preprocess-fires-path merge-trends-path forma-tap-path))
@@ -451,7 +451,7 @@ functions are tested elsewhere."
               probs-pail
               ([:tmp-dirs probs-pail-path]
                  (ProbsPail s-res t-res est-end probs-path probs-pail-path))
-              
+
               merge-probs
               ([:tmp-dirs merge-probs-path]
                  (MergeProbs s-res t-res est-end probs-pail-path merge-probs-path))

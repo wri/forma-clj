@@ -21,8 +21,8 @@
 
 (defn parse-locations
   "Parse collection of tile vectors or iso codes into set of tiles. Tiles
-   and iso codes are typically supplied to defmains via the command line,
-   and may therefore be strings."
+  and iso codes are typically supplied to defmains via the command line,
+  and may therefore be strings."
   [tiles-or-isos]
   {:pre [(let [tiles-or-isos (utils/arg-parser tiles-or-isos)] ;; handle str
            (or (= :all tiles-or-isos) ;; check for :all kw
@@ -132,15 +132,15 @@
    more details. m-res is the desired output resolution, likely the
    resolution of the other MODIS data we are using (i.e. \"500\")"
   ([path out-path m-res out-t-res fires-start-date tiles-or-isos]
-     (let [end-date (date/todays-date)
-           tiles (parse-locations tiles-or-isos)
-           fire-src (f/fire-source (hfs-textline path) tiles m-res)
-           reproject-query (f/reproject-fires m-res fire-src)
-           ts-query (tseries/fire-query reproject-query m-res out-t-res
-                                        fires-start-date end-date)
-           fires-tap (forma/fire-tap ts-query)
-           sink (hfs-seqfile out-path :sinkmode :replace)]
-       (?- sink fires-tap))))
+   (let [end-date (date/todays-date)
+         tiles (parse-locations tiles-or-isos)
+         fire-src (f/fire-source (hfs-textline path) tiles m-res)
+         reproject-query (f/reproject-fires m-res fire-src)
+         ts-query (tseries/fire-query reproject-query m-res out-t-res
+                                      fires-start-date end-date)
+         fires-tap (forma/fire-tap ts-query)
+         sink (hfs-seqfile out-path :sinkmode :replace)]
+     (?- sink fires-tap))))
 
 (defmain PreprocessModis
   "Preprocess MODIS data from raw HDF files to pail.
