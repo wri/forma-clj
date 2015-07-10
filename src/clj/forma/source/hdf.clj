@@ -12,8 +12,8 @@
 (ns forma.source.hdf
   (:use cascalog.api)
   (:require [cascalog.logic.ops :as c]
-            [cascalog.util :refer [uuid]]
             [cascalog.cascading.io :as io]
+            [clojure.java.io :as java.io]
             [clojure.set :as set]
             [forma.hadoop.pail :refer [to-pail]]
             [forma.reproject :refer [spatial-res temporal-res tilestring->hv]]
@@ -21,7 +21,7 @@
             [forma.thrift :as thrift]
             [forma.hadoop.predicate :as p]
             [forma.hadoop.io :as fio]
-            [clojure.java.io :as java.io])
+            [jackknife.core :refer [uuid]])
   (:import [org.gdal.gdal gdal Dataset Band]))
 
 ;; ## MODIS Introduction
@@ -157,7 +157,7 @@
    disk. This byte array is processed with gdal. On teardown, the temp
    directory is destroyed. Function returns the decompressed MODIS
    file as a 1-tuple."
-  (d/mapcatop
+  (mapcatop
    (prepfn
     [_ _]
     (let [tdir (io/temp-dir "hdf")]

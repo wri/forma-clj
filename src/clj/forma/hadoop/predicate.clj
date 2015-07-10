@@ -89,27 +89,28 @@
                       :start start
                       :length length)]]))
 
-(defmacro defpredsummer
-  "Generates cascalog defaggregateops for counting items that satisfy
-  some custom predicate. Defaggregateops don't allow anonymous
-  functions, so we went this route instead."
-  [name vals pred]
-  `(defaggregatefn ~name
-     ([] 0)
-     ([count# ~@vals] (if (~pred ~@vals)
-                        (inc count#)
-                        count#))
-     ([count#] [count#])))
+(defn filtered-count [limit]
+  (aggregatefn
+   ([] 0)
+   ([count val] (if (>= val limit)
+                  (inc count)
+                  count))
+   ([count] [count])))
 
-(defpredsummer [filtered-count [limit]]
-  [val] #(>= % limit))
+(defn bi-filtered-count [lim1 lim2]
+  (aggregatefn
+   ([] 0)
+   ([count val1 val2]
+    (if (and (>= val1 lim1)
+             (>= val2 lim2))
+      (inc count)
+      count))
+   ([count] [count])))
 
-(defpredsummer [bi-filtered-count [lim1 lim2]]
-  [val1 val2] #(and (>= %1 lim1)
-                    (>= %2 lim2)))
-
-(defpredsummer full-count
-  [val] identity)
+(defaggregatefn full-count
+  ([] 0)
+  ([count val] (if val (inc count) count))
+  ([count] [count]))
 
 ;; ### Predicate Macros
 
