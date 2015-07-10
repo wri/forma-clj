@@ -3,8 +3,8 @@
         [clojure.math.numeric-tower :only (abs)]
         [forma.matrix.utils]
         [cascalog.api])
-(:require [incanter.core :as i]
-          [cascalog.ops :as c])
+  (:require [incanter.core :as i]
+            [cascalog.logic.ops :as c])
   (:import [org.jblas FloatMatrix MatrixFunctions Solve DoubleMatrix]))
 
 ;; Namespace Conventions: Each observation is assigned a binary
@@ -81,7 +81,7 @@
   happen in production, but if it does, the result of classification
   would always be a probability of 0.5.
 
-  Arguments: 
+  Arguments:
     beta-rowmat: DoubleMatrix row vector
     features-rowmat: DoubleMatrix row vector, of equal length as
                      beta-rowmat

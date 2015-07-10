@@ -1,13 +1,13 @@
 (ns forma.hadoop.pail
-  (:use cascalog.api
-        [cascalog.io :only (with-fs-tmp)]
-        [forma.reproject :only (hv->tilestring)])
+  (:use cascalog.api)
+  (:require [cascalog.cascading.io :refer [with-fs-tmp]]
+            [forma.reproject :refer [hv->tilestring]])
   (:import [java.util List]
            [forma.schema DataChunk FormaValue
             LocationProperty LocationPropertyValue
             ModisPixelLocation DataValue]
-           [backtype.cascading.tap PailTap PailTap$PailTapOptions]
-           [backtype.hadoop.pail PailStructure Pail]
+           [com.backtype.cascading.tap PailTap PailTap$PailTapOptions]
+           [com.backtype.hadoop.pail PailStructure Pail]
            [forma.tap ThriftPailStructure]))
 
 ;; ## Pail Data Structures

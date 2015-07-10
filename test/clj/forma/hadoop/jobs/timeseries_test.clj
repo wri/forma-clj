@@ -4,7 +4,7 @@
         [midje sweet cascalog])
   (:require [forma.hadoop.io :as io]
             [forma.schema :as schema]
-            [forma.thrift :as thrift]            
+            [forma.thrift :as thrift]
             [forma.date-time :as date]))
 
 (defn test-chunks
@@ -33,10 +33,10 @@
 
 (fact
   "Test `timeseries` query"
-  (let [src [[1 (thrift/pack (range 10))] [3 (thrift/pack (range 10))]] 
+  (let [src [[1 (thrift/pack (range 10))] [3 (thrift/pack (range 10))]]
         src (<- [?pix-idx ?t-start ?t-end ?series]
                 (src ?date ?ts)
-                (timeseries [-9999.0] ?date ?ts :> ?pix-idx ?t-start ?t-end ?series))]
+                ((timeseries -9999.0) ?date ?ts :> ?pix-idx ?t-start ?t-end ?series))]
     (<- [?pix-idx ?t-start ?t-end ?ts-vec]
         (src ?pix-idx ?t-start ?t-end ?series)
         (thrift/unpack* ?series :> ?ts-vec)))

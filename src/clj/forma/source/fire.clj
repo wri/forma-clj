@@ -38,7 +38,7 @@
   fires. In this step, it represents a single fire. The 'temp330' is set to 1
   if the fire is greater than 330 degrees Kelvin. The 'conf50' is set to 1 if
   the fire confidence is greater than 50. If 'temp330' and 'conf50' are both 1,
-  the 'bothPreds' is set to 1. For a single fire, the 'count' is set to 1. 
+  the 'bothPreds' is set to 1. For a single fire, the 'count' is set to 1.
 
   At the end of this step, we have a single Pail full of DataChunk objects, one
   per fire, each which represents the fire in MODIS pixel coordinates.
@@ -81,7 +81,7 @@
 
   Example usage:
     > (monthly->standard 19770202)
-    1977-02-02"  
+    1977-02-02"
   [date-str]
   (convert date-str :basic-date :year-month-day))
 
@@ -152,8 +152,8 @@
   [src]
   (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
       (src ?line)
-      (p/mangle [#"\s+"] ?line
-                :> ?datestring _ _ ?s-lat ?s-lon ?s-kelvin _ _ _ ?s-conf)
+      ((p/mangle #"\s+") ?line
+       :> ?datestring _ _ ?s-lat ?s-lon ?s-kelvin _ _ _ ?s-conf)
       (not= "YYYYMMDD" ?datestring)
       (monthly-datestring ?datestring :> ?date)
       (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)))
@@ -174,8 +174,8 @@
   [src]
   (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
       (src ?line)
-      (p/mangle [#","] ?line
-                :> ?s-lat ?s-lon ?s-kelvin _ _ ?datestring _ _ ?s-conf _ _ _)
+      ((p/mangle #",") ?line
+       :> ?s-lat ?s-lon ?s-kelvin _ _ ?datestring _ _ ?s-conf _ _ _)
       (daily-datestring ?datestring :> ?date)
       (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)))
 
@@ -225,8 +225,8 @@
     (<- [?dataset ?date ?t-res ?lat ?lon ?tuple]
         (src ?line)
         (valid-fire? ?line expected-fields)
-        (p/mangle [#","] ?line
-                  :> ?s-lat ?s-lon ?s-kelvin _ _ ?date _ _ ?s-conf _ _ _)
+        ((p/mangle #",") ?line
+         :> ?s-lat ?s-lon ?s-kelvin _ _ ?date _ _ ?s-conf _ _ _)
         (fire-pred ?s-lat ?s-lon ?s-kelvin ?s-conf :> ?dataset ?t-res ?lat ?lon ?tuple)
         (keep-fire? s-res tile-set ?lat ?lon))))
 

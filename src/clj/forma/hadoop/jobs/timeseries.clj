@@ -2,7 +2,7 @@
   (:use cascalog.api
         [forma.matrix.utils :only (sparse-expander)]
         [forma.source.tilesets :only (tile-set)])
-  (:require [cascalog.ops :as c]
+  (:require [cascalog.logic.ops :as c]
             [forma.reproject :as r]
             [forma.date-time :as date]
             [forma.hadoop.pail :as pail]
@@ -12,7 +12,7 @@
             [forma.hadoop.predicate :as p]
             [forma.utils :as utils]))
 
-(defbufferop [timeseries [missing-val]]
+(defn timeseries
   "Takes in a number of `<t-period, modis-chunk>` tuples,
   sorted by time period, and transposes these into (n = chunk-size)
   4-tuples, formatted as `<pixel-idx, start, end, t-series>`, where
@@ -20,16 +20,18 @@
 
   Entering chunks should be sorted by `t-period` in ascending
   order. `modis-chunk` tuple fields must be vectors."
-  [tuples]
-  (let [[periods [val]] (apply map vector tuples)
-        [fp lp] ((juxt first peek) periods)
-        missing-struct (thrift/pack (repeat (thrift/count-vals val) missing-val))
-        chunks (sparse-expander missing-struct tuples :start fp)
-        tupleize (comp (partial vector fp lp) thrift/pack vector)]
-    (->> chunks
-         (map thrift/unpack)
-         (apply map tupleize)
-         (map-indexed cons))))
+  [missing-val]
+  (bufferfn
+   [tuples]
+   (let [[periods [val]] (apply map vector tuples)
+         [fp lp] ((juxt first peek) periods)
+         missing-struct (thrift/pack (repeat (thrift/count-vals val) missing-val))
+         chunks (sparse-expander missing-struct tuples :start fp)
+         tupleize (comp (partial vector fp lp) thrift/pack vector)]
+     (->> chunks
+          (map thrift/unpack)
+          (apply map tupleize)
+          (map-indexed cons)))))
 
 (defn form-tseries
   "Returns a predicate macro aggregator that generates a timeseries,
@@ -40,7 +42,7 @@
   (<- [?temporal-res ?date ?chunk :> ?pix-idx ?t-start ?t-end ?tseries]
       (date/datetime->period ?temporal-res ?date :> ?tperiod)
       (:sort ?tperiod)
-      (timeseries [missing-val] ?tperiod ?chunk :> ?pix-idx ?t-start ?t-end ?tseries)))
+      ((timeseries missing-val) ?tperiod ?chunk :> ?pix-idx ?t-start ?t-end ?tseries)))
 
 (defn extract-tseries
   "Given a source of chunks, this subquery extracts the proper
@@ -82,7 +84,7 @@
   :init-var    #'identity
   :combine-var #'schema/add-fires)
 
-(defmapop running-fire-sum
+(defn running-fire-sum
   "Special case of `running-sum` for fire objects."
   [start tseries]
   (when (seq tseries)

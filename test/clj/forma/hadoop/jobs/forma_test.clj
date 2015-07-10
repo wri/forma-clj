@@ -48,7 +48,7 @@
 (def s-res "500")
 (def loc-vec [s-res 28 8 0 0])
 (def pixel-loc (apply thrift/ModisPixelLocation* loc-vec))
-(def vcf-src    [(conj loc-vec 26)]) 
+(def vcf-src    [(conj loc-vec 26)])
 (def hansen-src [(conj loc-vec 100)])
 (def ecoid-src  [(conj loc-vec 10101)])
 (def gadm-src   [(conj loc-vec 40132)])
@@ -188,7 +188,7 @@
        (map last (telescoping-trends test-map2 start-idx ndvi rain)))) => true)
 
 (fact
-  "Test `telescoping-trends-wrapper` defmapcatop - math is tested elsewhere."
+  "Test `telescoping-trends-wrapper` mapcatfn - math is tested elsewhere."
   (let [src [["500" 28 8 0 0 693 (vec (range 300))
                     (vec (map #(/ % 100.) (range 1 301)))]]]
     (<- [?s-res ?mod-h ?mod-v ?sample ?line ?start ?end-l ?short-l ?long-l ?t-stat-l ?break-l]
@@ -240,7 +240,7 @@
  ;; ok
  true    [[1 :2005-12-19 [1 2] [3 4] [5 6] [7 8]]
           [1 :2006-01-17 [11 12] [13 14] [15 16] [17 18]]]  [1 2 11 12]
-          
+
  ;; not consecutive
  true    [[1 :2005-12-19 [1 2] [3 4] [5 6] [7 8]]
           [1 :2006-02-02 [11 12] [13 14] [15 16] [17 18]]]  (throws AssertionError)
@@ -270,9 +270,9 @@
              [50 1 :2006-01-17 [6] [7] [8] [9]]]] ;; replaces 3rd element
     (<- [?id ?start-final ?short-final ?long-final ?t-stat-final ?break-final]
         (src ?id ?created ?start-key ?short ?long ?t-stat ?break)
-        (merge-series-wrapper [t-res nodata] ?created ?start-key ?short
-                              ?long ?t-stat ?break :> ?start-final ?short-final
-                              ?long-final ?t-stat-final ?break-final)))
+        ((merge-series-wrapper t-res nodata) ?created ?start-key ?short
+         ?long ?t-stat ?break :> ?start-final ?short-final
+         ?long-final ?t-stat-final ?break-final)))
   => (produces [[50 827 [1 11 6] [2 12 7] [3 13 8] [4 14 9]]]))
 
 (fact "Test `array-val->series`."
@@ -294,7 +294,7 @@
   (let [test-map (assoc test-map :est-start "2005-12-19" :est-end "2006-01-17")
         fire-val (thrift/FireValue* 0 0 0 0)
         forma-val (thrift/FormaValue* fire-val 1. 2. 3. 4.)
-        forma-val2 (thrift/FormaValue* fire-val 11. 12. 13. 14.) 
+        forma-val2 (thrift/FormaValue* fire-val 11. 12. 13. 14.)
         data (thrift/TimeSeries* 827 [forma-val forma-val])
         data2 (thrift/TimeSeries* 828 [forma-val2 forma-val2]) ;; overlapping `data`
         src [["" (thrift/DataChunk* "trends" pixel-loc data "16" :pedigree 1)]
@@ -317,7 +317,7 @@
                      ["500" 28 8 0 1 start-idx p2 p2 p2 p2]]
         fire-src [["500" 28 8 0 0 (sample-fire-series 709 350 0 0 0 1)]]
         src (forma-tap test-map dynamic-src fire-src)
-        
+
         est-start-idx (date/datetime->period "16" "2010-01-01")
         ridx1a (- est-start-idx start-idx)
         ridx1b (inc ridx1a)
@@ -429,7 +429,7 @@
                                nil)]
     (<- [?win-idx ?unpacked-fire ?neighbor-sans-fire]
         (src _ _ _ _ _ _ ?window)
-        (process-neighbors [neighbors] ?window nodata :> ?win-idx ?val ?neighbor-val)
+        ((process-neighbors neighbors) ?window nodata :> ?win-idx ?val ?neighbor-val)
         (thrift/unpack* ?neighbor-val :> ?unpacked-neighbor)
         (first ?unpacked-neighbor :> ?fire-val)
         (thrift/unpack* ?fire-val :> ?unpacked-fire)
@@ -484,7 +484,7 @@
                           ["500" 1 (vec (repeat 21 0.75))]])]
     (<- [?id ?prob]
         (src ?id ?eco ?forma-val ?neighbor-val)
-        (apply-betas [betas] ?eco ?forma-val ?neighbor-val :> ?prob)))
+        ((apply-betas betas) ?eco ?forma-val ?neighbor-val :> ?prob)))
   => (produces [[1 0.9999999999771026]
                 [2 1.0]]))
 

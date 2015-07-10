@@ -9,7 +9,7 @@
   (:require [forma.postprocess.output :as o]
             [forma.reproject :as r]
             [forma.date-time :as date]
-            [cascalog.ops :as c]))
+            [cascalog.logic.ops :as c]))
 
 (def DEFAULT-DISCOUNT 1)
 
@@ -18,7 +18,7 @@
   [line re]
   (clojure.string/split line re))
 
-(defbufferop min-period
+(defbufferfn min-period
   "Returns the minimum value in tuples."
   [tuples]
   [(reduce min (map first tuples))])

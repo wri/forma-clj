@@ -3,7 +3,7 @@
         [forma.reproject :only (modis->latlon)]
         [incanter.core :only (view)]
         [incanter.charts :only (histogram)])
-  (:require [cascalog.ops :as c]))
+  (:require [cascalog.logic.ops :as c]))
 
 (def forma-src
   [[0 0 50 50 2006 82]
@@ -123,5 +123,5 @@ included in the FORMA data set, perhaps because VCF<25"
 
 ;; (defn get-hist
 ;;   [result-pairs]
-;;   (for [[forma prodes] result-pairs :when (< forma 50)] 
+;;   (for [[forma prodes] result-pairs :when (< forma 50)]
 ;;     prodes))

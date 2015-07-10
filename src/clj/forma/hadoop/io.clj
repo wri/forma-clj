@@ -5,10 +5,10 @@
 ;; abstraction.
 
 (ns forma.hadoop.io
-  (:use forma.schema
-        [cascalog.api :only (hfs-tap)]
-        [clojure.string :only (join)])
-  (:require [cascalog.workflow :as w]
+  (:use forma.schema)
+  (:require [cascalog.api :refer [hfs-tap]]
+            [cascalog.cascading.util :as cu]
+            [clojure.string :refer [join]]
             [forma.reproject :as r])
   (:import [forma WholeFile]
            [cascading.tuple Fields]))
@@ -69,7 +69,7 @@
 (defn whole-file
   "Custom scheme for dealing with entire files."
   [field-names]
-  (WholeFile. (w/fields field-names)))
+  (WholeFile. (cu/fields field-names)))
 
 ;; ## Cascading Taps
 ;;

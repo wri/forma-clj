@@ -1,16 +1,16 @@
 (ns forma.hadoop.predicate
-  (:use cascalog.api
-        [forma.matrix.utils :only (sparse-expander matrix-of)]
-        [forma.reproject :only (pixels-at-res)])
-  (:require [forma.utils :as u]
+  (:use cascalog.api)
+  (:require [cascalog.cascading.conf :as conf]
+            [cascalog.logic.ops :as c]
+            [cascalog.logic.vars :as v]
+            [clojure.string :as s]
+            [forma.utils :as u]
+            [forma.hadoop.io :as io]
             [forma.schema :as schema]
+            [forma.matrix.utils :refer [sparse-expander matrix-of]]
+            [forma.reproject :refer [pixels-at-res]]
             [forma.reproject :as r]
             [forma.thrift :as thrift]
-            [forma.hadoop.io :as io]
-            [clojure.string :as s]
-            [cascalog.ops :as c]
-            [cascalog.vars :as v]
-            [cascalog.conf :as conf]
             [hadoop-util.core :as hadoop])
   (:import [org.apache.hadoop.mapred JobConf]
            [cascading.flow.hadoop HadoopFlowProcess]
@@ -28,17 +28,17 @@
 
 ;; ### Operations
 
-;; #### Defmapops
+;; #### Defmapfns
 
 (defn add-fields
   "Adds an arbitrary number of fields to tuples in a cascalog query."
   [& fields]
   (vec fields))
 
-(defmapop [mangle [re]]
+(defn mangle
   "Splits textlines using the supplied regex."
-  [line]
-  (s/split line re))
+  [re]
+  (mapfn [line] (s/split line re)))
 
 (defn liberate
   "Takes a line with an index as the first value and numbers as the
@@ -54,7 +54,7 @@
                               (s/split line #"\s+"))]
     [idx (vec row-vals)]))
 
-(defmapop flatten-window
+(defn flatten-window
   "Flattens a window of nested clojure vectors into a single
   vector. For example:
 
@@ -62,9 +62,9 @@
   [window]
   [(into [] (flatten window))])
 
-;; #### Defmapcatops
+;; #### Defmapcatfns
 
-(defmapcatop index
+(defmapcatfn index
   "splits a sequence of values into nested 2-tuples formatted as
   `<idx, val>`. Index supports the `zero-index` keyword argument; this
   defaults to zero."
@@ -76,23 +76,25 @@
 
 ;; #### Aggregators
 
-(defbufferop [sparse-expansion [start length missing-val]]
+(defn sparse-expansion
   "Receives 2-tuple pairs of the form `<idx, val>`, inserts each
   `val` into a sparse vector at the corresponding `idx`. The `idx` of
   the first tuple will be treated as the zero value. The first tuple
   will `missing-val` will be substituted for any missing value."
-  [tuples]
-  [[(sparse-expander missing-val
-                     tuples
-                     :start start
-                     :length length)]])
+  [start length missing-val]
+  (bufferfn
+   [tuples]
+   [[(sparse-expander missing-val
+                      tuples
+                      :start start
+                      :length length)]]))
 
 (defmacro defpredsummer
   "Generates cascalog defaggregateops for counting items that satisfy
   some custom predicate. Defaggregateops don't allow anonymous
   functions, so we went this route instead."
   [name vals pred]
-  `(defaggregateop ~name
+  `(defaggregatefn ~name
      ([] 0)
      ([count# ~@vals] (if (~pred ~@vals)
                         (inc count#)
@@ -117,7 +119,7 @@
   "Converts between a textline with two numbers encoded as strings and
    their integer representations."
   (<- [?textline :> ?country ?admin]
-      (mangle #"," ?textline :> ?country ?admin-s)
+      ((mangle #",") ?textline :> ?country ?admin-s)
       (u/strings->floats ?admin-s :> ?admin)))
 
 (defn blossom-chunk
@@ -179,7 +181,7 @@
          (:sort ?sub-idx)
          (- ?idx start :> ?start-idx)
          ((c/juxt #'mod #'quot) ?start-idx length :> ?sub-idx ?split-idx)
-         (sparse-expansion [0 length empty-val] ?sub-idx ?val :> ?split-vec))))
+         ((sparse-expansion 0 length empty-val) ?sub-idx ?val :> ?split-vec))))
 
 ;; ### Generators
 
@@ -193,7 +195,7 @@
     res - The spatial resolution.
     tileseq - Map of country ISO keywords to MODIS tiles (see: forma.source.tilesets)"
   [tmp-path res tileseq]
-  {:pre [(coll? tileseq) 
+  {:pre [(coll? tileseq)
          (string? res)]}
   (let [tap (:sink (hfs-seqfile tmp-path))]
     (with-open [^TupleEntryCollector collector

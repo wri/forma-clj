@@ -1,10 +1,9 @@
 (ns forma.trends.bfast
   "This namespace builds a light version of BFAST, a trend processing
   algorithm originally written in R by Vesserbelt, et al."
-  (:use [forma.trends.filter :only (deseasonalize make-reliable hp-filter)]
-        [clojure.contrib.seq-utils :only (positions)]
-        [clojure.math.numeric-tower :only (sqrt floor abs expt)])
-  (:require [incanter.core :as i]
+  (:require [forma.trends.filter :refer [deseasonalize make-reliable hp-filter]]
+            [clojure.math.numeric-tower :refer [sqrt floor abs expt]]
+            [incanter.core :as i]
             [incanter.stats :as s]))
 
 (defn xproduct
@@ -99,6 +98,19 @@
   {:pre [(i/matrix? yvec)]}
   (i/mmult Xmat (regression-coefs yvec Xmat)))
 
+(defn indexed
+  "Returns a lazy sequence of [index, item] pairs, where items come
+  from 's' and indexes count up from zero.
+  (indexed '(a b c d))  =>  ([0 a] [1 b] [2 c] [3 d])"
+  [s]
+  (map vector (iterate inc 0) s))
+
+(defn positions
+  "Returns a lazy sequence containing the positions at which pred
+   is true for items in coll."
+  [pred coll]
+  (for [[idx elt] (indexed coll) :when (pred elt)] idx))
+
 (defn first-index
   "Returns the first index within `coll` where the value satisfies `pred`.
 
@@ -179,7 +191,7 @@
     (recresid-sd y X) => 0.2641384342395973"
   [yvec Xmat]
   (let [tau (apply - ((juxt i/nrow i/ncol) Xmat))
-        residuals (recresid-series yvec Xmat) 
+        residuals (recresid-series yvec Xmat)
         resid-sum (i/sum-of-squares
                    (pmap
                     #(- % (s/mean residuals))

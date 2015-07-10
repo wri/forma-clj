@@ -58,7 +58,7 @@ error."
          subquery  (<- [?dataset ?chunkid ?chunk]
                        (src ?filename ?hdf)
                        (unpack-modis [[:ndvi]] ?hdf :> ?dataset ?freetile)
-                       (raster-chunks [chunk-size] ?freetile :> ?chunkid ?chunk))]
+                       ((raster-chunks chunk-size) ?freetile :> ?chunkid ?chunk))]
      (<- [?count]
          (subquery ?dataset ?chunkid ?chunk)
          (c/count ?count))) => (produces [[?num-chunks]]))
@@ -76,7 +76,7 @@ error."
     (<- [?productname ?tileid ?date]
         (source _ ?hdf)
         (unpack-modis [[:ndvi]] ?hdf :> ?dataset ?freetile)
-        (meta-values [ks] ?freetile :> ?productname ?tileid ?date))
+        ((meta-values ks) ?freetile :> ?productname ?tileid ?date))
     => (produces [xs])))
 
 (fact "split-id tests."

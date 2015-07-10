@@ -7,14 +7,14 @@
   (:use cascalog.api
         [forma.source.gadmiso :only (gadm2->iso)]
         [forma.hadoop.jobs.postprocess :only (first-hit)])
-  (:require [cascalog.ops :as c]
+  (:require [cascalog.logic.ops :as c]
             [forma.postprocess.output :as o]
             [forma.reproject :as r]
             [forma.date-time :as date]
             [forma.utils :as u]
             [forma.hadoop.predicate :as p]))
 
-(defmapcatop wide->long
+(defmapcatfn wide->long
   "Convert a series from wide to long form.
 
    Usage:

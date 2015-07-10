@@ -26,7 +26,7 @@
       src [[(vec (range (* 2 720)))]]]
   (<- [?row ?row-data]
       (src ?rain-data)
-      (to-rows [step] ?rain-data :> ?row ?row-data))) => (produces-some [[0 (vec (range 720))]]))
+      ((to-rows step) ?rain-data :> ?row ?row-data))) => (produces-some [[0 (vec (range 720))]]))
 
 (facts
   "Test that `all-nodata?` correctly identifies collections with no valid values"
@@ -47,13 +47,13 @@
 
 (fact
   "Test resample-rain Cascalog query.
-  
+
   The resample-rain query takes a tap that emits rain tuples and a tap that
   emits MODIS pixels. It emits the same rain tuples projected into MODIS
   pixel coordinates."
   (let [tile-seq #{[8 6]}
-        file-tap nil 
-        test-rain-data [["2000-01-01" 239 489 100]] 
+        file-tap nil
+        test-rain-data [["2000-01-01" 239 489 100]]
         pix-tap [[8 6 0 0]]
         ascii-map {:corner [0 -90] :travel [+ +] :step 0.5 :nodata -999}
         m-res "500"]
@@ -120,7 +120,7 @@
   (let [rain-src [[0 1]]]
     (<- [?mod-h ?mod-v ?sample ?line]
         (rain-src ?row ?col)
-        (explode-rain "500" ?row ?col :> ?mod-h ?mod-v ?sample ?line))
+        ((explode-rain "500") ?row ?col :> ?mod-h ?mod-v ?sample ?line))
     => (produces-some [[18 17 120 2283]])))
 
 (fact

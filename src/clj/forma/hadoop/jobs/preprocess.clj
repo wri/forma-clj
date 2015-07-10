@@ -1,12 +1,13 @@
 (ns forma.hadoop.jobs.preprocess
-  (:use cascalog.api
-        [forma.hadoop.pail :only (to-pail split-chunk-tap)]
-        [forma.source.tilesets :only (tile-set)]
-        [cascalog.io :only (with-fs-tmp)])
-  (:require [forma.hadoop.predicate :as p]
+  (:use cascalog.api)
+  (:require [cascalog.cascading.io :refer [with-fs-tmp]]
+            [cascalog.logic.ops :as c]
+            [forma.hadoop.predicate :as p]
             [forma.hadoop.io :as io]
+            [forma.hadoop.pail :refer [to-pail split-chunk-tap]]
             [forma.date-time :as date]
             [forma.source.rain :as r]
+            [forma.source.tilesets :refer [tile-set]]
             [forma.reproject :as reproj]
             [forma.thrift :as thrift]
             [forma.hadoop.jobs.forma :as forma]
@@ -16,7 +17,6 @@
             [forma.source.hdf :as hdf]
             [forma.hadoop.jobs.timeseries :as tseries]
             [forma.static :as static]
-            [cascalog.ops :as c]
             [forma.utils :as utils]))
 
 (defn parse-locations
@@ -26,7 +26,7 @@
   [tiles-or-isos]
   {:pre [(let [tiles-or-isos (utils/arg-parser tiles-or-isos)] ;; handle str
            (or (= :all tiles-or-isos) ;; check for :all kw
-               (every? #(or (coll? %) (keyword? %)) tiles-or-isos)))] 
+               (every? #(or (coll? %) (keyword? %)) tiles-or-isos)))]
    :post [(let [not-kw? (comp not keyword? first)] ;; handle incorrect nesting
             (every? not-kw? %))]}
   (let [tiles-or-isos (utils/arg-parser tiles-or-isos) ;; handle string colls
@@ -147,7 +147,7 @@
    Usage:
      hadoop jar target/forma-0.2.0-SNAPSHOT-standalone.jar s3n://formastaging/MOD13A1 \\
      s3n://pailbucket/all-master \"{2012}*\" \"[:all]\""
-  [input-path pail-path date tiles-or-isos subsets]  
+  [input-path pail-path date tiles-or-isos subsets]
   (let [subsets (->> (utils/arg-parser subsets)
                      (filter (partial contains? (set static/forma-subsets))))
         tiles (parse-locations tiles-or-isos)

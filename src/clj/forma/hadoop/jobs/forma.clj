@@ -2,7 +2,7 @@
   (:use cascalog.api
         [forma.hadoop.pail :only (split-chunk-tap)]
         [forma.source.ecoregion :only (get-ecoregion get-super-ecoregion)])
-  (:require [cascalog.ops :as c]
+  (:require [cascalog.logic.ops :as c]
             [forma.matrix.walk :as w]
             [forma.reproject :as r]
             [forma.date-time :as date]
@@ -178,7 +178,7 @@
     (into [(first all-trends-but-short) (vec short-stats)]
           (take-last 3 all-trends-but-short))))
 
-(defmapcatop telescoping-trends-wrapper
+(defmapcatfn telescoping-trends-wrapper
   "Wrapper for `telescoping-trends` makes it easier to test that
    function outside of the Cascalog context."
   [est-map ts-start-period val-ts rain-ts]
@@ -259,11 +259,13 @@
           (into [start-idx])
           (vector))))
 
-(defbufferop [merge-series-wrapper [t-res nodata]]
-  "defbufferop wrapper for `merge-series`."
-  [tuples]
-  (let [consecutive true]
-    (merge-series t-res nodata tuples :consecutive consecutive)))
+(defn merge-series-wrapper
+  "defbufferfn wrapper for `merge-series`."
+  [t-res nodata]
+  (bufferfn
+   [tuples]
+   (let [consecutive true]
+     (merge-series t-res nodata tuples :consecutive consecutive))))
 
 (defn array-val->series
   "Given an ArrayValue of FormaValues (the product of unpacking the
@@ -297,9 +299,9 @@
         (thrift/unpack ?data :> ?start ?end ?array-val)
         (array-val->series ?array-val :> _ ?short ?long ?t-stat ?break)
         (date/period->key ?t-res ?start :> ?start-key)
-        (merge-series-wrapper [t-res nodata] ?created ?start-key ?short
-                              ?long ?t-stat ?break :> ?start-final ?short-final
-                              ?long-final ?t-stat-final ?break-final))))
+        ((merge-series-wrapper t-res nodata) ?created ?start-key ?short
+         ?long ?t-stat ?break :> ?start-final ?short-final
+         ?long-final ?t-stat-final ?break-final))))
 
 (defn forma-tap
   "Accepts an est-map and sources for dynamic and fires data,
@@ -330,18 +332,20 @@
         (>= ?period start)
         (:distinct false))))
 
-(defmapcatop [process-neighbors [num-neighbors]]
+(defn process-neighbors
   "Processes all neighbors... Returns the index within the chunk, the
   value, and the aggregate of the neighbors."
-  [window nodata]
-  (for [[idx [val neighbors]]
-        (->> (w/neighbor-scan num-neighbors window)
-             (map-indexed vector))
-        :when val]
-    [idx val (->> neighbors
-                  (apply concat)
-                  (filter identity)
-                  (schema/combine-neighbors nodata))]))
+  [num-neighbors]
+  (mapcatfn
+   [window nodata]
+   (for [[idx [val neighbors]]
+         (->> (w/neighbor-scan num-neighbors window)
+              (map-indexed vector))
+         :when val]
+     [idx val (->> neighbors
+                   (apply concat)
+                   (filter identity)
+                   (schema/combine-neighbors nodata))])))
 
 (defn neighbor-query
   "final query that walks the neighbors and spits out the values."
@@ -354,10 +358,10 @@
                                nil)]
     (<- [?s-res ?period ?mod-h ?mod-v ?sample ?line ?val ?neighbor-val]
         (src ?s-res ?period ?mod-h ?mod-v ?win-col ?win-row ?window)
-        (process-neighbors [neighbors] ?window nodata :> ?win-idx ?val ?neighbor-val)
+        ((process-neighbors neighbors) ?window nodata :> ?win-idx ?val ?neighbor-val)
         (r/tile-position cols rows ?win-col ?win-row ?win-idx :> ?sample ?line))))
 
-(defmapcatop eco-and-super
+(defmapcatfn eco-and-super
   "Wrapper for `get-ecoregion` returns an ecoid and its associated
   super-ecoregion.
 
@@ -386,7 +390,7 @@
                        (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
                        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?ecoid ?hansen ?coast-dist)
                        (thrift/obj-contains-nodata? nodata ?val :> false)
-                       (thrift/obj-contains-nodata? nodata ?neighbor-val :> false)        
+                       (thrift/obj-contains-nodata? nodata ?neighbor-val :> false)
                        (= ?pd first-idx)
                        (>= ?coast-dist min-coast-dist)
                        (:distinct false))]
@@ -402,17 +406,16 @@
   (let [first-idx (date/datetime->period t-res est-start)]
     (<- [?s-res ?ecoregion ?beta]
         (src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val ?ecoregion ?hansen)
-        (classify/logistic-beta-wrap
-         [ridge-const convergence-thresh max-iterations]
+        ((classify/logistic-beta-wrap ridge-const convergence-thresh max-iterations)
          ?hansen ?val ?neighbor-val :> ?beta)
         (:distinct false))))
 
-(defmapop [apply-betas [betas]]
-  [eco val neighbor-val]
-  (let [beta (((comp keyword str) eco) betas)]
-    (classify/logistic-prob-wrap beta val neighbor-val)))
+(defn apply-betas [betas]
+  (mapfn [eco val neighbor-val]
+         (let [beta (((comp keyword str) eco) betas)]
+           (classify/logistic-prob-wrap beta val neighbor-val))))
 
-(defbufferop consolidate-timeseries
+(defbufferfn consolidate-timeseries
   "Orders tuples by the second incoming field, inserting a supplied
    nodata value (first incoming field) where there are holes in the
    timeseries.
@@ -445,7 +448,7 @@
         (thrift/obj-contains-nodata? nodata ?neighbor-val :> false)
         (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?ecoregion _ _)
         (get-ecoregion ?ecoregion :super-ecoregions super-ecoregions :> ?final-eco)
-        (apply-betas [betas] ?final-eco ?val ?neighbor-val :> ?prob)
+        ((apply-betas betas) ?final-eco ?val ?neighbor-val :> ?prob)
         (consolidate-timeseries nodata ?pd ?prob :> ?pd-series ?prob-series)
         (first ?pd-series :> ?start-idx)
         (:distinct false))))
@@ -478,8 +481,8 @@
         (thrift/unpack ?data :> ?start ?end ?array-val)
         (thrift/unpack* ?array-val :> ?prob-series)
         (date/period->key ?t-res ?start :> ?start-key)
-        (merge-series-wrapper [t-res nodata] ?created ?start-key ?prob-series
-                              :> ?start-final ?merged-series))))
+        ((merge-series-wrapper t-res nodata) ?created ?start-key ?prob-series
+         :> ?start-final ?merged-series))))
 
 (defn probs-gadm2
   [probs-src gadm2-src static-src]

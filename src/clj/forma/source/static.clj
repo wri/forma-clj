@@ -1,7 +1,7 @@
 (ns forma.source.static
   (:use cascalog.api
         [forma.static :only (static-datasets)])
-  (:require [cascalog.ops :as c]
+  (:require [cascalog.logic.ops :as c]
             [forma.reproject :as r]
             [forma.schema :as schema]
             [forma.thrift :as thrift]

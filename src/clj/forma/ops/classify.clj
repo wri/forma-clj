@@ -1,9 +1,9 @@
 (ns forma.ops.classify
   "Convenient wrapper functions for the classify.logistic namespace,
   used mainly to compose cascalog queries."
-  (:use [forma.classify.logistic]
-        [cascalog.api])
-  (:require [cascalog.ops :as c]
+  (:use cascalog.api
+        forma.classify.logistic)
+  (:require [cascalog.logic.ops :as c]
             [forma.thrift :as thrift]))
 
 (defn unpack-feature-vec
@@ -20,17 +20,19 @@
     (into [] (concat [1] fire-seq [short long t-stat break]
                      fire-neighbor more))))
 
-(defbufferop [logistic-beta-wrap [r c m]]
+(defn logistic-beta-wrap
   "Accepts all tuples within an ecoregion and returns a coefficient
   vector resulting from a logistic regression."
-  [tuples]
-  (let [make-binary  (fn [x] (if (zero? x) 0 1))
-        pixel-features (for [x tuples]
-                         (let [[label val neighbor] x]
-                           [(make-binary label) (unpack-feature-vec val neighbor)]))]
-    [[(logistic-beta-vector (to-double-rowmat (map first pixel-features))
-                            (to-double-matrix (map second pixel-features))
-                            r c m)]]))
+  [r c m]
+  (bufferfn
+   [tuples]
+   (let [make-binary  (fn [x] (if (zero? x) 0 1))
+         pixel-features (for [x tuples]
+                          (let [[label val neighbor] x]
+                            [(make-binary label) (unpack-feature-vec val neighbor)]))]
+     [[(logistic-beta-vector (to-double-rowmat (map first pixel-features))
+                             (to-double-matrix (map second pixel-features))
+                             r c m)]])))
 
 (defn logistic-prob-wrap
   "Accepts the appropriate coefficient (beta) vector for a given
