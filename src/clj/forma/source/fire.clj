@@ -38,7 +38,7 @@
   fires. In this step, it represents a single fire. The 'temp330' is set to 1
   if the fire is greater than 330 degrees Kelvin. The 'conf50' is set to 1 if
   the fire confidence is greater than 50. If 'temp330' and 'conf50' are both 1,
-  the 'bothPreds' is set to 1. For a single fire, the 'count' is set to 1. 
+  the 'bothPreds' is set to 1. For a single fire, the 'count' is set to 1.
 
   At the end of this step, we have a single Pail full of DataChunk objects, one
   per fire, each which represents the fire in MODIS pixel coordinates.
@@ -81,7 +81,7 @@
 
   Example usage:
     > (monthly->standard 19770202)
-    1977-02-02"  
+    1977-02-02"
   [date-str]
   (convert date-str :basic-date :year-month-day))
 

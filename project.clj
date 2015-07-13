@@ -7,6 +7,7 @@
   :marginalia {:javascript ["mathjax/MathJax.js"]}
   :resources-paths ["resources"]
   :dev-resources-paths ["dev"]
+  :uberjar-name "uberforma.jar"
   :jvm-opts ["-XX:MaxPermSize=128M"
              "-XX:+UseConcMarkSweepGC"
              "-Xms1024M" "-Xmx1048M" "-server"]

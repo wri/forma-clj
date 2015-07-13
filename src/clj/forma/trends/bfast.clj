@@ -179,7 +179,7 @@
     (recresid-sd y X) => 0.2641384342395973"
   [yvec Xmat]
   (let [tau (apply - ((juxt i/nrow i/ncol) Xmat))
-        residuals (recresid-series yvec Xmat) 
+        residuals (recresid-series yvec Xmat)
         resid-sum (i/sum-of-squares
                    (pmap
                     #(- % (s/mean residuals))

@@ -26,7 +26,7 @@
   [tiles-or-isos]
   {:pre [(let [tiles-or-isos (utils/arg-parser tiles-or-isos)] ;; handle str
            (or (= :all tiles-or-isos) ;; check for :all kw
-               (every? #(or (coll? %) (keyword? %)) tiles-or-isos)))] 
+               (every? #(or (coll? %) (keyword? %)) tiles-or-isos)))]
    :post [(let [not-kw? (comp not keyword? first)] ;; handle incorrect nesting
             (every? not-kw? %))]}
   (let [tiles-or-isos (utils/arg-parser tiles-or-isos) ;; handle string colls
@@ -145,9 +145,9 @@
   "Preprocess MODIS data from raw HDF files to pail.
 
    Usage:
-     hadoop jar target/forma-0.2.0-SNAPSHOT-standalone.jar s3n://formastaging/MOD13A1 \\
+     hadoop jar target/<jarname>.jar s3n://formastaging/MOD13A1 \\
      s3n://pailbucket/all-master \"{2012}*\" \"[:all]\""
-  [input-path pail-path date tiles-or-isos subsets]  
+  [input-path pail-path date tiles-or-isos subsets]
   (let [subsets (->> (utils/arg-parser subsets)
                      (filter (partial contains? (set static/forma-subsets))))
         tiles (parse-locations tiles-or-isos)

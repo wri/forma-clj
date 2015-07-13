@@ -499,7 +499,7 @@ in which `string` lies (according to the supplied resolution, `res`)."
   "Extract values from `get-start` (inclusive) to `get-end` (exclusive)
    in a series based on the temporal resolution and supplied series start
    and end.
-   
+
    Usage:
      (temporal-subvec \"2005-01-01\" \"2005-01-17\" \"2005-01-01\" \"2005-02-18\" \"16\" [1 2 3 4])
      ;=> [1 2]"

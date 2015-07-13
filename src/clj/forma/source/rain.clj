@@ -151,7 +151,7 @@
         (all-nodata? nodata ?raindata :> false)
         (to-rows [step] ?raindata :> ?row ?row-data)
         (p/index ?row-data :> ?col ?val))))
-  
+
 (defn read-rain
   [ascii-map path]
   (let [file-tap (fio/hfs-wholefile path)
@@ -244,13 +244,13 @@
 
 (defn rain-tap
   "Accepts a source of rain pixels and their associated rain time
-  series, along with a spatial resolution, nodata value, base temporal 
-  resolution and target resolution. Returns a tap that contains the 
-  rain row and column, as well as the stretched and rounded series. 
-  
-  Nodata values are replaced by the immediately preceeding good value 
-  so that they don't interfere with the stretching process (which includes 
-  averaging values where periods span months). A default of 0 is used in 
+  series, along with a spatial resolution, nodata value, base temporal
+  resolution and target resolution. Returns a tap that contains the
+  rain row and column, as well as the stretched and rounded series.
+
+  Nodata values are replaced by the immediately preceeding good value
+  so that they don't interfere with the stretching process (which includes
+  averaging values where periods span months). A default of 0 is used in
   the case of a missing value at the beginning of the rain timeseries."
   [rain-src s-res nodata rain-t-res out-t-res]
   (let [series-src (mk-rain-series rain-src nodata)]
@@ -281,7 +281,7 @@
   Arguments:
     m-res - The MODIS resolution as a string.
     ascii-map - A map containing values for step and nodata values.
-    file-tap - Cascalog generator that emits rain tuples  [date row col value]. 
+    file-tap - Cascalog generator that emits rain tuples  [date row col value].
     pix-tap - Cascalog generator that emits MODIS pixel tuples [h v sample line].
     args - Optional memory file-tap of rain tuples used for testing.
 
@@ -297,10 +297,10 @@
     ?val - The rain value.
 
   Example usage:
-    > (??- 
+    > (??-
         (let [tile-seq #{[8 6]}
              file-tap nil
-             test-rain-data [[\"2000-01-01\" 239 489 100]] 
+             test-rain-data [[\"2000-01-01\" 239 489 100]]
              pix-tap [[8 6 0 0]]
              ascii-map {:corner [0 -90] :travel [+ +] :step 0.5 :nodata -999}
              m-res \"500\"]
@@ -308,7 +308,7 @@
   [m-res {:keys [step nodata] :as ascii-map} file-tap pix-tap & args]
   (let [[test-rain-vals] args
         rain-vals (if (not test-rain-vals) (rain-values step nodata file-tap) test-rain-vals)
-        mod-coords ["?mod-h" "?mod-v" "?sample" "?line"]]    
+        mod-coords ["?mod-h" "?mod-v" "?sample" "?line"]]
     (<- [?dataset ?m-res ?t-res !date ?mod-h ?mod-v ?sample ?line ?val]
         (rain-vals !date ?row ?col ?float-val)
         (double ?float-val :> ?val)

@@ -89,7 +89,7 @@
   "Trims a sequence with initial value indexed at x0 to fit within
   bottom (inclusive) and top (exclusive).
 
-  Example usage: 
+  Example usage:
     (trim-seq 0 2 0 [4 5 6]) => [4 5]"
   [bottom top x0 seq]
   {:pre [(not (empty? seq))]}
@@ -226,7 +226,7 @@
                            (not (== bad-val (coll j)))
                            (not (=  bad-val (coll j))))
                        true
-                       false) (coll j)                     
+                       false) (coll j)
                      (zero? j) default ;; all bad values from start to j
                      :else (recur (dec j)))))))))
 

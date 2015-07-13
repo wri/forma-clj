@@ -65,7 +65,7 @@
   order of the elements of the returned vector matters:
   [?false-pos ?true-neg ?true-pos ?false-neg]
 
-  Example use case: 
+  Example use case:
     (defn error-tap []
       (??<- [?fp-sum ?tn-sum ?tp-sum ?fn-sum]
             (sample-output-map ?m)

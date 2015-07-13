@@ -123,5 +123,5 @@ included in the FORMA data set, perhaps because VCF<25"
 
 ;; (defn get-hist
 ;;   [result-pairs]
-;;   (for [[forma prodes] result-pairs :when (< forma 50)] 
+;;   (for [[forma prodes] result-pairs :when (< forma 50)]
 ;;     prodes))
