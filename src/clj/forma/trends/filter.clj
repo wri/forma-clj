@@ -163,7 +163,7 @@
   [bad-set coll]
   (let [m-coll (map-indexed vector coll)
         r-coll (reverse m-coll)]
-    (set 
+    (set
      (apply concat
             (map #(for [[m n] % :while (bad-set n)] m)
                  [m-coll r-coll])))))

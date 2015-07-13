@@ -12,7 +12,7 @@
 
 ;; This namespace uses a dataset of David Wheeler's super-regions -
 ;; defined in WRI FORMA Note #15 (June 2013) - to replace a pixel's
-;; ecoid with the id of a super-ecoregion that may be adequately 
+;; ecoid with the id of a super-ecoregion that may be adequately
 
 ;; Assumes use of 500m data. The number of pixels vs. number of hits
 ;; will be different for a different resolution.

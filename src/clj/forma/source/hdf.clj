@@ -89,7 +89,7 @@
   ([^Dataset modis key]
      (into {} (.GetMetadata_Dict modis key))))
 
-;; The "SUBDATASETS" metadata dictionary contains 
+;; The "SUBDATASETS" metadata dictionary contains
 ;;
 ;; The paths to these are contained within the "SUBDATASETS" metadata
 ;; dictionary of the wrapping archive. This dictionary contains 18
@@ -175,7 +175,7 @@ as a 1-tuple."
 ;;functions to scale directly with pixel count, rather than with
 ;;number of datasets processed.
 
-(defmapcatop [raster-chunks [chunk-size]]  
+(defmapcatop [raster-chunks [chunk-size]]
   "Unpacks the data inside of a MODIS band and partitions it into
   chunks sized according to the supplied value. Specifically, returns
   a lazy sequence of 2-tuples of the form `[chunk-index, vector]`."

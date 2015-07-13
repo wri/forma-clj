@@ -25,7 +25,7 @@
                      "16"
                      :date "2001"))
 
-;; Cascalog memory tap for tile chunks: 
+;; Cascalog memory tap for tile chunks:
 (def tile-chunk-tap [[tile-chunk]])
 
 (def ts (let [ts (repeat 10 100)]

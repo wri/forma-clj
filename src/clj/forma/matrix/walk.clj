@@ -64,7 +64,7 @@ moving window."
   "Iterates across the supplied two dimensional matrix, returning a
   lazy sequence of 2-element vectors of the form `[matrix entry,
   neighbor-seq]`. Neighbors outside the matrix are reported as
-  nil. 
+  nil.
 
   Example usage:
     (def test-matrix [[:0 :1 :2 :3]

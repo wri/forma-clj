@@ -51,7 +51,7 @@
           yt-flipped (-> (- (math/expt 2 zoom) 1)
                           (- yt))]
       [xt yt-flipped zoom]))
-    
+
   (latlon->meters
     [this]
     "Returns this alert coordinates as meters."
@@ -65,7 +65,7 @@
                  (/ (/ Math/PI 180))
                  (* (/ origin-shift 180)))]
       [ym xm]))
-  
+
   (meters->pixels
     [this]
     "Returns this alert coordinates as pixels."
@@ -90,8 +90,8 @@
                  (Math/ceil)
                  (- 1)
                  (int))]
-      [yt xt]))   
-  
+      [yt xt]))
+
     (resolution
      [this]
      "Returns this alert map resolution in meters per pixel."

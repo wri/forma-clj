@@ -1,6 +1,6 @@
 (ns forma.thrift
   "This namespace provides an API for creating, accessing fields of, and
-   unpacking Thrift objects defined in the dev/forma.thrift IDL. 
+   unpacking Thrift objects defined in the dev/forma.thrift IDL.
 
   The following functions are available for creating Thrift objects:
 
@@ -42,7 +42,7 @@
            [java.util ArrayList]
            [org.apache.thrift TBase TUnion]))
 
-(defn epoch  
+(defn epoch
   []
   "Return seconds since epoch."
   (int (/ (System/currentTimeMillis) 1000)))
@@ -193,8 +193,8 @@
 
 (defn TimeSeries?
   "Return true if x is a supported TimeSeries value type, otherwise nil."
-  [x]   
-  (if (not (coll? x)) false 
+  [x]
+  (if (not (coll? x)) false
       (let [types [forma.schema.DoubleArray forma.schema.FireArray
                    forma.schema.FireValue forma.schema.FormaArray
                    forma.schema.FormaValue forma.schema.IntArray
@@ -322,17 +322,17 @@
   ModisPixelLocation
   (get-pixel-resolution [x] (.getResolution x))
   (get-pixel-tile-h [x] (.getTileH x))
-  (get-pixel-tile-v [x] (.getTileV x))  
+  (get-pixel-tile-v [x] (.getTileV x))
   (get-sample [x] (.getSample x))
-  (get-line [x] (.getLine x)))  
+  (get-line [x] (.getLine x)))
 
 (extend-protocol IModisChunkLocation
   ModisPixelLocation
   (get-chunk-resolution [x] (.getResolution x))
   (get-chunk-tile-h [x] (.getTileH x))
-  (get-chunk-tile-v [x] (.getTileV x))  
+  (get-chunk-tile-v [x] (.getTileV x))
   (get-chunk-id [x] (.getChunkID x))
-  (get-chunk-size [x] (.getChunkSize x)))  
+  (get-chunk-size [x] (.getChunkSize x)))
 
 (extend-protocol ITimeSeries
   TimeSeries
@@ -383,7 +383,7 @@
   (get-end-idx [x] (.getEndIdx x))
   (get-series [x] (.getSeries x)))
 
-(extend-protocol IDataChunk  
+(extend-protocol IDataChunk
   DataChunk
   (get-dataset [x] (.getDataset x))
   (get-location-property [x] (.getLocationProperty x))
@@ -394,7 +394,7 @@
 (extend-protocol IUnpackable
   LocationProperty
   (unpack [x] (->> x get-property get-field-value unpack))
-  
+
   ModisPixelLocation
   (unpack [x] (vec (map #(.getFieldValue x %) (keys (ModisPixelLocation/metaDataMap)))))
 
@@ -403,10 +403,10 @@
 
   FireValue
   (unpack [x] (vec (map #(.getFieldValue x %) (keys (FireValue/metaDataMap)))))
-  
+
   TimeSeries
   (unpack [x] (vec (map #(.getFieldValue x %) (keys (TimeSeries/metaDataMap)))))
-  
+
   FormaArray
   (unpack [x] (->> x .getValues vec))
 
@@ -429,7 +429,7 @@
       (cond (instance? TUnion val) (unpack val)
             (instance? TBase val) (unpack val)
             :else val)))
-  
+
   FormaValue
   (unpack [x] (vec (map #(.getFieldValue x %) (keys (FormaValue/metaDataMap)))))
 
@@ -451,7 +451,7 @@
   ;;         loc (->> loc get-property get-field-value)
   ;;         data (->> data .getFieldValue)]
   ;;     [name loc data t-res date]))
-  
+
   ArrayValue
   (unpack [x] (->> x .getFieldValue unpack))
 

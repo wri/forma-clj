@@ -386,7 +386,7 @@
                        (dynamic-src ?s-res ?pd ?mod-h ?mod-v ?s ?l ?val ?neighbor-val)
                        (static-src ?s-res ?mod-h ?mod-v ?s ?l _ _ ?ecoid ?hansen ?coast-dist)
                        (thrift/obj-contains-nodata? nodata ?val :> false)
-                       (thrift/obj-contains-nodata? nodata ?neighbor-val :> false)        
+                       (thrift/obj-contains-nodata? nodata ?neighbor-val :> false)
                        (= ?pd first-idx)
                        (>= ?coast-dist min-coast-dist)
                        (:distinct false))]
