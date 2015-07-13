@@ -53,9 +53,13 @@
          estimated-s3        (path :s3out "estimated")
          merged-estimated-s3 (path :s3out "merged-estimated")
          gfw-site-s3         (path :s3out "gfw-site")
+         forma-site-s3       (path :s3out "forma-site-" (:threshold conf))
          david-s3            (path :s3out "david")]
      (workflow
       [tmp-root]
+      start-workflow
+      ([] (println "Starting workflow."))
+
       preprocess-modis
       ([]
        (println "Preprocessing MODIS data")
@@ -66,7 +70,8 @@
                           (:modis-layers conf)))
 
       pre-rain
-      ([:tmp-dirs rain-output]
+      ([:tmp-dirs rain-output
+        :deps start-workflow]
        (println "Preprocessing rain")
        (p/PreprocessRain (path :archive "PRECL")
                          rain-output
@@ -80,14 +85,11 @@
        (p/ExplodeRain rain-output
                       exploded-rain-output
                       (:spatial-res conf)
-                      (:tiles conf))
-       ;; rain=$output
-       ;; rainoutput="$TMP/rain"
-       ;; $LAUNCHER "$PREPROCESSNS.ExplodeRain" $rain $rainoutput $SRES "$TILES"
-       )
+                      (:tiles conf)))
 
       ndvi-timeseries
-      ([:tmp-dirs ndvi-series-output]
+      ([:tmp-dirs ndvi-series-output
+        :deps start-workflow]
        (println "NDVI timeseries")
        (ts/ModisTimeseries (:pailpath storage)
                            ndvi-series-output
@@ -96,7 +98,8 @@
                            "ndvi"))
 
       ndvi-filter
-      ([:tmp-dirs filtered-ndvi-output]
+      ([:tmp-dirs filtered-ndvi-output
+        :deps ndvi-timeseries]
        (println "Filtering NDVI")
        (r/TimeseriesFilter (:spatial-res conf)
                            (:temporal-res conf)
@@ -125,7 +128,7 @@
                  est-start))
 
       trends->pail
-      ([]
+      ([:deps trends]
        (println "Adding trends series to pail")
        (r/TrendsPail (:spatial-res conf)
                      (:temporal-res conf)
@@ -134,7 +137,7 @@
                      (:pailpath storage)))
 
       merge-trends
-      ([]
+      ([:deps trends->pail]
        (println "Merging trends time series stored in pail")
        (r/MergeTrends (:spatial-res conf)
                       (:temporal-res conf)
@@ -143,7 +146,8 @@
                       merged-trends-s3))
 
       preprocess-fires
-      ([:tmp-dirs fire-output]
+      ([:tmp-dirs fire-output
+        :deps start-workflow]
        (println "Preprocessing fires")
        (p/PreprocessFire (path :archive "/fires")
                          fire-output
@@ -152,7 +156,8 @@
                          (:tiles conf)))
 
       forma-tap
-      ([:tmp-dirs forma-tap-output]
+      ([:tmp-dirs forma-tap-output
+        :deps [preprocess-fires merge-trends]]
        (println "Prepping FORMA tap for neighbor analysis")
        (r/FormaTap (:spatial-res conf)
                    (:temporal-res conf)
@@ -163,7 +168,8 @@
                    forma-tap-output))
 
       neighbors
-      ([:tmp-dirs neighbors-output]
+      ([:tmp-dirs neighbors-output
+        :deps forma-tap]
        (println "Merging neighbors")
        (r/NeighborQuery (:spatial-res conf)
                         (:temporal-res conf)
@@ -171,7 +177,8 @@
                         neighbors-output))
 
       beta-data-prep
-      ([:tmp-dirs beta-data-output]
+      ([:tmp-dirs beta-data-output
+        :deps neighbors]
        (println "Beta data prep - only keep data through training period")
        (r/BetaDataPrep (:spatial-res conf)
                        (:temporal-res conf)
@@ -181,7 +188,7 @@
                        true))
 
       gen-betas
-      ([]
+      ([:deps beta-data-prep]
        (println "Generating beta vectors")
        (r/GenBetas (:spatial-res conf)
                    (:temporal-res conf)
@@ -201,7 +208,7 @@
                         (:super-eco? conf)))
 
       probs-pail
-      ([]
+      ([:deps forma-estimate]
        (println "Add probability output to pail")
        (r/ProbsPail (:spatial-res conf)
                     (:temporal-res conf)
@@ -210,7 +217,7 @@
                     (:pailpath storage)))
 
       merge-probs
-      ([]
+      ([:deps probs-pail]
        (println "Merge probability time series.")
        (r/MergeProbs (:spatial-res conf)
                      (:temporal-res conf)
@@ -219,7 +226,7 @@
                      merged-estimated-s3))
 
       gadm2-eco-ids
-      ([]
+      ([:deps merge-probs]
        (println "Merging in gadm2 and eco fields")
        (r/ProbsGadm2 merged-estimated-s3
                      (:gadm2 storage)
@@ -227,7 +234,7 @@
                      (:gadm2eco storage)))
 
       common-data-conversion
-      ([]
+      ([:deps gadm2-eco-ids]
        (println "Prepping for website")
        (r/FormaWebsite (:threshold conf)
                        (:zoom conf)
@@ -241,7 +248,7 @@
                        gfw-site-s3))
 
       download-prep
-      ([]
+      ([:deps gadm2-eco-ids]
        ;; # prep data for FORMA download
        (println "Prepping data for FORMA download link")
        (r/FormaDownload (:threshold conf)
@@ -249,10 +256,10 @@
                         (:temporal-res conf)
                         (:nodata conf)
                         (:gadm2eco storage)
-                        gfw-site-s3))
+                        forma-site-s3))
 
       blue-raster
-      ([]
+      ([:deps gadm2-eco-ids]
        (println "Converting for Blue Raster")
        (r/BlueRaster (:spatial-res conf)
                      (:temporal-res conf)
@@ -262,7 +269,7 @@
                      (:blueraster storage)))
 
       david-conversion
-      ([]
+      ([:deps gadm2-eco-ids]
        (println "Converting for David")
        (r/FormaDavid (:nodata conf)
                      (:gadm2eco storage)
