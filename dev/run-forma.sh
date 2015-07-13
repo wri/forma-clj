@@ -27,7 +27,7 @@ PAILPATH="$TMP/pail"  # "s3n://formatest/output/pail"
 # Constants #
 #############
 
-FORMAJAR="target/forma-0.2.0-SNAPSHOT-standalone.jar"
+FORMAJAR="target/uberforma.jar"
 LAUNCHER="hadoop jar $FORMAJAR"
 PREPROCESSNS="forma.hadoop.jobs.preprocess"
 FORMANS="forma.hadoop.jobs.forma"

@@ -41,7 +41,7 @@ BLUERASTER="s3n://wriforma/$RUNDATE/$TRAININGEND-to-$ESTEND"
 # Constants #
 #############
 
-FORMAJAR="target/forma-1.0.0-SNAPSHOT-standalone.jar"
+FORMAJAR="target/uberforma.jar"
 LAUNCHER="hadoop jar $FORMAJAR"
 PREPROCESSNS="forma.hadoop.jobs.preprocess"
 RUNNERNS="forma.hadoop.jobs.runner"
@@ -50,11 +50,9 @@ RUNNERNS="forma.hadoop.jobs.runner"
 # PREPROCESSING #
 #################
 
-echo "Processing data to generate FORMA from $ESTSTART to $ESTEND" 
-
+echo "Processing data to generate FORMA from $ESTSTART to $ESTEND"
 # static preprocessing
 # skip for now #
-
 
 echo "Preprocessing MODIS data"
 # 5 minutes w/5 high-memory for 2 periods
@@ -152,7 +150,7 @@ $LAUNCHER $RUNNERNS.NeighborQuery $SRES $TRES $dynamic $neighbors
 echo "Beta data prep - only keep data through training period"
 dynamic=$neighbors
 output="$TMP/beta-data"
-#$LAUNCHER $RUNNERNS.BetaDataPrep $SRES $TRES $dynamic $STATIC $output true
+$LAUNCHER $RUNNERNS.BetaDataPrep $SRES $TRES $dynamic $STATIC $output true
 
 # gen-betas
 
@@ -160,7 +158,7 @@ output="$TMP/beta-data"
 #dynamic=$output
 #output="$S3OUT/betas"
 #$LAUNCHER $RUNNERNS.GenBetas $SRES $TRES $TRAININGEND $dynamic $output
-# if you're re-generating betas, make sure you put them in 
+# if you're re-generating betas, make sure you put them in
 # s3n://pailbucket/all-betas when they're ready
 
 # forma-estimate
@@ -217,6 +215,8 @@ echo "Converting for David"
 srcpath=$GADM2ECO
 output="$S3OUT/david"
 $LAUNCHER $RUNNERNS.FormaDavid $NODATA $srcpath $STATIC $output
+
+# Non-Clojure
 
 # set paths public
 BRPATH=$(echo $BLUERASTER | tr -s "s3n" "s3")
