@@ -234,7 +234,7 @@
   (let [base-vec (vec base-seq)
         len (count base-vec)]
     (for [x (range start-index (inc end-index))]
-      (subvec base-vec 0 (max len x)))))
+      (subvec base-vec 0 (min len x)))))
 
 (defn make-clean
   "Wrapper for `make-reliable`, `deseasonalize` and any future data cleaning
