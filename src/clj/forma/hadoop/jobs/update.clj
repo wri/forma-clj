@@ -115,30 +115,29 @@
      ;;                  exploded-rain-output
      ;;                  adjusted-s3))
 
-     ;; trends
-     ;; ([:tmp-dirs trends-output
-     ;;   :deps adjust-series]
-     ;;  (println "Calculating trends stats")
-     ;;  (r/Trends (:spatial-res conf)
-     ;;            (:temporal-res conf)
-     ;;            est-end
-     ;;            adjusted-s3
-     ;;            trends-output
-     ;;            est-start))
+     trends
+     ([:tmp-dirs trends-output
+       ;; :deps adjust-series
+       ]
+      (println "Calculating trends stats")
+      (r/Trends (:spatial-res conf)
+                (:temporal-res conf)
+                est-end
+                adjusted-s3
+                trends-output
+                est-start))
 
-     ;; trends->pail
-     ;; ([:deps trends]
-     ;;  (println "Adding trends series to pail")
-     ;;  (r/TrendsPail (:spatial-res conf)
-     ;;                (:temporal-res conf)
-     ;;                est-end
-     ;;                trends-output
-     ;;                (:pailpath storage)))
+     trends->pail
+     ([:deps trends]
+      (println "Adding trends series to pail")
+      (r/TrendsPail (:spatial-res conf)
+                    (:temporal-res conf)
+                    est-end
+                    trends-output
+                    (:pailpath storage)))
 
      merge-trends
-     ([
-       ;; :deps trends->pail
-       ]
+     ([:deps trends->pail]
       (println "Merging trends time series stored in pail")
       (r/MergeTrends (:spatial-res conf)
                      (:temporal-res conf)
@@ -177,17 +176,19 @@
                        forma-tap-output
                        neighbors-output))
 
-     beta-data-prep
-     ([:tmp-dirs beta-data-output
-       :deps neighbors]
-      (println "Beta data prep - only keep data through training period")
-      (r/BetaDataPrep (:spatial-res conf)
-                      (:temporal-res conf)
-                      neighbors-output
-                      (:static storage)
-                      beta-data-output
-                      true))
+     ;; DONT RUN
+     ;; beta-data-prep
+     ;; ([:tmp-dirs beta-data-output
+     ;;   :deps neighbors]
+     ;;  (println "Beta data prep - only keep data through training period")
+     ;;  (r/BetaDataPrep (:spatial-res conf)
+     ;;                  (:temporal-res conf)
+     ;;                  neighbors-output
+     ;;                  (:static storage)
+     ;;                  beta-data-output
+     ;;                  true))
 
+     ;; DON'T RUN
      ;; gen-betas
      ;; ([:deps beta-data-prep]
      ;;  (println "Generating beta vectors")
@@ -197,82 +198,86 @@
      ;;              beta-data-output
      ;;              beta-s3))
 
-     forma-estimate
-     ([:deps neighbors]
-      (println "Classify pixels using beta vectors")
-      (r/EstimateForma (:spatial-res conf)
-                       (:temporal-res conf)
-                       (:betas storage)
-                       neighbors-output
-                       (:static storage)
-                       estimated-s3
-                       (:super-eco? conf)))
 
-     probs-pail
-     ([:deps forma-estimate]
-      (println "Add probability output to pail")
-      (r/ProbsPail (:spatial-res conf)
-                   (:temporal-res conf)
-                   est-end
-                   estimated-s3
-                   (:pailpath storage)))
 
-     merge-probs
-     ([:deps probs-pail]
-      (println "Merge probability time series.")
-      (r/MergeProbs (:spatial-res conf)
-                    (:temporal-res conf)
-                    est-end
-                    (:pailpath storage)
-                    merged-estimated-s3))
+     ;; forma-estimate
+     ;; ([:deps neighbors]
+     ;;  (println "Classify pixels using beta vectors")
+     ;;  (r/EstimateForma (:spatial-res conf)
+     ;;                   (:temporal-res conf)
+     ;;                   (:betas storage)
+     ;;                   neighbors-output
+     ;;                   (:static storage)
+     ;;                   estimated-s3
+     ;;                   (:super-eco? conf)))
 
-     gadm2-eco-ids
-     ([:deps merge-probs]
-      (println "Merging in gadm2 and eco fields")
-      (r/ProbsGadm2 merged-estimated-s3
-                    (:gadm2 storage)
-                    (:static storage)
-                    (:gadm2eco storage)))
+     ;; probs-pail
+     ;; ([:deps forma-estimate]
+     ;;  (println "Add probability output to pail")
+     ;;  (r/ProbsPail (:spatial-res conf)
+     ;;               (:temporal-res conf)
+     ;;               est-end
+     ;;               estimated-s3
+     ;;               (:pailpath storage)))
 
-     common-data-conversion
-     ([:deps gadm2-eco-ids]
-      (println "Prepping for website")
-      (r/FormaWebsite (:threshold conf)
-                      (:zoom conf)
-                      (:min-zoom conf)
-                      (:spatial-res conf)
-                      (:temporal-res conf)
-                      (:cdm-temporal-res conf)
-                      (:training-end conf)
-                      (:nodata conf)
-                      (:gadm2eco storage)
-                      gfw-site-s3))
+     ;; merge-probs
+     ;; ([:deps probs-pail]
+     ;;  (println "Merge probability time series.")
+     ;;  (r/MergeProbs (:spatial-res conf)
+     ;;                (:temporal-res conf)
+     ;;                est-end
+     ;;                (:pailpath storage)
+     ;;                merged-estimated-s3))
 
-     download-prep
-     ([:deps gadm2-eco-ids]
-      ;; # prep data for FORMA download
-      (println "Prepping data for FORMA download link")
-      (r/FormaDownload (:threshold conf)
-                       (:spatial-res conf)
-                       (:temporal-res conf)
-                       (:nodata conf)
-                       (:gadm2eco storage)
-                       forma-site-s3))
+     ;; gadm2-eco-ids
+     ;; ([:deps merge-probs]
+     ;;  (println "Merging in gadm2 and eco fields")
+     ;;  (r/ProbsGadm2 merged-estimated-s3
+     ;;                (:gadm2 storage)
+     ;;                (:static storage)
+     ;;                (:gadm2eco storage)))
 
-     blue-raster
-     ([:deps gadm2-eco-ids]
-      (println "Converting for Blue Raster")
-      (r/BlueRaster (:spatial-res conf)
-                    (:temporal-res conf)
-                    (:nodata conf)
-                    (:gadm2eco storage)
-                    (:static storage)
-                    (:blueraster storage)))
+     ;; common-data-conversion
+     ;; ([:deps gadm2-eco-ids]
+     ;;  (println "Prepping for website")
+     ;;  (r/FormaWebsite (:threshold conf)
+     ;;                  (:zoom conf)
+     ;;                  (:min-zoom conf)
+     ;;                  (:spatial-res conf)
+     ;;                  (:temporal-res conf)
+     ;;                  (:cdm-temporal-res conf)
+     ;;                  (:training-end conf)
+     ;;                  (:nodata conf)
+     ;;                  (:gadm2eco storage)
+     ;;                  gfw-site-s3))
 
-     david-conversion
-     ([:deps gadm2-eco-ids]
-      (println "Converting for David")
-      (r/FormaDavid (:nodata conf)
-                    (:gadm2eco storage)
-                    (:static storage)
-                    david-s3)))))
+     ;; download-prep
+     ;; ([:deps gadm2-eco-ids]
+     ;;  ;; # prep data for FORMA download
+     ;;  (println "Prepping data for FORMA download link")
+     ;;  (r/FormaDownload (:threshold conf)
+     ;;                   (:spatial-res conf)
+     ;;                   (:temporal-res conf)
+     ;;                   (:nodata conf)
+     ;;                   (:gadm2eco storage)
+     ;;                   forma-site-s3))
+
+     ;; blue-raster
+     ;; ([:deps gadm2-eco-ids]
+     ;;  (println "Converting for Blue Raster")
+     ;;  (r/BlueRaster (:spatial-res conf)
+     ;;                (:temporal-res conf)
+     ;;                (:nodata conf)
+     ;;                (:gadm2eco storage)
+     ;;                (:static storage)
+     ;;                (:blueraster storage)))
+
+     ;; david-conversion
+     ;; ([:deps gadm2-eco-ids]
+     ;;  (println "Converting for David")
+     ;;  (r/FormaDavid (:nodata conf)
+     ;;                (:gadm2eco storage)
+     ;;                (:static storage)
+     ;;                david-s3))
+
+     )))
