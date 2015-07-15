@@ -152,6 +152,14 @@
               (a/long-stats ts short-rain)
               (a/hansen-stat ts)])))
 
+(defn expand-rain [rain-ts long-teleseries]
+  (let [base-vec (vec rain-ts)
+        size (count base-vec)
+        should-be (count long-teleseries)]
+    (if (> should-be size)
+      (vec (concat base-vec (repeat (- should-be size) (peek base-vec))))
+      base-vec)))
+
 (defn telescoping-trends
   "Maps `calculate-trends` onto each part of an ever-lengthening subset
    of the input timeseries, from `est-start` to `est-end`. Returns
@@ -163,6 +171,7 @@
         tele-start-idx (inc start-idx)
         tele-end-idx (inc end-idx)
         tele-series (f/tele-ts tele-start-idx tele-end-idx val-ts)
+        rain-ts (expand-rain rain-ts (last tele-series))
         ;;takes the last telescoping series (the longest one), and computes
         ;;the windowed trends, and then the moving averages. Then does
         ;;reductions min on the moving averages. We want the same
