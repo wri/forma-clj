@@ -231,10 +231,9 @@
   exception to avoid returning empty vector"
   [start-index end-index base-seq]
   {:pre [(> start-index 0)]}
-  (let [base-vec (vec base-seq)
-        len (count base-vec)]
+  (let [base-vec (vec base-seq)]
     (for [x (range start-index (inc end-index))]
-      (subvec base-vec 0 (min len x)))))
+      (subvec base-vec 0 x))))
 
 (defn make-clean
   "Wrapper for `make-reliable`, `deseasonalize` and any future data cleaning
