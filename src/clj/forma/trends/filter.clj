@@ -236,9 +236,9 @@
         last (peek base-vec)]
     (for [x (range start-index (inc end-index))]
       (let [prefix (subvec base-vec 0 (min x size))]
-        (if (> x size)
-          (concat prefix (repeat (- x size) last))
-          prefix)))))
+        (vec (if (> x size)
+               (concat prefix (repeat (- x size) last))
+               prefix))))))
 
 (defn make-clean
   "Wrapper for `make-reliable`, `deseasonalize` and any future data cleaning
