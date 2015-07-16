@@ -11,7 +11,7 @@
   [est-start est-end run-date]
   (let [training-end "2005-12-19"]
     {:configurable
-     {:threshold 50
+     {:threshold "50"
       :version "1.0"
       :spatial-res "500"
       :temporal-res "16"
@@ -24,9 +24,9 @@
       :est-end est-end
       :fire-start "2000-11-01"
       :super-eco? false
-      :nodata -9999.0
-      :zoom 17
-      :min-zoom 6}
+      :nodata "-9999.0"
+      :zoom "17"
+      :min-zoom "6"}
      :storage
      {:tmp "/tmp"
       :staging "s3n://formastaging"
