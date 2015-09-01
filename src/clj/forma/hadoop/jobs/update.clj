@@ -59,91 +59,90 @@
      start-workflow
      ([] (println "Starting workflow."))
 
-     ;; preprocess-modis
-     ;; ([]
-     ;;  (println "Preprocessing MODIS data")
-     ;;  (p/PreprocessModis (path :staging "MOD13A1/")
-     ;;                     (:pailpath storage)
-     ;;                     "{20}*"
-     ;;                     (:tiles conf)
-     ;;                     (:modis-layers conf)))
+     preprocess-modis
+     ([]
+      (println "Preprocessing MODIS data")
+      (p/PreprocessModis (path :staging "MOD13A1/")
+                         (:pailpath storage)
+                         "{20}*"
+                         (:tiles conf)
+                         (:modis-layers conf)))
 
-     ;; pre-rain
-     ;; ([:tmp-dirs rain-output
-     ;;   :deps start-workflow]
-     ;;  (println "Preprocessing rain")
-     ;;  (p/PreprocessRain (path :archive "PRECL")
-     ;;                    rain-output
-     ;;                    (:spatial-res conf)
-     ;;                    (:temporal-res conf)))
+     pre-rain
+     ([:tmp-dirs rain-output
+       :deps start-workflow]
+      (println "Preprocessing rain")
+      (p/PreprocessRain (path :archive "PRECL")
+                        rain-output
+                        (:spatial-res conf)
+                        (:temporal-res conf)))
 
-     ;; rain->modis
-     ;; ([:tmp-dirs exploded-rain-output
-     ;;   :deps pre-rain]
-     ;;  (println "Exploding rain into MODIS pixels")
-     ;;  (p/ExplodeRain rain-output
-     ;;                 exploded-rain-output
-     ;;                 (:spatial-res conf)
-     ;;                 (:tiles conf)))
+     rain->modis
+     ([:tmp-dirs exploded-rain-output
+       :deps pre-rain]
+      (println "Exploding rain into MODIS pixels")
+      (p/ExplodeRain rain-output
+                     exploded-rain-output
+                     (:spatial-res conf)
+                     (:tiles conf)))
 
-     ;; ndvi-timeseries
-     ;; ([:tmp-dirs ndvi-series-output
-     ;;   :deps start-workflow]
-     ;;  (println "NDVI timeseries")
-     ;;  (ts/ModisTimeseries (:pailpath storage)
-     ;;                      ndvi-series-output
-     ;;                      (:spatial-res conf)
-     ;;                      (:temporal-res conf)
-     ;;                      "ndvi"))
+     ndvi-timeseries
+     ([:tmp-dirs ndvi-series-output
+       :deps start-workflow]
+      (println "NDVI timeseries")
+      (ts/ModisTimeseries (:pailpath storage)
+                          ndvi-series-output
+                          (:spatial-res conf)
+                          (:temporal-res conf)
+                          "ndvi"))
 
-     ;; ndvi-filter
-     ;; ([:tmp-dirs filtered-ndvi-output
-     ;;   :deps ndvi-timeseries]
-     ;;  (println "Filtering NDVI")
-     ;;  (r/TimeseriesFilter (:spatial-res conf)
-     ;;                      (:temporal-res conf)
-     ;;                      ndvi-series-output
-     ;;                      (:static storage)
-     ;;                      filtered-ndvi-output))
+     ndvi-filter
+     ([:tmp-dirs filtered-ndvi-output
+       :deps ndvi-timeseries]
+      (println "Filtering NDVI")
+      (r/TimeseriesFilter (:spatial-res conf)
+                          (:temporal-res conf)
+                          ndvi-series-output
+                          (:static storage)
+                          filtered-ndvi-output))
 
-     ;; adjust-series
-     ;; ([:deps [rain->modis ndvi-filter]]
-     ;;  (println "Joining NDVI and rain series, adjusting length")
-     ;;  (r/AdjustSeries (:spatial-res conf)
-     ;;                  (:temporal-res conf)
-     ;;                  filtered-ndvi-output
-     ;;                  exploded-rain-output
-     ;;                  adjusted-s3))
+     adjust-series
+     ([:deps [rain->modis ndvi-filter]]
+      (println "Joining NDVI and rain series, adjusting length")
+      (r/AdjustSeries (:spatial-res conf)
+                      (:temporal-res conf)
+                      filtered-ndvi-output
+                      exploded-rain-output
+                      adjusted-s3))
 
-     ;; trends
-     ;; ([:tmp-dirs trends-output
-     ;;   ;; :deps adjust-series
-     ;;   ]
-     ;;  (println "Calculating trends stats")
-     ;;  (r/Trends (:spatial-res conf)
-     ;;            (:temporal-res conf)
-     ;;            est-end
-     ;;            adjusted-s3
-     ;;            trends-output
-     ;;            est-start))
+     trends
+     ([:tmp-dirs trends-output
+       :deps adjust-series]
+      (println "Calculating trends stats")
+      (r/Trends (:spatial-res conf)
+                (:temporal-res conf)
+                est-end
+                adjusted-s3
+                trends-output
+                est-start))
 
-     ;; trends->pail
-     ;; ([:deps trends]
-     ;;  (println "Adding trends series to pail")
-     ;;  (r/TrendsPail (:spatial-res conf)
-     ;;                (:temporal-res conf)
-     ;;                est-end
-     ;;                trends-output
-     ;;                (:pailpath storage)))
+     trends->pail
+     ([:deps trends]
+      (println "Adding trends series to pail")
+      (r/TrendsPail (:spatial-res conf)
+                    (:temporal-res conf)
+                    est-end
+                    trends-output
+                    (:pailpath storage)))
 
-     ;; merge-trends
-     ;; ([:deps trends->pail]
-     ;;  (println "Merging trends time series stored in pail")
-     ;;  (r/MergeTrends (:spatial-res conf)
-     ;;                 (:temporal-res conf)
-     ;;                 est-end
-     ;;                 (:pailpath storage)
-     ;;                 merged-trends-s3))
+     merge-trends
+     ([:deps trends->pail]
+      (println "Merging trends time series stored in pail")
+      (r/MergeTrends (:spatial-res conf)
+                     (:temporal-res conf)
+                     est-end
+                     (:pailpath storage)
+                     merged-trends-s3))
 
      preprocess-fires
      ([:tmp-dirs fire-output
@@ -276,6 +275,4 @@
       (r/FormaDavid (:nodata conf)
                     (:gadm2eco storage)
                     (:static storage)
-                    david-s3))
-
-     )))
+                    david-s3)))))
