@@ -271,7 +271,7 @@
 (defbufferop [merge-series-wrapper [t-res nodata]]
   "defbufferop wrapper for `merge-series`."
   [tuples]
-  (let [consecutive true]
+  (let [consecutive false]
     (merge-series t-res nodata tuples :consecutive consecutive)))
 
 (defn array-val->series
