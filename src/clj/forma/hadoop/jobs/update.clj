@@ -156,7 +156,7 @@
 
      forma-tap
      ([:tmp-dirs forma-tap-output
-       :deps [preprocess-fires #_ merge-trends]]
+       :deps [preprocess-fires merge-trends]]
       (println "Prepping FORMA tap for neighbor analysis")
       (r/FormaTap (:spatial-res conf)
                   (:temporal-res conf)
