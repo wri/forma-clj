@@ -48,7 +48,7 @@
 (def s-res "500")
 (def loc-vec [s-res 28 8 0 0])
 (def pixel-loc (apply thrift/ModisPixelLocation* loc-vec))
-(def vcf-src    [(conj loc-vec 26)]) 
+(def vcf-src    [(conj loc-vec 26)])
 (def hansen-src [(conj loc-vec 100)])
 (def ecoid-src  [(conj loc-vec 10101)])
 (def gadm-src   [(conj loc-vec 40132)])
@@ -240,7 +240,7 @@
  ;; ok
  true    [[1 :2005-12-19 [1 2] [3 4] [5 6] [7 8]]
           [1 :2006-01-17 [11 12] [13 14] [15 16] [17 18]]]  [1 2 11 12]
-          
+
  ;; not consecutive
  true    [[1 :2005-12-19 [1 2] [3 4] [5 6] [7 8]]
           [1 :2006-02-02 [11 12] [13 14] [15 16] [17 18]]]  (throws AssertionError)
@@ -251,7 +251,7 @@
 
 (tabular
  (fact "Test `merge-series`."
-  (let [series [[1 :2005-12-19 [1 2] [3 4] [5 6] [7 8]]
+   (let [series [[1 :2005-12-19 [1 2] [3 4] [5 6] [7 8]]
                 [1 ?2nd-start-key [11 12] [13 14] [15 16] [17 18]]]]
     (merge-series "16" -9999.0 series :consecutive ?consec))
   => ?result)
@@ -294,7 +294,7 @@
   (let [test-map (assoc test-map :est-start "2005-12-19" :est-end "2006-01-17")
         fire-val (thrift/FireValue* 0 0 0 0)
         forma-val (thrift/FormaValue* fire-val 1. 2. 3. 4.)
-        forma-val2 (thrift/FormaValue* fire-val 11. 12. 13. 14.) 
+        forma-val2 (thrift/FormaValue* fire-val 11. 12. 13. 14.)
         data (thrift/TimeSeries* 827 [forma-val forma-val])
         data2 (thrift/TimeSeries* 828 [forma-val2 forma-val2]) ;; overlapping `data`
         src [["" (thrift/DataChunk* "trends" pixel-loc data "16" :pedigree 1)]
@@ -317,7 +317,7 @@
                      ["500" 28 8 0 1 start-idx p2 p2 p2 p2]]
         fire-src [["500" 28 8 0 0 (sample-fire-series 709 350 0 0 0 1)]]
         src (forma-tap test-map dynamic-src fire-src)
-        
+
         est-start-idx (date/datetime->period "16" "2010-01-01")
         ridx1a (- est-start-idx start-idx)
         ridx1b (inc ridx1a)

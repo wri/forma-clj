@@ -4,7 +4,7 @@
 
 (ns forma.date-time
   (:use [clj-time.core :only (now date-time plus month year days)]
-        [forma.matrix.utils :only (sparse-expander)]
+        [forma.matrix.utils :as u]
         [forma.utils :only (inc-eq? all-unique? contains-nils?)])
   (:require [clj-time.core :as time]
             [clj-time.format :as f]))
@@ -424,7 +424,7 @@ in which `string` lies (according to the supplied resolution, `res`)."
   (let [date-ks (sort (keys m))
         pds-vals (for [k date-ks]
                    [(key->period t-res k) (k m)])]
-    (sparse-expander nodata pds-vals)))
+    (u/interpolating-sparse-expander nodata pds-vals)))
 
 (defn get-ts-map-start-idx
   "Given a map of dates and values, return the first date converted to a period.

@@ -115,6 +115,23 @@
   (let [ct (count coll)]
     (->> coll cycle (partition ct 1) (take ct))))
 
+(defn interpolating-sparse-expander
+  [placeholder tuples & {:keys [start length]}]
+  (let [start (or start (ffirst tuples))
+        halt? (fn [idx tup-seq]
+                (if length
+                  (>= idx (+ start length))
+                  (empty? tup-seq)))]
+    (loop [idx start
+           tup-seq tuples
+           placeholder placeholder
+           v (transient [])]
+      (let [[[pos val] & more] tup-seq]
+        (cond (halt? idx tup-seq) (persistent! v)
+              (when pos (= idx pos)) (recur (inc idx) more val (conj! v val))
+              (when pos (> idx pos)) (recur (inc idx) more val (conj! v placeholder))
+              :else (recur (inc idx) tup-seq val (conj! v placeholder)))))))
+
 (defn sparse-expander
   "Accepts a sequence of 2-tuples of the form `<idx, val>` and
   generates a sparse expansion with each `val` inserted at its
