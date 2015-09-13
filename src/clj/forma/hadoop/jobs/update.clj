@@ -115,34 +115,34 @@
      ;;                  exploded-rain-output
      ;;                  adjusted-s3))
 
-     ;; trends
-     ;; ([:tmp-dirs trends-output
-     ;;   :deps adjust-series]
-     ;;  (println "Calculating trends stats")
-     ;;  (r/Trends (:spatial-res conf)
-     ;;            (:temporal-res conf)
-     ;;            est-end
-     ;;            adjusted-s3
-     ;;            trends-output
-     ;;            est-start))
+     trends
+     ([:tmp-dirs trends-output
+       #_#_ :deps adjust-series]
+      (println "Calculating trends stats")
+      (r/Trends (:spatial-res conf)
+                (:temporal-res conf)
+                est-end
+                adjusted-s3
+                trends-output
+                est-start))
 
-     ;; trends->pail
-     ;; ([:deps trends]
-     ;;  (println "Adding trends series to pail")
-     ;;  (r/TrendsPail (:spatial-res conf)
-     ;;                (:temporal-res conf)
-     ;;                est-end
-     ;;                trends-output
-     ;;                (:pailpath storage)))
+     trends->pail
+     ([:deps trends]
+      (println "Adding trends series to pail")
+      (r/TrendsPail (:spatial-res conf)
+                    (:temporal-res conf)
+                    est-end
+                    trends-output
+                    (:pailpath storage)))
 
-     ;; merge-trends
-     ;; ([:deps trends->pail]
-     ;;  (println "Merging trends time series stored in pail")
-     ;;  (r/MergeTrends (:spatial-res conf)
-     ;;                 (:temporal-res conf)
-     ;;                 est-end
-     ;;                 (:pailpath storage)
-     ;;                 merged-trends-s3))
+     merge-trends
+     ([:deps trends->pail]
+      (println "Merging trends time series stored in pail")
+      (r/MergeTrends (:spatial-res conf)
+                     (:temporal-res conf)
+                     est-end
+                     (:pailpath storage)
+                     merged-trends-s3))
 
      preprocess-fires
      ([:tmp-dirs fire-output
@@ -156,7 +156,7 @@
 
      forma-tap
      ([:tmp-dirs forma-tap-output
-       :deps [preprocess-fires #_ merge-trends]]
+       :deps [preprocess-fires merge-trends]]
       (println "Prepping FORMA tap for neighbor analysis")
       (r/FormaTap (:spatial-res conf)
                   (:temporal-res conf)
