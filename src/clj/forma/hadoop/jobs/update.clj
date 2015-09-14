@@ -144,36 +144,36 @@
      ;;                 (:pailpath storage)
      ;;                 merged-trends-s3))
 
-     preprocess-fires
-     ([:tmp-dirs fire-output
-       :deps start-workflow]
-      (println "Preprocessing fires")
-      (p/PreprocessFire (path :archive "/fires")
-                        fire-output
-                        "500" "16"
-                        (:fire-start conf)
-                        (:tiles conf)))
+     ;; preprocess-fires
+     ;; ([:tmp-dirs fire-output
+     ;;   :deps start-workflow]
+     ;;  (println "Preprocessing fires")
+     ;;  (p/PreprocessFire (path :archive "/fires")
+     ;;                    fire-output
+     ;;                    "500" "16"
+     ;;                    (:fire-start conf)
+     ;;                    (:tiles conf)))
 
-     forma-tap
-     ([:tmp-dirs forma-tap-output
-       :deps [preprocess-fires #_ merge-trends]]
-      (println "Prepping FORMA tap for neighbor analysis")
-      (r/FormaTap (:spatial-res conf)
-                  (:temporal-res conf)
-                  est-start
-                  est-end
-                  fire-output
-                  merged-trends-s3
-                  forma-tap-output))
+     ;; forma-tap
+     ;; ([:tmp-dirs forma-tap-output
+     ;;   :deps [preprocess-fires #_ merge-trends]]
+     ;;  (println "Prepping FORMA tap for neighbor analysis")
+     ;;  (r/FormaTap (:spatial-res conf)
+     ;;              (:temporal-res conf)
+     ;;              est-start
+     ;;              est-end
+     ;;              fire-output
+     ;;              merged-trends-s3
+     ;;              forma-tap-output))
 
-     neighbors
-     ([:tmp-dirs neighbors-output
-       :deps forma-tap]
-      (println "Merging neighbors")
-      (r/NeighborQuery (:spatial-res conf)
-                       (:temporal-res conf)
-                       forma-tap-output
-                       neighbors-output))
+     ;; neighbors
+     ;; ([:tmp-dirs neighbors-output
+     ;;   :deps forma-tap]
+     ;;  (println "Merging neighbors")
+     ;;  (r/NeighborQuery (:spatial-res conf)
+     ;;                   (:temporal-res conf)
+     ;;                   forma-tap-output
+     ;;                   neighbors-output))
 
      ;; ;; DONT RUN
      ;; ;; beta-data-prep
@@ -197,28 +197,28 @@
      ;; ;;              beta-data-output
      ;; ;;              beta-s3))
 
-     forma-estimate
-     ([:deps neighbors]
-      (println "Classify pixels using beta vectors")
-      (r/EstimateForma (:spatial-res conf)
-                       (:temporal-res conf)
-                       (:betas storage)
-                       neighbors-output
-                       (:static storage)
-                       estimated-s3
-                       (:super-eco? conf)))
+     ;; forma-estimate
+     ;; ([:deps neighbors]
+     ;;  (println "Classify pixels using beta vectors")
+     ;;  (r/EstimateForma (:spatial-res conf)
+     ;;                   (:temporal-res conf)
+     ;;                   (:betas storage)
+     ;;                   neighbors-output
+     ;;                   (:static storage)
+     ;;                   estimated-s3
+     ;;                   (:super-eco? conf)))
 
-     probs-pail
-     ([:deps forma-estimate]
-      (println "Add probability output to pail")
-      (r/ProbsPail (:spatial-res conf)
-                   (:temporal-res conf)
-                   est-end
-                   estimated-s3
-                   (:pailpath storage)))
+     ;; probs-pail
+     ;; ([:deps forma-estimate]
+     ;;  (println "Add probability output to pail")
+     ;;  (r/ProbsPail (:spatial-res conf)
+     ;;               (:temporal-res conf)
+     ;;               est-end
+     ;;               estimated-s3
+     ;;               (:pailpath storage)))
 
      merge-probs
-     ([:deps probs-pail]
+     ([#_#_ :deps probs-pail]
       (println "Merge probability time series.")
       (r/MergeProbs (:spatial-res conf)
                     (:temporal-res conf)
